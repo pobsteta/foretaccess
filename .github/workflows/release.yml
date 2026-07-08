@@ -1,0 +1,49 @@
+# Release automatisée (CLAUDE.md, ADR-007).
+# Au push sur main, lit Version dans DESCRIPTION. Si c'est une version STABLE
+# X.Y.Z (pas .9000) dont le tag vX.Y.Z n'existe pas encore, pose le tag annoté
+# et crée la release GitHub (--generate-notes). Les versions de dev sont ignorées.
+on:
+  push:
+    branches: [main]
+    paths: [DESCRIPTION]
+
+name: release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Déterminer la version
+        id: ver
+        run: |
+          VER=$(grep '^Version:' DESCRIPTION | sed 's/^Version:[[:space:]]*//')
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if echo "$VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+            echo "Version de dev ($VER) — pas de release."
+          fi
+
+      - name: Créer le tag + la release
+        if: steps.ver.outputs.stable == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1 || gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Le tag $TAG existe déjà — rien à faire."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes
