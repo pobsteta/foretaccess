@@ -231,12 +231,11 @@ Reprend EPIC 0 (US-0.1…0.6) + DoD (brief §12).
 
 ---
 
-## 10. Questions ouvertes spécifiques au Lot 0 (à confirmer avant codage)
+## 10. Décisions spécifiques au Lot 0 (tranchées 2026-07-08)
 
-1. **Nom de la crate Rust** : `cablehelp` (proposé, cohérent brief) ou `foretaccess` ?
-2. **Version de départ du package** dans `DESCRIPTION` : `0.0.0.9000` (cycle dev, recommandé)
-   puis première release stable `0.1.0` au fil du Lot 0 — ou démarrer directement à `0.1.0` ?
-   *(NB : le tag dépôt `v0.1.0` déjà posé est un jalon **documentaire** ; à réconcilier avec la
-   première version **du package**.)*
-3. **Lib de validation de config** : `checkmate` (proposé) ou validation maison légère ?
-4. **`renv`** activé dès le Lot 0 (recommandé pour reproductibilité) ou plus tard ?
+1. **Nom de la crate Rust** : **`cablehelp`** (le package R reste `foretaccess`).
+2. **Versionnage** : le tag documentaire est **rebaptisé `v0.0.1`** ; le `DESCRIPTION` démarre
+   en cycle dev **`0.0.1.9000`**, et la **première release stable du package** sera **`0.1.0`**
+   à la clôture du Lot 0 (posée automatiquement par `release.yml`).
+3. **Lib de validation de config** : **`checkmate`**.
+4. **`renv`** : **activé dès le Lot 0** (reproductibilité, ENF-3), en tandem avec `Cargo.lock`.
