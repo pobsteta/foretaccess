@@ -1,0 +1,39 @@
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.Rapp.history
+*.Rproj
+.Renviron
+/renv/library/
+/renv/staging/
+*.Rcheck/
+*.tar.gz
+.covr/
+
+# Rust (crate via rextendr)
+src/rust/target/
+src/*.o
+src/*.so
+src/*.dll
+target/
+
+# Environnements & secrets
+.env
+*.env
+
+# SIG volumineux / sorties (garder inst/extdata versionné)
+*.gpkg
+*.tif
+*.tiff
+!inst/extdata/**
+
+# targets / pkgdown
+_targets/
+docs/pkgdown/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
