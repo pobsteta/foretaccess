@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "Si vous utilisez ForêtAccess, merci de le citer ainsi qu'à Sylvaccess (INRAE)."
+title: "ForêtAccess : cartographie de l'accessibilité des forêts"
+abstract: >-
+  Réimplémentation moderne, découplée et testable du modèle Sylvaccess (INRAE,
+  S. Dupire) : cœur métier pur en R et noyau câble en Rust (extendr), sorties en
+  base spatiale (PostGIS / GeoPackage).
+type: software
+authors:
+  - family-names: Obstetar
+    given-names: Pascal
+    email: pascal.obstetar@gmail.com
+version: 0.1.0
+date-released: "2026-07-09"
+license: GPL-3.0
+repository-code: "https://github.com/pobsteta/foretaccess"
+references:
+  - type: article
+    title: "Sylvaccess : un modèle pour cartographier automatiquement l'accessibilité des forêts"
+    authors:
+      - family-names: Dupire
+        given-names: Sylvain
+      - family-names: Bourrier
+        given-names: Franck
+      - family-names: Monnet
+        given-names: Jean-Matthieu
+      - family-names: Berger
+        given-names: Frédéric
+    year: 2015
+    journal: "Revue Forestière Française"

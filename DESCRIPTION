@@ -1,0 +1,34 @@
+Package: foretaccess
+Title: Cartographie de l'Accessibilité des Forêts (Réimplémentation de Sylvaccess)
+Version: 0.1.0
+Authors@R:
+    person("Pascal", "Obstetar", email = "pascal.obstetar@gmail.com",
+           role = c("aut", "cre"))
+Description: Cartographie automatique de l'accessibilité des forêts selon le
+    mode d'exploitation (skidder, porteur, câble-mât, camion DFCI).
+    Réimplémentation moderne, découplée et testable du modèle Sylvaccess
+    (INRAE, S. Dupire), avec un cœur métier pur en R et un noyau câble en Rust
+    (via 'extendr'), et des sorties en base spatiale (PostGIS / GeoPackage).
+License: GPL-3
+Encoding: UTF-8
+Language: fr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+SystemRequirements: Cargo (Rust's package manager), rustc
+Imports:
+    checkmate,
+    cli,
+    DBI,
+    sf,
+    terra,
+    yaml
+Suggests:
+    RPostgres,
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+URL: https://github.com/pobsteta/foretaccess
+BugReports: https://github.com/pobsteta/foretaccess/issues
+Config/rextendr/version: 0.5.0
+Depends: 
+    R (>= 4.2)

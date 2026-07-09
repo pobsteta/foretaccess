@@ -1,0 +1,63 @@
+test_that("les défauts skidder sont ceux de Sylvaccess v3.6", {
+  cfg <- foretaccess_config()
+  expect_s3_class(cfg, "foretaccess_config")
+  sk <- cfg$skidder
+  expect_equal(sk$debardage_amont_max_m, 50)
+  expect_equal(sk$debardage_aval_max_m, 100)
+  expect_equal(sk$pente_bascule_amont_pct, 75)
+  expect_equal(sk$pente_bascule_aval_pct, 20)
+  expect_equal(sk$distance_hors_desserte_max_m, 50)
+  expect_equal(sk$pente_skidder_max_pct, 30)
+  expect_equal(sk$pente_abattage_max_pct, 100)
+})
+
+test_that("les défauts porteur sont ceux de Sylvaccess v3.6", {
+  po <- foretaccess_config()$porteur
+  expect_equal(po$pente_travers_max_pct, 15)
+  expect_equal(po$pente_montee_max_pct, 30)
+  expect_equal(po$pente_descente_max_pct, 25)
+  expect_equal(po$portee_grue_m, 8)
+  expect_equal(po$distance_pente_forte_max_m, 300)
+  expect_equal(po$distance_hors_desserte_max_m, 200)
+  expect_equal(po$pente_abattage_max_pct, 100)
+})
+
+test_that("les défauts câble posent le schéma (matériels à compléter au Lot 4)", {
+  ca <- foretaccess_config()$cable
+  expect_equal(ca$hauteur_cable_min_m, 4)
+  expect_equal(ca$hauteur_cable_max_m, 30)
+  expect_equal(ca$pas_angulaire_deg, 1)
+  expect_type(ca$materiels, "list")
+  expect_length(ca$materiels, 0)
+})
+
+test_that("les surcharges sont appliquées et validées", {
+  cfg <- foretaccess_config(skidder = list(debardage_aval_max_m = 120))
+  expect_equal(cfg$skidder$debardage_aval_max_m, 120)
+  # les autres défauts restent intacts
+  expect_equal(cfg$skidder$debardage_amont_max_m, 50)
+})
+
+test_that("une config invalide échoue avec un message ciblé", {
+  expect_error(
+    foretaccess_config(skidder = list(debardage_aval_max_m = -1)),
+    class = "simpleError"
+  )
+  expect_error(
+    foretaccess_config(skidder = list(debardage_amont_max_m = "beaucoup"))
+  )
+  # incohérence hauteur câble min/max
+  expect_error(
+    foretaccess_config(cable = list(hauteur_cable_min_m = 30, hauteur_cable_max_m = 4)),
+    regexp = "hauteur_cable"
+  )
+})
+
+test_that("round-trip YAML préserve la configuration", {
+  cfg <- foretaccess_config(porteur = list(portee_grue_m = 10))
+  path <- withr::local_tempfile(fileext = ".yaml")
+  write_config(cfg, path)
+  cfg2 <- read_config(path)
+  expect_equal(cfg2$porteur$portee_grue_m, 10)
+  expect_equal(cfg2$skidder, cfg$skidder)
+})
