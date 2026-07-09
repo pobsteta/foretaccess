@@ -1,7 +1,11 @@
-# Copiez ce fichier en `.Renviron` (gitignoré) et renseignez l'URL de votre base
-# PostGIS de test. Sans cette variable, les tests d'intégration PostGIS sont skippés.
+# Copiez ce fichier en `.Renviron` (gitignoré) et renseignez l'URL d'une base PostGIS
+# de TEST. Sans cette variable, les tests d'intégration PostGIS sont skippés.
 #
-# Les tests créent puis suppriment un schéma JETABLE unique (`fa_test_<pid>`) ; ils
-# ne touchent JAMAIS aux autres schémas de la base. Vous pouvez donc pointer vers une
-# base partagée : seul le schéma de test est créé/supprimé.
-FORETACCESS_DB_URL_TEST=postgresql://user:password@127.0.0.1:5432/dbname
+# IMPORTANT — utilisez une base DÉDIÉE au test (p. ex. `..._test`), JAMAIS la base de
+# production. Les tests créent puis suppriment un schéma jetable unique (`fa_test_<pid>`)
+# et ne touchent jamais aux autres schémas ; mais par prudence (cf. incidents nemeton),
+# pointez sur une base jetable.
+#
+# Exemple d'écosystème nemeton : la base `nemeton` est la prod, `nemeton_test` la base
+# de test dédiée.
+FORETACCESS_DB_URL_TEST=postgresql://user:password@127.0.0.1:5432/mabase_test
