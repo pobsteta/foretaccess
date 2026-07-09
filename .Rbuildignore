@@ -19,5 +19,7 @@
 ^\.idea$
 ^\.claude$
 ^\.lintr$
+^\.Renviron$
+^\.Renviron\.example$
 ^foretaccess\.Rproj$
 ^\.Rproj\.user$
