@@ -40,7 +40,7 @@ test_that("un NA dans classe lève une erreur ciblée", {
   )
 })
 
-test_that("un volume non aligné lève une erreur ciblée", {
+test_that("un volume aux dimensions divergentes lève une erreur ciblée", {
   volume <- terra::rast(
     nrows = 25, ncols = 25, xmin = 0, xmax = 250, ymin = 0, ymax = 250,
     crs = "EPSG:2154"
@@ -48,7 +48,33 @@ test_that("un volume non aligné lève une erreur ciblée", {
   terra::values(volume) <- 1
   expect_error(
     valider_entrees(toy_mnt(), toy_desserte(), toy_foret(), volume = volume),
-    regexp = "Grille non align"
+    regexp = "Dimensions"
+  )
+})
+
+test_that("un volume à la résolution divergente lève une erreur ciblée", {
+  # Mêmes dimensions (50 x 50) mais cellules de 10 m au lieu de 5 m.
+  volume <- terra::rast(
+    nrows = 50, ncols = 50, xmin = 0, xmax = 500, ymin = 0, ymax = 500,
+    crs = "EPSG:2154"
+  )
+  terra::values(volume) <- 1
+  expect_error(
+    valider_entrees(toy_mnt(), toy_desserte(), toy_foret(), volume = volume),
+    regexp = "Resolution"
+  )
+})
+
+test_that("un volume à l'emprise décalée lève une erreur ciblée", {
+  # Mêmes dimensions et même résolution, mais origine décalée de 10 m.
+  volume <- terra::rast(
+    nrows = 50, ncols = 50, xmin = 10, xmax = 260, ymin = 10, ymax = 260,
+    crs = "EPSG:2154"
+  )
+  terra::values(volume) <- 1
+  expect_error(
+    valider_entrees(toy_mnt(), toy_desserte(), toy_foret(), volume = volume),
+    regexp = "emprise"
   )
 })
 
@@ -64,6 +90,31 @@ test_that("une géométrie vide lève une erreur ciblée", {
   expect_error(
     valider_entrees(toy_mnt(), toy_desserte(), foret),
     regexp = "vide"
+  )
+})
+
+test_that("une géométrie invalide lève une erreur ciblée", {
+  # Polygone « nœud papillon » : auto-intersection, donc invalide au sens OGC.
+  noeud <- sf::st_sf(
+    id = 1L,
+    geometry = sf::st_sfc(
+      sf::st_polygon(list(rbind(
+        c(50, 50), c(100, 100), c(100, 50), c(50, 100), c(50, 50)
+      ))),
+      crs = 2154
+    )
+  )
+  expect_error(
+    valider_entrees(toy_mnt(), toy_desserte(), noeud),
+    regexp = "invalide"
+  )
+})
+
+test_that("une couche vectorielle sans CRS lève une erreur ciblée", {
+  foret <- sf::st_set_crs(toy_foret(), NA)
+  expect_error(
+    valider_entrees(toy_mnt(), toy_desserte(), foret),
+    regexp = "n'a pas de CRS"
   )
 })
 
