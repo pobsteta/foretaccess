@@ -1,0 +1,182 @@
+#' Validation des entrées du prétraitement
+#'
+#' Politique **stricte** (spec 001 §10, décision 1) : toutes les couches doivent
+#' partager le CRS du MNT, et les rasters son alignement de grille. Aucune
+#' reprojection ni rééchantillonnage silencieux — l'utilisateur prépare ses
+#' données en amont. Chaque manquement lève une erreur ciblée.
+#'
+#' @param mnt `SpatRaster` du modèle numérique de terrain (grille de référence).
+#' @param desserte Objet `sf` de lignes, avec un champ `classe`.
+#' @param foret Objet `sf` de polygones.
+#' @param obstacles_complets,obstacles_partiels Objets `sf` ou `NULL`.
+#' @param volume `SpatRaster` ou `NULL`, aligné sur la grille du MNT.
+#' @param parcellaire Objet `sf` ou `NULL`.
+#'
+#' @return `TRUE` de façon invisible si tout est valide ; sinon une erreur.
+#' @export
+valider_entrees <- function(mnt,
+                            desserte,
+                            foret,
+                            obstacles_complets = NULL,
+                            obstacles_partiels = NULL,
+                            volume = NULL,
+                            parcellaire = NULL) {
+  checkmate::assert_class(mnt, "SpatRaster")
+  if (terra::nlyr(mnt) != 1L) {
+    cli::cli_abort(c(
+      "{.arg mnt} doit avoir une seule couche.",
+      "x" = "Reçu : {terra::nlyr(mnt)} couches."
+    ))
+  }
+  if (is.na(.crs_sf(mnt))) {
+    cli::cli_abort("{.arg mnt} n'a pas de CRS défini ; il sert de référence.")
+  }
+
+  .valider_desserte(desserte)
+
+  vecteurs <- list(
+    desserte           = desserte,
+    foret              = foret,
+    obstacles_complets = obstacles_complets,
+    obstacles_partiels = obstacles_partiels,
+    parcellaire        = parcellaire
+  )
+  for (nm in names(vecteurs)) {
+    x <- vecteurs[[nm]]
+    if (is.null(x)) next
+    .valider_geometries(x, nm)
+    .valider_crs(x, mnt, nm)
+    .valider_recouvrement(x, mnt, nm)
+  }
+
+  if (!is.null(volume)) {
+    checkmate::assert_class(volume, "SpatRaster")
+    .valider_crs(volume, mnt, "volume")
+    .valider_grille(volume, mnt, "volume")
+  }
+
+  invisible(TRUE)
+}
+
+# Classes de desserte reconnues (spec 001 §3).
+.classes_desserte <- function() c("route", "piste", "dfci")
+
+# Le champ `classe` existe et ne contient que des valeurs reconnues.
+.valider_desserte <- function(desserte) {
+  checkmate::assert_class(desserte, "sf", .var.name = "desserte")
+
+  if (!"classe" %in% names(desserte)) {
+    cli::cli_abort(c(
+      "La desserte doit posséder un champ {.field classe}.",
+      "x" = "Champs présents : {.field {setdiff(names(desserte), attr(desserte, 'sf_column'))}}."
+    ))
+  }
+
+  valeurs <- as.character(desserte$classe)
+  if (anyNA(valeurs)) {
+    cli::cli_abort("Le champ {.field classe} de la desserte contient des {.val NA}.")
+  }
+
+  attendues <- .classes_desserte()
+  inconnues <- setdiff(unique(valeurs), attendues)
+  if (length(inconnues)) {
+    cli::cli_abort(c(
+      "Valeur{?s} de {.field classe} inconnue{?s} dans la desserte : {.val {inconnues}}.",
+      "i" = "Valeurs attendues : {.val {attendues}}."
+    ))
+  }
+
+  invisible(TRUE)
+}
+
+# CRS d'une couche, en `crs` sf. Un CRS absent vaut NA (terra renvoie "").
+.crs_sf <- function(x) {
+  if (!inherits(x, "SpatRaster")) {
+    return(sf::st_crs(x))
+  }
+  wkt <- terra::crs(x)
+  if (!nzchar(wkt)) sf::NA_crs_ else sf::st_crs(wkt)
+}
+
+# CRS strictement identique à celui du MNT.
+.valider_crs <- function(x, mnt, arg) {
+  crs_x <- .crs_sf(x)
+  crs_mnt <- .crs_sf(mnt)
+
+  if (is.na(crs_x)) {
+    cli::cli_abort("{.arg {arg}} n'a pas de CRS défini (attendu : celui du MNT).")
+  }
+  if (crs_x != crs_mnt) {
+    cli::cli_abort(c(
+      "CRS divergent pour {.arg {arg}}.",
+      "x" = "{.arg {arg}} : {crs_x$input %||% 'inconnu'} ; MNT : {crs_mnt$input %||% 'inconnu'}.",
+      "i" = "Reprojetez la couche sur le CRS du MNT avant l'appel (politique stricte)."
+    ))
+  }
+  invisible(TRUE)
+}
+
+# Grille raster strictement identique à celle du MNT (dimensions, résolution, emprise).
+.valider_grille <- function(r, mnt, arg) {
+  if (!identical(dim(r)[1:2], dim(mnt)[1:2])) {
+    cli::cli_abort(c(
+      "Grille non alignée pour {.arg {arg}}.",
+      "x" = "Dimensions {paste(dim(r)[1:2], collapse = 'x')} ; MNT : \\
+             {paste(dim(mnt)[1:2], collapse = 'x')}."
+    ))
+  }
+  if (!isTRUE(all.equal(terra::res(r), terra::res(mnt)))) {
+    cli::cli_abort(c(
+      "Grille non alignée pour {.arg {arg}}.",
+      "x" = "Résolution {paste(terra::res(r), collapse = 'x')} ; MNT : \\
+             {paste(terra::res(mnt), collapse = 'x')}."
+    ))
+  }
+  if (!isTRUE(all.equal(as.vector(terra::ext(r)), as.vector(terra::ext(mnt))))) {
+    cli::cli_abort(c(
+      "Grille non alignée pour {.arg {arg}}.",
+      "x" = "L'emprise diffère de celle du MNT.",
+      "i" = "Aucun rééchantillonnage silencieux n'est effectué (politique stricte)."
+    ))
+  }
+  invisible(TRUE)
+}
+
+# Géométries présentes, non vides et valides.
+.valider_geometries <- function(x, arg) {
+  checkmate::assert_class(x, "sf", .var.name = arg)
+
+  if (nrow(x) == 0L) {
+    cli::cli_abort("{.arg {arg}} ne contient aucune géométrie.")
+  }
+  vides <- sf::st_is_empty(x)
+  if (any(vides)) {
+    cli::cli_abort(c(
+      "{.arg {arg}} contient {sum(vides)} géométrie{?s} vide{?s}.",
+      "x" = "Ligne{?s} concernée{?s} : {which(vides)}."
+    ))
+  }
+  invalides <- !sf::st_is_valid(x)
+  if (any(invalides, na.rm = TRUE)) {
+    cli::cli_abort(c(
+      "{.arg {arg}} contient {sum(invalides, na.rm = TRUE)} géométrie{?s} invalide{?s}.",
+      "i" = "Corrigez avec {.fn sf::st_make_valid} avant l'appel."
+    ))
+  }
+  invisible(TRUE)
+}
+
+# L'emprise de la couche recoupe celle du MNT.
+.valider_recouvrement <- function(x, mnt, arg) {
+  bb <- sf::st_bbox(x)
+  em <- terra::ext(mnt)
+  disjoint <- bb[["xmax"]] < em$xmin || bb[["xmin"]] > em$xmax ||
+    bb[["ymax"]] < em$ymin || bb[["ymin"]] > em$ymax
+  if (disjoint) {
+    cli::cli_abort(c(
+      "{.arg {arg}} ne recoupe pas l'emprise du MNT.",
+      "x" = "Emprises disjointes."
+    ))
+  }
+  invisible(TRUE)
+}

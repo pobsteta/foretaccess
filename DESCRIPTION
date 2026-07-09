@@ -20,7 +20,9 @@ Imports:
     cli,
     DBI,
     sf,
+    stats,
     terra,
+    tools,
     yaml
 Suggests:
     RPostgres,
