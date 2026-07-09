@@ -204,6 +204,32 @@ Couvre la DoD produit.
 
 ---
 
+## EPIC 10 — Acquisition depuis AOI *(Lot 10, amont du Lot 1)*
+Étend EF-1. Téléchargement automatique des entrées à partir d'une `AOI.gpkg`, patron nemeton
+(`happign`/`osmdata`, config JSON par pays). Voir `specs/010-acquisition-aoi.md`.
+
+### US-10.1 — Résolveur de sources config-driven
+*…je veux* des endpoints/couches déclarés dans `inst/datasources/FR.json` (pas en dur), *afin de*
+changer de source sans toucher au code.
+- **CA1** : `get_data_source()`/`get_layer_service()` lisent le JSON ; test sur le résolveur.
+
+### US-10.2 — Acquisition des couches (phase 1)
+*…je veux* télécharger MNT (RGE ALTI 5 m), desserte (BD TOPO), forêt (BD Forêt v2), obstacles
+(OSM) et cadastre depuis l'AOI.
+- **CA1** : `acquire_inputs()` produit ces couches en EPSG:2154, mises en cache et idempotentes.
+- **CA2** : `happign`/`osmdata` en Suggests ; absence → message d'installation ciblé.
+
+### US-10.3 — Compatibilité avec le prétraitement
+*…je veux* que les sorties alimentent directement `preprocess()` (Lot 1).
+- **CA1** : enchaînement `acquire_inputs()` → `preprocess()` démontré sur une micro-AOI.
+- **CA2** : tests unitaires **mockés** (hors-ligne) verts en CI ; intégration réseau opt-in.
+
+### US-10.4 — Phase 2 (différée)
+MNH LiDAR HD → volume estimé (`lasR`/`lidR`) ; BD Forêt v3 (repli v3→v2) ; MNT LiDAR HD (si
+résolution < 5 m un jour). *Hors périmètre de la première livraison.*
+
+---
+
 ## Traçabilité EF → Epics
 
 | EF | Epics |
