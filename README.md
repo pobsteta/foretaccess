@@ -1,5 +1,14 @@
 # ForêtAccess
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/pobsteta/foretaccess/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pobsteta/foretaccess/actions/workflows/R-CMD-check.yaml)
+[![Version](https://img.shields.io/github/v/release/pobsteta/foretaccess?sort=semver&logo=github&label=version&color=blue)](https://github.com/pobsteta/foretaccess/releases/latest)
+[![pkgdown](https://github.com/pobsteta/foretaccess/actions/workflows/pkgdown.yaml/badge.svg)](https://pobsteta.github.io/foretaccess/)
+[![codecov](https://codecov.io/gh/pobsteta/foretaccess/graph/badge.svg)](https://codecov.io/gh/pobsteta/foretaccess)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?logo=gnu)](https://www.gnu.org/licenses/gpl-3.0)
+<!-- badges: end -->
+
 Cartographie automatique de l'**accessibilité des forêts** selon le mode d'exploitation
 (skidder, porteur, câble-mât, camion DFCI). Réimplémentation moderne, découplée et
 testable du modèle **Sylvaccess** (INRAE — S. Dupire), sous forme de **package R** avec un

@@ -1,0 +1,51 @@
+# Construit le site pkgdown et le déploie sur la branche gh-pages.
+# Le site est bâti dans pkgdown_site/ (dédié) pour ne pas entrer en conflit avec
+# docs/ (qui héberge PRD/ROADMAP/ADR/brief du projet).
+on:
+  push:
+    branches: [main, master]
+  release:
+    types: [published]
+  pull_request:
+    branches: [main, master]
+
+name: pkgdown
+
+permissions:
+  contents: write
+
+jobs:
+  pkgdown:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+      cancel-in-progress: true
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+
+      - name: Construire le site pkgdown
+        run: pkgdown::build_site(dest_dir = "pkgdown_site", new_process = FALSE, install = TRUE)
+        shell: Rscript {0}
+
+      - name: Déployer sur gh-pages
+        if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          clean: true
+          branch: gh-pages
+          folder: pkgdown_site

@@ -32,6 +32,8 @@ target/
 # targets / pkgdown
 _targets/
 docs/pkgdown/
+pkgdown_site/
+cobertura.xml
 
 # Documents de travail (PDF, etc.)
 *.pdf
