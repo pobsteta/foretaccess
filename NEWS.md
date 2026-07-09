@@ -1,6 +1,6 @@
-# foretaccess (development version)
+# foretaccess 0.1.0 (2026-07-09)
 
-## Lot 0 — Fondations (en cours)
+## Lot 0 — Fondations
 
 * Squelette de **package R** + **crate Rust `cablehelp`** liée par `extendr`
   (`cablehelp_version()` comme preuve de chaîne R ↔ Rust).
