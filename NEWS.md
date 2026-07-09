@@ -1,3 +1,8 @@
+# foretaccess (development version)
+
+* Ajout des badges README (R-CMD-check, version, pkgdown, couverture Codecov,
+  lifecycle, licence) et du site pkgdown + job de couverture en CI.
+
 # foretaccess 0.1.0 (2026-07-09)
 
 ## Lot 0 — Fondations
