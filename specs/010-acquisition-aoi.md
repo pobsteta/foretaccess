@@ -32,7 +32,7 @@ Les sorties de ce lot sont exactement les **entrées** attendues par `preprocess
 | **MNT** | RGE ALTI (IGN WMS) | `ELEVATION.ELEVATIONGRIDCOVERAGE` @ **5 m** | raster `mnt.tif` |
 | **Desserte** | BD TOPO (IGN WFS) | `BDTOPO_V3:troncon_de_route` | `desserte.gpkg` (+ champ `classe`) |
 | **Forêt** | BD Forêt **v2** (IGN WFS) | `LANDCOVER.FORESTINVENTORY.V2:formation_vegetale` | `foret.gpkg` |
-| **Obstacles** | OpenStreetMap | `osmdata` : `building`, `water`/`waterway` | `obstacles.gpkg` |
+| **Obstacles** | OpenStreetMap | `osmdata` : `building`, `natural=water`/`waterway`, `railway`, `natural=cliff` | `obstacles.gpkg` |
 | **Parcellaire** | Cadastre (IGN WFS) | `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle` | `parcellaire.gpkg` (optionnel) |
 
 ### Phase 2 (hors ce lot — notée pour la roadmap)
@@ -87,8 +87,8 @@ Fonctions par source (appelées par l'orchestrateur, testables isolément) :
 - `acquire_desserte(aoi, ...)` → `happign::get_wfs(layer = <roads>)` + **mapping `classe`**
   (voir §10 Q2) → valeurs {route, piste, dfci} attendues par `preprocess()`.
 - `acquire_foret(aoi, version = "v2", ...)` → `happign::get_wfs(layer = <bdforet_v2>)`.
-- `acquire_obstacles(aoi, ...)` → `osmdata::opq(bbox_wgs84) |> add_osm_feature("building") |>
-  osmdata_sf()` (+ eau) → polygones obstacles.
+- `acquire_obstacles(aoi, features = c("building", "water", "railway", "cliff"), ...)` →
+  `osmdata::opq(bbox_wgs84) |> add_osm_feature(...) |> osmdata_sf()` → polygones/lignes obstacles.
 - `acquire_cadastre(aoi, ...)` → `happign::get_wfs(layer = <cadastre>)`.
 
 Chaque fonction : reproj EPSG:2154, re-clip sur l'AOI (`sf::st_intersection` — les WFS ne
@@ -168,14 +168,15 @@ tests/testthat/test-datasources.R, test-acquire-*.R (mocks), test-acquire-online
 
 ---
 
-## 10. Questions ouvertes (à trancher avant codage)
+## 10. Décisions (tranchées 2026-07-09)
 
-1. **Cadastre** : source IGN WFS `PARCELLAIRE_EXPRESS` (proposé, cohérent avec le reste happign)
-   ou API **Etalab** `cadastre.data.gouv.fr` (comme le fait aussi nemeton) ?
-2. **Mapping `classe` de la desserte** (BD TOPO `troncon_de_route`) vers {route, piste, dfci} :
-   quelles règles ? (p. ex. `nature`/`importance` → route vs piste ; **DFCI** rarement
-   distinguable dans BD TOPO → source/attribut dédié ou classe optionnelle au départ ?)
-3. **Obstacles OSM** : quel jeu de features par défaut ? (proposé : `building` + surfaces d'eau
-   `natural=water`/`waterway`) — en ajouter (falaises, voies ferrées) ?
-4. **Emprise des requêtes** : buffer par défaut autour de l'AOI (`buffer_m`) pour capter la
-   desserte hors emprise stricte — valeur par défaut (p. ex. 0 vs 100 m) ?
+1. **Cadastre** : **IGN WFS `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`** (même client
+   happign que le reste ; pas d'API Etalab en v1).
+2. **Mapping `classe` de la desserte** : dériver **route/piste** depuis les attributs BD TOPO
+   (`nature`/`importance`) ; la classe **`dfci`** reste **optionnelle/vide en phase 1** (peu
+   distinguable dans BD TOPO), à alimenter plus tard via une **source DFCI dédiée**. Le champ
+   `classe` produit reste conforme au contrat de `preprocess()`.
+3. **Obstacles OSM** (par défaut) : **`building`** + surfaces d'eau (`natural=water` /
+   `waterway`) + **`railway`** + **`natural=cliff`** (falaises). Jeu extensible via paramètre.
+4. **Buffer AOI** : **100 m** par défaut (`buffer_m = 100`) pour capter la desserte juste hors
+   emprise (utile au least-cost, Lot 2) ; **recadrage final sur l'AOI stricte**.
