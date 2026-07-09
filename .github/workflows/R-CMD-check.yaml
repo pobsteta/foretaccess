@@ -87,17 +87,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Cohérence DESCRIPTION / NEWS / CITATION (versions stables seulement)
-        shell: Rscript {0}
+        shell: bash
         run: |
-          desc <- read.dcf("DESCRIPTION")[, "Version"]
-          if (grepl("\\.9000$|\\.9[0-9]{3}$", desc) || lengths(regmatches(desc, gregexpr("\\.", desc))) > 2) {
-            cat("Version de dev (", desc, ") — contrôle de cohérence sauté.\n")
-            quit(status = 0)
-          }
-          news <- readLines("NEWS.md")
-          news_ver <- sub("^# foretaccess ([0-9.]+).*", "\\1", news[grepl("^# foretaccess [0-9]", news)][1])
-          cit <- yaml::read_yaml("CITATION.cff")$version
-          if (!identical(desc, news_ver) || !identical(desc, as.character(cit))) {
-            stop(sprintf("Incohérence: DESCRIPTION=%s NEWS=%s CITATION=%s", desc, news_ver, cit))
-          }
-          cat("Versions cohérentes:", desc, "\n")
+          VER=$(grep '^Version:' DESCRIPTION | sed 's/^Version:[[:space:]]*//')
+          # Version de dev (X.Y.Z.9000, 4 composantes) -> contrôle sauté.
+          if ! echo "$VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Version de dev ($VER) — contrôle de cohérence sauté."
+            exit 0
+          fi
+          NEWS=$(grep -oE '^# foretaccess [0-9]+\.[0-9]+\.[0-9]+' NEWS.md | head -1 | awk '{print $3}')
+          CIT=$(grep -E '^version:' CITATION.cff | head -1 | sed 's/^version:[[:space:]]*//' | tr -d '"' | tr -d "'" | xargs)
+          if [ "$VER" != "$NEWS" ] || [ "$VER" != "$CIT" ]; then
+            echo "Incohérence: DESCRIPTION=$VER NEWS=$NEWS CITATION=$CIT"
+            exit 1
+          fi
+          echo "Versions cohérentes: $VER"

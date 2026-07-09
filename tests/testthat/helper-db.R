@@ -21,8 +21,29 @@ skip_if_no_test_db <- function() {
   }
 }
 
+# Décompose une URL postgresql://user:pass@host:port/dbname en composants.
+# RPostgres ne re-parse PAS une URL passée via `dbname` : il faut l'éclater.
+parse_pg_url <- function(url) {
+  rx <- "^postgres(?:ql)?://(?:([^:@/]+)(?::([^@/]+))?@)?([^:/?]+)(?::([0-9]+))?/([^?]+)"
+  m <- regmatches(url, regexec(rx, url))[[1]]
+  if (length(m) == 0L) {
+    stop("URL PostgreSQL invalide : ", url)
+  }
+  list(
+    user     = m[2],
+    password = m[3],
+    host     = m[4],
+    port     = if (nzchar(m[5])) as.integer(m[5]) else 5432L,
+    dbname   = m[6]
+  )
+}
+
 connect_test_db <- function() {
-  DBI::dbConnect(RPostgres::Postgres(), dbname = test_db_url())
+  p <- parse_pg_url(test_db_url())
+  args <- list(RPostgres::Postgres(), dbname = p$dbname, host = p$host, port = p$port)
+  if (nzchar(p$user)) args$user <- p$user
+  if (nzchar(p$password)) args$password <- p$password
+  do.call(DBI::dbConnect, args)
 }
 
 # Nom de schéma jetable, unique par processus de test.
