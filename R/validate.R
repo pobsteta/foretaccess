@@ -25,11 +25,11 @@ valider_entrees <- function(mnt,
   if (terra::nlyr(mnt) != 1L) {
     cli::cli_abort(c(
       "{.arg mnt} doit avoir une seule couche.",
-      "x" = "Reçu : {terra::nlyr(mnt)} couches."
+      "x" = "Recu : {terra::nlyr(mnt)} couches."
     ))
   }
   if (is.na(.crs_sf(mnt))) {
-    cli::cli_abort("{.arg mnt} n'a pas de CRS défini ; il sert de référence.")
+    cli::cli_abort("{.arg mnt} n'a pas de CRS defini ; il sert de reference.")
   }
 
   .valider_desserte(desserte)
@@ -67,8 +67,8 @@ valider_entrees <- function(mnt,
 
   if (!"classe" %in% names(desserte)) {
     cli::cli_abort(c(
-      "La desserte doit posséder un champ {.field classe}.",
-      "x" = "Champs présents : {.field {setdiff(names(desserte), attr(desserte, 'sf_column'))}}."
+      "La desserte doit posseder un champ {.field classe}.",
+      "x" = "Champs presents : {.field {setdiff(names(desserte), attr(desserte, 'sf_column'))}}."
     ))
   }
 
@@ -104,7 +104,7 @@ valider_entrees <- function(mnt,
   crs_mnt <- .crs_sf(mnt)
 
   if (is.na(crs_x)) {
-    cli::cli_abort("{.arg {arg}} n'a pas de CRS défini (attendu : celui du MNT).")
+    cli::cli_abort("{.arg {arg}} n'a pas de CRS defini (attendu : celui du MNT).")
   }
   if (crs_x != crs_mnt) {
     cli::cli_abort(c(
@@ -120,23 +120,23 @@ valider_entrees <- function(mnt,
 .valider_grille <- function(r, mnt, arg) {
   if (!identical(dim(r)[1:2], dim(mnt)[1:2])) {
     cli::cli_abort(c(
-      "Grille non alignée pour {.arg {arg}}.",
+      "Grille non alignee pour {.arg {arg}}.",
       "x" = "Dimensions {paste(dim(r)[1:2], collapse = 'x')} ; MNT : \\
              {paste(dim(mnt)[1:2], collapse = 'x')}."
     ))
   }
   if (!isTRUE(all.equal(terra::res(r), terra::res(mnt)))) {
     cli::cli_abort(c(
-      "Grille non alignée pour {.arg {arg}}.",
-      "x" = "Résolution {paste(terra::res(r), collapse = 'x')} ; MNT : \\
+      "Grille non alignee pour {.arg {arg}}.",
+      "x" = "Resolution {paste(terra::res(r), collapse = 'x')} ; MNT : \\
              {paste(terra::res(mnt), collapse = 'x')}."
     ))
   }
   if (!isTRUE(all.equal(as.vector(terra::ext(r)), as.vector(terra::ext(mnt))))) {
     cli::cli_abort(c(
-      "Grille non alignée pour {.arg {arg}}.",
-      "x" = "L'emprise diffère de celle du MNT.",
-      "i" = "Aucun rééchantillonnage silencieux n'est effectué (politique stricte)."
+      "Grille non alignee pour {.arg {arg}}.",
+      "x" = "L'emprise differe de celle du MNT.",
+      "i" = "Aucun reechantillonnage silencieux n'est effectue (politique stricte)."
     ))
   }
   invisible(TRUE)
@@ -147,19 +147,19 @@ valider_entrees <- function(mnt,
   checkmate::assert_class(x, "sf", .var.name = arg)
 
   if (nrow(x) == 0L) {
-    cli::cli_abort("{.arg {arg}} ne contient aucune géométrie.")
+    cli::cli_abort("{.arg {arg}} ne contient aucune geometrie.")
   }
   vides <- sf::st_is_empty(x)
   if (any(vides)) {
     cli::cli_abort(c(
-      "{.arg {arg}} contient {sum(vides)} géométrie{?s} vide{?s}.",
-      "x" = "Ligne{?s} concernée{?s} : {which(vides)}."
+      "{.arg {arg}} contient {sum(vides)} geometrie{?s} vide{?s}.",
+      "x" = "Ligne{?s} concernee{?s} : {which(vides)}."
     ))
   }
   invalides <- !sf::st_is_valid(x)
   if (any(invalides, na.rm = TRUE)) {
     cli::cli_abort(c(
-      "{.arg {arg}} contient {sum(invalides, na.rm = TRUE)} géométrie{?s} invalide{?s}.",
+      "{.arg {arg}} contient {sum(invalides, na.rm = TRUE)} geometrie{?s} invalide{?s}.",
       "i" = "Corrigez avec {.fn sf::st_make_valid} avant l'appel."
     ))
   }

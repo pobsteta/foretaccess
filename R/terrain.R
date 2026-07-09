@@ -52,9 +52,5 @@ calculer_terrain <- function(mnt, methode = "Horn") {
 
 # Nombre de voisins passé à terra::terrain pour chaque méthode.
 .voisins_terrain <- function(methode) {
-  switch(methode,
-    Horn = 8L,
-    Evans = 4L,
-    cli::cli_abort("Méthode de pente inconnue : {.val {methode}}.")
-  )
+  c(Horn = 8L, Evans = 4L)[[methode]]
 }

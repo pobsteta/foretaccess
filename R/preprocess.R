@@ -212,7 +212,7 @@ lire_rasters <- function(write_dir) {
   fichiers <- file.path(write_dir, paste0(.couches_rasters(), ".tif"))
   fichiers <- fichiers[file.exists(fichiers)]
   if (!length(fichiers)) {
-    cli::cli_abort("Aucun raster de prétraitement trouvé dans {.path {write_dir}}.")
+    cli::cli_abort("Aucun raster de pretraitement trouve dans {.path {write_dir}}.")
   }
   stats::setNames(lapply(fichiers, terra::rast), tools::file_path_sans_ext(basename(fichiers)))
 }

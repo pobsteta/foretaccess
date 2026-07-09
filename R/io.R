@@ -19,8 +19,8 @@ NULL
     return(terra::rast(x))
   }
   cli::cli_abort(c(
-    "{.arg {arg}} doit être un chemin de fichier ou un {.cls SpatRaster}.",
-    "x" = "Reçu : {.cls {class(x)[1]}}."
+    "{.arg {arg}} doit etre un chemin de fichier ou un {.cls SpatRaster}.",
+    "x" = "Recu : {.cls {class(x)[1]}}."
   ))
 }
 
@@ -37,7 +37,7 @@ NULL
     return(sf::st_read(x, quiet = TRUE))
   }
   cli::cli_abort(c(
-    "{.arg {arg}} doit être un chemin de fichier ou un objet {.cls sf}.",
-    "x" = "Reçu : {.cls {class(x)[1]}}."
+    "{.arg {arg}} doit etre un chemin de fichier ou un objet {.cls sf}.",
+    "x" = "Recu : {.cls {class(x)[1]}}."
   ))
 }
