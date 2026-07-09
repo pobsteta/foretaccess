@@ -39,7 +39,7 @@ jobs:
           needs: website
 
       - name: Construire le site pkgdown
-        run: pkgdown::build_site(dest_dir = "pkgdown_site", new_process = FALSE, install = TRUE)
+        run: pkgdown::build_site(new_process = FALSE, install = TRUE)
         shell: Rscript {0}
 
       - name: Déployer sur gh-pages

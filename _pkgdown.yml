@@ -1,5 +1,7 @@
 url: https://pobsteta.github.io/foretaccess
 
+destination: pkgdown_site
+
 template:
   bootstrap: 5
 
