@@ -184,15 +184,16 @@ Le jeu jouet du Lot 0 (`inst/extdata/toy/`) suffit ; on pourra l'enrichir (obsta
 
 ---
 
-## 10. Questions ouvertes (à trancher avant codage)
+## 10. Décisions (tranchées 2026-07-09)
 
-1. **Politique CRS / grille en entrée** : strict (erreur si une couche diffère du MNT) —
-   proposé — ou **reprojection/rééchantillonnage automatique** vers la grille du MNT ?
-2. **Algorithme de pente/exposition** : utiliser `terra`/Horn maintenant et réconcilier avec
-   l'oracle v3.6 plus tard (proposé) — ou **porter la formule exacte de Sylvaccess** (`.pyx`)
-   dès le Lot 1 ?
-3. **Oracle de non-régression du Lot 1** : démarrer sur l'**oracle analytique** (MNT jouet à
-   pente connue) — proposé — ou exiger l'**oracle réel Sylvaccess v3.6** dès ce lot (implique
-   de faire tourner v3.6 sur un MNT réaliste) ?
-4. **Sortie rasters** : objets en mémoire + écriture **optionnelle** COG (`write_dir`) —
-   proposé — ou écriture COG **systématique** sur disque ?
+1. **Politique CRS / grille** : **stricte** — toutes les couches doivent partager le CRS et
+   l'alignement de grille du MNT ; sinon **erreur ciblée**. Aucune reprojection/rééchantillonnage
+   silencieux (l'utilisateur reprojette en amont).
+2. **Pente / exposition** : **`terra`/Horn** (8 voisins) au Lot 1 ; réconciliation avec l'oracle
+   Sylvaccess v3.6 (et le `.pyx`) différée. La méthode reste **configurable** pour permettre cet
+   ajustement sans refonte.
+3. **Oracle de non-régression** : **analytique** — validation sur le MNT jouet (plan incliné
+   20 %, exposition constante). Les oracles réels Sylvaccess v3.6 seront ajoutés ultérieurement
+   (ADR-006).
+4. **Sortie rasters** : **objets en mémoire** + écriture GeoTIFF/COG **optionnelle** via
+   `write_dir` (pas d'I/O imposé à chaque appel).
