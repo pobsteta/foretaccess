@@ -45,3 +45,7 @@ cobertura.xml
 src/rust/vendor
 src/Makevars
 src/Makevars.win
+
+# Artefacts testthat (rapports d'échec régénérés à chaque exécution)
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds
