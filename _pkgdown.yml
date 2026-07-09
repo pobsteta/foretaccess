@@ -1,0 +1,10 @@
+url: https://pobsteta.github.io/foretaccess
+
+destination: pkgdown_site
+
+template:
+  bootstrap: 5
+
+# La documentation projet (PRD, ROADMAP, ADR, brief) vit dans docs/ et n'est PAS
+# la sortie pkgdown : le site est construit dans pkgdown_site/ puis déployé sur la
+# branche gh-pages (cf. .github/workflows/pkgdown.yaml).

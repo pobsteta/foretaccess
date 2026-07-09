@@ -21,5 +21,9 @@
 ^\.lintr$
 ^\.Renviron$
 ^\.Renviron\.example$
+^_pkgdown\.yml$
+^pkgdown_site$
+^codecov\.yml$
+^cobertura\.xml$
 ^foretaccess\.Rproj$
 ^\.Rproj\.user$
