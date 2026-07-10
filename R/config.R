@@ -88,7 +88,15 @@ foretaccess_config <- function(skidder = list(),
       crs_epsg      = NA_integer_,
       # Methode de calcul de la pente/exposition (Lot 1) : Horn (8 voisins) ou
       # Evans (4 voisins). Configurable pour reconcilier avec l'oracle v3.6.
-      methode_pente = "Horn"
+      methode_pente = "Horn",
+      # Tuilage (Lot 7). La tuile vaut quatre fois le halo initial : le halo n'y
+      # coute alors que 125 % de surface calculee en trop. Le halo double tant que
+      # des cellules restent non certifiees ; `halo_max_m` borne le pire cas, a
+      # l'ordre de grandeur du trainage sur piste observe sur donnees reelles.
+      tuile_m        = 2000,
+      halo_initial_m = 500,
+      halo_max_m     = 4000,
+      workers        = 1L
     )
   )
 }
@@ -152,6 +160,17 @@ validate_config <- function(cfg) {
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)
   checkmate::assert_int(ge$crs_epsg, na.ok = TRUE)
   checkmate::assert_choice(ge$methode_pente, .methodes_terrain())
+  checkmate::assert_number(ge$tuile_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ge$halo_initial_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ge$halo_max_m, lower = 0, finite = TRUE)
+  if (ge$halo_max_m < ge$halo_initial_m) {
+    cli::cli_abort(c(
+      "Configuration de tuilage incoherente.",
+      "x" = "{.field halo_max_m} ({ge$halo_max_m}) doit etre >= \\
+             {.field halo_initial_m} ({ge$halo_initial_m})."
+    ))
+  }
+  checkmate::assert_int(ge$workers, lower = 1)
 
   invisible(cfg)
 }
