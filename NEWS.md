@@ -1,3 +1,32 @@
+# foretaccess 0.3.1 (2026-07-10)
+
+## Conformité à Sylvaccess v3.6
+
+Première exécution sur données réelles (AOI de 7,2 km², RGE ALTI + BD TOPO). Elle a
+révélé deux écarts au code source que le jeu jouet ne pouvait pas exposer.
+
+* `distance_hors_desserte_max_m` **ne plafonne pas la distance de débardage**. C'est la
+  distance maximale que le skidder peut parcourir **hors forêt**, sur du terrain roulable,
+  pour rejoindre un massif qu'aucune desserte ne touche. Nouvelle fonction exportée
+  `zone_roulable_connectee()`, qui reproduit la construction en trois temps de
+  `Pente_ok_skidder` (connexité depuis la desserte, saut borné hors forêt, recollement),
+  et `terrain_roulable()`, son critère de pente sans le critère forêt.
+* La `distance_trainage_piste` est désormais pondérée par la pente, comme le traînage en
+  forêt (`Dfwd_flat_forest_tracks(f, Lien_Piste, Pond_pente, …)`), et non propagée à coût
+  uniforme.
+
+Sur l'AOI de test, la surface parcourable augmente de 1,9 ha.
+
+## Performance
+
+* Le tas binaire du Dijkstra était recopié à chaque opération (sémantique de copie de R
+  sur un vecteur porté par une liste) : **357×** sur une sonde de 200 000 insertions.
+* Le balayage radial de treuillage portait des vecteurs pleine longueur sous un masque de
+  rayons vivants : compacter les survivants le rend **2,2×** plus rapide, à sortie
+  identique bit à bit.
+
+`skidder()` traite désormais 7,2 km² en 22 s CPU (3,05 s/km²) sur un cœur.
+
 # foretaccess 0.3.0 (2026-07-10)
 
 ## Lot 2 — Moteur Skidder (+ service least-cost partagé)

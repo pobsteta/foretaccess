@@ -215,12 +215,35 @@ admissible sans calcul.
   complets ∩ hors obstacles partiels.
 - `zone_abattage` (`Pente_ok_buch`) = `pente ≤ pente_abattage_max_pct` (défaut 100 %).
 - Une cellule est **accessible** si elle est atteinte soit par roulage (least-cost depuis la
-  desserte, dans la limite de `distance_hors_desserte_max_m`), soit par treuillage (§4.3).
+  desserte, sur la zone construite en §4.5.1), soit par treuillage (§4.3).
 - `distance_debardage = distance_treuillage + distance_trainage_foret + distance_trainage_piste`.
+- La `distance_trainage_piste` est un least-cost **le long du réseau**, des pistes vers la
+  route la plus proche, sur la **même surface pondérée par la pente** que le traînage en
+  forêt (`Dfwd_flat_forest_tracks(f, Lien_Piste, Pond_pente, …)`) : une piste en devers
+  coûte plus qu'une piste plate.
 - **`s_option`** (nouveau paramètre, absent de la config actuelle) arbitre entre les deux
   stratégies : `1` = privilégier le treuillage (limiter l'impact sur le sol, **défaut v3.6**),
   `2` = privilégier le débusquage. Les deux ordonnancent différemment roulage et treuillage.
   Le Lot 2b n'implémente que l'**option 1** ; l'option 2 est reportée (§10.7).
+
+#### 4.5.1 `distance_hors_desserte_max_m` — ce que ce paramètre fait vraiment
+
+Ce n'est **pas** un plafond sur la distance de débardage. C'est la distance maximale que le
+skidder peut parcourir **hors forêt**, sur du terrain roulable, pour rejoindre un massif
+qu'aucune desserte ne touche : couper par une prairie plutôt que faire le tour.
+
+Sylvaccess construit `Pente_ok_skidder` en trois temps, et `s_dmax_outfor` (défaut 50 m)
+ne borne que le deuxième :
+
+1. la **forêt roulable** atteinte depuis la desserte, sans limite de distance ;
+2. une extension **hors forêt** sur du terrain roulable (`Pente_ok_skid`, où le critère
+   forêt ne joue pas), plafonnée à `distance_hors_desserte_max_m` ;
+3. le **recollement** de la forêt roulable ainsi rendue accessible, à nouveau sans limite.
+
+Seule l'étape 2 est un coût borné ; les étapes 1 et 3 ne demandent que de la connectivité
+(composantes connexes en 8-connexité). D'où la conclusion, contre-intuitive : sur un massif
+bien desservi, ce paramètre n'a **aucun effet** — et une distance de débardage de 4 km n'est
+pas une anomalie mais la conséquence d'un traînage sur piste lui aussi long.
 
 ### 4.6 Tableau récapitulatif (US-2.3)
 
@@ -279,6 +302,7 @@ Sylvaccess produit aussi des **classes de distance totale** (`s_class` : 0 ; 250
 - `test-skidder-distances.R` : additivité des distances.
 - `test-skidder-recap.R` : conservation de la surface ; volumes ; ligne `indetermine`.
 - `test-skidder-grid.R` : grille de sortie.
+- `test-hors-desserte.R` : saut hors forêt (§4.5.1) ; pondération de pente sur piste.
 
 **Oracle** : analytique, mais désormais **calibré sur le code source** — la loi de bascule et
 la fonction de coût ont des valeurs de référence exactes (§4.4, §5). Les sorties réelles
@@ -366,6 +390,10 @@ contente pas de les trancher : il **contredit** deux hypothèses de la première
    un plus court chemin. Le service least-cost ne sert qu'au **traînage**.
 7. **Place de dépôt** : couche `sf` de points fournie par l'utilisateur ; à défaut, la cellule
    de desserte d'`allocation` (le `.pyx` fournit exactement cette information).
+10. **`distance_hors_desserte_max_m`** : distance maximale parcourable **hors forêt**, et non
+    plafond de débardage (§4.5.1). Corrigé après la première exécution sur données réelles,
+    qui a montré des distances de 4 km qu'aucun plafond de 50 m n'aurait dû laisser passer :
+    le paramètre ne bornait rien de ce qu'on lui prêtait.
 
 ### Questions restantes (non bloquantes)
 
