@@ -20,7 +20,9 @@ pas les équations. Trois d'entre elles contredisaient nos hypothèses initiales
 * **`treuiller()`** : le treuillage n'est **pas** un plus court chemin, mais un
   balayage radial 360° au pas de 1°, en ligne droite, avec une distance **3D** et
   une contrainte de dégagement du câble (la corde reste entre le sol et
-  `hauteur_degagement_max_m`, attachée à `hauteur_attache_treuil_m`).
+  `hauteur_degagement_max_m`, attachée à `hauteur_attache_treuil_m`). Les rayons
+  vivants sont compactés à chaque pas : la plupart meurent en quelques cellules,
+  et le travail s'effondre (2,2× sur terrain réel).
 * **`distance_treuillage_max()`**, **`coefficients_bascule()`** : la loi de bascule
   est affine en **dénivelé**, pas en pente. À plat, la distance admissible vaut
   **80,23 m** — ni 50 (plafond amont), ni 100 (plafond aval).

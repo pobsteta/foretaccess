@@ -156,39 +156,49 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
 
   for (az in seq_along(rayons)) {
     ray <- rayons[[az]]
-    vivant <- rep(TRUE, length(routes))
+
+    # Rayons encore vivants. On les *compacte* a chaque pas plutot que de porter
+    # un masque sur des vecteurs pleine longueur : la plupart des rayons meurent
+    # en quelques cellules (relief, plafond de distance), et le travail s'effondre.
+    act <- routes
+    rl_a <- rl
+    rc_a <- rc
+    alt_a <- alt_r
     # Bornes cumulees de la pente admissible, imposees par les pixels deja
     # traverses : la corde doit rester dans [sol, sol + degagement].
     lo <- rep(-Inf, length(routes))
     hi <- rep(Inf, length(routes))
 
     for (i in seq_len(nrow(ray))) {
-      lv <- rl + ray$dl[i]
-      cv <- rc + ray$dc[i]
-      vivant <- vivant & lv >= 1L & lv <= nr & cv >= 1L & cv <= nc
+      lv <- rl_a + ray$dl[i]
+      cv <- rc_a + ray$dc[i]
+      dans <- lv >= 1L & lv <= nr & cv >= 1L & cv <= nc
+      if (!any(dans)) break
 
-      cel <- rep(NA_integer_, length(routes))
-      cel[vivant] <- (lv[vivant] - 1L) * nc + cv[vivant]
-      vivant[vivant] <- treuillable[cel[vivant]]
-      if (!any(vivant)) break
+      cel <- rep(NA_integer_, length(act))
+      cel[dans] <- (lv[dans] - 1L) * nc + cv[dans]
+      ok <- dans
+      ok[dans] <- treuillable[cel[dans]]
+      if (!any(ok)) break
 
       hd <- ray$hdist[i]
-      dz <- alt[cel] - alt_r
+      dz <- alt[cel] - alt_a
       s <- dz / hd
       d3 <- sqrt(hd^2 + dz^2)
 
       # Degagement : verifie sur les pixels strictement anterieurs (bornes cumulees).
-      vivant <- vivant & !is.na(s) & s >= lo & s <= hi
+      ok <- ok & !is.na(s) & s >= lo & s <= hi
       # Plafond de distance : applique seulement au-dela de min(amont, aval).
-      vivant <- vivant & (d3 <= cf$dmin | d3 <= .dmax(s, cf))
-      vivant[is.na(vivant)] <- FALSE
-      if (!any(vivant)) break
+      ok <- ok & (d3 <= cf$dmin | d3 <= .dmax(s, cf))
+      ok[is.na(ok)] <- FALSE
+      garde <- which(ok)
+      if (!length(garde)) break
 
       # Ecriture du minimum : on ordonne par distance decroissante pour que la
       # plus petite valeur soit ecrite en dernier sur les cellules dupliquees.
-      idx <- cel[vivant]
-      dd <- d3[vivant]
-      rr <- routes[vivant]
+      idx <- cel[garde]
+      dd <- d3[garde]
+      rr <- act[garde]
       o <- order(dd, decreasing = TRUE)
       idx <- idx[o]
       dd <- dd[o]
@@ -198,9 +208,13 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
       dist[idx[mieux]] <- dd[mieux]
       alloc[idx[mieux]] <- rr[mieux]
 
-      # Mise a jour des bornes pour les pixels suivants du rayon.
-      lo <- pmax(lo, (dz - h) / hd)
-      hi <- pmin(hi, (dz - h + degagement) / hd)
+      # Mise a jour des bornes, puis compactage sur les rayons survivants.
+      lo <- pmax(lo[garde], (dz[garde] - h) / hd)
+      hi <- pmin(hi[garde], (dz[garde] - h + degagement) / hd)
+      act <- act[garde]
+      rl_a <- rl_a[garde]
+      rc_a <- rc_a[garde]
+      alt_a <- alt_a[garde]
     }
   }
 
