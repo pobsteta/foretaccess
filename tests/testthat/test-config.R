@@ -61,3 +61,21 @@ test_that("round-trip YAML préserve la configuration", {
   expect_equal(cfg2$porteur$portee_grue_m, 10)
   expect_equal(cfg2$skidder, cfg$skidder)
 })
+
+test_that("les parametres skidder du Lot 2 sont ceux du .pyx", {
+  sk <- foretaccess_config()$skidder
+  expect_equal(sk$hauteur_attache_treuil_m, 10)
+  expect_equal(sk$hauteur_degagement_max_m, 30)
+  expect_equal(sk$surcout_obstacle_complet, 1000)
+  expect_equal(as.integer(sk$option_modelisation), 1L)
+  expect_equal(sk$classes_distance_m, c(0, 250, 500, 1000, 1500, 2000))
+})
+
+test_that("une hauteur de degagement incoherente echoue avec un message cible", {
+  expect_error(
+    foretaccess_config(skidder = list(hauteur_degagement_max_m = 5)),
+    regexp = "hauteur_degagement_max_m"
+  )
+  expect_error(foretaccess_config(skidder = list(option_modelisation = 3L)))
+  expect_error(foretaccess_config(skidder = list(classes_distance_m = c(500, 100))))
+})

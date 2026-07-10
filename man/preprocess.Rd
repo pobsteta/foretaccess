@@ -44,6 +44,8 @@ Lot 8 pour l'agrégation).}
 Un objet de classe \code{foretaccess_preprocessing} : une liste dont les
 rasters partagent exactement la grille du MNT.
 \describe{
+\item{\code{mnt}}{le MNT, grille de référence. Les moteurs en ont besoin : le
+treuillage du skidder raisonne sur les altitudes (Lot 2).}
 \item{\code{slope_pct}}{pente en pourcentage.}
 \item{\code{aspect_deg}}{exposition en degrés depuis le nord (plat = \code{NA}).}
 \item{\code{foret_mask}}{1 dans les polygones forêt, 0 ailleurs.}

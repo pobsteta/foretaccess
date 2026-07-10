@@ -66,8 +66,8 @@ testable sans I/O (ADR-004).
 
 ### Sortie
 Objet de classe **`foretaccess_skidder`** (liste structurée) :
-- `accessibilite` : `SpatRaster` **catégoriel** à trois classes — `accessible`,
-  `parcourable`, `non_accessible`.
+- `accessibilite` : `SpatRaster` **catégoriel** — `parcourable`, `accessible`,
+  `non_accessible`, `hors_foret` ; `NA` = indéterminé (bordures du calcul de pente).
 - `distance_treuillage` : `SpatRaster` (m), distance **3D** — 0 là où il n'y a pas de treuillage.
 - `allocation` : `SpatRaster` — identifiant de la cellule de desserte de rattachement.
 - `distance_trainage_piste`, `distance_trainage_foret` : `SpatRaster` (m).
@@ -93,9 +93,13 @@ via `write_dir`, cohérente avec `preprocess()`.
 Reproduit `calcul_distance_de_cout()` du `.pyx`. **Sans aucune règle métier.**
 
 ```r
-propager_cout(surface_cout, sources, zone, cout_max = Inf)  # -> list(cout_cumule, allocation)
-chemin_optimal(allocation, cout_cumule, depuis)             # -> sf LINESTRING
+propager_cout(surface_cout, sources, zone, cout_max = Inf)  # -> foretaccess_propagation
+chemin_optimal(propagation, depuis)                         # -> sf LINESTRING
 ```
+
+`propager_cout()` renvoie trois `SpatRaster` : `cout_cumule`, `allocation`, et
+`predecesseur` — ce dernier, absent du `.pyx` (qui rejoue la propagation), rend la
+reconstruction du trajet exacte et immédiate.
 
 Sémantique exacte, à respecter au pixel près :
 - **8-connexité** ; le pas vaut la taille de cellule, ou `taille × √2` en diagonale ;
@@ -245,8 +249,13 @@ Sylvaccess produit aussi des **classes de distance totale** (`s_class` : 0 ; 250
   `1e-6` — **en particulier 80,2349 m à plat**, et la continuité aux deux ancrages.
 - **CA-2.7** Le rayon de treuillage s'interrompt quand la corde sort de
   `[0, degagement_max]` : un relief intercalé bloque le treuillage au-delà (test dédié).
-- **CA-2.8** Sur le MNT jouet (plan à 20 %), la pente est partout ≤ 30 % : aucune cellule
-  n'est treuillée, tout est `parcourable`. Oracle analytique.
+- **CA-2.8** Sur le MNT jouet (plan à 20 %), la pente est partout ≤ 30 % : toute cellule
+  atteinte est `parcourable`, et aucune n'est `non_accessible`. Oracle analytique.
+  *Attention* : le treuillage **s'applique quand même** près de la desserte. Dans le `.pyx`,
+  `Zone_OK` borne le treuillage par la pente d'**abattage manuel** (100 %), et non par la
+  pente skidder (30 %) : sous l'option 1, une cellule proche de la desserte est treuillée même
+  si l'engin pourrait y rouler. La classe `parcourable` décrit la **praticabilité du terrain**,
+  pas le mécanisme d'extraction retenu.
 - **CA-2.9** Sur le MNT jouet à pente forte (§7), le treuillage se déclenche, avec les
   distances amont/aval attendues. Un test par sens.
 - **CA-2.10** `distance_debardage` = somme exacte des trois composantes, sans `NA` parasite.
@@ -287,16 +296,17 @@ R/treuillage.R      → balayage radial 360°, loi de bascule, contrainte de dé
 R/skidder.R         → skidder() + classe foretaccess_skidder
 R/recap.R           → surfaces/volumes par classe (réutilisé au Lot 3)
 tests/testthat/…    → cf. §6
-data-raw/make_toy.R → ajouter un MNT à pente forte + obstacles (déterministe)
+tests/testthat/helper-skidder.R → MNT à pente forte, desserte, zones (déterministe)
 ```
 
 **Aucune nouvelle dépendance** (décision §10.1).
 
-Le jeu jouet du Lot 0 ne suffit pas : sa pente vaut 20 % partout, **sous** le seuil skidder de
-30 %, donc aucun treuillage n'y serait jamais déclenché et la moitié des règles ne serait pas
-exercée. Il faut lui adjoindre, de façon déterministe : un **MNT à pente forte** (plan à 60 %,
-avec une zone > 100 % pour exercer l'exclusion d'abattage), un **relief intercalé** pour
-exercer la contrainte de dégagement (CA-2.7), et des **obstacles** complets et partiels.
+Le jeu jouet du Lot 0 ne suffit pas à exercer toutes les règles. On lui adjoint, **en mémoire
+et de façon déterministe** (helpers de test, aucune fixture volumineuse à versionner) : un
+**MNT à pente forte** (plan à 60 %), un **relief intercalé** et une **fosse** pour exercer les
+deux bornes de la contrainte de dégagement (CA-2.7), et des **obstacles** complets et partiels.
+Le carré d'obstacles doit être placé **hors de la piste DFCI diagonale** du jouet, qui va de
+(0, 0) à (250, 250) : sinon ses cellules sont aussi des cellules de desserte.
 
 Nouveaux paramètres de config (`config$skidder`), défauts v3.6 :
 `hauteur_attache_treuil_m = 10`, `hauteur_degagement_max_m = 30`,
@@ -321,13 +331,13 @@ Nouveaux paramètres de config (`config$skidder`), défauts v3.6 :
 ## 9. Definition of Done (Lot 2)
 
 - [x] Spec validée + questions §10 tranchées (2026-07-10).
-- [ ] Service least-cost (2a) : Dijkstra + allocation + chemin, tests verts.
-- [ ] Fonction de coût, loi de bascule, treuillage radial (2b).
-- [ ] Jeu jouet enrichi (pente forte, relief intercalé, obstacles), déterministe.
-- [ ] Règles, distances, récap ; tests verts (un test par règle et par cas d'erreur).
+- [x] Service least-cost (2a) : Dijkstra + allocation + chemin, tests verts.
+- [x] Fonction de coût, loi de bascule, treuillage radial (2b).
+- [x] Jeu jouet enrichi (pente forte, relief intercalé, obstacles), déterministe.
+- [x] Règles, distances, récap ; tests verts (un test par règle et par cas d'erreur).
 - [ ] `lintr` / `testthat` / `R CMD check` / `cargo` / `clippy` OK en CI ; couverture ≥ `main`.
-- [ ] Chaînes du code R en **ASCII** (contrainte `R CMD check`, cf. `PLAN.md`).
-- [ ] Doc d'usage (roxygen) ; entrée `NEWS.md` ; `PLAN.md` à jour.
+- [x] Chaînes du code R en **ASCII** (contrainte `R CMD check`, cf. `PLAN.md`).
+- [x] Doc d'usage (roxygen) ; entrée `NEWS.md` ; `PLAN.md` à jour.
 - [ ] Branche dédiée + PR + revue ; commits atomiques ; release `v0.3.0`.
 
 ---
