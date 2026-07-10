@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,12 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>fix/conformite-pyx-skidder</code>
+<strong>Branche</strong> : <code>main</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.3.1</code> (correctif de conformité ; <code>release.yml</code> pose le tag au merge sur <code>main</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.3.1.9000</code> (cycle de dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent sur <code>0.3.1</code>, la dernière release)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 2 — Moteur Skidder</strong> — livré en <code>v0.3.0</code>, corrigé en <code>v0.3.1</code> après confrontation aux données réelles.</li>
+<strong>Lot en cours</strong> : aucun. Lot 2 clos et publié (<code>v0.3.0</code>, puis <code>v0.3.1</code> après confrontation aux données réelles). Prochain : <strong>Lot 7</strong> ou <strong>Lot 3</strong>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -145,7 +145,7 @@
 </div>
 <div class="section level2">
 <h2 id="prochaine-étape">Prochaine étape<a class="anchor" aria-label="anchor" href="#prochaine-%C3%A9tape"></a></h2>
-<p>Merger <code>fix/conformite-pyx-skidder</code> → <code>main</code> (tag <code>v0.3.1</code>), puis repasser en cycle de dev <code>0.3.1.9000</code>. Ensuite <strong>le Lot 7 (passage à l’échelle) avant tout portage Rust</strong> : le tuilage et le parallélisme rendent le massif et le département accessibles sans écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite. En parallèle : <code>specs/003-porteur.md</code>, qui réutilise le service least-cost livré ici.</p>
+<p><strong>Le Lot 7 (passage à l’échelle) avant tout portage Rust</strong> : le tuilage et le parallélisme rendent le massif et le département accessibles sans écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite (cf. § performance). En parallèle : <code>specs/003-porteur.md</code>, qui réutilise le service least-cost livré ici.</p>
 <div class="section level3">
 <h3 id="dette-assumée-du-lot-2">Dette assumée du Lot 2<a class="anchor" aria-label="anchor" href="#dette-assum%C3%A9e-du-lot-2"></a></h3>
 <ul><li>Seule l’<strong>option de modélisation 1</strong> (privilégier le treuillage) est implémentée ; l’option 2 lève une erreur explicite.</li>
@@ -228,6 +228,8 @@
 </ul></li>
 <li>Effet sur l’AOI réelle : <code>parcourable</code> 65 041 → 65 800 cellules (+1,9 ha), <code>non_accessible</code> 72 438 → 71 679. 395 tests verts, <code>lintr</code> 0, ASCII OK.</li>
 <li>L’IGN WFS renvoie du WGS 84 : <code><a href="reference/valider_entrees.html">valider_entrees()</a></code> l’a <strong>rejeté</strong>, exactement le comportement voulu. La reprojection a lieu dans le script de benchmark, jamais dans le package.</li>
+<li>
+<strong>Correctif mergé et publié en <code>v0.3.1</code></strong> (PR #11, sept checks verts). Retour en cycle de dev <code>0.3.1.9000</code>. Lot 2 clos.</li>
 </ul></div>
 </div>
 </div>
