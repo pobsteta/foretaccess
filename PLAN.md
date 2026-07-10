@@ -8,9 +8,9 @@
 
 - **Branche** : `specs/002-skidder` (cycle de dev)
 - **Version `DESCRIPTION`** : `0.2.0.9000` (dernière release `v0.2.0`)
-- **Lot en cours** : **Lot 2 — Moteur Skidder**. Spec écrite (PR #9), décisions
-  d'architecture figées. Le lot est scindé : **2a** (service least-cost) est
-  débloqué, **2b** (règles skidder) attend le `.pyx` de Sylvaccess.
+- **Lot en cours** : **Lot 2 — Moteur Skidder**. Spec écrite et **validée** (PR #9),
+  décisions prises sur **lecture du code source Sylvaccess v3.6**. Les deux
+  incréments (2a service least-cost, 2b règles skidder) sont **débloqués**.
 
 ## Avancement par lot
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
-| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 2a débloqué, 2b bloqué (`.pyx`) | — |
+| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 spec validée, code à écrire | `v0.3.0` (à venir) |
 | 3 | Moteur Porteur | à écrire | ⬜ | — |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
@@ -73,23 +73,31 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Merger la PR #9 (spec 002), puis implémenter l'**incrément 2a** : le service
-least-cost (`propager_cout()`, `chemin_optimal()`), sans aucune règle métier, sur
-des surfaces de coût **orientées** (anisotropie de type Tobler).
+Merger la PR #9 (spec 002), puis implémenter l'**incrément 2a** : `propager_cout()`
+(Dijkstra 8-connexe, coût de la cellule d'arrivée, diagonale × √2, avec raster
+d'**allocation**) et `chemin_optimal()`. Aucune règle métier, aucune dépendance
+nouvelle. Puis **2b** : coût de pente, loi de bascule, treuillage radial.
 
-### Bloqueur — `sylvaccess_cython3.pyx`
+### Bloqueur levé — le `.pyx` est public
 
-L'incrément **2b** (règles skidder) ne peut pas démarrer sans trois informations
-que le brief §7 range déjà dans « à récupérer depuis le code source »
-(GPL v3, `forge.inrae.fr`) :
+Le dépôt `forge.inrae.fr/sylvain.dupire/sylvaccess` est **public** : l'API GitLab
+répond sans authentification (c'est la page HTML qui affiche un écran de connexion
+trompeur). `scripts/sylvaccess_cython3.pyx` a été lu, et il **contredit deux
+hypothèses** de la première rédaction de la spec :
 
-1. la **loi de bascule** pente → distance de treuillage admissible, sous la pente
-   de bascule (75 % amont, 20 % aval) ;
-2. la **fonction de coût** des plus courts chemins (`calcul_distance_de_cout`) ;
-3. la **sémantique des obstacles partiels** (infranchissables, ou surcoût ?).
+- la **fonction de coût est isotrope** (`√(1 + (p/100)²)`, facteur d'allongement 3D) :
+  il n'y a aucun Tobler dans Sylvaccess ;
+- le **treuillage n'est pas un least-cost** mais un balayage radial 360° au pas de 1°,
+  en ligne droite, avec une contrainte de dégagement du câble (0–30 m au-dessus du sol,
+  attache à 10 m) et une distance **3D** ;
+- la **loi de bascule** est affine en **dénivelé**, pas en pente : à plat,
+  `Dmax = 80,23 m` (ni 50 ni 100). Une interpolation linéaire en pente — l'hypothèse
+  naturelle — aurait donné 62 m au lieu de 50 m à 30 % de pente, soit **20 % d'erreur
+  silencieuse**.
 
-Les deviner produirait des distances **silencieusement fausses** : l'oracle
-analytique du jeu jouet ne les contredirait pas.
+Backend retenu : **Dijkstra maison**. `terra::costDist()` accumule la friction
+**moyenne** des deux cellules (9,5 au lieu de 10 sur dix cellules à friction 1) et
+diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'allocation.
 
 ---
 
@@ -129,3 +137,12 @@ analytique du jeu jouet ne les contredirait pas.
   pente vaut 20 % partout, sous le seuil de 30 %, donc **aucun treuillage n'y serait
   jamais déclenché**. Un MNT à pente forte et des obstacles sont à ajouter à
   `data-raw/make_toy.R` au moment du 2b.
+- **Le `.pyx` de Sylvaccess est public et a été lu.** Il a renversé trois décisions :
+  coût **isotrope** (et non Tobler), **Dijkstra maison** (et non `leastcostpath`), et
+  treuillage par **balayage radial** (et non least-cost). La spec 002 est réécrite sur
+  la source, pas sur des hypothèses. Les constantes en dur du `.pyx` (attache 10 m,
+  dégagement 30 m, surcoût obstacle 1000, `s_option`) deviennent des paramètres de
+  config (ADR-003).
+- AOI réelle fournie (`data-raw/aoi.gpkg`, 720,9 ha, EPSG:2154) — ignorée par git
+  (`*.gpkg`), destinée au Lot 10 et à un test d'intégration, **pas** au jeu jouet, qui
+  reste synthétique pour rester un oracle analytique exact.
