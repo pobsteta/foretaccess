@@ -16,9 +16,9 @@
 #' pourrait y rouler. L'option `2` n'est pas implémentée.
 #'
 #' @section Écarts assumés avec Sylvaccess v3.6:
-#' Le plafond `distance_hors_desserte_max_m` n'est pas appliqué : la propagation
-#' est déjà confinée à la forêt. La hiérarchie route / piste est réduite à deux
-#' niveaux (`route` et `dfci` comptent comme routes). Voir `specs/002-skidder.md`.
+#' La hiérarchie route / piste est réduite à deux niveaux (`route` et `dfci`
+#' comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
+#' Voir `specs/002-skidder.md`.
 #'
 #' @param pre Objet `foretaccess_preprocessing` issu de [preprocess()].
 #' @param config Objet [foretaccess_config()].
@@ -71,10 +71,10 @@ skidder <- function(pre,
   treuil <- treuiller(pre$mnt, pre$desserte, zone_tr, config)
 
   # --- Trainage en foret : plus court chemin depuis la desserte. --------------
+  # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.
   sources <- .sources_desserte(pre, desserte_cel)
   cout <- surface_cout_skidder(pre, config)
-  zone_rl <- zone_roulage(pre, config)
-  zone_rl[desserte_cel] <- 1
+  zone_rl <- zone_roulable_connectee(pre, config)
   roulage <- propager_cout(cout, sources, zone = zone_rl)
 
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
@@ -85,7 +85,9 @@ skidder <- function(pre,
   a_tr <- as.numeric(terra::values(treuil$allocation))
   d_rl <- as.numeric(terra::values(roulage$cout_cumule))
   a_rl <- as.numeric(terra::values(roulage$allocation))
-  roulable <- as.numeric(terra::values(zone_rl)) == 1
+  # Pour le classement, `parcourable` decrit la praticabilite du terrain forestier,
+  # pas la zone de propagation (qui deborde de 50 m hors foret).
+  roulable <- as.numeric(terra::values(zone_roulage(pre, config))) == 1
   foret <- as.numeric(terra::values(pre$foret_mask)) == 1
   pente_na <- is.na(terra::values(pre$slope_pct))
 
