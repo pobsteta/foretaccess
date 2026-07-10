@@ -6,11 +6,11 @@
 
 ## État courant
 
-- **Branche** : `lot-2-skidder`
-- **Version `DESCRIPTION`** : `0.3.0` (version stable préparée ; `release.yml` pose le
+- **Branche** : `fix/conformite-pyx-skidder`
+- **Version `DESCRIPTION`** : `0.3.1` (correctif de conformité ; `release.yml` pose le
   tag au merge sur `main`)
-- **Lot en cours** : **Lot 2 — Moteur Skidder** — 2a et 2b implémentés, tests verts,
-  reste la PR et la revue.
+- **Lot en cours** : **Lot 2 — Moteur Skidder** — livré en `v0.3.0`, corrigé en `v0.3.1`
+  après confrontation aux données réelles.
 
 ## Avancement par lot
 
@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
-| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 code fait, PR à ouvrir | `v0.3.0` (à poser) |
+| 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | à écrire | ⬜ | — |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
@@ -73,19 +73,57 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Ouvrir la PR `lot-2-skidder` → `main` (le merge pose le tag `v0.3.0`), puis repasser
-en cycle de dev `0.3.0.9000`. Ensuite : `specs/003-porteur.md`, qui réutilise le
-service least-cost livré ici.
+Merger `fix/conformite-pyx-skidder` → `main` (tag `v0.3.1`), puis repasser en cycle de
+dev `0.3.1.9000`. Ensuite **le Lot 7 (passage à l'échelle) avant tout portage Rust** :
+le tuilage et le parallélisme rendent le massif et le département accessibles sans
+écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite.
+En parallèle : `specs/003-porteur.md`, qui réutilise le service least-cost livré ici.
 
 ### Dette assumée du Lot 2
 
 - Seule l'**option de modélisation 1** (privilégier le treuillage) est implémentée ;
   l'option 2 lève une erreur explicite.
-- Le plafond `distance_hors_desserte_max_m` n'est pas appliqué (la propagation est
-  déjà confinée à la forêt) et la hiérarchie route / piste est réduite à deux niveaux.
-- Le Dijkstra est en R pur : ~10 s sur le jouet 50×50. Sur l'AOI réelle (295 k
-  cellules) il faudra mesurer, et probablement porter le noyau en Rust (ADR-001).
-  La frontière est déjà au bon endroit : `propager_cout()` ne connaît aucune règle métier.
+- La hiérarchie route / piste est réduite à deux niveaux (`route` et `dfci` comptent
+  comme routes).
+- Le Dijkstra et le balayage radial sont en R pur (cf. § performance ci-dessous).
+  La frontière est au bon endroit : `propager_cout()` ne connaît aucune règle métier.
+
+## Performance — mesures sur AOI réelle (2026-07-10)
+
+AOI de 7,2 km² (294 130 cellules à 5 m, pente médiane 34 %), MNT RGE ALTI, forêt BD
+TOPO. **Temps CPU** (`user.self`), la machine étant chargée : le temps écoulé valait
+alors le double, et ne mesurait que la contention.
+
+| Étage | CPU |
+|---|---|
+| `zone_roulable_connectee()` | 6,62 s |
+| `treuiller()` (balayage radial) | 10,99 s |
+| `propager_cout()` (roulage) | 6,29 s |
+| **`skidder()` complet** | **21,97 s** |
+
+Soit **3,05 s/km²** sur un cœur. Extrapolation : massif de 100 km² → 5 min ; département
+de 2 000 km² → 1,7 h ; région de 20 000 km² → 17 h ; France (170 000 km²) → 6 jours.
+Divisé par 8 sur 8 cœurs, le département tombe à 13 min et la France à 18 h.
+
+**Verdict Rust** : le portage n'est pas justifié à l'échelle du massif ni du département —
+le Lot 7 y suffit. Il l'est pour la région et la France. Et le candidat au portage est
+**le Dijkstra** (12,9 s CPU cumulés, 59 %), non le balayage radial (11,0 s, 50 % — les
+deux se recouvrent, le total inclut aussi le prétraitement). C'est l'inverse de ce que
+la première mesure suggérait : elle précédait `zone_roulable_connectee()`, qui ajoute un
+Dijkstra. Deux réserves : l'AOI est **raide**, donc les rayons de treuil y meurent vite —
+un plateau doux inverserait le rapport ; et le Dijkstra bénéficierait aussi d'un tuilage,
+pas seulement d'un changement de langage.
+
+Deux bogues de performance corrigés en cours de route, tous deux dans du code à moi :
+
+- **Tas binaire recopié** : passé de fonction en fonction dans une liste, chaque
+  `tas$cle[i] <- x` recopiait le vecteur entier (sémantique de copie de R). Sonde isolée :
+  96,44 s contre 0,27 s pour 200 000 insertions, soit **357×**. Corrigé par des vecteurs
+  locaux mutés via `<<-`.
+- **Rayons de treuil non compactés** : le balayage portait des vecteurs pleine longueur
+  sous un masque `vivant`, alors que la plupart des rayons meurent en quelques cellules.
+  Compaction des survivants : 34,7 s → 16,1 s, distances et allocations **bit à bit
+  identiques**.
 
 ### Le `.pyx` est public
 
@@ -166,3 +204,24 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   ce qui en faisait des cellules de desserte.
 - `preprocess()` conserve désormais le MNT (`$mnt`) : le treuillage raisonne sur les
   altitudes. Ajout additif, sans rupture.
+- **Lot 2 mergé et publié en `v0.3.0`** (PR #10).
+- **Confrontation aux données réelles** (AOI 7,2 km², RGE ALTI + BD TOPO). Elle a servi
+  à trancher le portage Rust, et a d'abord révélé deux bogues de performance dans mon
+  propre code (tas recopié, rayons non compactés), puis **deux écarts de conformité** au
+  `.pyx` que le jeu jouet ne pouvait pas exposer — d'où `v0.3.1` :
+  - `.distance_sur_piste()` propageait à coût uniforme 1 ; Sylvaccess pondère la piste
+    par la pente comme le reste (`Dfwd_flat_forest_tracks(f, Lien_Piste, Pond_pente, …)`).
+  - `distance_hors_desserte_max_m` n'était pas implémenté. **Il ne plafonne pas la
+    distance de débardage** : il autorise le skidder à traverser jusqu'à 50 m de terrain
+    roulable **hors forêt** pour rejoindre un massif isolé. Reproduit par
+    `zone_roulable_connectee()` (construction en trois temps de `Pente_ok_skidder` :
+    connexité, saut borné, recollement), avec `terra::patches()` pour les deux étapes de
+    pure connexité et un Dijkstra borné pour le saut.
+  - Au passage, ma première explication des 4 km de débardage était **fausse** : je les
+    avais imputés au plafond manquant. Ils viennent du `distance_trainage_piste`
+    (max 4 030 m, médiane 1 020 m), lui-même faussé par le coût uniforme.
+- Effet sur l'AOI réelle : `parcourable` 65 041 → 65 800 cellules (+1,9 ha),
+  `non_accessible` 72 438 → 71 679. 395 tests verts, `lintr` 0, ASCII OK.
+- L'IGN WFS renvoie du WGS 84 : `valider_entrees()` l'a **rejeté**, exactement le
+  comportement voulu. La reprojection a lieu dans le script de benchmark, jamais dans le
+  package.

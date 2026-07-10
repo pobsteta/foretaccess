@@ -56,9 +56,9 @@ pourrait y rouler. L'option \code{2} n'est pas implémentée.
 }
 \section{Écarts assumés avec Sylvaccess v3.6}{
 
-Le plafond \code{distance_hors_desserte_max_m} n'est pas appliqué : la propagation
-est déjà confinée à la forêt. La hiérarchie route / piste est réduite à deux
-niveaux (\code{route} et \code{dfci} comptent comme routes). Voir \code{specs/002-skidder.md}.
+La hiérarchie route / piste est réduite à deux niveaux (\code{route} et \code{dfci}
+comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
+Voir \code{specs/002-skidder.md}.
 }
 
 \examples{

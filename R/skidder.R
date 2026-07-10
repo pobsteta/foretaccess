@@ -16,9 +16,9 @@
 #' pourrait y rouler. L'option `2` n'est pas implémentée.
 #'
 #' @section Écarts assumés avec Sylvaccess v3.6:
-#' Le plafond `distance_hors_desserte_max_m` n'est pas appliqué : la propagation
-#' est déjà confinée à la forêt. La hiérarchie route / piste est réduite à deux
-#' niveaux (`route` et `dfci` comptent comme routes). Voir `specs/002-skidder.md`.
+#' La hiérarchie route / piste est réduite à deux niveaux (`route` et `dfci`
+#' comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
+#' Voir `specs/002-skidder.md`.
 #'
 #' @param pre Objet `foretaccess_preprocessing` issu de [preprocess()].
 #' @param config Objet [foretaccess_config()].
@@ -71,20 +71,23 @@ skidder <- function(pre,
   treuil <- treuiller(pre$mnt, pre$desserte, zone_tr, config)
 
   # --- Trainage en foret : plus court chemin depuis la desserte. --------------
+  # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.
   sources <- .sources_desserte(pre, desserte_cel)
-  zone_rl <- zone_roulage(pre, config)
-  zone_rl[desserte_cel] <- 1
-  roulage <- propager_cout(surface_cout_skidder(pre, config), sources, zone = zone_rl)
+  cout <- surface_cout_skidder(pre, config)
+  zone_rl <- zone_roulable_connectee(pre, config)
+  roulage <- propager_cout(cout, sources, zone = zone_rl)
 
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
-  d_piste <- .distance_sur_piste(pre)
+  d_piste <- .distance_sur_piste(pre, cout)
 
   # --- Combinaison (option 1 : le treuillage prime). --------------------------
   d_tr <- as.numeric(terra::values(treuil$distance))
   a_tr <- as.numeric(terra::values(treuil$allocation))
   d_rl <- as.numeric(terra::values(roulage$cout_cumule))
   a_rl <- as.numeric(terra::values(roulage$allocation))
-  roulable <- as.numeric(terra::values(zone_rl)) == 1
+  # Pour le classement, `parcourable` decrit la praticabilite du terrain forestier,
+  # pas la zone de propagation (qui deborde de 50 m hors foret).
+  roulable <- as.numeric(terra::values(zone_roulage(pre, config))) == 1
   foret <- as.numeric(terra::values(pre$foret_mask)) == 1
   pente_na <- is.na(terra::values(pre$slope_pct))
 
@@ -165,7 +168,10 @@ skidder <- function(pre,
 
 # Distance, le long des pistes, jusqu'a la route la plus proche. Les cellules de
 # route valent 0 ; les cellules hors reseau valent 0 (elles ne trainent pas sur piste).
-.distance_sur_piste <- function(pre) {
+#
+# Le cout est la surface ponderee par la pente (`Pond_pente`), comme dans
+# `Dfwd_flat_forest_tracks()` : une piste en devers coute plus qu'une piste plate.
+.distance_sur_piste <- function(pre, cout) {
   cl <- terra::levels(pre$desserte)[[1]]
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
@@ -178,8 +184,6 @@ skidder <- function(pre,
     return(rep(0, n))
   }
 
-  cout <- terra::rast(pre$mnt)
-  terra::values(cout) <- 1
   zone <- terra::rast(pre$mnt)
   terra::values(zone) <- as.numeric(est_piste | est_route)
 
