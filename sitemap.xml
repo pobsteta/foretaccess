@@ -2,14 +2,19 @@
 <url><loc>https://pobsteta.github.io/foretaccess/404.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/CLAUDE.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/LICENSE-text.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/PLAN.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/authors.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/news/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/cablehelp_version.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/calculer_terrain.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess-package.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess_config.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/index.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/io.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/lire_rasters.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/preprocess.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/read_config.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/sb_ensure_schema.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/sb_list_layers.html</loc></url>
@@ -19,6 +24,7 @@
 <url><loc>https://pobsteta.github.io/foretaccess/reference/storage_gpkg.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/storage_postgis.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/validate_config.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/valider_entrees.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/write_config.html</loc></url>
 </urlset>
 

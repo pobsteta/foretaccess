@@ -7,11 +7,20 @@
 
   Version de la crate Rust `cablehelp` (noyau câble).
 
+- [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
+  : Pente et exposition depuis un MNT
+
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
   : Compare une sortie à un oracle de non-régression
 
 - [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)
   : Configuration métier de ForêtAccess (défauts Sylvaccess v3.6)
+
+- [`lire_rasters()`](https://pobsteta.github.io/foretaccess/reference/lire_rasters.md)
+  : Relit un prétraitement écrit sur disque
+
+- [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  : Prétraitement commun aux moteurs d'accessibilité
 
 - [`read_config()`](https://pobsteta.github.io/foretaccess/reference/read_config.md)
   : Lit une configuration depuis un fichier YAML
@@ -39,6 +48,9 @@
 
 - [`validate_config()`](https://pobsteta.github.io/foretaccess/reference/validate_config.md)
   : Valide un objet de configuration ForêtAccess
+
+- [`valider_entrees()`](https://pobsteta.github.io/foretaccess/reference/valider_entrees.md)
+  : Validation des entrées du prétraitement
 
 - [`write_config()`](https://pobsteta.github.io/foretaccess/reference/write_config.md)
   : Écrit une configuration au format YAML

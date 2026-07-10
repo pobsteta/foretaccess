@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,9 +33,24 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="foretaccess-development-version">foretaccess (development version)<a class="anchor" aria-label="anchor" href="#foretaccess-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="foretaccess-020-2026-07-09">foretaccess 0.2.0 (2026-07-09)<a class="anchor" aria-label="anchor" href="#foretaccess-020-2026-07-09"></a></h2>
+<div class="section level3">
+<h3 id="lot--io--prétraitement-0-2-0">Lot 1 — I/O &amp; prétraitement<a class="anchor" aria-label="anchor" href="#lot--io--pr%C3%A9traitement-0-2-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/preprocess.html">preprocess()</a></code></strong> : socle commun aux quatre moteurs. Produit un objet <code>foretaccess_preprocessing</code> dont tous les rasters partagent exactement la grille du MNT (pente, exposition, masque forêt, desserte catégorielle, masques d’obstacles, masque d’exclusion de pente, volume aligné).</li>
+<li>
+<strong><code><a href="../reference/valider_entrees.html">valider_entrees()</a></code></strong> : validation <strong>stricte</strong> des entrées — CRS commun, alignement de grille, champ <code>classe</code> de la desserte, géométries non vides et valides, emprises se recouvrant. Aucune reprojection ni rééchantillonnage silencieux ; chaque manquement lève une erreur ciblée.</li>
+<li>
+<strong><code><a href="../reference/calculer_terrain.html">calculer_terrain()</a></code></strong> : pente en pourcentage et exposition en degrés depuis le nord (plat = <code>NA</code>), via <code>terra</code>. Méthode configurable (<code>config$general$methode_pente</code> : <code>"Horn"</code> par défaut, ou <code>"Evans"</code>).</li>
+<li>Écriture GeoTIFF/<strong>COG</strong> optionnelle (<code>preprocess(write_dir = )</code>) et relecture par <strong><code><a href="../reference/lire_rasters.html">lire_rasters()</a></code></strong>.</li>
+<li>Chaque entrée est acceptée comme <strong>chemin de fichier</strong> ou comme objet déjà chargé (<code>SpatRaster</code> / <code>sf</code>), conformément à l’ADR-004.</li>
+<li>Non-régression sur oracle <strong>analytique</strong> : le MNT jouet (plan incliné à 20 %) valide pente, exposition et masques via <code><a href="../reference/compare_to_oracle.html">compare_to_oracle()</a></code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="divers-0-2-0">Divers<a class="anchor" aria-label="anchor" href="#divers-0-2-0"></a></h3>
 <ul><li>Ajout des badges README (R-CMD-check, version, pkgdown, couverture Codecov, lifecycle, licence) et du site pkgdown + job de couverture en CI.</li>
 </ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="foretaccess-010-2026-07-09">foretaccess 0.1.0 (2026-07-09)<a class="anchor" aria-label="anchor" href="#foretaccess-010-2026-07-09"></a></h2>
 <div class="section level3">

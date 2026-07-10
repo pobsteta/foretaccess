@@ -33,7 +33,8 @@ foretaccess_config(
 
 - general:
 
-  Liste des paramètres généraux (résolution, CRS).
+  Liste des paramètres généraux (résolution, CRS, méthode de calcul de
+  la pente).
 
 ## Value
 
