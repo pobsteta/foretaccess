@@ -95,6 +95,10 @@ Le treuillage est borné parce que `.dmax()` est **plafonné** hors des pentes d
 `.dmax(p) ∈ [daval, damont]` par construction (`R/treuillage.R`). Un rayon meurt donc au plus
 tard à 100 m avec les défauts v3.6. Le halo se calcule, il ne se devine pas.
 
+Conséquence pratique : un halo inférieur à cette portée ne certifie **rien**, même loin de la
+desserte — une desserte hors fenêtre pourrait treuiller dans la tuile sans qu'on le sache. Le
+halo adaptatif démarre donc utilement à `halo_initial_m ≥ portée + 1,5 × résolution`.
+
 Le traînage, lui, est un plus court chemin **sans plafond** : un chemin de débardage peut
 traverser toute la carte, et la connexité d'un massif à la desserte peut passer par un détour
 arbitrairement long. **Aucun halo fixe ne garantit l'identité au mono-bloc.** C'est le cœur
@@ -181,9 +185,14 @@ grille **globale**. Il doit donc être calculé sur la grille de l'emprise enti�
 celle de la tuile, sinon deux tuiles allouent le même identifiant à deux dessertes
 différentes. C'est le seul champ non local du moteur, et le piège principal de ce lot.
 
-Le `recap` global est la **somme** des récaps de tuiles, classe par classe. Les tuiles étant
-disjointes, la surface totale est conservée par construction — c'est un invariant testable
-(CA-7.4), pas une propriété espérée.
+Le `recap` global se calcule sur la mosaïque assemblée. Les tuiles étant disjointes, c'est
+exactement la somme des récaps de tuiles, et la surface totale est conservée par construction
+— un invariant testable (CA-7.4), pas une propriété espérée.
+
+Une cellule non certifiée ne publie **rien** : ni classe, ni distance, ni allocation. Toutes
+ses couches valent `NA`. Un résultat plausible mais faux est pire qu'un `NA` déclaré. Le
+raster `certifie` reste disponible en mémoire ; il n'est pas écrit, puisque les `NA` des
+couches le disent déjà (décision §10.3).
 
 ### 4.6 Parallélisme (décision §10.2)
 
@@ -202,9 +211,17 @@ dépend **pas** du nombre de workers — c'est CA-7.2, et c'est vérifiable.
 
 ### 4.7 Élagage spatial
 
-Une tuile sans aucune cellule de forêt est **sautée** (aucun calcul, sortie `hors_foret`).
-Une tuile sans desserte dans `T ∪ H` n'est pas sautée : elle peut être accessible depuis une
-desserte plus lointaine, et c'est le certificat qui tranche.
+Une tuile **sans aucune desserte** dans `T ∪ H` est sautée : le moteur n'aurait pas de point
+de départ. Elle ne certifie rien, et le halo grandit pour aller chercher une desserte.
+
+La tentation est d'y écrire `hors_foret` pour les cellules non forestières — leur *classe* est
+bien un fait local. Mais leurs **distances** ne le sont pas : la zone de traînage déborde de
+50 m hors forêt (spec 002 §4.5.1), et le mono-bloc leur attribue une distance non nulle. Une
+tuile sans desserte ne publie donc rien du tout. C'est plus conservateur que ce que cette
+section annonçait d'abord, et c'est la seule règle qui préserve l'identité au mono-bloc.
+
+Sauter une tuile sans **forêt** serait tentant pour la même raison, et faux pour la même :
+une bande non forestière peut porter du traînage.
 
 ---
 
@@ -229,8 +246,8 @@ desserte plus lointaine, et c'est le certificat qui tranche.
   allouées à la même desserte portent le même identifiant.
 - **CA-7.8** *(US-7.1 CA2)* Les sorties sont des **COG** valides et relisibles, avec la table
   de catégories de l'accessibilité préservée (piège du Lot 1 : pas d'option de création).
-- **CA-7.9** Une tuile sans forêt est sautée sans calcul (mesurable : le moteur n'est pas
-  appelé).
+- **CA-7.9** Une tuile sans desserte dans `T ∪ H` est sautée sans calcul (mesurable : le
+  moteur n'est pas appelé) et ne publie rien : ses cellules sont `indetermine`.
 - **CA-7.10** Sur l'AOI réelle (7,2 km², hors CI), le résultat tuilé est identique au
   mono-bloc, et le temps sur `n` cœurs est inférieur à `1,6 × T₁ / n × 1,3` (surcoût du
   certificat, plus 30 % de marge d'ordonnancement).
