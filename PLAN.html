@@ -40,11 +40,11 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>main</code> (cycle de dev)</li>
+<strong>Branche</strong> : <code>specs/002-skidder</code> (cycle de dev)</li>
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>0.2.0.9000</code> (dernière release <code>v0.2.0</code>)</li>
 <li>
-<strong>Lot en cours</strong> : aucun. Prochain : <strong>Lot 2 — Moteur Skidder</strong> (spec à écrire).</li>
+<strong>Lot en cours</strong> : <strong>Lot 2 — Moteur Skidder</strong>. Spec écrite et <strong>validée</strong> (PR #9), décisions prises sur <strong>lecture du code source Sylvaccess v3.6</strong>. Les deux incréments (2a service least-cost, 2b règles skidder) sont <strong>débloqués</strong>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -65,9 +65,10 @@
 <td><code>v0.2.0</code></td>
 </tr><tr><td>2</td>
 <td>Moteur Skidder</td>
-<td>à écrire</td>
-<td>⬜</td>
-<td>—</td>
+<td><code>specs/002-skidder.md</code></td>
+<td>🟡 spec validée, code à écrire</td>
+<td>
+<code>v0.3.0</code> (à venir)</td>
 </tr><tr><td>3</td>
 <td>Moteur Porteur</td>
 <td>à écrire</td>
@@ -142,8 +143,16 @@
 </div>
 <div class="section level2">
 <h2 id="prochaine-étape">Prochaine étape<a class="anchor" aria-label="anchor" href="#prochaine-%C3%A9tape"></a></h2>
-<p>Rédiger <code>specs/002-skidder.md</code> (Lot 2 — Moteur Skidder), qui introduit le service least-cost partagé avec le Lot 6 (DFCI). Ne rien coder avant validation de la spec et de ses questions ouvertes.</p>
+<p>Merger la PR #9 (spec 002), puis implémenter l’<strong>incrément 2a</strong> : <code>propager_cout()</code> (Dijkstra 8-connexe, coût de la cellule d’arrivée, diagonale × √2, avec raster d’<strong>allocation</strong>) et <code>chemin_optimal()</code>. Aucune règle métier, aucune dépendance nouvelle. Puis <strong>2b</strong> : coût de pente, loi de bascule, treuillage radial.</p>
+<div class="section level3">
+<h3 id="bloqueur-levé--le-pyx-est-public">Bloqueur levé — le <code>.pyx</code> est public<a class="anchor" aria-label="anchor" href="#bloqueur-lev%C3%A9--le-pyx-est-public"></a></h3>
+<p>Le dépôt <code>forge.inrae.fr/sylvain.dupire/sylvaccess</code> est <strong>public</strong> : l’API GitLab répond sans authentification (c’est la page HTML qui affiche un écran de connexion trompeur). <code>scripts/sylvaccess_cython3.pyx</code> a été lu, et il <strong>contredit deux hypothèses</strong> de la première rédaction de la spec :</p>
+<ul><li>la <strong>fonction de coût est isotrope</strong> (<code>√(1 + (p/100)²)</code>, facteur d’allongement 3D) : il n’y a aucun Tobler dans Sylvaccess ;</li>
+<li>le <strong>treuillage n’est pas un least-cost</strong> mais un balayage radial 360° au pas de 1°, en ligne droite, avec une contrainte de dégagement du câble (0–30 m au-dessus du sol, attache à 10 m) et une distance <strong>3D</strong> ;</li>
+<li>la <strong>loi de bascule</strong> est affine en <strong>dénivelé</strong>, pas en pente : à plat, <code>Dmax = 80,23 m</code> (ni 50 ni 100). Une interpolation linéaire en pente — l’hypothèse naturelle — aurait donné 62 m au lieu de 50 m à 30 % de pente, soit <strong>20 % d’erreur silencieuse</strong>.</li>
+</ul><p>Backend retenu : <strong>Dijkstra maison</strong>. <code><a href="https://rspatial.github.io/terra/reference/costDist.html" class="external-link">terra::costDist()</a></code> accumule la friction <strong>moyenne</strong> des deux cellules (9,5 au lieu de 10 sur dix cellules à friction 1) et diverge donc systématiquement ; ni lui ni <code>leastcostpath</code> ne renvoient l’allocation.</p>
 <hr></div>
+</div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
 <div class="section level3">
@@ -165,6 +174,12 @@
 <code>lintr</code> et <code>covr</code> installés dans la bibliothèque <code>renv</code> locale (sans toucher à <code>renv.lock</code>) : ils manquaient, d’où l’angle mort local.</li>
 <li>
 <strong>Lot 1 mergé et publié en <code>v0.2.0</code></strong> ; retour en cycle de dev <code>0.2.0.9000</code>.</li>
+<li>
+<code>specs/002-skidder.md</code> rédigée (PR #9). Décisions figées : <code>leastcostpath</code> comme backend least-cost, et coût <strong>anisotrope</strong> de type Tobler (porté par la transition orientée <code>a → b</code>, pas par la cellule). Lot scindé en 2a (débloqué) et 2b (bloqué).</li>
+<li>Constat de conception : le jeu jouet actuel ne peut pas valider le skidder — sa pente vaut 20 % partout, sous le seuil de 30 %, donc <strong>aucun treuillage n’y serait jamais déclenché</strong>. Un MNT à pente forte et des obstacles sont à ajouter à <code>data-raw/make_toy.R</code> au moment du 2b.</li>
+<li>
+<strong>Le <code>.pyx</code> de Sylvaccess est public et a été lu.</strong> Il a renversé trois décisions : coût <strong>isotrope</strong> (et non Tobler), <strong>Dijkstra maison</strong> (et non <code>leastcostpath</code>), et treuillage par <strong>balayage radial</strong> (et non least-cost). La spec 002 est réécrite sur la source, pas sur des hypothèses. Les constantes en dur du <code>.pyx</code> (attache 10 m, dégagement 30 m, surcoût obstacle 1000, <code>s_option</code>) deviennent des paramètres de config (ADR-003).</li>
+<li>AOI réelle fournie (<code>data-raw/aoi.gpkg</code>, 720,9 ha, EPSG:2154) — ignorée par git (<code>*.gpkg</code>), destinée au Lot 10 et à un test d’intégration, <strong>pas</strong> au jeu jouet, qui reste synthétique pour rester un oracle analytique exact.</li>
 </ul></div>
 </div>
 </div>
