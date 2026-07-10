@@ -97,7 +97,14 @@ skidder <- function(pre,
   }
 
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
-  piste <- .distance_sur_piste(pre, cout, bord)
+  # Si le pretraitement la porte deja (tuilage), elle est globale, donc exacte : le
+  # reseau est unidimensionnel et creux, on le propage une fois pour toute l'emprise
+  # plutot que de faire grandir le halo jusqu'a sa plus longue piste (spec 007 §4.3.1).
+  piste <- if (is.null(pre$distance_piste)) {
+    .distance_sur_piste(pre, cout, bord)
+  } else {
+    list(distance = as.numeric(terra::values(pre$distance_piste)), certifie = NULL)
+  }
   d_piste <- piste$distance
 
   # --- Combinaison (option 1 : le treuillage prime). --------------------------
