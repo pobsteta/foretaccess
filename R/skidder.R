@@ -72,12 +72,13 @@ skidder <- function(pre,
 
   # --- Trainage en foret : plus court chemin depuis la desserte. --------------
   sources <- .sources_desserte(pre, desserte_cel)
+  cout <- surface_cout_skidder(pre, config)
   zone_rl <- zone_roulage(pre, config)
   zone_rl[desserte_cel] <- 1
-  roulage <- propager_cout(surface_cout_skidder(pre, config), sources, zone = zone_rl)
+  roulage <- propager_cout(cout, sources, zone = zone_rl)
 
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
-  d_piste <- .distance_sur_piste(pre)
+  d_piste <- .distance_sur_piste(pre, cout)
 
   # --- Combinaison (option 1 : le treuillage prime). --------------------------
   d_tr <- as.numeric(terra::values(treuil$distance))
@@ -165,7 +166,10 @@ skidder <- function(pre,
 
 # Distance, le long des pistes, jusqu'a la route la plus proche. Les cellules de
 # route valent 0 ; les cellules hors reseau valent 0 (elles ne trainent pas sur piste).
-.distance_sur_piste <- function(pre) {
+#
+# Le cout est la surface ponderee par la pente (`Pond_pente`), comme dans
+# `Dfwd_flat_forest_tracks()` : une piste en devers coute plus qu'une piste plate.
+.distance_sur_piste <- function(pre, cout) {
   cl <- terra::levels(pre$desserte)[[1]]
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
@@ -178,8 +182,6 @@ skidder <- function(pre,
     return(rep(0, n))
   }
 
-  cout <- terra::rast(pre$mnt)
-  terra::values(cout) <- 1
   zone <- terra::rast(pre$mnt)
   terra::values(zone) <- as.numeric(est_piste | est_route)
 

@@ -111,3 +111,15 @@ test_that("sans piste, le trainage sur piste est nul partout", {
   sk <- skidder(pre)
   expect_true(all(terra::values(sk$distance_trainage_piste) == 0))
 })
+
+test_that("la distance sur piste est ponderee par la pente, pas uniforme", {
+  # Sylvaccess propage sur `Pond_pente`, comme le trainage en foret. Sur le jouet
+  # (20 % partout), un pas orthogonal de piste coute 5 x sqrt(1 + 0,2^2) = 5,0990 m.
+  sk <- toy_skidder()
+  piste <- as.numeric(terra::values(sk$distance_trainage_piste))
+  pas <- 5 * sqrt(1 + 0.2^2)
+
+  positifs <- sort(unique(round(piste[piste > 0], 6)))
+  expect_equal(positifs[1], pas, tolerance = 1e-6)
+  expect_false(isTRUE(all.equal(positifs[1], 5)))
+})
