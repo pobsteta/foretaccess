@@ -6,9 +6,11 @@
 
 ## État courant
 
-- **Branche** : `main` (cycle de dev)
+- **Branche** : `specs/002-skidder` (cycle de dev)
 - **Version `DESCRIPTION`** : `0.2.0.9000` (dernière release `v0.2.0`)
-- **Lot en cours** : aucun. Prochain : **Lot 2 — Moteur Skidder** (spec à écrire).
+- **Lot en cours** : **Lot 2 — Moteur Skidder**. Spec écrite (PR #9), décisions
+  d'architecture figées. Le lot est scindé : **2a** (service least-cost) est
+  débloqué, **2b** (règles skidder) attend le `.pyx` de Sylvaccess.
 
 ## Avancement par lot
 
@@ -16,7 +18,7 @@
 |---|---|---|---|---|
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
-| 2 | Moteur Skidder | à écrire | ⬜ | — |
+| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 2a débloqué, 2b bloqué (`.pyx`) | — |
 | 3 | Moteur Porteur | à écrire | ⬜ | — |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
@@ -71,9 +73,23 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Rédiger `specs/002-skidder.md` (Lot 2 — Moteur Skidder), qui introduit le service
-least-cost partagé avec le Lot 6 (DFCI). Ne rien coder avant validation de la spec
-et de ses questions ouvertes.
+Merger la PR #9 (spec 002), puis implémenter l'**incrément 2a** : le service
+least-cost (`propager_cout()`, `chemin_optimal()`), sans aucune règle métier, sur
+des surfaces de coût **orientées** (anisotropie de type Tobler).
+
+### Bloqueur — `sylvaccess_cython3.pyx`
+
+L'incrément **2b** (règles skidder) ne peut pas démarrer sans trois informations
+que le brief §7 range déjà dans « à récupérer depuis le code source »
+(GPL v3, `forge.inrae.fr`) :
+
+1. la **loi de bascule** pente → distance de treuillage admissible, sous la pente
+   de bascule (75 % amont, 20 % aval) ;
+2. la **fonction de coût** des plus courts chemins (`calcul_distance_de_cout`) ;
+3. la **sémantique des obstacles partiels** (infranchissables, ou surcoût ?).
+
+Les deviner produirait des distances **silencieusement fausses** : l'oracle
+analytique du jeu jouet ne les contredirait pas.
 
 ---
 
@@ -106,3 +122,10 @@ et de ses questions ouvertes.
 - `lintr` et `covr` installés dans la bibliothèque `renv` locale (sans toucher à
   `renv.lock`) : ils manquaient, d'où l'angle mort local.
 - **Lot 1 mergé et publié en `v0.2.0`** ; retour en cycle de dev `0.2.0.9000`.
+- `specs/002-skidder.md` rédigée (PR #9). Décisions figées : `leastcostpath` comme
+  backend least-cost, et coût **anisotrope** de type Tobler (porté par la transition
+  orientée `a → b`, pas par la cellule). Lot scindé en 2a (débloqué) et 2b (bloqué).
+- Constat de conception : le jeu jouet actuel ne peut pas valider le skidder — sa
+  pente vaut 20 % partout, sous le seuil de 30 %, donc **aucun treuillage n'y serait
+  jamais déclenché**. Un MNT à pente forte et des obstacles sont à ajouter à
+  `data-raw/make_toy.R` au moment du 2b.
