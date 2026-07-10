@@ -54,7 +54,16 @@ foretaccess_config <- function(skidder = list(),
       pente_bascule_aval_pct       = 20,
       distance_hors_desserte_max_m = 50,
       pente_skidder_max_pct        = 30,
-      pente_abattage_max_pct       = 100
+      pente_abattage_max_pct       = 100,
+      # Lot 2 : constantes lues dans sylvaccess_cython3.pyx (skid_debusq_RF),
+      # ou elles sont codees en dur. Promues en parametres (ADR-003).
+      hauteur_attache_treuil_m     = 10,
+      hauteur_degagement_max_m     = 30,
+      surcout_obstacle_complet     = 1000,
+      # 1 = privilegier le treuillage (limiter l'impact sur le sol, defaut v3.6) ;
+      # 2 = privilegier le debusquage. Seule l'option 1 est implementee.
+      option_modelisation          = 1L,
+      classes_distance_m           = c(0, 250, 500, 1000, 1500, 2000)
     ),
     porteur = list(
       pente_travers_max_pct        = 15,
@@ -103,6 +112,19 @@ validate_config <- function(cfg) {
   checkmate::assert_number(sk$distance_hors_desserte_max_m, lower = 0, finite = TRUE)
   checkmate::assert_number(sk$pente_skidder_max_pct, lower = 0)
   checkmate::assert_number(sk$pente_abattage_max_pct, lower = 0)
+  checkmate::assert_number(sk$hauteur_attache_treuil_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(sk$hauteur_degagement_max_m, lower = 0, finite = TRUE)
+  if (sk$hauteur_degagement_max_m <= sk$hauteur_attache_treuil_m) {
+    cli::cli_abort(c(
+      "Configuration skidder incoherente.",
+      "x" = "{.field hauteur_degagement_max_m} ({sk$hauteur_degagement_max_m}) doit etre > \\
+             {.field hauteur_attache_treuil_m} ({sk$hauteur_attache_treuil_m})."
+    ))
+  }
+  checkmate::assert_number(sk$surcout_obstacle_complet, lower = 0, finite = TRUE)
+  checkmate::assert_choice(as.integer(sk$option_modelisation), c(1L, 2L))
+  checkmate::assert_numeric(sk$classes_distance_m, lower = 0, min.len = 2,
+                            any.missing = FALSE, sorted = TRUE, unique = TRUE)
 
   po <- cfg$porteur
   checkmate::assert_number(po$pente_travers_max_pct, lower = 0)
