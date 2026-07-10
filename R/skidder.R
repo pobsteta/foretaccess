@@ -25,6 +25,10 @@
 #' @param trajets_depuis Cellules (indices ou points `sf`) pour lesquelles
 #'   reconstruire le trajet de traînage vers la desserte. `NULL` (défaut) : aucun.
 #' @param write_dir Répertoire d'écriture des rasters en GeoTIFF/COG, ou `NULL`.
+#' @param bord Côtés ouverts de la fenêtre, quand `pre` n'est qu'une **tuile** d'un
+#'   territoire plus vaste (voir [certifier_propagation()]). `NULL` (défaut) : `pre`
+#'   couvre tout le territoire, le résultat est exact partout. Sinon, la sortie porte
+#'   une couche `certifie` (spec 007 §4.3).
 #'
 #' @return Un objet de classe `foretaccess_skidder` :
 #'   \describe{
@@ -36,6 +40,7 @@
 #'     \item{`distance_debardage`}{somme des trois précédentes.}
 #'     \item{`allocation`}{cellule de desserte de rattachement.}
 #'     \item{`trajet`}{`sf` de `LINESTRING`, ou `NULL`.}
+#'     \item{`certifie`}{`SpatRaster` logique, ou `NULL` si `bord` l'est.}
 #'     \item{`recap`}{`data.frame` des surfaces et volumes par classe.}
 #'     \item{`grid`, `config`, `fichiers`}{comme au Lot 1.}
 #'   }
@@ -49,7 +54,8 @@
 skidder <- function(pre,
                     config = foretaccess_config(),
                     trajets_depuis = NULL,
-                    write_dir = NULL) {
+                    write_dir = NULL,
+                    bord = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
 
@@ -75,10 +81,24 @@ skidder <- function(pre,
   sources <- .sources_desserte(pre, desserte_cel)
   cout <- surface_cout_skidder(pre, config)
   zone_rl <- zone_roulable_connectee(pre, config)
-  roulage <- propager_cout(cout, sources, zone = zone_rl)
+
+  if (is.null(bord)) {
+    roulage <- propager_cout(cout, sources, zone = zone_rl)
+    cert_r <- NULL
+  } else {
+    # `zone_rl` est *monotone* : calculee sur une fenetre, elle ne peut que
+    # sous-estimer la zone globale. Certifier le trainage suffit donc a certifier
+    # aussi la zone -- a condition de minorer `d_bord` sur une sur-approximation.
+    cert_r <- certifier_propagation(
+      cout, sources,
+      zone = zone_rl, zone_majorante = .zone_majorante(pre, config), bord = bord
+    )
+    roulage <- cert_r$propagation
+  }
 
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
-  d_piste <- .distance_sur_piste(pre, cout)
+  piste <- .distance_sur_piste(pre, cout, bord)
+  d_piste <- piste$distance
 
   # --- Combinaison (option 1 : le treuillage prime). --------------------------
   d_tr <- as.numeric(terra::values(treuil$distance))
@@ -115,6 +135,11 @@ skidder <- function(pre,
   codes[!foret & !est_desserte] <- 4 # hors_foret
   codes[pente_na] <- NA_real_
 
+  # Une cellule non certifiee est `indetermine` (`NA`), jamais rangee dans
+  # `non_accessible` : le doute se declare, il ne se range pas (spec 007 §4.4).
+  certifie <- .certifier_skidder(cert_r, piste$certifie, treuille, roule, allocation, pre, config, bord)
+  if (!is.null(certifie)) codes[!certifie] <- NA_real_
+
   faire <- function(v, nom) {
     r <- terra::rast(pre$mnt)
     terra::values(r) <- v
@@ -140,6 +165,7 @@ skidder <- function(pre,
       distance_debardage      = faire(dist_total, "distance_debardage"),
       allocation              = faire(allocation, "allocation"),
       trajet                  = NULL,
+      certifie                = if (is.null(certifie)) NULL else faire(certifie, "certifie"),
       recap                   = recapituler(acc, pre$volume),
       grid                    = pre$grid,
       config                  = config,
@@ -157,6 +183,59 @@ skidder <- function(pre,
   sk
 }
 
+# Sur-approximation locale de la zone traversable globale : tout terrain roulable, plus
+# la desserte elle-meme, qu'une pente forte pourrait exclure. `d_bord` doit s'y propager
+# librement, sans quoi il cesserait de minorer le cout d'entree (spec 007 §4.3).
+.zone_majorante <- function(pre, config) {
+  z <- terrain_roulable(pre, config)
+  z[!is.na(terra::values(pre$desserte))] <- 1
+  z
+}
+
+# Portee maximale du treuil : au-dela, aucun rayon ne survit. Le halo doit la couvrir,
+# sinon une desserte hors fenetre treuillerait dans la tuile sans qu'on le sache.
+.portee_treuil <- function(config, res) {
+  sk <- config$skidder
+  max(sk$debardage_amont_max_m, sk$debardage_aval_max_m) + 1.5 * res
+}
+
+# Certificat composite du moteur (spec 007 §4.3). `NULL` hors tuilage.
+#
+# Le treuillage, l'abattage et la pente sont *locaux* : exacts des lors que le halo
+# couvre la portee du treuil. Restent le trainage, dont le certificat porte a la fois
+# le cout et la zone, et la distance sur piste, qu'il faut certifier **a la cellule de
+# desserte allouee** -- c'est elle qui la porte.
+.certifier_skidder <- function(cert_r, cert_piste, treuille, roule, allocation,
+                               pre, config, bord) {
+  if (is.null(cert_r)) {
+    return(NULL)
+  }
+  res <- terra::res(pre$mnt)[1]
+  halo_suffisant <- length(bord) == 0L ||
+    .halo_cellules(pre) * res >= .portee_treuil(config, res)
+  if (!halo_suffisant) {
+    return(rep(FALSE, terra::ncell(pre$mnt)))
+  }
+
+  ok <- as.logical(terra::values(cert_r$certifie))
+  # L'allocation du trainage n'importe que pour les cellules qu'il dessert vraiment.
+  alloc_r <- roule & !treuille
+  ok[alloc_r] <- ok[alloc_r] & as.logical(terra::values(cert_r$certifie_allocation))[alloc_r]
+
+  if (!is.null(cert_piste)) {
+    cp <- as.logical(terra::values(cert_piste))
+    a <- !is.na(allocation)
+    ok[a] <- ok[a] & cp[allocation[a]]
+  }
+  ok
+}
+
+# Largeur du halo effectivement disponible autour de la fenetre, en cellules. Sans
+# information de tuilage, la fenetre est le territoire : la portee est toujours couverte.
+.halo_cellules <- function(pre) {
+  if (is.null(pre$halo_cel)) Inf else pre$halo_cel
+}
+
 # Raster de sources : chaque cellule de desserte porte son propre indice.
 .sources_desserte <- function(pre, desserte_cel) {
   s <- terra::rast(pre$mnt)
@@ -171,7 +250,10 @@ skidder <- function(pre,
 #
 # Le cout est la surface ponderee par la pente (`Pond_pente`), comme dans
 # `Dfwd_flat_forest_tracks()` : une piste en devers coute plus qu'une piste plate.
-.distance_sur_piste <- function(pre, cout) {
+#
+# Le reseau est une donnee locale : sa restriction a la fenetre est exacte, et sert donc
+# aussi de zone majorante. Seule la *distance* le long du reseau deborde de la fenetre.
+.distance_sur_piste <- function(pre, cout, bord = NULL) {
   cl <- terra::levels(pre$desserte)[[1]]
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
@@ -181,7 +263,7 @@ skidder <- function(pre,
 
   n <- terra::ncell(pre$mnt)
   if (!any(est_route) || !any(est_piste)) {
-    return(rep(0, n))
+    return(list(distance = rep(0, n), certifie = NULL))
   }
 
   zone <- terra::rast(pre$mnt)
@@ -192,10 +274,18 @@ skidder <- function(pre,
   v[est_route] <- 1
   terra::values(src) <- v
 
-  prop <- propager_cout(cout, src, zone = zone)
+  if (is.null(bord)) {
+    prop <- propager_cout(cout, src, zone = zone)
+    certifie <- NULL
+  } else {
+    cert <- certifier_propagation(cout, src, zone = zone, bord = bord)
+    prop <- cert$propagation
+    certifie <- cert$certifie
+  }
+
   d <- as.numeric(terra::values(prop$cout_cumule))
   d[is.na(d)] <- 0
-  d
+  list(distance = d, certifie = certifie)
 }
 
 # Reporte la distance sur piste de la cellule de desserte allouee a chaque pixel.

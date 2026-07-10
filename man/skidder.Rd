@@ -8,7 +8,8 @@ skidder(
   pre,
   config = foretaccess_config(),
   trajets_depuis = NULL,
-  write_dir = NULL
+  write_dir = NULL,
+  bord = NULL
 )
 }
 \arguments{
@@ -20,6 +21,11 @@ skidder(
 reconstruire le trajet de traînage vers la desserte. \code{NULL} (défaut) : aucun.}
 
 \item{write_dir}{Répertoire d'écriture des rasters en GeoTIFF/COG, ou \code{NULL}.}
+
+\item{bord}{Côtés ouverts de la fenêtre, quand \code{pre} n'est qu'une \strong{tuile} d'un
+territoire plus vaste (voir \code{\link[=certifier_propagation]{certifier_propagation()}}). \code{NULL} (défaut) : \code{pre}
+couvre tout le territoire, le résultat est exact partout. Sinon, la sortie porte
+une couche \code{certifie} (spec 007 §4.3).}
 }
 \value{
 Un objet de classe \code{foretaccess_skidder} :
@@ -32,6 +38,7 @@ Un objet de classe \code{foretaccess_skidder} :
 \item{\code{distance_debardage}}{somme des trois précédentes.}
 \item{\code{allocation}}{cellule de desserte de rattachement.}
 \item{\code{trajet}}{\code{sf} de \code{LINESTRING}, ou \code{NULL}.}
+\item{\code{certifie}}{\code{SpatRaster} logique, ou \code{NULL} si \code{bord} l'est.}
 \item{\code{recap}}{\code{data.frame} des surfaces et volumes par classe.}
 \item{\code{grid}, \code{config}, \code{fichiers}}{comme au Lot 1.}
 }
