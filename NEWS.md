@@ -11,6 +11,9 @@ pas les équations. Trois d'entre elles contredisaient nos hypothèses initiales
   8-connexe, coût porté par la **cellule d'arrivée** (et non la moyenne des deux
   cellules, comme `terra::costDist()`), diagonale × `sqrt(2)`, plafond de coût, et
   raster d'**allocation** identifiant la source atteinte. Aucune dépendance nouvelle.
+  Le tas binaire vit dans des vecteurs mutés en place : le passer en liste ferait
+  recopier le vecteur à chaque opération (sémantique de copie de R), rendant le
+  Dijkstra quadratique — mesuré à 357× plus lent sur 200 000 insertions.
 * **`surface_cout_skidder()`**, **`ponderation_pente()`** : la fonction de coût est
   `sqrt(1 + (p/100)^2)`, le facteur d'allongement 3D de la traversée d'une cellule.
   Elle ne dépend que de la pente **absolue** : la propagation est **isotrope**.

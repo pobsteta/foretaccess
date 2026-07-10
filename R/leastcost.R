@@ -120,6 +120,11 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
 
 # Dijkstra a tas binaire, 8-connexite, cout porte par la cellule d'arrivee.
 # Travaille sur des vecteurs en ordre "row-major" (celui de terra::values()).
+#
+# Le tas vit dans des vecteurs *locaux*, mutes en place via `<<-`. Le passer en
+# liste d'une fonction a l'autre ferait recopier le vecteur a chaque operation
+# (semantique de copie de R), ce qui rendrait le Dijkstra quadratique : mesure a
+# 357x plus lent sur 200 000 insertions. Le portage Rust reste direct.
 .dijkstra <- function(cout, franchissable, ids, depart, nr, nc, pas, cout_max) {
   n <- nr * nc
   diag <- pas * sqrt(2)
@@ -129,6 +134,61 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
   pred <- rep(NA_real_, n)
   fige <- logical(n)
 
+  # --- Tas binaire minimal, en vecteurs locaux. ------------------------------
+  capacite <- max(64L, length(depart) * 2L)
+  h_cle <- integer(capacite)
+  h_prio <- numeric(capacite)
+  h_n <- 0L
+
+  ajouter <- function(cle, prio) {
+    if (h_n == length(h_cle)) {
+      h_cle <<- c(h_cle, integer(length(h_cle)))
+      h_prio <<- c(h_prio, numeric(length(h_prio)))
+    }
+    i <- h_n + 1L
+    h_cle[i] <<- cle
+    h_prio[i] <<- prio
+    h_n <<- i
+
+    while (i > 1L) {
+      pere <- i %/% 2L
+      if (h_prio[pere] <= h_prio[i]) break
+      tmp <- h_cle[pere]
+      h_cle[pere] <<- h_cle[i]
+      h_cle[i] <<- tmp
+      tmp <- h_prio[pere]
+      h_prio[pere] <<- h_prio[i]
+      h_prio[i] <<- tmp
+      i <- pere
+    }
+    invisible(NULL)
+  }
+
+  retirer <- function() {
+    cle <- h_cle[1L]
+    h_cle[1L] <<- h_cle[h_n]
+    h_prio[1L] <<- h_prio[h_n]
+    h_n <<- h_n - 1L
+
+    i <- 1L
+    while (TRUE) {
+      g <- 2L * i
+      d <- g + 1L
+      petit <- i
+      if (g <= h_n && h_prio[g] < h_prio[petit]) petit <- g
+      if (d <= h_n && h_prio[d] < h_prio[petit]) petit <- d
+      if (petit == i) break
+      tmp <- h_cle[petit]
+      h_cle[petit] <<- h_cle[i]
+      h_cle[i] <<- tmp
+      tmp <- h_prio[petit]
+      h_prio[petit] <<- h_prio[i]
+      h_prio[i] <<- tmp
+      i <- petit
+    }
+    cle
+  }
+
   # Decalages des 8 voisins : (dligne, dcolonne, longueur du pas).
   dl <- c(-1L, -1L, -1L, 0L, 0L, 1L, 1L, 1L)
   dc <- c(-1L, 0L, 1L, -1L, 1L, -1L, 0L, 1L)
@@ -137,14 +197,10 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
   # Les sources sont a cout nul et s'allouent a elles-memes.
   dist[depart] <- 0
   alloc[depart] <- ids[depart]
+  for (s in depart) ajouter(s, 0)
 
-  tas <- .tas_creer(length(depart) + 16L)
-  for (s in depart) tas <- .tas_ajouter(tas, s, 0)
-
-  while (tas$n > 0L) {
-    tete <- .tas_retirer(tas)
-    tas <- tete$tas
-    u <- tete$cle
+  while (h_n > 0L) {
+    u <- retirer()
     if (fige[u]) next
     fige[u] <- TRUE
 
@@ -167,71 +223,12 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
       dist[v] <- dv
       alloc[v] <- alloc[u]
       pred[v] <- u
-      tas <- .tas_ajouter(tas, v, dv)
+      ajouter(v, dv)
     }
   }
 
   dist[!is.finite(dist)] <- NA_real_
   list(dist = dist, alloc = alloc, pred = pred)
-}
-
-# --- Tas binaire minimal (cle = indice de cellule, priorite = cout cumule) ----
-# Implemente a la main : aucune dependance, et le portage Rust sera direct.
-
-# Echange deux elements du tas (cle et priorite ensemble).
-.tas_echanger <- function(tas, i, j) {
-  tmp <- tas$cle[i]
-  tas$cle[i] <- tas$cle[j]
-  tas$cle[j] <- tmp
-  tmp <- tas$prio[i]
-  tas$prio[i] <- tas$prio[j]
-  tas$prio[j] <- tmp
-  tas
-}
-
-.tas_creer <- function(capacite = 64L) {
-  list(cle = integer(capacite), prio = numeric(capacite), n = 0L)
-}
-
-.tas_ajouter <- function(tas, cle, prio) {
-  if (tas$n == length(tas$cle)) {
-    tas$cle <- c(tas$cle, integer(length(tas$cle)))
-    tas$prio <- c(tas$prio, numeric(length(tas$prio)))
-  }
-  i <- tas$n + 1L
-  tas$cle[i] <- cle
-  tas$prio[i] <- prio
-  tas$n <- i
-
-  # Remontee.
-  while (i > 1L) {
-    p <- i %/% 2L
-    if (tas$prio[p] <= tas$prio[i]) break
-    tas <- .tas_echanger(tas, p, i)
-    i <- p
-  }
-  tas
-}
-
-.tas_retirer <- function(tas) {
-  cle <- tas$cle[1L]
-  tas$cle[1L] <- tas$cle[tas$n]
-  tas$prio[1L] <- tas$prio[tas$n]
-  tas$n <- tas$n - 1L
-
-  # Descente.
-  i <- 1L
-  while (TRUE) {
-    g <- 2L * i
-    d <- g + 1L
-    petit <- i
-    if (g <= tas$n && tas$prio[g] < tas$prio[petit]) petit <- g
-    if (d <= tas$n && tas$prio[d] < tas$prio[petit]) petit <- d
-    if (petit == i) break
-    tas <- .tas_echanger(tas, petit, i)
-    i <- petit
-  }
-  list(tas = tas, cle = cle)
 }
 
 #' Trajet optimal d'une cellule vers sa source
