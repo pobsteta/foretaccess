@@ -1,6 +1,8 @@
 # specs/002 — Lot 2 : Moteur Skidder (+ service least-cost partagé)
 
-> **Statut** : proposé — en attente de validation.
+> **Statut** : **partiellement validé** (décisions §10 du 2026-07-10). L'incrément **2a**
+> (service least-cost) est **débloqué** ; l'incrément **2b** (règles skidder) reste **bloqué**
+> sur la lecture du `.pyx` de Sylvaccess (§10.3–10.5, §11).
 > **Lot** : 2 (roadmap [`docs/ROADMAP.md`](../docs/ROADMAP.md)). **Epic** : 2 (backlog
 > [`docs/BACKLOG.md`](../docs/BACKLOG.md), US-2.1…2.3). **Exigence** : EF-4
 > ([`docs/PRD.md`](../docs/PRD.md)).
@@ -90,14 +92,17 @@ propager_cout(surface_cout, sources, cout_max = Inf)  # -> list(cout_cumule, ret
 chemin_optimal(retour, depuis)                        # -> sf LINESTRING
 ```
 
-- `surface_cout` : `SpatRaster` de coût par cellule (`NA` = infranchissable).
+- `surface_cout` : surface de coût **orientée** — le coût est porté par la **transition**
+  `a → b` entre cellules voisines, pas par la cellule (décision §10.2, anisotropie de type
+  Tobler). Une transition `NA` est infranchissable.
 - `sources` : `SpatRaster` logique ou `sf` (la desserte).
 - Renvoie le **coût cumulé** depuis la source la plus proche, et un raster de **retour**
   (*backlink*) permettant de remonter le trajet.
 - `cout_max` élague la propagation : indispensable pour le passage à l'échelle (ADR-005).
 
-Implémentation : `leastcostpath` (qui s'appuie sur `terra`) ou `gdistance`. Choix en §10 Q2.
-La fonction de coût métier, elle, est fournie **par le moteur**, pas par le service.
+Implémentation : **`leastcostpath`** (décision §10.1), qui s'appuie sur `terra` et expose des
+surfaces de coût orientées (`create_slope_cs()`). La **fonction de coût métier**, elle, est
+fournie **par le moteur**, jamais par le service : celui-ci ne connaît que des transitions.
 
 ### 4.2 Règles skidder (US-2.2)
 
@@ -231,27 +236,56 @@ l'autre n'est aujourd'hui installée. Cf. §10 Q2.
 
 ---
 
-## 10. Questions ouvertes (à trancher avant tout codage)
+## 10. Décisions et questions ouvertes
 
-1. **Loi de bascule pente → distance de treuillage.** Entre 0 % et la pente de bascule
-   (75 % amont, 20 % aval), la distance admissible croît-elle **linéairement** jusqu'au
-   maximum, est-elle **constante au maximum** dès le seuil de pente skidder, ou suit-elle des
-   **paliers** ? L'article est muet ; la réponse est dans `sylvaccess_cython3.pyx`.
-   *Sans elle, les distances de treuillage ne peuvent pas être justes.*
-2. **Bibliothèque least-cost** : `leastcostpath` (moderne, sur `terra`, actif) ou `gdistance`
-   (historique, sur `raster`, en fin de vie) ? Proposition : **`leastcostpath`**, avec le
-   service `propager_cout()` en façade pour pouvoir en changer.
-3. **Anisotropie du coût** : le coût de déplacement dépend-il du **sens** (monter coûte plus
-   cher que descendre, à la Tobler) ou seulement de la pente absolue ? Cela conditionne la
-   forme de `surface_cout` et la distinction amont/aval.
-4. **Place de dépôt** : point fourni par l'utilisateur (couche `sf`), ou **nœud de desserte le
-   plus proche** calculé automatiquement ? Proposition : couche optionnelle, et à défaut, la
-   cellule de desserte de coût minimal.
-5. **Traînage piste vs forêt** : le traînage se décompose-t-il selon que la cellule traversée
-   porte une desserte (`piste`) ou non (`foret`), le long du trajet least-cost ? C'est
-   l'interprétation retenue ici — à confirmer.
-6. **Obstacles partiels** : au Lot 1 ils sont rasterisés sans sémantique. Sont-ils
-   **infranchissables pour le skidder** (comme les obstacles complets), ou **franchissables
-   avec surcoût** ? Le brief dit seulement « spécifiques skidder ».
-7. **Oracle** : dispose-t-on d'une exécution Sylvaccess v3.6 sur le jeu jouet pour figer des
-   références, ou reste-t-on sur l'oracle analytique à ce lot (comme au Lot 1) ?
+### Décisions tranchées (2026-07-10)
+
+1. **Bibliothèque least-cost** : **`leastcostpath`** (moderne, bâtie sur `terra` comme le
+   Lot 1, maintenue sur CRAN), et non `gdistance` (bâtie sur `raster`, en fin de vie, ce qui
+   introduirait une seconde pile raster dans le package). Elle entre dans `Imports`. Le
+   service `propager_cout()` reste en **façade**, pour pouvoir en changer sans toucher aux
+   moteurs. *À vérifier à l'implémentation : le plafond de coût (`cout_max`) et la
+   reconstruction du trajet ne sont pas exposés de la même façon selon les versions.*
+2. **Anisotropie du coût** : **anisotrope, de type Tobler** — le coût dépend de la **pente
+   signée** entre cellules voisines, monter ne coûte pas comme descendre. Le service
+   `propager_cout()` doit donc opérer sur des **transitions orientées** (`a → b`), et non sur
+   un coût par cellule. C'est une contrainte forte sur le backend
+   (`leastcostpath::create_slope_cs()`), à honorer dès la conception du service.
+
+### Bloqué sur le code source Sylvaccess
+
+Trois points ne peuvent pas être devinés sans faire des distances **silencieusement fausses**
+(l'oracle analytique ne les contredirait pas). Ils sont explicitement rangés par le brief §7
+dans « à récupérer depuis le code source » (`sylvaccess_cython3.pyx`, GPL v3, `forge.inrae.fr`).
+**Le Lot 2b est bloqué tant qu'ils ne sont pas lus.**
+
+3. **Loi de bascule pente → distance de treuillage.** Sous la pente de bascule (75 % amont,
+   20 % aval), la distance admissible croît-elle linéairement, est-elle constante au maximum
+   dès le seuil skidder, ou suit-elle des paliers ?
+4. **Fonction de coût** des plus courts chemins (`calcul_distance_de_cout`) : forme exacte de
+   la pénalité de pente signée.
+5. **Obstacles partiels** : infranchissables pour le skidder, ou franchissables avec surcoût ?
+   Le brief dit seulement « spécifiques skidder », sans sémantique.
+
+### Questions restantes (non bloquantes)
+
+6. **Place de dépôt** : couche `sf` de points fournie par l'utilisateur ; à défaut, la cellule
+   de desserte de coût minimal. *Proposition retenue sauf avis contraire.*
+7. **Traînage piste vs forêt** : décomposition selon que la cellule traversée par le trajet
+   least-cost porte une desserte ou non. *Interprétation retenue sauf avis contraire.*
+8. **Oracle** : analytique à ce lot (comme au Lot 1), les oracles réels Sylvaccess v3.6 étant
+   branchés via `compare_to_oracle()` dès qu'une exécution de référence est disponible.
+
+---
+
+## 11. Découpage du lot
+
+Les décisions ci-dessus scindent le Lot 2 en deux incréments livrables séparément :
+
+| Incrément | Contenu | État |
+|---|---|---|
+| **2a — Service least-cost** | `propager_cout()`, `chemin_optimal()`, transitions anisotropes, tests analytiques (CA-2.1, CA-2.2) | **débloqué** — aucune règle métier, donc aucune dépendance au `.pyx` |
+| **2b — Règles skidder** | règles v3.6, classement, distances, récap (CA-2.3 … CA-2.8) | **bloqué** sur §10.3–10.5 |
+
+Le jeu jouet enrichi (MNT à pente forte, obstacles) relève de 2b, puisqu'il n'existe que pour
+exercer les règles. 2a se teste sur des surfaces de coût synthétiques.
