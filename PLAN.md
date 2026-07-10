@@ -6,18 +6,16 @@
 
 ## État courant
 
-- **Branche** : `lot-1-pretraitement`
-- **Version `DESCRIPTION`** : `0.2.0` (version stable préparée ; la release est posée
-  automatiquement par `release.yml` au merge sur `main`)
-- **Lot en cours** : **Lot 1 — I/O & prétraitement** — code et tests terminés,
-  reste la PR et la revue.
+- **Branche** : `main` (cycle de dev)
+- **Version `DESCRIPTION`** : `0.2.0.9000` (dernière release `v0.2.0`)
+- **Lot en cours** : aucun. Prochain : **Lot 2 — Moteur Skidder** (spec à écrire).
 
 ## Avancement par lot
 
 | Lot | Nom | Spec | État | Release |
 |---|---|---|---|---|
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
-| 1 | I/O & prétraitement | `specs/001-pretraitement.md` | 🟡 code fait, PR à ouvrir | `v0.2.0` (à poser) |
+| 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | à écrire | ⬜ | — |
 | 3 | Moteur Porteur | à écrire | ⬜ | — |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
@@ -46,26 +44,21 @@ Les ADR font foi (`docs/adr/`). Rappel des décisions qui contraignent le code e
 - **Lot 1, §10** : politique CRS/grille **stricte** (erreur, pas de reprojection ni
   de rééchantillonnage silencieux) ; pente/exposition via `terra`/Horn, méthode
   **configurable** ; rasters en mémoire, écriture COG **optionnelle**.
+- **Aucune couche sans CRS** n'est admise dans le projet : `valider_entrees()`
+  rejette toute entrée dont le CRS est absent, sans jamais le compléter par
+  défaut. Verrouillé par un test de non-régression.
+- **Code R portable** : `R CMD check` interdit le non-ASCII dans les *chaînes*
+  littérales (les commentaires et le roxygen le tolèrent). Les messages `cli`
+  s'écrivent donc translittérés (é→e, à→a, ç→c).
 
 ## Lot 1 — état détaillé
 
-| Étape | Fichier | État |
-|---|---|---|
-| Normalisation des entrées (chemin \| objet) | `R/io.R` | ✅ |
-| Validation CRS / grille / attributs / géométries | `R/validate.R` | ✅ |
-| Pente (%) & exposition (°), méthode configurable | `R/terrain.R` | ✅ |
-| Rasterisation, masques, exclusion de pente | `R/preprocess.R` | ✅ |
-| Orchestrateur `preprocess()` + classe de sortie | `R/preprocess.R` | ✅ |
-| Écriture COG optionnelle + `lire_rasters()` | `R/preprocess.R` | ✅ |
-| Tests (io, validate, slope-aspect, masks, grid, cog) | `tests/testthat/` | ✅ |
-| `NEWS.md` + doc roxygen (`NAMESPACE`, `man/`) | — | ✅ |
-| `lintr` / `R CMD check` / `cargo` / `clippy` | CI | ⬜ à vérifier en CI |
-| PR + release `v0.2.0` | — | ⬜ |
-
-**Definition of Done** : cf. `specs/001-pretraitement.md` §9.
-
-Critères d'acceptation CA-1.1 à CA-1.6 : tous couverts par des tests verts
-(117 tests au total, dont l'oracle analytique du MNT jouet).
+Lot **terminé** et publié en `v0.2.0` (PR #7). Definition of Done intégralement
+satisfaite : `preprocess()`, `valider_entrees()`, `calculer_terrain()` et
+`lire_rasters()` livrés, critères d'acceptation CA-1.1 à CA-1.6 tous couverts par
+des tests verts (oracle analytique du MNT jouet), CI verte sur les sept checks,
+couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
+`R/preprocess.R` à 100 %).
 
 ### Effets de bord assumés
 
@@ -78,9 +71,9 @@ Critères d'acceptation CA-1.1 à CA-1.6 : tous couverts par des tests verts
 
 ## Prochaine étape
 
-Ouvrir la PR `lot-1-pretraitement` → `main` (le merge déclenche `release.yml` et
-pose le tag `v0.2.0`), puis repasser en cycle de dev `0.2.0.9000`. Ensuite :
-rédiger `specs/002-skidder.md`.
+Rédiger `specs/002-skidder.md` (Lot 2 — Moteur Skidder), qui introduit le service
+least-cost partagé avec le Lot 6 (DFCI). Ne rien coder avant validation de la spec
+et de ses questions ouvertes.
 
 ---
 
@@ -100,3 +93,16 @@ rédiger `specs/002-skidder.md`.
   la réconciliation ultérieure avec l'oracle Sylvaccess v3.6 sans refonte.
 - `DESCRIPTION`/`NEWS.md`/`CITATION.cff` alignés sur `0.2.0` ; spec 001 passée en
   statut « validé » et sa DoD cochée.
+
+### 2026-07-10
+- PR #7 : la CI a rattrapé deux défauts que la suite locale ne voyait pas.
+  `R CMD check` refusait le non-ASCII dans les chaînes du code R (messages `cli`
+  accentués) et signalait `PLAN.md` comme fichier non standard à la racine ;
+  Codecov refusait la baisse de couverture (95,21 % → 94,21 %). `covr` a situé
+  quatre branches d'erreur non exercées dans `R/validate.R` (résolution
+  divergente, emprise décalée, géométrie invalide, couche sans CRS) — le test
+  « volume non aligné » n'exerçait en réalité que le contrôle des dimensions.
+  Corrigé : couverture à 97,91 %, CI verte sur les sept checks.
+- `lintr` et `covr` installés dans la bibliothèque `renv` locale (sans toucher à
+  `renv.lock`) : ils manquaient, d'où l'angle mort local.
+- **Lot 1 mergé et publié en `v0.2.0`** ; retour en cycle de dev `0.2.0.9000`.
