@@ -23,7 +23,7 @@
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
-| 7 | Passage à l'échelle | à écrire | ⬜ | — |
+| 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | 🟡 spec validée, 7a en cours | — |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
 | 9 | Doc & publication | à écrire | ⬜ | — |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
@@ -226,3 +226,9 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   package.
 - **Correctif mergé et publié en `v0.3.1`** (PR #11, sept checks verts). Retour en cycle
   de dev `0.3.1.9000`. Lot 2 clos.
+- `specs/007-passage-echelle.md` rédigée ; ADR-005 passé de « proposé » à **accepté**.
+  Décisions : **certificat d'exactitude + halo adaptatif** (le critère « identique au
+  mono-bloc » de l'US-7.1 n'est pas atteignable par un halo fixe — le traînage est un plus
+  court chemin **sans plafond**) ; **`mirai`** plutôt que `future`/`furrr` ; sortie **COG
+  recomposé** seul, les cellules non certifiées tombant dans la classe `indetermine` qui
+  existe déjà. Lot découpé en 7a (théorème), 7b (garantie), 7c (vitesse).
