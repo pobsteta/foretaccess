@@ -27,6 +27,8 @@
 #' @return Un objet de classe `foretaccess_preprocessing` : une liste dont les
 #'   rasters partagent exactement la grille du MNT.
 #'   \describe{
+#'     \item{`mnt`}{le MNT, grille de référence. Les moteurs en ont besoin : le
+#'       treuillage du skidder raisonne sur les altitudes (Lot 2).}
 #'     \item{`slope_pct`}{pente en pourcentage.}
 #'     \item{`aspect_deg`}{exposition en degrés depuis le nord (plat = `NA`).}
 #'     \item{`foret_mask`}{1 dans les polygones forêt, 0 ailleurs.}
@@ -106,6 +108,7 @@ preprocess <- function(mnt,
   # 7. Assemblage.
   pre <- structure(
     list(
+      mnt                     = mnt,
       slope_pct               = terr$slope_pct,
       aspect_deg              = terr$aspect_deg,
       foret_mask              = foret_mask,
