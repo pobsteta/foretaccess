@@ -6,11 +6,11 @@
 
 ## État courant
 
-- **Branche** : `fix/conformite-pyx-skidder`
-- **Version `DESCRIPTION`** : `0.3.1` (correctif de conformité ; `release.yml` pose le
-  tag au merge sur `main`)
-- **Lot en cours** : **Lot 2 — Moteur Skidder** — livré en `v0.3.0`, corrigé en `v0.3.1`
-  après confrontation aux données réelles.
+- **Branche** : `main`
+- **Version `DESCRIPTION`** : `0.3.1.9000` (cycle de dev ; `NEWS.md` et `CITATION.cff`
+  restent sur `0.3.1`, la dernière release)
+- **Lot en cours** : aucun. Lot 2 clos et publié (`v0.3.0`, puis `v0.3.1` après
+  confrontation aux données réelles). Prochain : **Lot 7** ou **Lot 3**.
 
 ## Avancement par lot
 
@@ -73,10 +73,9 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Merger `fix/conformite-pyx-skidder` → `main` (tag `v0.3.1`), puis repasser en cycle de
-dev `0.3.1.9000`. Ensuite **le Lot 7 (passage à l'échelle) avant tout portage Rust** :
-le tuilage et le parallélisme rendent le massif et le département accessibles sans
-écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite.
+**Le Lot 7 (passage à l'échelle) avant tout portage Rust** : le tuilage et le
+parallélisme rendent le massif et le département accessibles sans écrire une ligne de
+Rust, et ils sont de toute façon nécessaires ensuite (cf. § performance).
 En parallèle : `specs/003-porteur.md`, qui réutilise le service least-cost livré ici.
 
 ### Dette assumée du Lot 2
@@ -225,3 +224,5 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 - L'IGN WFS renvoie du WGS 84 : `valider_entrees()` l'a **rejeté**, exactement le
   comportement voulu. La reprojection a lieu dans le script de benchmark, jamais dans le
   package.
+- **Correctif mergé et publié en `v0.3.1`** (PR #11, sept checks verts). Retour en cycle
+  de dev `0.3.1.9000`. Lot 2 clos.
