@@ -97,10 +97,9 @@ l'engin pourrait y rouler. L'option `2` n'est pas implémentée.
 
 ## Écarts assumés avec Sylvaccess v3.6
 
-Le plafond `distance_hors_desserte_max_m` n'est pas appliqué : la
-propagation est déjà confinée à la forêt. La hiérarchie route / piste
-est réduite à deux niveaux (`route` et `dfci` comptent comme routes).
-Voir `specs/002-skidder.md`.
+La hiérarchie route / piste est réduite à deux niveaux (`route` et
+`dfci` comptent comme routes), et l'option de modélisation 2 n'est pas
+implémentée. Voir `specs/002-skidder.md`.
 
 ## Examples
 

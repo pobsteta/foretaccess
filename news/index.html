@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,23 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.1" id="foretaccess-031-2026-07-10">foretaccess 0.3.1 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-031-2026-07-10"></a></h2>
+<div class="section level3">
+<h3 id="conformité-à-sylvaccess-v36-0-3-1">Conformité à Sylvaccess v3.6<a class="anchor" aria-label="anchor" href="#conformit%C3%A9-%C3%A0-sylvaccess-v36-0-3-1"></a></h3>
+<p>Première exécution sur données réelles (AOI de 7,2 km², RGE ALTI + BD TOPO). Elle a révélé deux écarts au code source que le jeu jouet ne pouvait pas exposer.</p>
+<ul><li>
+<code>distance_hors_desserte_max_m</code> <strong>ne plafonne pas la distance de débardage</strong>. C’est la distance maximale que le skidder peut parcourir <strong>hors forêt</strong>, sur du terrain roulable, pour rejoindre un massif qu’aucune desserte ne touche. Nouvelle fonction exportée <code><a href="../reference/zone_roulable_connectee.html">zone_roulable_connectee()</a></code>, qui reproduit la construction en trois temps de <code>Pente_ok_skidder</code> (connexité depuis la desserte, saut borné hors forêt, recollement), et <code><a href="../reference/terrain_roulable.html">terrain_roulable()</a></code>, son critère de pente sans le critère forêt.</li>
+<li>La <code>distance_trainage_piste</code> est désormais pondérée par la pente, comme le traînage en forêt (<code>Dfwd_flat_forest_tracks(f, Lien_Piste, Pond_pente, …)</code>), et non propagée à coût uniforme.</li>
+</ul><p>Sur l’AOI de test, la surface parcourable augmente de 1,9 ha.</p>
+</div>
+<div class="section level3">
+<h3 id="performance-0-3-1">Performance<a class="anchor" aria-label="anchor" href="#performance-0-3-1"></a></h3>
+<ul><li>Le tas binaire du Dijkstra était recopié à chaque opération (sémantique de copie de R sur un vecteur porté par une liste) : <strong>357×</strong> sur une sonde de 200 000 insertions.</li>
+<li>Le balayage radial de treuillage portait des vecteurs pleine longueur sous un masque de rayons vivants : compacter les survivants le rend <strong>2,2×</strong> plus rapide, à sortie identique bit à bit.</li>
+</ul><p><code><a href="../reference/skidder.html">skidder()</a></code> traite désormais 7,2 km² en 22 s CPU (3,05 s/km²) sur un cœur.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="foretaccess-030-2026-07-10">foretaccess 0.3.0 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-030-2026-07-10"></a></h2>
 <div class="section level3">

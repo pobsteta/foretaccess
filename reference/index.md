@@ -70,6 +70,9 @@
 - [`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md)
   : Surface de coût du skidder (pondération de pente)
 
+- [`terrain_roulable()`](https://pobsteta.github.io/foretaccess/reference/terrain_roulable.md)
+  : Terrain roulable, indépendamment de la forêt
+
 - [`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)
   : Distance de treuillage depuis la desserte (balayage radial)
 
@@ -81,6 +84,9 @@
 
 - [`write_config()`](https://pobsteta.github.io/foretaccess/reference/write_config.md)
   : Écrit une configuration au format YAML
+
+- [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
+  : Zone effectivement roulable, connectée à la desserte
 
 - [`zone_roulage()`](https://pobsteta.github.io/foretaccess/reference/zone_roulage.md)
   : Zone de roulage du skidder
