@@ -148,9 +148,35 @@ Trois corollaires, tous utiles :
   règle s'applique, sans code spécifique.
 
 Le certificat ne connaît rien du territoire hors de `R`. Il ne suppose rien sur la densité de
-la desserte. Il coûte **une propagation de plus par tuile** — soit environ 2× le temps de
-l'étage least-cost, qui pèse 59 % du moteur, donc ~1,6× au total. C'est le prix de la
-garantie, et il est explicite.
+la desserte.
+
+#### 4.3.1 Ce que coûte vraiment le certificat
+
+Deux coûts, et le second est le seul qui compte.
+
+La propagation supplémentaire depuis le bord double l'étage least-cost. Anodin.
+
+Mais le certificat n'est satisfait que si `d_R(v) ≤ d_∂(v)`, donc **le halo doit dépasser la
+plus longue distance qui peut entrer dans la tuile**. Et le surcoût surfacique du halo croît
+comme `(1 + 2·halo/tuile)²`. Le halo adaptatif ne triche pas : il grandit jusqu'à satisfaire
+le certificat, et si la distance à couvrir est grande, il coûte cher. Mesuré : sur une
+emprise de 1 km avec des tuiles de 250 m et un halo qui monte à 500 m, le tuilage coûte
+**27× le mono-bloc**. Avec `tuile = 4 × halo`, il coûte **2,5×** — conforme à la formule.
+
+D'où la règle : `tuile_m ≫ halo_m`, et surtout **ne pas laisser une propagation longue piloter
+le halo**. Or il y en avait une : `distance_trainage_piste` atteint 4 030 m sur données
+réelles, ce qui imposerait un halo de 4 km, donc des tuiles de 16 km.
+
+Elle n'a pas à le faire. Cette propagation vit sur le **réseau de desserte** : unidimensionnel,
+creux, quelques pour cent des cellules. Une seule propagation **globale** la donne exactement,
+pour une fraction du coût d'une tuile. `traiter_par_tuiles()` la calcule une fois, la range
+dans le prétraitement (`pre$distance_piste`), la découpe avec les autres couches, et
+`skidder()` la reprend telle quelle. Elle cesse d'être un moteur de halo, et n'a plus besoin
+d'être certifiée : elle est exacte par construction.
+
+Reste le traînage en forêt, dont la portée est la distance à la desserte la plus proche —
+quelques centaines de mètres — et le treuillage, borné à 100 m. Le halo retombe à l'échelle
+de la desserte, pas à celle du réseau.
 
 ### 4.4 Halo adaptatif
 
@@ -249,8 +275,9 @@ une bande non forestière peut porter du traînage.
 - **CA-7.9** Une tuile sans desserte dans `T ∪ H` est sautée sans calcul (mesurable : le
   moteur n'est pas appelé) et ne publie rien : ses cellules sont `indetermine`.
 - **CA-7.10** Sur l'AOI réelle (7,2 km², hors CI), le résultat tuilé est identique au
-  mono-bloc, et le temps sur `n` cœurs est inférieur à `1,6 × T₁ / n × 1,3` (surcoût du
-  certificat, plus 30 % de marge d'ordonnancement).
+  mono-bloc, et le surcoût CPU du tuilage reste sous `(1 + 2·halo/tuile)² × 1,2`. Le gain du
+  parallélisme se mesure en temps **écoulé**, sur une machine non bridée thermiquement —
+  celle de développement injecte de l'idle (`idle_inject`), ce qui l'interdit.
 
 ---
 
@@ -298,7 +325,7 @@ skidder : c'est un théorème sur les plus courts chemins, pas une règle forest
 
 | Risque | Mitigation |
 |---|---|
-| Le certificat double le coût du least-cost | Mesuré (CA-7.10). La propagation depuis le bord s'arrête tôt : ses coûts croissent depuis la bordure, et `cout_max` la tronque au coût maximal observé dans `d_R`. |
+| Le certificat impose `halo ≥ plus longue distance entrante`, et le surcoût croît en `(1 + 2·halo/tuile)²` | Mesuré. La seule propagation kilométrique, `distance_trainage_piste`, est précalculée **globalement** sur le réseau (§4.3.1) : elle ne pilote plus le halo. Garder `tuile_m ≥ 4 × halo_m`. |
 | L'`allocation` en indices globaux déborde le `double` | 2^53 cellules : sans objet, même au national (7 × 10^12 cellules à 5 m). |
 | Un halo qui grandit fait exploser la mémoire d'une tuile | `halo_max` borne la fenêtre. Une tuile de 1 km avec 4 km de halo fait 81 km² : 3,2 M cellules, quelques centaines de Mo. Tenable. |
 | `mirai` jeune face à `future` | L'interface d'orchestration est isolée dans une fonction (`.appliquer_tuiles()`) ; en changer coûte une fonction. |

@@ -1,3 +1,44 @@
+# foretaccess 0.4.0 (2026-07-10)
+
+## Lot 7 — Passage à l'échelle (tuilage, certificat, parallélisme)
+
+Le brief exige un résultat tuilé **identique** au traitement mono-bloc. Un halo fixe ne le
+donne pas : le traînage est un plus court chemin sans portée bornée, et la connexité d'un
+massif à la desserte peut passer par un détour arbitrairement long. Un halo trop court produit
+des artefacts de bordure — distances trop grandes, cellules faussement inaccessibles — que
+rien ne signale.
+
+* `certifier_propagation()` **prouve** l'exactitude cellule par cellule. Deux propagations sur
+  la fenêtre : `d_R` depuis les sources, `d_∂` depuis le bord ouvert pris à coût nul. Si
+  `d_R(v) ≤ d_∂(v)`, aucun chemin extérieur ne peut faire mieux. L'allocation est exacte si
+  l'inégalité est stricte ; `∞ ≤ ∞` certifie l'inaccessibilité ; la connexité n'est que le cas
+  `coût ≡ 0`.
+* `decouper_emprise()` découpe en fenêtres d'écriture **disjointes** avec halo. Le halo ne sert
+  qu'au calcul : la recomposition est une mosaïque, sans règle de fusion.
+* `traiter_par_tuiles()` double le halo tant que des cellules restent non certifiées. Au
+  plafond, elles sortent en `indetermine` avec un avertissement — jamais rangées dans
+  `non_accessible`, jamais tronquées en silence. Une cellule non certifiée ne publie rien :
+  ni classe, ni distance, ni allocation.
+* Parallélisme par tuile via **`mirai`** (nouvelle dépendance). `workers = 1` s'exécute sans
+  démon. Le résultat ne dépend pas du nombre de workers.
+* Sorties en COG recomposé.
+
+### Le halo, et ce qu'il coûte
+
+Le certificat n'est satisfait que si le halo dépasse la plus longue distance qui peut entrer
+dans la tuile, et le surcoût surfacique croît comme `(1 + 2·halo/tuile)²`. Mesuré : 2,5× le
+mono-bloc avec `tuile = 4 × halo`, mais **27×** quand le halo dépasse la tuile.
+
+`distance_trainage_piste` atteint 4 km sur données réelles et aurait imposé des tuiles de
+16 km. Elle vit pourtant sur le réseau de desserte — unidimensionnel et creux : une seule
+propagation globale la donne exactement. `traiter_par_tuiles()` la précalcule, et elle cesse
+d'être un moteur de halo.
+
+## Nouvelles fonctions
+
+`decouper_emprise()`, `fenetre_tuile()`, `certifier_propagation()`, `traiter_par_tuiles()`.
+`skidder()` accepte `bord` et certifie alors ses sorties.
+
 # foretaccess 0.3.1 (2026-07-10)
 
 ## Conformité à Sylvaccess v3.6
