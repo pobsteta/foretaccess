@@ -6,12 +6,11 @@
 
 ## État courant
 
-- **Branche** : `specs/002-skidder` (cycle de dev)
-- **Version `DESCRIPTION`** : `0.2.0.9000` (dernière release `v0.2.0`)
-- **Lot en cours** : **Lot 2 — Moteur Skidder**. Spec écrite et
-  **validée** (PR \#9), décisions prises sur **lecture du code source
-  Sylvaccess v3.6**. Les deux incréments (2a service least-cost, 2b
-  règles skidder) sont **débloqués**.
+- **Branche** : `lot-2-skidder`
+- **Version `DESCRIPTION`** : `0.3.0` (version stable préparée ;
+  `release.yml` pose le tag au merge sur `main`)
+- **Lot en cours** : **Lot 2 — Moteur Skidder** — 2a et 2b implémentés,
+  tests verts, reste la PR et la revue.
 
 ## Avancement par lot
 
@@ -19,7 +18,7 @@
 |----|----|----|----|----|
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
-| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 spec validée, code à écrire | `v0.3.0` (à venir) |
+| 2 | Moteur Skidder | `specs/002-skidder.md` | 🟡 code fait, PR à ouvrir | `v0.3.0` (à poser) |
 | 3 | Moteur Porteur | à écrire | ⬜ | — |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
@@ -87,13 +86,24 @@ checks, couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`,
 
 ## Prochaine étape
 
-Merger la PR \#9 (spec 002), puis implémenter l’**incrément 2a** :
-`propager_cout()` (Dijkstra 8-connexe, coût de la cellule d’arrivée,
-diagonale × √2, avec raster d’**allocation**) et `chemin_optimal()`.
-Aucune règle métier, aucune dépendance nouvelle. Puis **2b** : coût de
-pente, loi de bascule, treuillage radial.
+Ouvrir la PR `lot-2-skidder` → `main` (le merge pose le tag `v0.3.0`),
+puis repasser en cycle de dev `0.3.0.9000`. Ensuite :
+`specs/003-porteur.md`, qui réutilise le service least-cost livré ici.
 
-### Bloqueur levé — le `.pyx` est public
+### Dette assumée du Lot 2
+
+- Seule l’**option de modélisation 1** (privilégier le treuillage) est
+  implémentée ; l’option 2 lève une erreur explicite.
+- Le plafond `distance_hors_desserte_max_m` n’est pas appliqué (la
+  propagation est déjà confinée à la forêt) et la hiérarchie route /
+  piste est réduite à deux niveaux.
+- Le Dijkstra est en R pur : ~10 s sur le jouet 50×50. Sur l’AOI réelle
+  (295 k cellules) il faudra mesurer, et probablement porter le noyau en
+  Rust (ADR-001). La frontière est déjà au bon endroit :
+  [`propager_cout()`](https://pobsteta.github.io/foretaccess/reference/propager_cout.md)
+  ne connaît aucune règle métier.
+
+### Le `.pyx` est public
 
 Le dépôt `forge.inrae.fr/sylvain.dupire/sylvaccess` est **public** :
 l’API GitLab répond sans authentification (c’est la page HTML qui
@@ -175,3 +185,17 @@ ni `leastcostpath` ne renvoient l’allocation.
   ignorée par git (`*.gpkg`), destinée au Lot 10 et à un test
   d’intégration, **pas** au jeu jouet, qui reste synthétique pour rester
   un oracle analytique exact.
+- **Lot 2 implémenté** (2a puis 2b) : `R/leastcost.R`, `R/cout.R`,
+  `R/treuillage.R`, `R/skidder.R`, `R/recap.R` et neuf fichiers de
+  tests. 383 tests verts, couverture 97,93 %, tous les fichiers du lot à
+  100 %.
+- Deux corrections de la spec, révélées par le code : le critère CA-2.8
+  supposait qu’aucun treuillage n’a lieu sous 30 % de pente, alors que
+  le `.pyx` borne le treuillage par la pente d’**abattage** (100 %) —
+  sous l’option 1, une cellule proche de la desserte est treuillée même
+  si l’engin pourrait y rouler. Et le carré d’obstacles du jeu jouet
+  était traversé par la piste DFCI diagonale (0,0)→(250,250), ce qui en
+  faisait des cellules de desserte.
+- [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  conserve désormais le MNT (`$mnt`) : le treuillage raisonne sur les
+  altitudes. Ajout additif, sans rupture.

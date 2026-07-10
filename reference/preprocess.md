@@ -70,6 +70,11 @@ preprocess(
 Un objet de classe `foretaccess_preprocessing` : une liste dont les
 rasters partagent exactement la grille du MNT.
 
+- `mnt`:
+
+  le MNT, grille de référence. Les moteurs en ont besoin : le treuillage
+  du skidder raisonne sur les altitudes (Lot 2).
+
 - `slope_pct`:
 
   pente en pourcentage.

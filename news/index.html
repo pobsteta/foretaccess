@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,38 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="foretaccess-030-2026-07-10">foretaccess 0.3.0 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-030-2026-07-10"></a></h2>
+<div class="section level3">
+<h3 id="lot--moteur-skidder--service-least-cost-partagé-0-3-0">Lot 2 — Moteur Skidder (+ service least-cost partagé)<a class="anchor" aria-label="anchor" href="#lot--moteur-skidder--service-least-cost-partag%C3%A9-0-3-0"></a></h3>
+<p>Les règles sont <strong>dérivées du code source Sylvaccess v3.6</strong> (GPL v3, <code>forge.inrae.fr/sylvain.dupire/sylvaccess</code>), et non de l’article — qui n’en donne pas les équations. Trois d’entre elles contredisaient nos hypothèses initiales.</p>
+<ul><li>
+<strong><code><a href="../reference/propager_cout.html">propager_cout()</a></code></strong> et <strong><code><a href="../reference/chemin_optimal.html">chemin_optimal()</a></code></strong> : service de plus court chemin sur grille, partagé avec le porteur (Lot 3) et le camion DFCI (Lot 6). Dijkstra 8-connexe, coût porté par la <strong>cellule d’arrivée</strong> (et non la moyenne des deux cellules, comme <code><a href="https://rspatial.github.io/terra/reference/costDist.html" class="external-link">terra::costDist()</a></code>), diagonale × <code>sqrt(2)</code>, plafond de coût, et raster d’<strong>allocation</strong> identifiant la source atteinte. Aucune dépendance nouvelle. Le tas binaire vit dans des vecteurs mutés en place : le passer en liste ferait recopier le vecteur à chaque opération (sémantique de copie de R), rendant le Dijkstra quadratique — mesuré à 357× plus lent sur 200 000 insertions.</li>
+<li>
+<strong><code><a href="../reference/surface_cout_skidder.html">surface_cout_skidder()</a></code></strong>, <strong><code><a href="../reference/ponderation_pente.html">ponderation_pente()</a></code></strong> : la fonction de coût est <code>sqrt(1 + (p/100)^2)</code>, le facteur d’allongement 3D de la traversée d’une cellule. Elle ne dépend que de la pente <strong>absolue</strong> : la propagation est <strong>isotrope</strong>.</li>
+<li>
+<strong><code><a href="../reference/treuiller.html">treuiller()</a></code></strong> : le treuillage n’est <strong>pas</strong> un plus court chemin, mais un balayage radial 360° au pas de 1°, en ligne droite, avec une distance <strong>3D</strong> et une contrainte de dégagement du câble (la corde reste entre le sol et <code>hauteur_degagement_max_m</code>, attachée à <code>hauteur_attache_treuil_m</code>). Les rayons vivants sont compactés à chaque pas : la plupart meurent en quelques cellules, et le travail s’effondre (2,2× sur terrain réel).</li>
+<li>
+<strong><code><a href="../reference/distance_treuillage_max.html">distance_treuillage_max()</a></code></strong>, <strong><code><a href="../reference/coefficients_bascule.html">coefficients_bascule()</a></code></strong> : la loi de bascule est affine en <strong>dénivelé</strong>, pas en pente. À plat, la distance admissible vaut <strong>80,23 m</strong> — ni 50 (plafond amont), ni 100 (plafond aval).</li>
+<li>
+<strong><code><a href="../reference/skidder.html">skidder()</a></code></strong> : orchestrateur. Classes d’accessibilité, distances de treuillage, de traînage (forêt et piste) et de débardage, allocation, trajets optionnels, écriture GeoTIFF/COG.</li>
+<li>
+<strong><code><a href="../reference/recapituler.html">recapituler()</a></code></strong> : surfaces et volumes par classe, avec une ligne <code>indetermine</code> explicite — les bordures ne sont jamais rangées silencieusement dans une classe métier.</li>
+<li>
+<strong><code><a href="../reference/zone_roulage.html">zone_roulage()</a></code></strong>, <strong><code><a href="../reference/zone_treuillable.html">zone_treuillable()</a></code></strong> : les obstacles <strong>partiels</strong> bloquent le roulage mais pas le treuillage ; les obstacles <strong>complets</strong> reçoivent un surcoût additif prohibitif mais <strong>fini</strong> (1000), et ne sont pas <code>NA</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="changements-0-3-0">Changements<a class="anchor" aria-label="anchor" href="#changements-0-3-0"></a></h3>
+<ul><li>
+<code><a href="../reference/preprocess.html">preprocess()</a></code> conserve désormais le <strong>MNT</strong> dans son résultat (<code>$mnt</code>) : les moteurs en ont besoin, le treuillage raisonnant sur les altitudes. Ajout additif.</li>
+<li>Nouveaux paramètres <code>config$skidder</code>, aux défauts v3.6 lus dans le <code>.pyx</code> : <code>hauteur_attache_treuil_m</code>, <code>hauteur_degagement_max_m</code>, <code>surcout_obstacle_complet</code>, <code>option_modelisation</code>, <code>classes_distance_m</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="limites-connues-0-3-0">Limites connues<a class="anchor" aria-label="anchor" href="#limites-connues-0-3-0"></a></h3>
+<ul><li>Seule l’<strong>option de modélisation 1</strong> (privilégier le treuillage) est implémentée ; l’option 2 lève une erreur explicite.</li>
+<li>Le plafond <code>distance_hors_desserte_max_m</code> n’est pas appliqué, et la hiérarchie route / piste est réduite à deux niveaux. Voir <code>specs/002-skidder.md</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="foretaccess-020-2026-07-09">foretaccess 0.2.0 (2026-07-09)<a class="anchor" aria-label="anchor" href="#foretaccess-020-2026-07-09"></a></h2>
 <div class="section level3">

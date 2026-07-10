@@ -1,5 +1,77 @@
 # Changelog
 
+## foretaccess 0.3.0 (2026-07-10)
+
+### Lot 2 — Moteur Skidder (+ service least-cost partagé)
+
+Les règles sont **dérivées du code source Sylvaccess v3.6** (GPL v3,
+`forge.inrae.fr/sylvain.dupire/sylvaccess`), et non de l’article — qui
+n’en donne pas les équations. Trois d’entre elles contredisaient nos
+hypothèses initiales.
+
+- **[`propager_cout()`](https://pobsteta.github.io/foretaccess/reference/propager_cout.md)**
+  et
+  **[`chemin_optimal()`](https://pobsteta.github.io/foretaccess/reference/chemin_optimal.md)**
+  : service de plus court chemin sur grille, partagé avec le porteur
+  (Lot 3) et le camion DFCI (Lot 6). Dijkstra 8-connexe, coût porté par
+  la **cellule d’arrivée** (et non la moyenne des deux cellules, comme
+  [`terra::costDist()`](https://rspatial.github.io/terra/reference/costDist.html)),
+  diagonale × `sqrt(2)`, plafond de coût, et raster d’**allocation**
+  identifiant la source atteinte. Aucune dépendance nouvelle. Le tas
+  binaire vit dans des vecteurs mutés en place : le passer en liste
+  ferait recopier le vecteur à chaque opération (sémantique de copie de
+  R), rendant le Dijkstra quadratique — mesuré à 357× plus lent sur 200
+  000 insertions.
+- **[`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md)**,
+  **[`ponderation_pente()`](https://pobsteta.github.io/foretaccess/reference/ponderation_pente.md)**
+  : la fonction de coût est `sqrt(1 + (p/100)^2)`, le facteur
+  d’allongement 3D de la traversée d’une cellule. Elle ne dépend que de
+  la pente **absolue** : la propagation est **isotrope**.
+- **[`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)**
+  : le treuillage n’est **pas** un plus court chemin, mais un balayage
+  radial 360° au pas de 1°, en ligne droite, avec une distance **3D** et
+  une contrainte de dégagement du câble (la corde reste entre le sol et
+  `hauteur_degagement_max_m`, attachée à `hauteur_attache_treuil_m`).
+  Les rayons vivants sont compactés à chaque pas : la plupart meurent en
+  quelques cellules, et le travail s’effondre (2,2× sur terrain réel).
+- **[`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)**,
+  **[`coefficients_bascule()`](https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.md)**
+  : la loi de bascule est affine en **dénivelé**, pas en pente. À plat,
+  la distance admissible vaut **80,23 m** — ni 50 (plafond amont), ni
+  100 (plafond aval).
+- **[`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)**
+  : orchestrateur. Classes d’accessibilité, distances de treuillage, de
+  traînage (forêt et piste) et de débardage, allocation, trajets
+  optionnels, écriture GeoTIFF/COG.
+- **[`recapituler()`](https://pobsteta.github.io/foretaccess/reference/recapituler.md)**
+  : surfaces et volumes par classe, avec une ligne `indetermine`
+  explicite — les bordures ne sont jamais rangées silencieusement dans
+  une classe métier.
+- **[`zone_roulage()`](https://pobsteta.github.io/foretaccess/reference/zone_roulage.md)**,
+  **[`zone_treuillable()`](https://pobsteta.github.io/foretaccess/reference/zone_treuillable.md)**
+  : les obstacles **partiels** bloquent le roulage mais pas le
+  treuillage ; les obstacles **complets** reçoivent un surcoût additif
+  prohibitif mais **fini** (1000), et ne sont pas `NA`.
+
+### Changements
+
+- [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  conserve désormais le **MNT** dans son résultat (`$mnt`) : les moteurs
+  en ont besoin, le treuillage raisonnant sur les altitudes. Ajout
+  additif.
+- Nouveaux paramètres `config$skidder`, aux défauts v3.6 lus dans le
+  `.pyx` : `hauteur_attache_treuil_m`, `hauteur_degagement_max_m`,
+  `surcout_obstacle_complet`, `option_modelisation`,
+  `classes_distance_m`.
+
+### Limites connues
+
+- Seule l’**option de modélisation 1** (privilégier le treuillage) est
+  implémentée ; l’option 2 lève une erreur explicite.
+- Le plafond `distance_hors_desserte_max_m` n’est pas appliqué, et la
+  hiérarchie route / piste est réduite à deux niveaux. Voir
+  `specs/002-skidder.md`.
+
 ## foretaccess 0.2.0 (2026-07-09)
 
 ### Lot 1 — I/O & prétraitement
