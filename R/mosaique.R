@@ -61,20 +61,44 @@ traiter_par_tuiles <- function(pre,
   nc <- terra::ncol(pre$mnt)
   n <- nr * nc
 
+  pre <- .precalculer_piste(pre, config)
+
   plan <- decouper_emprise(pre$mnt, ge$tuile_m, 0)$tuiles
   sortie <- .sortie_vide(n)
   certifie <- rep(FALSE, n)
-  journal <- vector("list", nrow(plan))
+  acquis <- vector("list", nrow(plan))
+  halo <- rep(ge$halo_initial_m, nrow(plan))
 
+  # Boucle par *niveau de halo* : toutes les tuiles d'un meme niveau partent ensemble,
+  # et seules celles qui restent non certifiees repartent au niveau suivant. Le halo
+  # grandit donc en parallele, sans qu'une tuile difficile bloque les autres.
+  actives <- seq_len(nrow(plan))
+  while (length(actives)) {
+    if (!quiet) {
+      cli::cli_alert_info("Halo {halo[actives[1]]} m : {length(actives)} tuile{?s}")
+    }
+    taches <- lapply(actives, function(i) {
+      .fenetre_calcul(plan[i, ], halo[i], terra::res(pre$mnt)[1], nr, nc)
+    })
+    res <- .appliquer_tuiles(pre, config, moteur, taches, nc, ge$workers)
+
+    fini <- vapply(seq_along(actives), function(k) {
+      res[[k]]$non_certifie == 0L || halo[actives[k]] >= ge$halo_max_m
+    }, logical(1))
+
+    for (k in which(fini)) acquis[[actives[k]]] <- c(res[[k]], list(halo_m = halo[actives[k]]))
+    halo[actives[!fini]] <- pmin(2 * halo[actives[!fini]], ge$halo_max_m)
+    actives <- actives[!fini]
+  }
+
+  journal <- vector("list", nrow(plan))
   for (i in seq_len(nrow(plan))) {
-    if (!quiet) cli::cli_alert_info("Tuile {i}/{nrow(plan)}")
-    r <- .traiter_tuile(pre, config, moteur, plan[i, ], nr, nc)
+    r <- acquis[[i]]
     glo <- .cellules_globales(r$ligne, nc)
     sortie <- .poser_tuile(sortie, r, glo)
     certifie[glo] <- r$certifie
     journal[[i]] <- data.frame(id = plan$id[i], halo_m = r$halo_m, non_certifie = r$non_certifie)
   }
-
   journal <- do.call(rbind, journal)
   restant <- sum(journal$non_certifie)
   if (restant > 0) {
@@ -106,29 +130,102 @@ traiter_par_tuiles <- function(pre,
   t
 }
 
-# Traite une tuile, en doublant le halo tant que des cellules restent non certifiees.
-# Chaque doublement quadruple la surface du halo : la convergence est rapide, et le
-# plafond `halo_max_m` borne le pire cas.
-.traiter_tuile <- function(pre, config, moteur, ligne, nr, nc) {
-  ge <- config$general
-  res <- terra::res(pre$mnt)[1]
-  halo <- ge$halo_initial_m
-
-  repeat {
-    t <- .fenetre_calcul(ligne, halo, res, nr, nc)
-    out <- .calculer_tuile(pre, config, moteur, t, nc)
-
-    if (out$non_certifie == 0L || halo >= ge$halo_max_m) break
-    halo <- min(2 * halo, ge$halo_max_m)
+# Repartit les tuiles d'un niveau de halo sur les workers. `workers = 1` execute *sans
+# demon*, dans le processus courant : indispensable au debogage, ou un plantage dans un
+# demon ne remonte qu'une trace tronquee.
+#
+# Les `SpatRaster` portent des pointeurs C++ : ils ne franchissent pas la frontiere de
+# processus. On recadre donc dans le parent -- une lecture de fenetre, que `terra` fait
+# sans charger le raster entier -- puis on emballe (`terra::wrap()`) la seule tuile.
+.appliquer_tuiles <- function(pre, config, moteur, taches, nc, workers) {
+  if (workers <= 1L) {
+    return(lapply(taches, function(t) {
+      .executer_tuile(.preparer_tuile(pre, t), config, moteur, t, nc)
+    }))
   }
-  c(out, list(halo_m = halo))
+  if (!requireNamespace("mirai", quietly = TRUE)) {
+    cli::cli_abort(c(
+      "Le package {.pkg mirai} est requis pour {.code workers > 1}.",
+      "i" = "Installer {.pkg mirai}, ou fixer {.field config$general$workers} a 1."
+    ))
+  }
+
+  charges <- lapply(taches, function(t) {
+    list(t = t, pre = .emballer_pre(.preparer_tuile(pre, t)))
+  })
+
+  mirai::daemons(as.integer(workers))
+  on.exit(mirai::daemons(0L), add = TRUE)
+  mirai::everywhere(library(foretaccess))
+
+  travaux <- mirai::mirai_map(
+    charges,
+    function(charge, config, moteur, nc) {
+      pre_t <- foretaccess:::.deballer_pre(charge$pre)
+      foretaccess:::.executer_tuile(pre_t, config, moteur, charge$t, nc)
+    },
+    # `...` de `mirai_map()` sert a *iterer* ; les constantes passent par `.args`.
+    .args = list(config = config, moteur = moteur, nc = nc)
+  )
+  .verifier_demons(travaux[])
+}
+
+# Une erreur dans un demon revient comme valeur, non comme condition : sans ce controle,
+# elle traverserait la boucle de halo en silence et ressortirait en `NA` indechiffrable.
+.verifier_demons <- function(res) {
+  rate <- vapply(res, function(x) inherits(x, "miraiError"), logical(1))
+  if (any(rate)) {
+    cli::cli_abort(c(
+      "{sum(rate)} tuile{?s} en echec dans un demon {.pkg mirai}.",
+      "x" = "{as.character(res[[which(rate)[1]]])}",
+      "i" = "Rejouer avec {.code workers = 1} pour obtenir la trace complete."
+    ))
+  }
+  res
+}
+
+# La distance sur piste est la propagation la plus longue du moteur : sur donnees reelles
+# elle atteint 4 km, ce qui forcerait le halo a 4 km -- et le surcout du halo croit comme
+# (1 + 2 halo / tuile)^2. Mais elle vit sur le *reseau*, unidimensionnel et creux : une
+# seule propagation globale la donne exactement, pour une fraction du cout d'une tuile.
+# Elle cesse alors d'etre un moteur de halo. Le pretraitement la porte, `.recadrer_pre()`
+# la decoupe, `skidder()` la reprend telle quelle.
+.precalculer_piste <- function(pre, config) {
+  if (!is.null(pre$distance_piste)) {
+    return(pre)
+  }
+  cout <- surface_cout_skidder(pre, config)
+  d <- .distance_sur_piste(pre, cout)$distance
+
+  r <- terra::rast(pre$mnt)
+  terra::values(r) <- d
+  names(r) <- "distance_piste"
+  pre$distance_piste <- r
+  pre
+}
+
+# Recadre le pretraitement sur la fenetre de calcul d'une tuile.
+.preparer_tuile <- function(pre, t) {
+  fen <- .ext_cellules(pre$mnt, t$hl1, t$hl2, t$hc1, t$hc2)
+  .recadrer_pre(pre, fen, t$halo_cel)
+}
+
+.emballer_pre <- function(pre_t) {
+  for (nm in names(pre_t)) {
+    if (inherits(pre_t[[nm]], "SpatRaster")) pre_t[[nm]] <- terra::wrap(pre_t[[nm]])
+  }
+  pre_t
+}
+
+.deballer_pre <- function(pre_t) {
+  for (nm in names(pre_t)) {
+    if (inherits(pre_t[[nm]], "PackedSpatRaster")) pre_t[[nm]] <- terra::unwrap(pre_t[[nm]])
+  }
+  pre_t
 }
 
 # Calcul d'une tuile sur sa fenetre elargie, puis extraction de la fenetre d'ecriture.
-.calculer_tuile <- function(pre, config, moteur, t, nc) {
-  fen <- .ext_cellules(pre$mnt, t$hl1, t$hl2, t$hc1, t$hc2)
-  pre_t <- .recadrer_pre(pre, fen, t$halo_cel)
-
+.executer_tuile <- function(pre_t, config, moteur, t, nc) {
   ncw <- t$hc2 - t$hc1 + 1L
   cel_t <- .cellules_fenetre(t, ncw)
 

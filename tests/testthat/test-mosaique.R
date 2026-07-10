@@ -187,6 +187,60 @@ test_that("les rasters sont ecrits en COG relisibles, categories preservees (CA-
   })
 })
 
+test_that("le resultat ne depend pas du nombre de workers (CA-7.2)", {
+  # Les demons chargent le package : ils ont besoin qu'il soit *installe*, pas
+  # seulement charge par `pkgload`. En developpement local, ce test se saute.
+  skip_if_not_installed("mirai")
+  skip_if(pkgload::is_dev_package("foretaccess"), "package charge par pkgload")
+
+  pre <- toy_preprocess()
+  seq1 <- traiter_par_tuiles(pre, cfg_tuiles(), quiet = TRUE)
+  par4 <- traiter_par_tuiles(pre, cfg_tuiles(workers = 4L), quiet = TRUE)
+
+  for (nm in .couches_skidder()) {
+    expect_equal(
+      as.numeric(terra::values(par4[[nm]])),
+      as.numeric(terra::values(seq1[[nm]])),
+      info = nm
+    )
+  }
+  expect_equal(par4$tuiles, seq1$tuiles)
+})
+
+test_that("la distance sur piste est precalculee globalement, donc exacte", {
+  pre <- toy_preprocess()
+  ref <- skidder(pre)
+
+  enrichi <- .precalculer_piste(pre, foretaccess_config())
+  expect_s4_class(enrichi$distance_piste, "SpatRaster")
+
+  # Le moteur la reprend telle quelle : meme resultat qu'en la recalculant lui-meme.
+  reutilise <- skidder(enrichi)
+  expect_equal(
+    terra::values(reutilise$distance_trainage_piste),
+    terra::values(ref$distance_trainage_piste)
+  )
+
+  # Et le precalcul est idempotent.
+  expect_identical(.precalculer_piste(enrichi, foretaccess_config()), enrichi)
+})
+
+test_that("l'emballage d'une tuile traverse la frontiere de processus", {
+  # Les `SpatRaster` portent des pointeurs C++ : seul l'aller-retour wrap/unwrap les
+  # rend serialisables. C'est ce qui permet a une tuile d'atteindre un demon.
+  pre <- toy_preprocess()
+  t <- .fenetre_calcul(decouper_emprise(pre$mnt, 100, 0)$tuiles[1, ], 50, 5, 50, 50)
+  pre_t <- .preparer_tuile(pre, t)
+
+  emballe <- .emballer_pre(pre_t)
+  expect_s4_class(emballe$mnt, "PackedSpatRaster")
+  expect_length(unserialize(serialize(emballe, NULL)), length(emballe))
+
+  rendu <- .deballer_pre(emballe)
+  expect_s4_class(rendu$mnt, "SpatRaster")
+  expect_equal(terra::values(rendu$mnt), terra::values(pre_t$mnt))
+})
+
 test_that("print.foretaccess_mosaique resume la mosaique", {
   mo <- traiter_par_tuiles(toy_preprocess(), cfg_tuiles(), quiet = TRUE)
   expect_message(print(mo), regexp = "Mosaique ForetAccess")

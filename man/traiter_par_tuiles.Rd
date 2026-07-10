@@ -29,6 +29,8 @@ Un objet de classe \code{foretaccess_mosaique} :
 \describe{
 \item{\code{accessibilite}, \verb{distance_*}, \code{allocation}}{les couches du moteur,
 recomposées sur toute l'emprise.}
+\item{\code{certifie}}{\code{SpatRaster} logique. Gardé en mémoire, \strong{pas écrit} : les
+cellules non certifiées se lisent déjà comme \code{NA} dans les couches.}
 \item{\code{recap}}{\code{data.frame} agrégé, \code{indetermine} compris.}
 \item{\code{tuiles}}{\code{data.frame} : halo final et cellules non certifiées, par tuile.}
 \item{\code{indetermine_ha}}{surface non certifiée, toujours reportée.}
