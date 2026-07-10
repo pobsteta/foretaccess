@@ -225,6 +225,45 @@ test_that("la distance sur piste est precalculee globalement, donc exacte", {
   expect_identical(.precalculer_piste(enrichi, foretaccess_config()), enrichi)
 })
 
+test_that("skidder certifie seul, sans passer par le tuilage", {
+  # Appele directement avec `bord`, le moteur n'a pas de distance sur piste precalculee :
+  # il la calcule et la certifie lui-meme, et n'a aucun halo pour couvrir le treuil.
+  pre <- toy_preprocess()
+
+  sk <- skidder(pre, bord = "bas")
+  expect_s4_class(sk$certifie, "SpatRaster")
+  # Sans information de tuilage, la fenetre *est* le territoire : la portee du treuil
+  # est couverte, et il reste des cellules certifiees.
+  expect_gt(sum(terra::values(sk$certifie) == 1), 0)
+
+  # Une fenetre fermee certifie tout : c'est exactement le mono-bloc.
+  ferme <- skidder(pre, bord = character(0))
+  expect_true(all(terra::values(ferme$certifie) == 1))
+  expect_equal(
+    terra::values(ferme$distance_debardage),
+    terra::values(skidder(pre)$distance_debardage)
+  )
+})
+
+test_that("la progression s'affiche quand on ne la fait pas taire", {
+  expect_message(
+    traiter_par_tuiles(toy_preprocess(), cfg_tuiles(tuile_m = 1000)),
+    regexp = "Halo"
+  )
+})
+
+test_that("une erreur de demon est relevee, pas avalee", {
+  # `mirai` rend les erreurs comme *valeurs*, non comme conditions : sans controle, une
+  # tuile en echec traverserait la boucle de halo et ressortirait en `NA` indechiffrable.
+  faux <- structure("Error : la tuile a explose", class = c("miraiError", "errorValue"))
+
+  expect_error(.verifier_demons(list(faux)), regexp = "echec dans un demon")
+  expect_error(.verifier_demons(list(faux)), regexp = "workers = 1")
+  # Un lot sain traverse inchange.
+  sain <- list(list(non_certifie = 0L))
+  expect_identical(.verifier_demons(sain), sain)
+})
+
 test_that("l'emballage d'une tuile traverse la frontiere de processus", {
   # Les `SpatRaster` portent des pointeurs C++ : seul l'aller-retour wrap/unwrap les
   # rend serialisables. C'est ce qui permet a une tuile d'atteindre un demon.

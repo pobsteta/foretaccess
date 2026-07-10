@@ -143,13 +143,6 @@ traiter_par_tuiles <- function(pre,
       .executer_tuile(.preparer_tuile(pre, t), config, moteur, t, nc)
     }))
   }
-  if (!requireNamespace("mirai", quietly = TRUE)) {
-    cli::cli_abort(c(
-      "Le package {.pkg mirai} est requis pour {.code workers > 1}.",
-      "i" = "Installer {.pkg mirai}, ou fixer {.field config$general$workers} a 1."
-    ))
-  }
-
   charges <- lapply(taches, function(t) {
     list(t = t, pre = .emballer_pre(.preparer_tuile(pre, t)))
   })
@@ -160,12 +153,15 @@ traiter_par_tuiles <- function(pre,
 
   travaux <- mirai::mirai_map(
     charges,
-    function(charge, config, moteur, nc) {
-      pre_t <- foretaccess:::.deballer_pre(charge$pre)
-      foretaccess:::.executer_tuile(pre_t, config, moteur, charge$t, nc)
+    function(charge, config, moteur, nc, deballer, executer) {
+      executer(deballer(charge$pre), config, moteur, charge$t, nc)
     },
-    # `...` de `mirai_map()` sert a *iterer* ; les constantes passent par `.args`.
-    .args = list(config = config, moteur = moteur, nc = nc)
+    # `...` de `mirai_map()` sert a *iterer* ; les constantes passent par `.args`. Les
+    # fonctions internes y voyagent en valeur, plutot que d'etre rappelees par `:::`.
+    .args = list(
+      config = config, moteur = moteur, nc = nc,
+      deballer = .deballer_pre, executer = .executer_tuile
+    )
   )
   .verifier_demons(travaux[])
 }
@@ -361,9 +357,9 @@ traiter_par_tuiles <- function(pre,
   mo
 }
 
+# `recapituler()` emet toujours une ligne `indetermine`, meme vide : pas de cas absent.
 .surface_indetermine <- function(recap) {
-  s <- recap$surface_ha[recap$classe == "indetermine"]
-  if (!length(s)) 0 else s
+  recap$surface_ha[recap$classe == "indetermine"]
 }
 
 #' @export
