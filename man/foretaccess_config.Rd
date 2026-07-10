@@ -19,7 +19,8 @@ foretaccess_config(
 \item{cable}{Liste des paramètres câble. Le \strong{schéma} est posé dès le Lot 0 ;
 les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).}
 
-\item{general}{Liste des paramètres généraux (résolution, CRS).}
+\item{general}{Liste des paramètres généraux (résolution, CRS, méthode de
+calcul de la pente).}
 }
 \value{
 Un objet de classe \code{foretaccess_config} (liste structurée), validé.

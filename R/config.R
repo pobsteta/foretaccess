@@ -9,7 +9,8 @@
 #' @param porteur Liste des paramètres porteur (voir *Détails*).
 #' @param cable Liste des paramètres câble. Le **schéma** est posé dès le Lot 0 ;
 #'   les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).
-#' @param general Liste des paramètres généraux (résolution, CRS).
+#' @param general Liste des paramètres généraux (résolution, CRS, méthode de
+#'   calcul de la pente).
 #'
 #' @details
 #' Défauts **skidder** (v3.6) : débardage amont max 50 m, aval max 100 m
@@ -74,8 +75,11 @@ foretaccess_config <- function(skidder = list(),
       materiels           = list()
     ),
     general = list(
-      resolution_m = 5,
-      crs_epsg     = NA_integer_
+      resolution_m  = 5,
+      crs_epsg      = NA_integer_,
+      # Methode de calcul de la pente/exposition (Lot 1) : Horn (8 voisins) ou
+      # Evans (4 voisins). Configurable pour reconcilier avec l'oracle v3.6.
+      methode_pente = "Horn"
     )
   )
 }
@@ -125,6 +129,7 @@ validate_config <- function(cfg) {
   ge <- cfg$general
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)
   checkmate::assert_int(ge$crs_epsg, na.ok = TRUE)
+  checkmate::assert_choice(ge$methode_pente, .methodes_terrain())
 
   invisible(cfg)
 }

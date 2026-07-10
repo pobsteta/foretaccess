@@ -27,3 +27,4 @@
 ^cobertura\.xml$
 ^foretaccess\.Rproj$
 ^\.Rproj\.user$
+^PLAN\.md$

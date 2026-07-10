@@ -1,6 +1,7 @@
 # specs/001 — Lot 1 : I/O & prétraitement (commun)
 
-> **Statut** : proposé — en attente de validation.
+> **Statut** : **validé** (décisions §10 tranchées le 2026-07-09) — implémenté au
+> Lot 1, livré en `v0.2.0`.
 > **Lot** : 1 (roadmap [`docs/ROADMAP.md`](../docs/ROADMAP.md)). **Epic** : 1 (backlog
 > [`docs/BACKLOG.md`](../docs/BACKLOG.md), US-1.1…1.4). **Exigences** : EF-1, EF-2, EF-3
 > ([`docs/PRD.md`](../docs/PRD.md)).
@@ -175,11 +176,11 @@ Le jeu jouet du Lot 0 (`inst/extdata/toy/`) suffit ; on pourra l'enrichir (obsta
 
 ## 9. Definition of Done (Lot 1)
 
-- [ ] Spec validée (ce fichier) + questions §10 tranchées.
-- [ ] `preprocess()` + validation + terrain + rasterisation/masques implémentés.
-- [ ] Tests verts (pente/expo/masques conformes à l'oracle ; erreurs d'entrée ciblées).
+- [x] Spec validée (ce fichier) + questions §10 tranchées.
+- [x] `preprocess()` + validation + terrain + rasterisation/masques implémentés.
+- [x] Tests verts (pente/expo/masques conformes à l'oracle ; erreurs d'entrée ciblées).
 - [ ] `lintr`/`testthat`/`R CMD check` et `cargo`/`clippy` OK en CI ; couverture maintenue.
-- [ ] Doc d'usage (roxygen + éventuel article pkgdown) ; entrée `NEWS.md`.
+- [x] Doc d'usage (roxygen) ; entrée `NEWS.md`.
 - [ ] Branche dédiée + PR + revue ; commits atomiques.
 
 ---
