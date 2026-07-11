@@ -8,10 +8,13 @@
 <url><loc>https://pobsteta.github.io/foretaccess/news/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/cablehelp_version.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/calculer_terrain.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/certifier_propagation.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/chemin_optimal.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/decouper_emprise.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/fenetre_tuile.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess-package.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess_config.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/index.html</loc></url>
@@ -32,6 +35,7 @@
 <url><loc>https://pobsteta.github.io/foretaccess/reference/storage_postgis.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/terrain_roulable.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/traiter_par_tuiles.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/treuiller.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/validate_config.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/valider_entrees.html</loc></url>

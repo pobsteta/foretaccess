@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,12 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>main</code>
+<strong>Branche</strong> : <code>specs/007-passage-echelle</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.3.1.9000</code> (cycle de dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent sur <code>0.3.1</code>, la dernière release)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.4.0</code> (version stable préparée ; <code>release.yml</code> pose le tag au merge sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : aucun. Lot 2 clos et publié (<code>v0.3.0</code>, puis <code>v0.3.1</code> après confrontation aux données réelles). Prochain : <strong>Lot 7</strong> ou <strong>Lot 3</strong>.</li>
+<strong>Lot en cours</strong> : <strong>Lot 7 — Passage à l’échelle</strong> — 7a, 7b et 7c implémentés, tests verts, reste la PR. Prochain : <strong>Lot 3 — Moteur Porteur</strong>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -93,9 +93,10 @@
 <td>—</td>
 </tr><tr><td>7</td>
 <td>Passage à l’échelle</td>
-<td>à écrire</td>
-<td>⬜</td>
-<td>—</td>
+<td><code>specs/007-passage-echelle.md</code></td>
+<td>🟡 code fait, PR à ouvrir</td>
+<td>
+<code>v0.4.0</code> (à poser)</td>
 </tr><tr><td>8</td>
 <td>Base spatiale &amp; agrégation</td>
 <td>à écrire</td>
@@ -145,7 +146,8 @@
 </div>
 <div class="section level2">
 <h2 id="prochaine-étape">Prochaine étape<a class="anchor" aria-label="anchor" href="#prochaine-%C3%A9tape"></a></h2>
-<p><strong>Le Lot 7 (passage à l’échelle) avant tout portage Rust</strong> : le tuilage et le parallélisme rendent le massif et le département accessibles sans écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite (cf. § performance). En parallèle : <code>specs/003-porteur.md</code>, qui réutilise le service least-cost livré ici.</p>
+<p>Ouvrir la PR <code>specs/007-passage-echelle</code> → <code>main</code> (le merge pose le tag <code>v0.4.0</code>), puis repasser en cycle de dev <code>0.4.0.9000</code>. Ensuite : <code>specs/003-porteur.md</code>, qui réutilise le service least-cost du Lot 2 et le service de tuilage du Lot 7.</p>
+<p>Le portage Rust reste <strong>après</strong> : le tuilage rend le massif et le département accessibles sans écrire une ligne de Rust (cf. § performance).</p>
 <div class="section level3">
 <h3 id="dette-assumée-du-lot-2">Dette assumée du Lot 2<a class="anchor" aria-label="anchor" href="#dette-assum%C3%A9e-du-lot-2"></a></h3>
 <ul><li>Seule l’<strong>option de modélisation 1</strong> (privilégier le treuillage) est implémentée ; l’option 2 lève une erreur explicite.</li>
@@ -170,12 +172,35 @@
 <td><strong>21,97 s</strong></td>
 </tr></tbody></table><p>Soit <strong>3,05 s/km²</strong> sur un cœur. Extrapolation : massif de 100 km² → 5 min ; département de 2 000 km² → 1,7 h ; région de 20 000 km² → 17 h ; France (170 000 km²) → 6 jours. Divisé par 8 sur 8 cœurs, le département tombe à 13 min et la France à 18 h.</p>
 <p><strong>Verdict Rust</strong> : le portage n’est pas justifié à l’échelle du massif ni du département — le Lot 7 y suffit. Il l’est pour la région et la France. Et le candidat au portage est <strong>le Dijkstra</strong> (12,9 s CPU cumulés, 59 %), non le balayage radial (11,0 s, 50 % — les deux se recouvrent, le total inclut aussi le prétraitement). C’est l’inverse de ce que la première mesure suggérait : elle précédait <code><a href="reference/zone_roulable_connectee.html">zone_roulable_connectee()</a></code>, qui ajoute un Dijkstra. Deux réserves : l’AOI est <strong>raide</strong>, donc les rayons de treuil y meurent vite — un plateau doux inverserait le rapport ; et le Dijkstra bénéficierait aussi d’un tuilage, pas seulement d’un changement de langage.</p>
+<div class="section level3">
+<h3 id="ce-que-coûte-le-tuilage-lot-7-2026-07-10">Ce que coûte le tuilage (Lot 7, 2026-07-10)<a class="anchor" aria-label="anchor" href="#ce-que-co%C3%BBte-le-tuilage-lot-7-2026-07-10"></a></h3>
+<p>Le certificat n’est satisfait que si le <strong>halo dépasse la plus longue distance qui peut entrer dans la tuile</strong>, et le surcoût surfacique croît comme <code>(1 + 2·halo/tuile)²</code>. Mesuré sur une grille synthétique de 2 km (160 000 cellules, dessertes tous les 400 m) :</p>
+<table class="table"><thead><tr><th>Configuration</th>
+<th>CPU</th>
+<th>Surcoût</th>
+</tr></thead><tbody><tr><td>mono-bloc</td>
+<td>11,2 s</td>
+<td>—</td>
+</tr><tr><td>tuiles 1000 m, halo 250 m</td>
+<td>28,1 s</td>
+<td>
+<strong>2,5×</strong> (prédit 2,25×)</td>
+</tr><tr><td>tuiles 250 m, halo → 500 m (1 km d’emprise)</td>
+<td>87,0 s</td>
+<td><strong>27×</strong></td>
+</tr></tbody></table><p>D’où la règle <code>tuile_m ≥ 4 × halo_m</code>, et surtout : ne jamais laisser une propagation kilométrique piloter le halo. <code>distance_trainage_piste</code> en était une (4 030 m sur l’AOI réelle) ; elle est désormais <strong>précalculée globalement</strong> sur le réseau de desserte, qui est unidimensionnel et creux. Elle a cessé d’être un moteur de halo.</p>
+<p><strong>Le parallélisme n’a pas pu être mesuré ici.</strong> La machine de développement injecte de l’idle (<code>idle_inject/*</code>, throttling thermique du noyau) : la charge affichée est de 6 à 10 sur 8 cœurs sans qu’aucun processus utilisateur ne tourne, et le temps écoulé vaut systématiquement le double du temps CPU. Le gain des workers est donc à re-mesurer sur une machine non bridée. L’exactitude, elle, est vérifiée : <code>workers = 4</code> donne un résultat identique bit à bit à <code>workers = 1</code>.</p>
+<p><em>(Correction : j’avais d’abord attribué cette charge à des workers <code>workRSOCK</code> orphelins laissés par <code>covr</code>. C’était faux — ce sont des threads noyau.)</em></p>
+</div>
+<div class="section level3">
+<h3 id="bogues-de-performance-corrigés-lot-2">Bogues de performance corrigés (Lot 2)<a class="anchor" aria-label="anchor" href="#bogues-de-performance-corrig%C3%A9s-lot-2"></a></h3>
 <p>Deux bogues de performance corrigés en cours de route, tous deux dans du code à moi :</p>
 <ul><li>
 <strong>Tas binaire recopié</strong> : passé de fonction en fonction dans une liste, chaque <code>tas$cle[i] &lt;- x</code> recopiait le vecteur entier (sémantique de copie de R). Sonde isolée : 96,44 s contre 0,27 s pour 200 000 insertions, soit <strong>357×</strong>. Corrigé par des vecteurs locaux mutés via <code>&lt;&lt;-</code>.</li>
 <li>
 <strong>Rayons de treuil non compactés</strong> : le balayage portait des vecteurs pleine longueur sous un masque <code>vivant</code>, alors que la plupart des rayons meurent en quelques cellules. Compaction des survivants : 34,7 s → 16,1 s, distances et allocations <strong>bit à bit identiques</strong>.</li>
-</ul><div class="section level3">
+</ul></div>
+<div class="section level3">
 <h3 id="le-pyx-est-public">Le <code>.pyx</code> est public<a class="anchor" aria-label="anchor" href="#le-pyx-est-public"></a></h3>
 <p>Le dépôt <code>forge.inrae.fr/sylvain.dupire/sylvaccess</code> est <strong>public</strong> : l’API GitLab répond sans authentification (c’est la page HTML qui affiche un écran de connexion trompeur). <code>scripts/sylvaccess_cython3.pyx</code> a été lu, et il <strong>contredit deux hypothèses</strong> de la première rédaction de la spec :</p>
 <ul><li>la <strong>fonction de coût est isotrope</strong> (<code>√(1 + (p/100)²)</code>, facteur d’allongement 3D) : il n’y a aucun Tobler dans Sylvaccess ;</li>
@@ -230,6 +255,17 @@
 <li>L’IGN WFS renvoie du WGS 84 : <code><a href="reference/valider_entrees.html">valider_entrees()</a></code> l’a <strong>rejeté</strong>, exactement le comportement voulu. La reprojection a lieu dans le script de benchmark, jamais dans le package.</li>
 <li>
 <strong>Correctif mergé et publié en <code>v0.3.1</code></strong> (PR #11, sept checks verts). Retour en cycle de dev <code>0.3.1.9000</code>. Lot 2 clos.</li>
+<li>
+<code>specs/007-passage-echelle.md</code> rédigée ; ADR-005 passé de « proposé » à <strong>accepté</strong>. Décisions : <strong>certificat d’exactitude + halo adaptatif</strong> (le critère « identique au mono-bloc » de l’US-7.1 n’est pas atteignable par un halo fixe — le traînage est un plus court chemin <strong>sans plafond</strong>) ; <strong><code>mirai</code></strong> plutôt que <code>future</code>/<code>furrr</code> ; sortie <strong>COG recomposé</strong> seul, les cellules non certifiées tombant dans la classe <code>indetermine</code> qui existe déjà. Lot découpé en 7a (théorème), 7b (garantie), 7c (vitesse).</li>
+<li>
+<strong>Lot 7 implémenté</strong> : <code>R/tuilage.R</code>, <code>R/certificat.R</code>, <code>R/mosaique.R</code>, <code>skidder(bord=)</code>, et trois fichiers de tests. 491 tests verts, <code>lintr</code> 0, ASCII OK.</li>
+<li>Trois choses que seuls les tests et la mesure ont révélées, toutes contredisant la première rédaction de la spec :
+<ul><li>une tuile sans desserte ne peut pas publier <code>hors_foret</code> pour ses cellules non forestières : leur <em>classe</em> est un fait local, mais pas leurs distances (la zone de traînage déborde de 50 m hors forêt). Elle ne publie donc rien ;</li>
+<li>le certificat coûte bien plus qu’une propagation de plus : il impose <code>halo ≥ plus longue distance entrante</code>, et le surcoût croît en <code>(1 + 2·halo/tuile)²</code> ;</li>
+<li>
+<code>mirai_map()</code> traite <code>...</code> comme des vecteurs à itérer ; les constantes passent par <code>.args</code>. Et une erreur de démon revient comme <em>valeur</em> (<code>miraiError</code>), pas comme condition : sans contrôle explicite, elle traverse la boucle en silence.</li>
+</ul></li>
+<li>Les <code>SpatRaster</code> portent des pointeurs C++ : ils ne franchissent pas la frontière de processus. Le parent recadre (lecture de fenêtre, sans charger le raster entier), puis emballe (<code><a href="https://rspatial.github.io/terra/reference/wrap.html" class="external-link">terra::wrap()</a></code>) la seule tuile.</li>
 </ul></div>
 </div>
 </div>

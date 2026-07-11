@@ -13,7 +13,8 @@ skidder(
   pre,
   config = foretaccess_config(),
   trajets_depuis = NULL,
-  write_dir = NULL
+  write_dir = NULL,
+  bord = NULL
 )
 ```
 
@@ -37,6 +38,15 @@ skidder(
 - write_dir:
 
   Répertoire d'écriture des rasters en GeoTIFF/COG, ou `NULL`.
+
+- bord:
+
+  Côtés ouverts de la fenêtre, quand `pre` n'est qu'une **tuile** d'un
+  territoire plus vaste (voir
+  [`certifier_propagation()`](https://pobsteta.github.io/foretaccess/reference/certifier_propagation.md)).
+  `NULL` (défaut) : `pre` couvre tout le territoire, le résultat est
+  exact partout. Sinon, la sortie porte une couche `certifie` (spec 007
+  §4.3).
 
 ## Value
 
@@ -70,6 +80,10 @@ Un objet de classe `foretaccess_skidder` :
 - `trajet`:
 
   `sf` de `LINESTRING`, ou `NULL`.
+
+- `certifie`:
+
+  `SpatRaster` logique, ou `NULL` si `bord` l'est.
 
 - `recap`:
 

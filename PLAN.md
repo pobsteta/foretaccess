@@ -6,12 +6,12 @@
 
 ## État courant
 
-- **Branche** : `main`
-- **Version `DESCRIPTION`** : `0.3.1.9000` (cycle de dev ; `NEWS.md` et
-  `CITATION.cff` restent sur `0.3.1`, la dernière release)
-- **Lot en cours** : aucun. Lot 2 clos et publié (`v0.3.0`, puis
-  `v0.3.1` après confrontation aux données réelles). Prochain : **Lot
-  7** ou **Lot 3**.
+- **Branche** : `specs/007-passage-echelle`
+- **Version `DESCRIPTION`** : `0.4.0` (version stable préparée ;
+  `release.yml` pose le tag au merge sur `main`)
+- **Lot en cours** : **Lot 7 — Passage à l’échelle** — 7a, 7b et 7c
+  implémentés, tests verts, reste la PR. Prochain : **Lot 3 — Moteur
+  Porteur**.
 
 ## Avancement par lot
 
@@ -24,7 +24,7 @@
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
-| 7 | Passage à l’échelle | à écrire | ⬜ | — |
+| 7 | Passage à l’échelle | `specs/007-passage-echelle.md` | 🟡 code fait, PR à ouvrir | `v0.4.0` (à poser) |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
 | 9 | Doc & publication | à écrire | ⬜ | — |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
@@ -87,11 +87,14 @@ checks, couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`,
 
 ## Prochaine étape
 
-**Le Lot 7 (passage à l’échelle) avant tout portage Rust** : le tuilage
-et le parallélisme rendent le massif et le département accessibles sans
-écrire une ligne de Rust, et ils sont de toute façon nécessaires ensuite
-(cf. § performance). En parallèle : `specs/003-porteur.md`, qui
-réutilise le service least-cost livré ici.
+Ouvrir la PR `specs/007-passage-echelle` → `main` (le merge pose le tag
+`v0.4.0`), puis repasser en cycle de dev `0.4.0.9000`. Ensuite :
+`specs/003-porteur.md`, qui réutilise le service least-cost du Lot 2 et
+le service de tuilage du Lot 7.
+
+Le portage Rust reste **après** : le tuilage rend le massif et le
+département accessibles sans écrire une ligne de Rust (cf. §
+performance).
 
 ### Dette assumée du Lot 2
 
@@ -134,6 +137,39 @@ qui ajoute un Dijkstra. Deux réserves : l’AOI est **raide**, donc les
 rayons de treuil y meurent vite — un plateau doux inverserait le rapport
 ; et le Dijkstra bénéficierait aussi d’un tuilage, pas seulement d’un
 changement de langage.
+
+### Ce que coûte le tuilage (Lot 7, 2026-07-10)
+
+Le certificat n’est satisfait que si le **halo dépasse la plus longue
+distance qui peut entrer dans la tuile**, et le surcoût surfacique croît
+comme `(1 + 2·halo/tuile)²`. Mesuré sur une grille synthétique de 2 km
+(160 000 cellules, dessertes tous les 400 m) :
+
+| Configuration                               | CPU    | Surcoût                 |
+|---------------------------------------------|--------|-------------------------|
+| mono-bloc                                   | 11,2 s | —                       |
+| tuiles 1000 m, halo 250 m                   | 28,1 s | **2,5×** (prédit 2,25×) |
+| tuiles 250 m, halo → 500 m (1 km d’emprise) | 87,0 s | **27×**                 |
+
+D’où la règle `tuile_m ≥ 4 × halo_m`, et surtout : ne jamais laisser une
+propagation kilométrique piloter le halo. `distance_trainage_piste` en
+était une (4 030 m sur l’AOI réelle) ; elle est désormais **précalculée
+globalement** sur le réseau de desserte, qui est unidimensionnel et
+creux. Elle a cessé d’être un moteur de halo.
+
+**Le parallélisme n’a pas pu être mesuré ici.** La machine de
+développement injecte de l’idle (`idle_inject/*`, throttling thermique
+du noyau) : la charge affichée est de 6 à 10 sur 8 cœurs sans qu’aucun
+processus utilisateur ne tourne, et le temps écoulé vaut
+systématiquement le double du temps CPU. Le gain des workers est donc à
+re-mesurer sur une machine non bridée. L’exactitude, elle, est vérifiée
+: `workers = 4` donne un résultat identique bit à bit à `workers = 1`.
+
+*(Correction : j’avais d’abord attribué cette charge à des workers
+`workRSOCK` orphelins laissés par `covr`. C’était faux — ce sont des
+threads noyau.)*
+
+### Bogues de performance corrigés (Lot 2)
 
 Deux bogues de performance corrigés en cours de route, tous deux dans du
 code à moi :
@@ -276,3 +312,32 @@ ni `leastcostpath` ne renvoient l’allocation.
   lieu dans le script de benchmark, jamais dans le package.
 - **Correctif mergé et publié en `v0.3.1`** (PR \#11, sept checks
   verts). Retour en cycle de dev `0.3.1.9000`. Lot 2 clos.
+- `specs/007-passage-echelle.md` rédigée ; ADR-005 passé de « proposé »
+  à **accepté**. Décisions : **certificat d’exactitude + halo
+  adaptatif** (le critère « identique au mono-bloc » de l’US-7.1 n’est
+  pas atteignable par un halo fixe — le traînage est un plus court
+  chemin **sans plafond**) ; **`mirai`** plutôt que `future`/`furrr` ;
+  sortie **COG recomposé** seul, les cellules non certifiées tombant
+  dans la classe `indetermine` qui existe déjà. Lot découpé en 7a
+  (théorème), 7b (garantie), 7c (vitesse).
+- **Lot 7 implémenté** : `R/tuilage.R`, `R/certificat.R`,
+  `R/mosaique.R`, `skidder(bord=)`, et trois fichiers de tests. 491
+  tests verts, `lintr` 0, ASCII OK.
+- Trois choses que seuls les tests et la mesure ont révélées, toutes
+  contredisant la première rédaction de la spec :
+  - une tuile sans desserte ne peut pas publier `hors_foret` pour ses
+    cellules non forestières : leur *classe* est un fait local, mais pas
+    leurs distances (la zone de traînage déborde de 50 m hors forêt).
+    Elle ne publie donc rien ;
+  - le certificat coûte bien plus qu’une propagation de plus : il impose
+    `halo ≥ plus longue distance entrante`, et le surcoût croît en
+    `(1 + 2·halo/tuile)²` ;
+  - `mirai_map()` traite `...` comme des vecteurs à itérer ; les
+    constantes passent par `.args`. Et une erreur de démon revient comme
+    *valeur* (`miraiError`), pas comme condition : sans contrôle
+    explicite, elle traverse la boucle en silence.
+- Les `SpatRaster` portent des pointeurs C++ : ils ne franchissent pas
+  la frontière de processus. Le parent recadre (lecture de fenêtre, sans
+  charger le raster entier), puis emballe
+  ([`terra::wrap()`](https://rspatial.github.io/terra/reference/wrap.html))
+  la seule tuile.

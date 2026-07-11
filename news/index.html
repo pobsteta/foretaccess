@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,30 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.0" id="foretaccess-040-2026-07-10">foretaccess 0.4.0 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-040-2026-07-10"></a></h2>
+<div class="section level3">
+<h3 id="lot--passage-à-léchelle-tuilage-certificat-parallélisme-0-4-0">Lot 7 — Passage à l’échelle (tuilage, certificat, parallélisme)<a class="anchor" aria-label="anchor" href="#lot--passage-%C3%A0-l%C3%A9chelle-tuilage-certificat-parall%C3%A9lisme-0-4-0"></a></h3>
+<p>Le brief exige un résultat tuilé <strong>identique</strong> au traitement mono-bloc. Un halo fixe ne le donne pas : le traînage est un plus court chemin sans portée bornée, et la connexité d’un massif à la desserte peut passer par un détour arbitrairement long. Un halo trop court produit des artefacts de bordure — distances trop grandes, cellules faussement inaccessibles — que rien ne signale.</p>
+<ul><li>
+<code><a href="../reference/certifier_propagation.html">certifier_propagation()</a></code> <strong>prouve</strong> l’exactitude cellule par cellule. Deux propagations sur la fenêtre : <code>d_R</code> depuis les sources, <code>d_∂</code> depuis le bord ouvert pris à coût nul. Si <code>d_R(v) ≤ d_∂(v)</code>, aucun chemin extérieur ne peut faire mieux. L’allocation est exacte si l’inégalité est stricte ; <code>∞ ≤ ∞</code> certifie l’inaccessibilité ; la connexité n’est que le cas <code>coût ≡ 0</code>.</li>
+<li>
+<code><a href="../reference/decouper_emprise.html">decouper_emprise()</a></code> découpe en fenêtres d’écriture <strong>disjointes</strong> avec halo. Le halo ne sert qu’au calcul : la recomposition est une mosaïque, sans règle de fusion.</li>
+<li>
+<code><a href="../reference/traiter_par_tuiles.html">traiter_par_tuiles()</a></code> double le halo tant que des cellules restent non certifiées. Au plafond, elles sortent en <code>indetermine</code> avec un avertissement — jamais rangées dans <code>non_accessible</code>, jamais tronquées en silence. Une cellule non certifiée ne publie rien : ni classe, ni distance, ni allocation.</li>
+<li>Parallélisme par tuile via <strong><code>mirai</code></strong> (nouvelle dépendance). <code>workers = 1</code> s’exécute sans démon. Le résultat ne dépend pas du nombre de workers.</li>
+<li>Sorties en COG recomposé.</li>
+</ul><div class="section level4">
+<h4 id="le-halo-et-ce-quil-coûte-0-4-0">Le halo, et ce qu’il coûte<a class="anchor" aria-label="anchor" href="#le-halo-et-ce-quil-co%C3%BBte-0-4-0"></a></h4>
+<p>Le certificat n’est satisfait que si le halo dépasse la plus longue distance qui peut entrer dans la tuile, et le surcoût surfacique croît comme <code>(1 + 2·halo/tuile)²</code>. Mesuré : 2,5× le mono-bloc avec <code>tuile = 4 × halo</code>, mais <strong>27×</strong> quand le halo dépasse la tuile.</p>
+<p><code>distance_trainage_piste</code> atteint 4 km sur données réelles et aurait imposé des tuiles de 16 km. Elle vit pourtant sur le réseau de desserte — unidimensionnel et creux : une seule propagation globale la donne exactement. <code><a href="../reference/traiter_par_tuiles.html">traiter_par_tuiles()</a></code> la précalcule, et elle cesse d’être un moteur de halo.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="nouvelles-fonctions-0-4-0">Nouvelles fonctions<a class="anchor" aria-label="anchor" href="#nouvelles-fonctions-0-4-0"></a></h3>
+<p><code><a href="../reference/decouper_emprise.html">decouper_emprise()</a></code>, <code><a href="../reference/fenetre_tuile.html">fenetre_tuile()</a></code>, <code><a href="../reference/certifier_propagation.html">certifier_propagation()</a></code>, <code><a href="../reference/traiter_par_tuiles.html">traiter_par_tuiles()</a></code>. <code><a href="../reference/skidder.html">skidder()</a></code> accepte <code>bord</code> et certifie alors ses sorties.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.1" id="foretaccess-031-2026-07-10">foretaccess 0.3.1 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-031-2026-07-10"></a></h2>
 <div class="section level3">

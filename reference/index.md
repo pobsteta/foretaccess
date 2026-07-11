@@ -10,6 +10,9 @@
 - [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
   : Pente et exposition depuis un MNT
 
+- [`certifier_propagation()`](https://pobsteta.github.io/foretaccess/reference/certifier_propagation.md)
+  : Certificat d'exactitude d'une propagation sur une fenêtre
+
 - [`chemin_optimal()`](https://pobsteta.github.io/foretaccess/reference/chemin_optimal.md)
   : Trajet optimal d'une cellule vers sa source
 
@@ -19,8 +22,14 @@
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
   : Compare une sortie à un oracle de non-régression
 
+- [`decouper_emprise()`](https://pobsteta.github.io/foretaccess/reference/decouper_emprise.md)
+  : Découper une emprise en tuiles avec halo
+
 - [`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)
   : Distance maximale de treuillage admissible
+
+- [`fenetre_tuile()`](https://pobsteta.github.io/foretaccess/reference/fenetre_tuile.md)
+  : Emprise d'une tuile
 
 - [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)
   : Configuration métier de ForêtAccess (défauts Sylvaccess v3.6)
@@ -72,6 +81,9 @@
 
 - [`terrain_roulable()`](https://pobsteta.github.io/foretaccess/reference/terrain_roulable.md)
   : Terrain roulable, indépendamment de la forêt
+
+- [`traiter_par_tuiles()`](https://pobsteta.github.io/foretaccess/reference/traiter_par_tuiles.md)
+  : Traiter une emprise par tuiles
 
 - [`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)
   : Distance de treuillage depuis la desserte (balayage radial)

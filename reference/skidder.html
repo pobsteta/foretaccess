@@ -13,7 +13,7 @@ Lot 1 (ADR-004) et tous ses seuils viennent de config (ADR-003)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,8 @@ Lot 1 (ADR-004) et tous ses seuils viennent de <code>config</code> (ADR-003).</p
 <span>  <span class="va">pre</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  trajets_depuis <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  write_dir <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  write_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bord <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -75,6 +76,13 @@ reconstruire le trajet de traînage vers la desserte. <code>NULL</code> (défaut
 
 <dt id="arg-write-dir">write_dir<a class="anchor" aria-label="anchor" href="#arg-write-dir"></a></dt>
 <dd><p>Répertoire d'écriture des rasters en GeoTIFF/COG, ou <code>NULL</code>.</p></dd>
+
+
+<dt id="arg-bord">bord<a class="anchor" aria-label="anchor" href="#arg-bord"></a></dt>
+<dd><p>Côtés ouverts de la fenêtre, quand <code>pre</code> n'est qu'une <strong>tuile</strong> d'un
+territoire plus vaste (voir <code><a href="certifier_propagation.html">certifier_propagation()</a></code>). <code>NULL</code> (défaut) : <code>pre</code>
+couvre tout le territoire, le résultat est exact partout. Sinon, la sortie porte
+une couche <code>certifie</code> (spec 007 §4.3).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -100,6 +108,9 @@ reconstruire le trajet de traînage vers la desserte. <code>NULL</code> (défaut
 
 <dt><code>trajet</code></dt>
 <dd><p><code>sf</code> de <code>LINESTRING</code>, ou <code>NULL</code>.</p></dd>
+
+<dt><code>certifie</code></dt>
+<dd><p><code>SpatRaster</code> logique, ou <code>NULL</code> si <code>bord</code> l'est.</p></dd>
 
 <dt><code>recap</code></dt>
 <dd><p><code>data.frame</code> des surfaces et volumes par classe.</p></dd>
