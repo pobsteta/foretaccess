@@ -49,3 +49,7 @@ src/Makevars.win
 # Artefacts testthat (rapports d'échec régénérés à chaque exécution)
 tests/testthat/_problems/
 tests/testthat/testthat-problems.rds
+
+# Artefacts de couverture (covr / gcov)
+*.gcda
+*.gcno
