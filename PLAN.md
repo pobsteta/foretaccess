@@ -6,11 +6,11 @@
 
 ## État courant
 
-- **Branche** : `main`
-- **Version `DESCRIPTION`** : `0.4.0.9000` (cycle de dev ; `NEWS.md` et `CITATION.cff`
-  restent sur `0.4.0`, la dernière release)
-- **Lot en cours** : aucun. Lot 7 clos et publié (`v0.4.0`). Prochain : **Lot 3 — Moteur
-  Porteur**, qui réutilise le service least-cost (Lot 2) et le tuilage (Lot 7).
+- **Branche** : `specs/003-porteur`
+- **Version `DESCRIPTION`** : `0.5.0` (version stable préparée ; `release.yml` pose le
+  tag au merge sur `main`)
+- **Lot en cours** : **Lot 3 — Moteur Porteur** — 3a et 3b implémentés, tests verts,
+  reste la PR. Prochain : **Lot 4 (noyau câble Rust)** ou consolidation.
 
 ## Avancement par lot
 
@@ -19,7 +19,7 @@
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
-| 3 | Moteur Porteur | à écrire | ⬜ | — |
+| 3 | Moteur Porteur | `specs/003-porteur.md` | 🟡 code fait, PR à ouvrir | `v0.5.0` (à poser) |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
@@ -73,13 +73,17 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-**Lot 3 — Moteur Porteur** (`specs/003-porteur.md`, à rédiger). Il réutilise le service
-least-cost du Lot 2 et le service de tuilage du Lot 7. Le porteur diffère du skidder par
-sa mécanique : cône d'azimuts, pentes en long et en travers distinctes, portée de grue —
-et **pas de treuillage**. La config porte déjà ses défauts v3.6 (`config$porteur`).
+Ouvrir la PR `specs/003-porteur` → `main` (le merge pose le tag `v0.5.0`), puis repasser
+en cycle de dev `0.5.0.9000`. Ensuite, deux pistes indépendantes :
 
-Le portage Rust reste **après** : le tuilage rend le massif et le département accessibles
-sans écrire une ligne de Rust (cf. § performance).
+- **Consolidation du porteur** : le saut hors forêt (`f_dmax_outfor`) et la double passe
+  réseau/contour, la dette assumée du Lot 3 — à traiter après confrontation à l'AOI réelle,
+  comme la conformité du skidder l'a été.
+- **Lot 4 — Noyau câble (Rust)** : le premier moteur non terrestre, et le point où le
+  portage `extendr` prend son sens (mécanique CableHelp, `rayon`).
+
+Le portage Rust des moteurs terrestres reste **après le tuilage** : à l'échelle du
+département, le Lot 7 suffit (cf. § performance).
 
 ### Dette assumée du Lot 2
 
@@ -258,6 +262,23 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   package.
 - **Correctif mergé et publié en `v0.3.1`** (PR #11, sept checks verts). Retour en cycle
   de dev `0.3.1.9000`. Lot 2 clos.
+
+### 2026-07-11
+- **Lot 7 mergé et publié en `v0.4.0`** (PR #13). Retour en cycle de dev `0.4.0.9000`.
+- **Lot 3 (porteur) rédigé sur la source et implémenté.** Comme pour le skidder, la
+  lecture du `.pyx` a renversé l'hypothèse de départ : le porteur n'est pas un skidder
+  aux seuils différents. Sa conduite est un **balayage radial** depuis le réseau, pas un
+  Dijkstra ; il a un **grappin** (8 m) et non un treuil ; ses pentes se comparent **en
+  degrés** ; et sa contrainte de **dévers** dépend de l'azimut de conduite.
+- Un piège de rédaction, révélé par les tests : j'avais inversé amont et aval. Une cellule
+  *plus haute* que la route relève de la **descente** (le trajet chargé descend vers la
+  route), pas de la montée. Le `.pyx` le dit, les tests l'ont confirmé.
+- **Tuilage généralisé** : `traiter_par_tuiles()` prend un argument `couches` et sert tout
+  moteur. Le porteur tuile mieux que le skidder — portée bornée (300 m + 8 m), certificat
+  réduit à « le halo couvre-t-il la portée ? ».
+- Deux fragilités latentes corrigées : `.distance_sur_piste()` plantait sur une desserte
+  non catégorisée ; le grappin lisait un champ inexistant de la propagation.
+- `porteur()` livré, `conduire()` exportée. 533 tests verts, `lintr` 0, ASCII OK.
 - `specs/007-passage-echelle.md` rédigée ; ADR-005 passé de « proposé » à **accepté**.
   Décisions : **certificat d'exactitude + halo adaptatif** (le critère « identique au
   mono-bloc » de l'US-7.1 n'est pas atteignable par un halo fixe — le traînage est un plus
