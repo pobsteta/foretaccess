@@ -6,11 +6,11 @@
 
 ## État courant
 
-- **Branche** : `specs/007-passage-echelle`
-- **Version `DESCRIPTION`** : `0.4.0` (version stable préparée ; `release.yml` pose le
-  tag au merge sur `main`)
-- **Lot en cours** : **Lot 7 — Passage à l'échelle** — 7a, 7b et 7c implémentés, tests
-  verts, reste la PR. Prochain : **Lot 3 — Moteur Porteur**.
+- **Branche** : `main`
+- **Version `DESCRIPTION`** : `0.4.0.9000` (cycle de dev ; `NEWS.md` et `CITATION.cff`
+  restent sur `0.4.0`, la dernière release)
+- **Lot en cours** : aucun. Lot 7 clos et publié (`v0.4.0`). Prochain : **Lot 3 — Moteur
+  Porteur**, qui réutilise le service least-cost (Lot 2) et le tuilage (Lot 7).
 
 ## Avancement par lot
 
@@ -23,7 +23,7 @@
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
-| 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | 🟡 code fait, PR à ouvrir | `v0.4.0` (à poser) |
+| 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
 | 9 | Doc & publication | à écrire | ⬜ | — |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
@@ -73,9 +73,10 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Ouvrir la PR `specs/007-passage-echelle` → `main` (le merge pose le tag `v0.4.0`), puis
-repasser en cycle de dev `0.4.0.9000`. Ensuite : `specs/003-porteur.md`, qui réutilise le
-service least-cost du Lot 2 et le service de tuilage du Lot 7.
+**Lot 3 — Moteur Porteur** (`specs/003-porteur.md`, à rédiger). Il réutilise le service
+least-cost du Lot 2 et le service de tuilage du Lot 7. Le porteur diffère du skidder par
+sa mécanique : cône d'azimuts, pentes en long et en travers distinctes, portée de grue —
+et **pas de treuillage**. La config porte déjà ses défauts v3.6 (`config$porteur`).
 
 Le portage Rust reste **après** : le tuilage rend le massif et le département accessibles
 sans écrire une ligne de Rust (cf. § performance).
