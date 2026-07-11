@@ -26,6 +26,8 @@
 #' @param moteur Fonction moteur, de signature `(pre, config, bord)`. Défaut [skidder()].
 #' @param write_dir Répertoire d'écriture des COG recomposés, ou `NULL`.
 #' @param quiet Supprime la progression.
+#' @param couches Noms des couches de sortie du `moteur` à recomposer. `NULL` (défaut) :
+#'   celles du skidder. Pour le porteur, passer `.couches_porteur()`.
 #'
 #' @return Un objet de classe `foretaccess_mosaique` :
 #'   \describe{
@@ -51,10 +53,15 @@ traiter_par_tuiles <- function(pre,
                                config = foretaccess_config(),
                                moteur = skidder,
                                write_dir = NULL,
-                               quiet = FALSE) {
+                               quiet = FALSE,
+                               couches = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
   checkmate::assert_function(moteur)
+
+  # Chaque moteur nomme ses couches ; le tuilage n'en connait aucune. Faute d'indication,
+  # on prend celles du skidder, moteur par defaut.
+  if (is.null(couches)) couches <- .couches_skidder()
 
   ge <- config$general
   nr <- terra::nrow(pre$mnt)
@@ -64,7 +71,7 @@ traiter_par_tuiles <- function(pre,
   pre <- .precalculer_piste(pre, config)
 
   plan <- decouper_emprise(pre$mnt, ge$tuile_m, 0)$tuiles
-  sortie <- .sortie_vide(n)
+  sortie <- .sortie_vide(n, couches)
   certifie <- rep(FALSE, n)
   acquis <- vector("list", nrow(plan))
   halo <- rep(ge$halo_initial_m, nrow(plan))
@@ -80,7 +87,7 @@ traiter_par_tuiles <- function(pre,
     taches <- lapply(actives, function(i) {
       .fenetre_calcul(plan[i, ], halo[i], terra::res(pre$mnt)[1], nr, nc)
     })
-    res <- .appliquer_tuiles(pre, config, moteur, taches, nc, ge$workers)
+    res <- .appliquer_tuiles(pre, config, moteur, taches, nc, ge$workers, couches)
 
     fini <- vapply(seq_along(actives), function(k) {
       res[[k]]$non_certifie == 0L || halo[actives[k]] >= ge$halo_max_m
@@ -109,7 +116,7 @@ traiter_par_tuiles <- function(pre,
     ))
   }
 
-  .assembler_mosaique(sortie, certifie, pre, config, journal, write_dir)
+  .assembler_mosaique(sortie, certifie, pre, config, journal, write_dir, couches)
 }
 
 # Fenetre de calcul d'une tuile pour un halo donne, et ses cotes ouverts. Le halo est
@@ -137,10 +144,10 @@ traiter_par_tuiles <- function(pre,
 # Les `SpatRaster` portent des pointeurs C++ : ils ne franchissent pas la frontiere de
 # processus. On recadre donc dans le parent -- une lecture de fenetre, que `terra` fait
 # sans charger le raster entier -- puis on emballe (`terra::wrap()`) la seule tuile.
-.appliquer_tuiles <- function(pre, config, moteur, taches, nc, workers) {
+.appliquer_tuiles <- function(pre, config, moteur, taches, nc, workers, couches) {
   if (workers <= 1L) {
     return(lapply(taches, function(t) {
-      .executer_tuile(.preparer_tuile(pre, t), config, moteur, t, nc)
+      .executer_tuile(.preparer_tuile(pre, t), config, moteur, t, nc, couches)
     }))
   }
   charges <- lapply(taches, function(t) {
@@ -153,13 +160,13 @@ traiter_par_tuiles <- function(pre,
 
   travaux <- mirai::mirai_map(
     charges,
-    function(charge, config, moteur, nc, deballer, executer) {
-      executer(deballer(charge$pre), config, moteur, charge$t, nc)
+    function(charge, config, moteur, nc, couches, deballer, executer) {
+      executer(deballer(charge$pre), config, moteur, charge$t, nc, couches)
     },
     # `...` de `mirai_map()` sert a *iterer* ; les constantes passent par `.args`. Les
     # fonctions internes y voyagent en valeur, plutot que d'etre rappelees par `:::`.
     .args = list(
-      config = config, moteur = moteur, nc = nc,
+      config = config, moteur = moteur, nc = nc, couches = couches,
       deballer = .deballer_pre, executer = .executer_tuile
     )
   )
@@ -221,24 +228,24 @@ traiter_par_tuiles <- function(pre,
 }
 
 # Calcul d'une tuile sur sa fenetre elargie, puis extraction de la fenetre d'ecriture.
-.executer_tuile <- function(pre_t, config, moteur, t, nc) {
+.executer_tuile <- function(pre_t, config, moteur, t, nc, couches) {
   ncw <- t$hc2 - t$hc1 + 1L
   cel_t <- .cellules_fenetre(t, ncw)
 
   if (!.tuile_calculable(pre_t)) {
-    return(.tuile_indeterminee(cel_t, t))
+    return(.tuile_indeterminee(cel_t, t, couches))
   }
 
   sk <- moteur(pre_t, config, bord = .cotes_ouverts(t))
-  couches <- lapply(.couches_skidder(), function(nm) {
+  valeurs <- lapply(couches, function(nm) {
     as.numeric(terra::values(sk[[nm]]))[cel_t]
   })
-  names(couches) <- .couches_skidder()
+  names(valeurs) <- couches
 
   cert <- as.logical(terra::values(sk$certifie))[cel_t]
-  couches$allocation <- .allocation_globale(couches$allocation, t, ncw, nc)
+  valeurs$allocation <- .allocation_globale(valeurs$allocation, t, ncw, nc)
 
-  list(valeurs = couches, certifie = cert, ligne = t, non_certifie = sum(!cert))
+  list(valeurs = valeurs, certifie = cert, ligne = t, non_certifie = sum(!cert))
 }
 
 # Une tuile sans desserte dans sa fenetre de calcul n'est pas calculable : le moteur
@@ -253,10 +260,9 @@ traiter_par_tuiles <- function(pre,
   any(!is.na(terra::values(pre_t$desserte)))
 }
 
-.tuile_indeterminee <- function(cel_t, t) {
+.tuile_indeterminee <- function(cel_t, t, couches) {
   n <- length(cel_t)
-  nms <- .couches_skidder()
-  valeurs <- structure(lapply(nms, function(x) rep(NA_real_, n)), names = nms)
+  valeurs <- structure(lapply(couches, function(x) rep(NA_real_, n)), names = couches)
   list(valeurs = valeurs, certifie = rep(FALSE, n), ligne = t, non_certifie = n)
 }
 
@@ -305,9 +311,8 @@ traiter_par_tuiles <- function(pre,
   out
 }
 
-.sortie_vide <- function(n) {
-  nms <- .couches_skidder()
-  structure(lapply(nms, function(x) rep(NA_real_, n)), names = nms)
+.sortie_vide <- function(n, couches) {
+  structure(lapply(couches, function(x) rep(NA_real_, n)), names = couches)
 }
 
 .poser_tuile <- function(sortie, r, glo) {
@@ -315,7 +320,7 @@ traiter_par_tuiles <- function(pre,
   sortie
 }
 
-.assembler_mosaique <- function(sortie, certifie, pre, config, journal, write_dir) {
+.assembler_mosaique <- function(sortie, certifie, pre, config, journal, write_dir, couches) {
   # Une cellule non certifiee ne publie aucun chiffre : ni classe, ni distance, ni
   # allocation. Un resultat plausible mais faux est pire qu'un `NA` declare.
   for (nm in names(sortie)) sortie[[nm]][!certifie] <- NA_real_
@@ -327,34 +332,45 @@ traiter_par_tuiles <- function(pre,
     r
   }
 
-  acc <- faire(sortie$accessibilite, "accessibilite")
+  # Les couches du moteur, recomposees generiquement -- le nom de chacune vient du moteur.
+  rasters <- stats::setNames(lapply(couches, function(nm) faire(sortie[[nm]], nm)), couches)
+  acc <- rasters$accessibilite
   levels(acc) <- data.frame(
     value = 1:4,
     classe = c("parcourable", "accessible", "non_accessible", "hors_foret")
   )
+  rasters$accessibilite <- acc
   recap <- recapituler(acc, pre$volume)
 
   mo <- structure(
-    list(
-      accessibilite           = acc,
-      distance_treuillage     = faire(sortie$distance_treuillage, "distance_treuillage"),
-      distance_trainage_foret = faire(sortie$distance_trainage_foret, "distance_trainage_foret"),
-      distance_trainage_piste = faire(sortie$distance_trainage_piste, "distance_trainage_piste"),
-      distance_debardage      = faire(sortie$distance_debardage, "distance_debardage"),
-      allocation              = faire(sortie$allocation, "allocation"),
-      certifie                = faire(as.numeric(certifie), "certifie"),
-      recap                   = recap,
-      tuiles                  = journal,
-      indetermine_ha          = .surface_indetermine(recap),
-      grid                    = pre$grid,
-      config                  = config,
-      fichiers                = NULL
-    ),
+    c(rasters, list(
+      certifie       = faire(as.numeric(certifie), "certifie"),
+      recap          = recap,
+      tuiles         = journal,
+      indetermine_ha = .surface_indetermine(recap),
+      couches        = couches,
+      grid           = pre$grid,
+      config         = config,
+      fichiers       = NULL
+    )),
     class = "foretaccess_mosaique"
   )
 
-  if (!is.null(write_dir)) mo$fichiers <- .ecrire_rasters_skidder(mo, write_dir)
+  if (!is.null(write_dir)) mo$fichiers <- .ecrire_rasters_couches(mo, mo$couches, write_dir)
   mo
+}
+
+# Ecrit les couches nommees d'un objet en COG. Generique : sert au tuilage, quel que soit
+# le moteur.
+.ecrire_rasters_couches <- function(x, couches, write_dir) {
+  checkmate::assert_string(write_dir)
+  dir.create(write_dir, recursive = TRUE, showWarnings = FALSE)
+  chemins <- vapply(couches, function(nm) {
+    f <- file.path(write_dir, paste0(nm, ".tif"))
+    terra::writeRaster(x[[nm]], f, filetype = "COG", overwrite = TRUE)
+    f
+  }, character(1))
+  as.list(chemins)
 }
 
 # `recapituler()` emet toujours une ligne `indetermine`, meme vide : pas de cas absent.

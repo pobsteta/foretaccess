@@ -9,7 +9,8 @@ traiter_par_tuiles(
   config = foretaccess_config(),
   moteur = skidder,
   write_dir = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  couches = NULL
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ traiter_par_tuiles(
 \item{write_dir}{Répertoire d'écriture des COG recomposés, ou \code{NULL}.}
 
 \item{quiet}{Supprime la progression.}
+
+\item{couches}{Noms des couches de sortie du \code{moteur} à recomposer. \code{NULL} (défaut) :
+celles du skidder. Pour le porteur, passer \code{.couches_porteur()}.}
 }
 \value{
 Un objet de classe \code{foretaccess_mosaique} :
