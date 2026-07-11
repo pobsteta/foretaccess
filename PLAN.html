@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,12 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>specs/007-passage-echelle</code>
+<strong>Branche</strong> : <code>main</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.4.0</code> (version stable préparée ; <code>release.yml</code> pose le tag au merge sur <code>main</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.4.0.9000</code> (cycle de dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent sur <code>0.4.0</code>, la dernière release)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 7 — Passage à l’échelle</strong> — 7a, 7b et 7c implémentés, tests verts, reste la PR. Prochain : <strong>Lot 3 — Moteur Porteur</strong>.</li>
+<strong>Lot en cours</strong> : aucun. Lot 7 clos et publié (<code>v0.4.0</code>). Prochain : <strong>Lot 3 — Moteur Porteur</strong>, qui réutilise le service least-cost (Lot 2) et le tuilage (Lot 7).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -94,9 +94,8 @@
 </tr><tr><td>7</td>
 <td>Passage à l’échelle</td>
 <td><code>specs/007-passage-echelle.md</code></td>
-<td>🟡 code fait, PR à ouvrir</td>
-<td>
-<code>v0.4.0</code> (à poser)</td>
+<td>✅ terminé</td>
+<td><code>v0.4.0</code></td>
 </tr><tr><td>8</td>
 <td>Base spatiale &amp; agrégation</td>
 <td>à écrire</td>
@@ -146,7 +145,7 @@
 </div>
 <div class="section level2">
 <h2 id="prochaine-étape">Prochaine étape<a class="anchor" aria-label="anchor" href="#prochaine-%C3%A9tape"></a></h2>
-<p>Ouvrir la PR <code>specs/007-passage-echelle</code> → <code>main</code> (le merge pose le tag <code>v0.4.0</code>), puis repasser en cycle de dev <code>0.4.0.9000</code>. Ensuite : <code>specs/003-porteur.md</code>, qui réutilise le service least-cost du Lot 2 et le service de tuilage du Lot 7.</p>
+<p><strong>Lot 3 — Moteur Porteur</strong> (<code>specs/003-porteur.md</code>, à rédiger). Il réutilise le service least-cost du Lot 2 et le service de tuilage du Lot 7. Le porteur diffère du skidder par sa mécanique : cône d’azimuts, pentes en long et en travers distinctes, portée de grue — et <strong>pas de treuillage</strong>. La config porte déjà ses défauts v3.6 (<code>config$porteur</code>).</p>
 <p>Le portage Rust reste <strong>après</strong> : le tuilage rend le massif et le département accessibles sans écrire une ligne de Rust (cf. § performance).</p>
 <div class="section level3">
 <h3 id="dette-assumée-du-lot-2">Dette assumée du Lot 2<a class="anchor" aria-label="anchor" href="#dette-assum%C3%A9e-du-lot-2"></a></h3>
