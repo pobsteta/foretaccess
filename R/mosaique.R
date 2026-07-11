@@ -26,6 +26,8 @@
 #' @param moteur Fonction moteur, de signature `(pre, config, bord)`. Défaut [skidder()].
 #' @param write_dir Répertoire d'écriture des COG recomposés, ou `NULL`.
 #' @param quiet Supprime la progression.
+#' @param couches Noms des couches de sortie du `moteur` à recomposer. `NULL` (défaut) :
+#'   celles du skidder. Pour le porteur, passer `.couches_porteur()`.
 #'
 #' @return Un objet de classe `foretaccess_mosaique` :
 #'   \describe{

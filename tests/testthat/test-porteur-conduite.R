@@ -103,6 +103,22 @@ test_that("une desserte absente leve une erreur ciblee", {
     regexp = "aucune cellule")
 })
 
+test_that("les rayons qui sortent tous de la grille arretent le balayage", {
+  # Desserte dans un COIN d'une petite grille plate : les rayons pointant hors grille en
+  # sortent des le premier pas, ce qui declenche l'arret de sortie de grille. Ceux qui
+  # pointent vers l'interieur couvrent leur voisinage.
+  mnt <- mnt_plan(pente = 0, n = 11)
+  d0 <- sf::st_sf(classe = "route",
+    geometry = sf::st_sfc(sf::st_linestring(rbind(c(5, 5), c(10, 5))), crs = 2154))
+  pre <- preprocess(mnt = mnt, desserte = d0, foret = foret_pleine(mnt))
+  pre$desserte <- desserte_point(mnt, 2.5, 2.5) # coin bas-gauche de la grille 11x11
+
+  cd <- conduire(pre, foretaccess_config(), zone_conduite(pre))
+  # Le balayage se termine sans planter, et atteint l'interieur depuis le coin.
+  atteint <- sum(!is.na(terra::values(cd$distance)))
+  expect_gt(atteint, 20)
+})
+
 test_that("un replat n'a pas de devers : la conduite n'y est bornee que par la pente en long", {
   # MNT plat : pente 0, exposition NA. Aucun filtre ne casse, tout est conduisible.
   mnt <- mnt_plan(pente = 0, n = 41)

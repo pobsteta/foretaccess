@@ -100,6 +100,21 @@ test_that("le porteur tuile a l'identique du mono-bloc (CA-3.9)", {
   }
 })
 
+test_that("un halo trop court laisse le porteur indetermine (certificat par portee)", {
+  # Halo bien inferieur a la portee de conduite (300 m) : aucune tuile interieure ne
+  # peut se certifier, et ses cellules sortent indetermine.
+  pre <- toy_preprocess()
+  cfg <- foretaccess_config(general = list(
+    tuile_m = 50, halo_initial_m = 20, halo_max_m = 20
+  ))
+  suppressWarnings(
+    mo <- traiter_par_tuiles(pre, cfg, moteur = porteur,
+      couches = .couches_porteur(), quiet = TRUE)
+  )
+  expect_gt(sum(terra::values(mo$certifie) == 0), 0)
+  expect_gt(mo$indetermine_ha, 0)
+})
+
 test_that("le halo suffisant du porteur couvre conduite plus grappin", {
   # Un halo trop court pour la portee de conduite laisse des cellules indeterminees ;
   # un halo qui la couvre certifie tout.
