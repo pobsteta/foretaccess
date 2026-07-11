@@ -23,7 +23,7 @@ réseau de desserte, un balayage \strong{360° au pas de 1°}, en ligne droite, 
 sous trois contraintes de pente, distinctes de celles du skidder (spec 003 §4.2).
 }
 \details{
-Contrairement au treuillage — dont ce balayage partage la géométrie (\code{\link[=.rayons]{.rayons()}}) —
+Contrairement au treuillage — dont ce balayage partage la géométrie interne —
 les filtres portent sur la \strong{pente du terrain} à la cellule, en \strong{degrés}, et non sur
 le gradient du rayon. À chaque cellule \code{j} d'un rayon d'azimut \code{az}, le rayon s'arrête
 (\code{break}) au premier filtre violé :
@@ -44,5 +44,5 @@ La distance retenue est \strong{3D} : \verb{√(Hdist² + (alt_j − alt_route)�
 garde la desserte la plus proche à ce sens.
 }
 \seealso{
-\code{\link[=treuiller]{treuiller()}}, \code{\link[=.rayons]{.rayons()}}
+\code{\link[=treuiller]{treuiller()}}
 }

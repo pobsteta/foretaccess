@@ -9,7 +9,8 @@ traiter_par_tuiles(
   config = foretaccess_config(),
   moteur = skidder,
   write_dir = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  couches = NULL
 )
 }
 \arguments{

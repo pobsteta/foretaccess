@@ -231,6 +231,17 @@ pré-calculés par azimut) : à factoriser, pas à dupliquer. **Aucune nouvelle 
    skidder. À exposer dans `preprocess()` comme une couche d'obstacles propre au moteur, ou à
    réutiliser les obstacles génériques (question §10, non bloquante).
 
+### Dette assumée (Lot 3)
+
+- Le **saut hors forêt** (`distance_hors_desserte_max_m`, `f_dmax_outfor` = 200 m) n'est
+  pas implémenté : la zone de conduite est forestière. C'est l'équivalent porteur de
+  `zone_roulable_connectee()` du skidder, et il mérite le même traitement — construction en
+  trois temps, certificat de connexité sous tuilage. À traiter dans un incrément ultérieur,
+  comme il l'a été pour le skidder après confrontation aux données réelles.
+- La **double passe** (réseau puis contour, §4.2) est ramenée à une passe unique amorcée
+  depuis le réseau. À valider sur données réelles : un massif profond, atteint seulement par
+  relais de contour, pourrait révéler l'écart.
+
 ### Questions restantes (non bloquantes)
 
 6. **Double passe** (réseau puis contour) : la reproduire, ou prouver qu'une passe unique bien

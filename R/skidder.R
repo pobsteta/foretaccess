@@ -261,14 +261,21 @@ skidder <- function(pre,
 # Le reseau est une donnee locale : sa restriction a la fenetre est exacte, et sert donc
 # aussi de zone majorante. Seule la *distance* le long du reseau deborde de la fenetre.
 .distance_sur_piste <- function(pre, cout, bord = NULL) {
+  n <- terra::ncell(pre$mnt)
+
+  # Sans table de categories, la desserte ne distingue pas piste et route : il n'y a
+  # donc pas de trainage sur piste (cas des dessertes-points de test, ou d'un reseau
+  # non categorise). On rend une distance nulle plutot que de planter.
   cl <- terra::levels(pre$desserte)[[1]]
+  if (!is.data.frame(cl) || ncol(cl) < 2L) {
+    return(list(distance = rep(0, n), certifie = NULL))
+  }
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
 
   est_piste <- !is.na(codes) & codes %in% code_piste
   est_route <- !is.na(codes) & !est_piste
 
-  n <- terra::ncell(pre$mnt)
   if (!any(est_route) || !any(est_piste)) {
     return(list(distance = rep(0, n), certifie = NULL))
   }

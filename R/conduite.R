@@ -6,7 +6,7 @@
 #' sous trois contraintes de pente, distinctes de celles du skidder (spec 003 §4.2).
 #'
 #' @details
-#' Contrairement au treuillage — dont ce balayage partage la géométrie ([.rayons()]) —
+#' Contrairement au treuillage — dont ce balayage partage la géométrie interne —
 #' les filtres portent sur la **pente du terrain** à la cellule, en **degrés**, et non sur
 #' le gradient du rayon. À chaque cellule `j` d'un rayon d'azimut `az`, le rayon s'arrête
 #' (`break`) au premier filtre violé :
@@ -30,7 +30,7 @@
 #' @param zone `SpatRaster` logique des cellules candidates à la conduite (forêt roulable).
 #'
 #' @return Une liste de deux `SpatRaster` : `distance` (3D, m) et `allocation`.
-#' @seealso [treuiller()], [.rayons()]
+#' @seealso [treuiller()]
 #' @export
 conduire <- function(pre, config, zone) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
