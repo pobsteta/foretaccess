@@ -13,7 +13,8 @@ traiter_par_tuiles(
   config = foretaccess_config(),
   moteur = skidder,
   write_dir = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  couches = NULL
 )
 ```
 
@@ -42,6 +43,11 @@ traiter_par_tuiles(
 - quiet:
 
   Supprime la progression.
+
+- couches:
+
+  Noms des couches de sortie du `moteur` à recomposer. `NULL` (défaut) :
+  celles du skidder. Pour le porteur, passer `.couches_porteur()`.
 
 ## Value
 

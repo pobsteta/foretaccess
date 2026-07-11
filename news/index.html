@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,32 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0" id="foretaccess-050-2026-07-11">foretaccess 0.5.0 (2026-07-11)<a class="anchor" aria-label="anchor" href="#foretaccess-050-2026-07-11"></a></h2>
+<div class="section level3">
+<h3 id="lot--moteur-porteur-forwarder-0-5-0">Lot 3 — Moteur Porteur (forwarder)<a class="anchor" aria-label="anchor" href="#lot--moteur-porteur-forwarder-0-5-0"></a></h3>
+<p>Deuxième moteur terrestre, <code><a href="../reference/porteur.html">porteur()</a></code>. Rédigé sur le code source Sylvaccess v3.6 (<code>Sylvaccess_3_forwarder.py</code>, <code>sylvaccess_cython3.pyx</code>), qui renverse l’hypothèse « porteur = skidder aux seuils différents ».</p>
+<ul><li>La conduite est un <strong>balayage radial</strong> depuis le réseau de desserte (<code>fwd_azimuts_forest_roadnet</code>), non un plus court chemin. Nouvelle fonction exportée <code><a href="../reference/conduire.html">conduire()</a></code>, qui partage la géométrie de rayons du treuillage mais s’en distingue par trois filtres, tous sur la pente du terrain <strong>en degrés</strong> :
+<ul><li>
+<strong>pente en long signée par l’altitude</strong> : une cellule plus haute que la route relève de la descente (le porteur y ramène le bois chargé en descendant), plus basse de la montée ;</li>
+<li>
+<strong>dévers dépendant de l’azimut</strong> : <code>pente_travers / cos(90 - Δ)</code>, nul dans le sens de la pente, maximal en travers — le basculement latéral de la machine ;</li>
+<li>
+<strong>accumulateur de distance en pente forte</strong>, plafonné à <code>distance_pente_forte_max_m</code>.</li>
+</ul></li>
+<li>Pas de treuil, mais un <strong>grappin</strong> de <code>portee_grue_m</code> (8 m) : une extension géométrique bornée du terrain récoltable, reproduisant <code>fwd_add_hoist</code>.</li>
+<li>La distance retenue est <strong>3D</strong>.</li>
+</ul><p>Le porteur se tuile mieux que le skidder : sa portée étant bornée (conduite 300 m, grappin 8 m), le halo suffisant est petit et connu. <code>traiter_par_tuiles(moteur = porteur)</code> donne un résultat identique au mono-bloc.</p>
+</div>
+<div class="section level3">
+<h3 id="généralisation-du-tuilage-0-5-0">Généralisation du tuilage<a class="anchor" aria-label="anchor" href="#g%C3%A9n%C3%A9ralisation-du-tuilage-0-5-0"></a></h3>
+<p><code><a href="../reference/traiter_par_tuiles.html">traiter_par_tuiles()</a></code> accepte un argument <code>couches</code> : il n’est plus lié aux couches du skidder et sert n’importe quel moteur.</p>
+</div>
+<div class="section level3">
+<h3 id="dette-assumée-0-5-0">Dette assumée<a class="anchor" aria-label="anchor" href="#dette-assum%C3%A9e-0-5-0"></a></h3>
+<p>Le saut hors forêt du porteur (<code>f_dmax_outfor</code>, l’équivalent de <code><a href="../reference/zone_roulable_connectee.html">zone_roulable_connectee()</a></code> du skidder) et la double passe réseau/contour ne sont pas encore implémentés. Voir <code>specs/003-porteur.md</code>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.0" id="foretaccess-040-2026-07-10">foretaccess 0.4.0 (2026-07-10)<a class="anchor" aria-label="anchor" href="#foretaccess-040-2026-07-10"></a></h2>
 <div class="section level3">

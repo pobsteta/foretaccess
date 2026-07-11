@@ -1,5 +1,52 @@
 # Changelog
 
+## foretaccess 0.5.0 (2026-07-11)
+
+### Lot 3 — Moteur Porteur (forwarder)
+
+Deuxième moteur terrestre,
+[`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md).
+Rédigé sur le code source Sylvaccess v3.6 (`Sylvaccess_3_forwarder.py`,
+`sylvaccess_cython3.pyx`), qui renverse l’hypothèse « porteur = skidder
+aux seuils différents ».
+
+- La conduite est un **balayage radial** depuis le réseau de desserte
+  (`fwd_azimuts_forest_roadnet`), non un plus court chemin. Nouvelle
+  fonction exportée
+  [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md),
+  qui partage la géométrie de rayons du treuillage mais s’en distingue
+  par trois filtres, tous sur la pente du terrain **en degrés** :
+  - **pente en long signée par l’altitude** : une cellule plus haute que
+    la route relève de la descente (le porteur y ramène le bois chargé
+    en descendant), plus basse de la montée ;
+  - **dévers dépendant de l’azimut** : `pente_travers / cos(90 - Δ)`,
+    nul dans le sens de la pente, maximal en travers — le basculement
+    latéral de la machine ;
+  - **accumulateur de distance en pente forte**, plafonné à
+    `distance_pente_forte_max_m`.
+- Pas de treuil, mais un **grappin** de `portee_grue_m` (8 m) : une
+  extension géométrique bornée du terrain récoltable, reproduisant
+  `fwd_add_hoist`.
+- La distance retenue est **3D**.
+
+Le porteur se tuile mieux que le skidder : sa portée étant bornée
+(conduite 300 m, grappin 8 m), le halo suffisant est petit et connu.
+`traiter_par_tuiles(moteur = porteur)` donne un résultat identique au
+mono-bloc.
+
+### Généralisation du tuilage
+
+[`traiter_par_tuiles()`](https://pobsteta.github.io/foretaccess/reference/traiter_par_tuiles.md)
+accepte un argument `couches` : il n’est plus lié aux couches du skidder
+et sert n’importe quel moteur.
+
+### Dette assumée
+
+Le saut hors forêt du porteur (`f_dmax_outfor`, l’équivalent de
+[`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
+du skidder) et la double passe réseau/contour ne sont pas encore
+implémentés. Voir `specs/003-porteur.md`.
+
 ## foretaccess 0.4.0 (2026-07-10)
 
 ### Lot 7 — Passage à l’échelle (tuilage, certificat, parallélisme)

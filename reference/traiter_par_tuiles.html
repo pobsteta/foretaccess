@@ -13,7 +13,7 @@ partout où il est certifié."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,8 @@ partout où il est certifié.</p>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  moteur <span class="op">=</span> <span class="va">skidder</span>,</span>
 <span>  write_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  couches <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -80,6 +81,11 @@ partout où il est certifié.</p>
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Supprime la progression.</p></dd>
+
+
+<dt id="arg-couches">couches<a class="anchor" aria-label="anchor" href="#arg-couches"></a></dt>
+<dd><p>Noms des couches de sortie du <code>moteur</code> à recomposer. <code>NULL</code> (défaut) :
+celles du skidder. Pour le porteur, passer <code>.couches_porteur()</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

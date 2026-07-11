@@ -22,6 +22,9 @@
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
   : Compare une sortie à un oracle de non-régression
 
+- [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md)
+  : Balayage radial de conduite du porteur
+
 - [`decouper_emprise()`](https://pobsteta.github.io/foretaccess/reference/decouper_emprise.md)
   : Découper une emprise en tuiles avec halo
 
@@ -39,6 +42,9 @@
 
 - [`ponderation_pente()`](https://pobsteta.github.io/foretaccess/reference/ponderation_pente.md)
   : Pondération de pente (facteur d'allongement 3D)
+
+- [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
+  : Moteur d'accessibilité porteur (forwarder)
 
 - [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
   : Prétraitement commun aux moteurs d'accessibilité
