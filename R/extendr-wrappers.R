@@ -220,4 +220,40 @@ cable_find_lomin <- function(d, h, xup, zup, fact, alts, f_o, tmax, q1, q2, q3, 
 #' @export
 cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_max, slope_min, slope_max, alts, f_o, tmax, q1, q2, q3, eao, csize, angle_intsup, dsupdep, slope_prev) .Call(wrap__cable_test_span, line_x, line_z, pg, posi, hg, hd, hline_min, hline_max, slope_min, slope_max, alts, f_o, tmax, q1, q2, q3, eao, csize, angle_intsup, dsupdep, slope_prev)
 
+#' Balayage 360 deg / pixel du potentiel câble (0 support), porté en Rust.
+#'
+#' Pour chaque cellule de desserte et chacun des 360 azimuts, extrait le profil
+#' d'altitude, cherche la plus longue travée faisable ([cable_test_span()]) et
+#' accumule couverture et lignes candidates. Parallèle (`rayon`) sur les
+#' départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).
+#'
+#' @param alt Elevation values (row-major, NA as NaN).
+#' @param nr Number of raster rows.
+#' @param nc Number of raster columns.
+#' @param res Cell size (m); square cells assumed.
+#' @param foret Forest mask (1 = forest), row-major.
+#' @param routes Desserte cell indices (1-based) used as line starts.
+#' @param vol Volume per cell (row-major); ignored when `has_vol` is false.
+#' @param has_vol Whether `vol` carries usable volume data.
+#' @param htower Start-support height (m).
+#' @param h_end Terminal-support height (m).
+#' @param hline_min Minimum ground clearance of the carrying cable (m).
+#' @param hline_max Maximum ground clearance of the carrying cable (m).
+#' @param slope_min Minimum line slope (rad).
+#' @param slope_max Maximum line slope (rad).
+#' @param f_o Gravity force of load plus carriage (N).
+#' @param tmax Maximum allowable tension (N).
+#' @param q1 Linear mass of the carrying cable (kg/m).
+#' @param q2 Linear mass of the hauling cable (kg/m).
+#' @param q3 Linear mass of the return cable (kg/m).
+#' @param eao Young's modulus times cable section (N).
+#' @param angle_intsup Inter-support angle constraint (rad).
+#' @param lmax Maximum line length (m).
+#' @param lmin Minimum line length (m).
+#' @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
+#'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
+#'   `li_ipc`.
+#' @export
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin)
+
 # nolint end

@@ -1,14 +1,25 @@
-# foretaccess (development version)
+# foretaccess 0.12.0 (2026-07-13)
 
-* **Article « Cartes de sortie sur une AOI réelle »** (site pkgdown) : le pipeline
-  complet exécuté sur `data-raw/aoi.gpkg` (massif des Cévennes), chaque sortie
-  cartographiée sur **fond OpenStreetMap** (entrées MNT/desserte/forêt, sorties
-  skidder/porteur/DFCI en raster, câble et agrégation zonale en vecteur). Cartes
-  pré-rendues par `data-raw/cartes.R` (acquisition IGN + tuiles OSM via `maptiles`),
-  embarquées en images (aucun calcul ni réseau à la construction du site).
-* **Note de performance** (721 ha) : moteurs terrestres ~1 min 35 s ; le **câble**
-  est le goulot (heures à > 1 jour à cette échelle — chaque rayon monte à 750 m),
-  ce qui documente la dette de portage Rust / tuilage du noyau câble.
+## Portage Rust du balayage câble (point chaud)
+
+* **`potentiel_cable()` porté dans le noyau Rust** (`cablehelp`, `cable_scan`) :
+  l'orchestration 360°/pixel — extraction du profil, recherche de la plus longue
+  travée faisable, accumulation couverture/lignes — vit désormais dans le crate,
+  parallélisée sur les cellules de desserte via **`rayon`**. R prépare les entrées
+  et réassemble les sorties SIG ; la frontière reste minimale et typée (ADR-001).
+* **Non-régression bit-pour-bit** vis-à-vis de l'ancienne double boucle R
+  (accessibilité, longueur/azimut, table des lignes candidates) : arrondi
+  demi-au-pair (`round()` R / IEC 60559) et séquences `seq()` reproduits à
+  l'identique. Gain mesuré **~5×** (grille 60 × 60, 60 départs : 36 s → 6 s), avec
+  passage à l'échelle sur les grandes emprises grâce au parallélisme.
+
+## Article « Cartes de sortie sur une AOI réelle » (site pkgdown)
+
+* Le pipeline complet exécuté sur `data-raw/aoi.gpkg` (massif des Cévennes), chaque
+  sortie cartographiée sur **fond OpenStreetMap** (entrées MNT/desserte/forêt,
+  sorties skidder/porteur/DFCI en raster, câble et agrégation zonale en vecteur).
+  Cartes pré-rendues par `data-raw/cartes.R` (acquisition IGN + tuiles OSM via
+  `maptiles`), embarquées en images (aucun calcul ni réseau à la construction).
 
 # foretaccess 0.11.0 (2026-07-12)
 
