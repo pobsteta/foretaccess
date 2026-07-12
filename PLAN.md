@@ -6,8 +6,8 @@
 
 ## État courant
 
-- **Branche** : `lot-1-pretraitement` (release `v0.12.0` — portage Rust du balayage câble)
-- **Version `DESCRIPTION`** : `0.12.0` (stable ; `NEWS.md`/`CITATION.cff` alignés)
+- **Branche** : `main` (release `v0.12.0` posée ; cycle dev `0.12.0.9000` ouvert)
+- **Version `DESCRIPTION`** : `0.12.0.9000` (cycle dev ; `NEWS.md`/`CITATION.cff` restent à `0.12.0`)
 - **Fait (0.12.0)** : **portage Rust du balayage câble** (`cable_scan` dans `cablehelp`).
   L'orchestration 360°/pixel de `potentiel_cable()` — profil, plus longue travée faisable,
   couverture/lignes — vit dans le crate, parallélisée sur les départs via `rayon`. R prépare
