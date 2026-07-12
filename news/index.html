@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,12 +39,19 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="foretaccess-development-version">foretaccess (development version)<a class="anchor" aria-label="anchor" href="#foretaccess-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.12.0" id="foretaccess-0120-2026-07-13">foretaccess 0.12.0 (2026-07-13)<a class="anchor" aria-label="anchor" href="#foretaccess-0120-2026-07-13"></a></h2>
+<div class="section level3">
+<h3 id="portage-rust-du-balayage-câble-point-chaud-0-12-0">Portage Rust du balayage câble (point chaud)<a class="anchor" aria-label="anchor" href="#portage-rust-du-balayage-c%C3%A2ble-point-chaud-0-12-0"></a></h3>
 <ul><li>
-<strong>Article « Cartes de sortie sur une AOI réelle »</strong> (site pkgdown) : le pipeline complet exécuté sur <code>data-raw/aoi.gpkg</code> (massif des Cévennes), chaque sortie cartographiée sur <strong>fond OpenStreetMap</strong> (entrées MNT/desserte/forêt, sorties skidder/porteur/DFCI en raster, câble et agrégation zonale en vecteur). Cartes pré-rendues par <code>data-raw/cartes.R</code> (acquisition IGN + tuiles OSM via <code>maptiles</code>), embarquées en images (aucun calcul ni réseau à la construction du site).</li>
+<strong><code><a href="../reference/potentiel_cable.html">potentiel_cable()</a></code> porté dans le noyau Rust</strong> (<code>cablehelp</code>, <code>cable_scan</code>) : l’orchestration 360°/pixel — extraction du profil, recherche de la plus longue travée faisable, accumulation couverture/lignes — vit désormais dans le crate, parallélisée sur les cellules de desserte via <strong><code>rayon</code></strong>. R prépare les entrées et réassemble les sorties SIG ; la frontière reste minimale et typée (ADR-001).</li>
 <li>
-<strong>Note de performance</strong> (721 ha) : moteurs terrestres ~1 min 35 s ; le <strong>câble</strong> est le goulot (heures à &gt; 1 jour à cette échelle — chaque rayon monte à 750 m), ce qui documente la dette de portage Rust / tuilage du noyau câble.</li>
+<strong>Non-régression bit-pour-bit</strong> vis-à-vis de l’ancienne double boucle R (accessibilité, longueur/azimut, table des lignes candidates) : arrondi demi-au-pair (<code><a href="https://rdrr.io/r/base/Round.html" class="external-link">round()</a></code> R / IEC 60559) et séquences <code><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq()</a></code> reproduits à l’identique. Gain mesuré <strong>~5×</strong> (grille 60 × 60, 60 départs : 36 s → 6 s), avec passage à l’échelle sur les grandes emprises grâce au parallélisme.</li>
 </ul></div>
+<div class="section level3">
+<h3 id="article--cartes-de-sortie-sur-une-aoi-réelle--site-pkgdown-0-12-0">Article « Cartes de sortie sur une AOI réelle » (site pkgdown)<a class="anchor" aria-label="anchor" href="#article--cartes-de-sortie-sur-une-aoi-r%C3%A9elle--site-pkgdown-0-12-0"></a></h3>
+<ul><li>Le pipeline complet exécuté sur <code>data-raw/aoi.gpkg</code> (massif des Cévennes), chaque sortie cartographiée sur <strong>fond OpenStreetMap</strong> (entrées MNT/desserte/forêt, sorties skidder/porteur/DFCI en raster, câble et agrégation zonale en vecteur). Cartes pré-rendues par <code>data-raw/cartes.R</code> (acquisition IGN + tuiles OSM via <code>maptiles</code>), embarquées en images (aucun calcul ni réseau à la construction).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.11.0" id="foretaccess-0110-2026-07-12">foretaccess 0.11.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-0110-2026-07-12"></a></h2>
 <div class="section level3">

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,11 +46,13 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>docs/cartes-aoi</code> (cycle dev <code>0.11.0.9000</code> ; ajout d’un article carto, pas de release)</li>
+<strong>Branche</strong> : <code>main</code> (release <code>v0.12.0</code> posée ; cycle dev <code>0.12.0.9000</code> ouvert)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.11.0.9000</code> (cycle dev ; <code>NEWS.md</code>/<code>CITATION.cff</code> restent à <code>0.11.0</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.12.0.9000</code> (cycle dev ; <code>NEWS.md</code>/<code>CITATION.cff</code> restent à <code>0.12.0</code>)</li>
 <li>
-<strong>En cours (doc)</strong> : article pkgdown <strong>« Cartes de sortie sur une AOI réelle »</strong> — pipeline complet sur <code>data-raw/aoi.gpkg</code> (Cévennes), chaque sortie sur fond OSM, cartes pré-rendues (<code>data-raw/cartes.R</code>) et embarquées. Benchmark des durées par étage sur 721 ha documenté (terrestre ~1 min 35 s ; câble = goulot, heures à &gt; 1 jour — confirme la dette portage Rust).</li>
+<strong>Fait (0.12.0)</strong> : <strong>portage Rust du balayage câble</strong> (<code>cable_scan</code> dans <code>cablehelp</code>). L’orchestration 360°/pixel de <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> — profil, plus longue travée faisable, couverture/lignes — vit dans le crate, parallélisée sur les départs via <code>rayon</code>. R prépare les entrées et réassemble les sorties SIG (frontière minimale et typée, ADR-001). <strong>Non-régression bit-pour-bit</strong> vis-à-vis de l’ancienne double boucle R (arrondi demi-au-pair et <code><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq()</a></code> reproduits). Gain <strong>~5×</strong> (60 × 60, 60 départs : 36 s → 6 s), passage à l’échelle par le parallélisme. Ancien helper R <code>.ligne_cable()</code> retiré. 18 tests cargo, 728 tests R verts.</li>
+<li>
+<strong>Article carto</strong> (livré avec 0.12.0) : <strong>« Cartes de sortie sur une AOI réelle »</strong> — pipeline complet sur <code>data-raw/aoi.gpkg</code> (Cévennes), chaque sortie sur fond OSM, cartes pré-rendues (<code>data-raw/cartes.R</code>) et embarquées. Benchmark des durées par étage sur 721 ha documenté (terrestre ~1 min 35 s ; câble = goulot avant portage — désormais accéléré et parallèle).</li>
 <li>
 <strong>Lots 0–10 livrés</strong> : prétraitement, moteurs skidder / porteur, noyau câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle (tuilage), base spatiale &amp; agrégation, doc &amp; publication, et <strong>acquisition depuis AOI</strong> (Lot 10). Périmètre v1 fonctionnel atteint.</li>
 <li>
@@ -366,7 +368,8 @@
 <li>Le repli sur grille de <code>newton_thtv</code> dans <code>find_lomin</code> coûte <code>O((Tmax/pas)²)</code> ≈ 3 M évaluations par appel — <strong>catastrophique</strong> dans la boucle chaude (scan interminable).</li>
 <li>Un Newton chaud nu diverge sans bon amorçage. <strong>Solution</strong> : <code>seed_grid</code> (grille grossière 40 × 40, coût fixe indépendant de <code>Tmax</code>) amorce, Newton chaud raffine, la marche sur <code>Lo</code> réchauffe. Le repli <code>solve_charge</code> prototypé en 4b s’est révélé code mort et a été retiré. <code>faisabilite.rs</code> est revenu à l’état fidèle (Newton chaud pur).</li>
 </ol></li>
-<li>Restent en extension (documentées, spec §11) : placement multi-supports (oracle réel), pêchage latéral <code>distance_laterale_max_m</code>, portage Rust de l’orchestration (point chaud).</li>
+<li>
+<strong>Portage Rust de l’orchestration livré en <code>v0.12.0</code></strong> (<code>cable_scan</code>, <code>rayon</code>, non-régression bit-pour-bit, ~5×). Restent en extension (spec §11) : placement multi-supports (oracle réel), pêchage latéral <code>distance_laterale_max_m</code>.</li>
 </ul></li>
 </ul></div>
 </div>

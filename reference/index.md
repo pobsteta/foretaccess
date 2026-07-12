@@ -139,6 +139,10 @@ Potentiel de lignes (noyau Rust) et sélection multicritère.
   Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un
   vecteur `c(Th, Tv)`.
 
+- [`cable_scan()`](https://pobsteta.github.io/foretaccess/reference/cable_scan.md)
+  : Balayage 360 deg / pixel du potentiel câble (0 support), porté en
+  Rust.
+
 - [`cable_test_span()`](https://pobsteta.github.io/foretaccess/reference/cable_test_span.md)
   :
 
