@@ -142,7 +142,6 @@ pub fn check_hlinemin(
 ) -> f64 {
     let end = lo - 10.0;
     let w = G * q1 * lo;
-    let err = 1.0;
     let mut hmin_ok: f64 = 10000.0;
     let mut test = true;
 
@@ -152,7 +151,7 @@ pub fn check_hlinemin(
     let mut s1 = lo * 0.5 - csize;
     while s1 > 10.0 {
         let f = f_charge(lo, f_o, q2, q3, s1, dsupdep, dsupend);
-        let (nth, ntv) = newton_warm(th, tv, lo, eao, w, f, s1, d, h_alt, err);
+        let (nth, ntv) = newton_warm(th, tv, lo, eao, w, f, s1, d, h_alt, 1.0);
         th = nth;
         tv = ntv;
         if f_x(th, tv, lo, eao, w, f, s1, d).abs() + f_z(th, tv, lo, eao, w, f, s1, h_alt).abs()
@@ -186,7 +185,7 @@ pub fn check_hlinemin(
         let mut s1 = ((lo * 0.5 + csize) as i64 as f64).min(end);
         while s1 < end {
             let f = f_charge(lo, f_o, q2, q3, s1, dsupdep, dsupend);
-            let (nth, ntv) = newton_warm(th, tv, lo, eao, w, f, s1, d, h_alt, err);
+            let (nth, ntv) = newton_warm(th, tv, lo, eao, w, f, s1, d, h_alt, 1.0);
             th = nth;
             tv = ntv;
             if f_x(th, tv, lo, eao, w, f, s1, d).abs() + f_z(th, tv, lo, eao, w, f, s1, h_alt).abs()

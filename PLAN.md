@@ -9,11 +9,12 @@
 - **Branche** : `specs/004-cable`
 - **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release `v0.5.1`, tag posé
   par `release.yml` au merge de la #17 sur `main`)
-- **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec `specs/004-cable.md` validée
-  (2026-07-12). **4a** (caténaire + Newton), **4b** (faisabilité de travée) et **4c**
-  (primitives d'optimisation : `find_lomin`, `test_span`) livrés : 10 bindings extendr,
-  16 tests cargo + 35 tests R. Le placement multi-supports `OptPyl_Up` est différé (oracle
-  réel requis). Suivant : 4d (balayage 360°/pixel + orchestration R + tuilage).
+- **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec validée (2026-07-12). **4a**
+  (caténaire + Newton), **4b** (faisabilité de travée), **4c** (`find_lomin`, `test_span`)
+  et **4d** (`potentiel_cable()` : balayage 360°/pixel, orchestration R, 0 support) livrés.
+  10 bindings extendr, 16 tests cargo + ~45 tests R. Restent en extension : placement
+  multi-supports (`OptPyl_Up`, oracle réel), pêchage latéral, portage Rust de l'orchestration.
+  **Release `v0.6.0`** visée pour clore le moteur câble.
 
 ## Avancement par lot
 
@@ -383,3 +384,22 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
     bord matériel est à traiter en 4d (Tabmesh porté ou solveur à repli dans le balayage).
   - Oracle : solution manufacturée (résidus nuls, `Tcalc ≈ Tmax`, fermeture) + sol/pente
     paramétrés. 5 tests cargo + 6 tests R. Suite complète verte. Cycle dev, pas de release.
+- **Incrément 4d implémenté** (`R/cable.R`, `potentiel_cable()`) : balayage 360°/pixel depuis
+  la desserte (`.rayons()`), profil MNT interpolé à 0,5 m, `cable_test_span` (0 support) sur
+  des longueurs décroissantes (pas = résolution), couverture des cellules forestières. Sortie
+  `foretaccess_cable` (accessibilité, longueur/azimut de ligne, nb_supports). Config câble
+  complétée avec les matériels v3.6 (`config.R`, `validate_config`, `test-config`). 6 tests R
+  sur MNT synthétique (plan incliné), scan en **3,2 s**.
+  - **Trois pièges numériques traversés avant d'aboutir** (tous invisibles hors exécution du
+    scan complet) :
+    1. La « fragilité au bord de tension » de 4c était en réalité une **infaisabilité
+       géométrique** (câble tendu depuis un support à 60 m violant `hline_max` = 50 m). Le
+       noyau tourne au `Tmax` **matériel** ; tests 4c rebasculés dessus (support 45 m).
+    2. Le repli sur grille de `newton_thtv` dans `find_lomin` coûte `O((Tmax/pas)²)` ≈ 3 M
+       évaluations par appel — **catastrophique** dans la boucle chaude (scan interminable).
+    3. Un Newton chaud nu diverge sans bon amorçage. **Solution** : `seed_grid` (grille
+       grossière 40 × 40, coût fixe indépendant de `Tmax`) amorce, Newton chaud raffine, la
+       marche sur `Lo` réchauffe. Le repli `solve_charge` prototypé en 4b s'est révélé code
+       mort et a été retiré. `faisabilite.rs` est revenu à l'état fidèle (Newton chaud pur).
+  - Restent en extension (documentées, spec §11) : placement multi-supports (oracle réel),
+    pêchage latéral `distance_laterale_max_m`, portage Rust de l'orchestration (point chaud).
