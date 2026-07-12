@@ -1,3 +1,29 @@
+# foretaccess 0.7.0 (2026-07-12)
+
+## Lot 5 — Sélection multicritère des lignes câble
+
+Sortie **décisionnelle** du volet câble (EF-7). Parmi les lignes faisables du
+balayage 360°/pixel (Lot 4), on sélectionne un sous-ensemble non redondant
+maximisant la couverture selon des critères pondérés. Porté de
+`select_best_lines` / `create_best_table` (Sylvaccess v3.6, GPL v3).
+
+* **Table des lignes candidates** : `potentiel_cable()` émet désormais `$lignes`,
+  une candidate par couple (départ, azimut) faisable, avec surface forêt
+  couverte, longueur, sens (amont/aval), nombre de supports, et — si un raster de
+  volume est fourni — volume total et **IPC** (= volume / longueur).
+* **`selectionner_lignes()`** : filtrage par limites min/max, score pondéré
+  normalisé (maximiser → `valeur / p98` ; minimiser → `1 − valeur / max`),
+  classement déterministe, **sélection gloutonne** (une ligne retenue apporte au
+  moins 60 % de surface nouvelle). Sortie **`sf`** des lignes (LINESTRING, CRS
+  strict) et **raster de couverture**.
+* **Configuration** de la sélection dans `config$cable$selection` (poids, limites,
+  sens préféré, contribution minimale). Les critères volume/IPC sont neutralisés
+  automatiquement en l'absence de donnée de volume.
+
+Six critères MVP (surface, supports, sens, longueur, volume, IPC) ; VAM×10 et
+coût €/m³ de v3.6 repoussés. La reproductibilité vis-à-vis de v3.6 sur le jeu
+test reste à confronter à un oracle réel ; le déterminisme est verrouillé.
+
 # foretaccess 0.6.0 (2026-07-12)
 
 ## Lot 4 — Noyau câble (Rust, CableHelp)
