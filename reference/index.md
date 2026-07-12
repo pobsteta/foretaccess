@@ -119,6 +119,9 @@
 - [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
   : Moteur d'accessibilité porteur (forwarder)
 
+- [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+  : Potentiel d'accessibilite par cable-mat (Lot 4d)
+
 - [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
   : Prétraitement commun aux moteurs d'accessibilité
 
