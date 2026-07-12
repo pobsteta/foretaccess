@@ -231,16 +231,27 @@ pré-calculés par azimut) : à factoriser, pas à dupliquer. **Aucune nouvelle 
    skidder. À exposer dans `preprocess()` comme une couche d'obstacles propre au moteur, ou à
    réutiliser les obstacles génériques (question §10, non bloquante).
 
-### Dette assumée (Lot 3)
+### Dette levée (2026-07-12)
 
-- Le **saut hors forêt** (`distance_hors_desserte_max_m`, `f_dmax_outfor` = 200 m) n'est
-  pas implémenté : la zone de conduite est forestière. C'est l'équivalent porteur de
-  `zone_roulable_connectee()` du skidder, et il mérite le même traitement — construction en
-  trois temps, certificat de connexité sous tuilage. À traiter dans un incrément ultérieur,
-  comme il l'a été pour le skidder après confrontation aux données réelles.
-- La **double passe** (réseau puis contour, §4.2) est ramenée à une passe unique amorcée
-  depuis le réseau. À valider sur données réelles : un massif profond, atteint seulement par
-  relais de contour, pourrait révéler l'écart.
+- Le **saut hors forêt** (`distance_hors_desserte_max_m`, `f_dmax_outfor` = 200 m) est
+  désormais implémenté dans `.zone_conduite()`, fidèle à `Pente_ok_forwarder` : forêt ∪ saut
+  pondéré par la pente sur du terrain récoltable non forestier depuis le contour de la forêt.
+  Au passage, un **vrai bug** a été corrigé : la zone bornait la pente par
+  `min(travers, montée, descente)` = 15 %, alors que `Zone_OK` de Sylvaccess la borne par le
+  **maximum** = 30 % (le balayage affine ensuite par le sens et le dévers). Le `min` excluait
+  à tort les cellules roulables en montée dans le sens de la pente.
+
+### Dette assumée restante (Lot 3)
+
+- La **double passe** (`fwd_azimuts_forest_roadnet` puis `fwd_azimuts_contour`, §4.2) reste
+  une **passe unique** amorcée depuis le réseau. La seconde passe relaie depuis le contour de
+  la zone atteinte, ce qui étend la portée par zigzag (le porteur contourne un dévers en
+  combinant une direction quasi-parallèle à la pente puis une direction dans le sens de la
+  pente). Elle a été prototypée puis retirée : sur un plan uniforme elle rend le dévers non
+  bloquant pour la *portée* (seulement pour la *distance*), et sans oracle Sylvaccess réel,
+  son comportement exact — notamment le modèle de distance en composantes séparées
+  (`Dpente`/`Dfor`/`Dpis`) — ne peut être validé sur les fixtures synthétiques. À reprendre
+  quand une sortie Sylvaccess v3.6 de référence sera disponible.
 
 ### Questions restantes (non bloquantes)
 
