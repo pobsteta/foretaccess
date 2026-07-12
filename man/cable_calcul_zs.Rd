@@ -7,6 +7,26 @@
 \usage{
 cable_calcul_zs(th, tv, lo, eao, w, f, s1, s)
 }
+\arguments{
+\item{th}{Horizontal tension component at the upper support (N).}
+
+\item{tv}{Vertical tension component at the upper support (N).}
+
+\item{lo}{Unstretched cable length over the span (m).}
+
+\item{eao}{Young's modulus times the cable section (N).}
+
+\item{w}{Weight of the cable over its whole length (N).}
+
+\item{f}{Gravity force of the load (N).}
+
+\item{s1}{Arc-length position of the load (m).}
+
+\item{s}{Arc-length position at which the cable is evaluated (m).}
+}
+\value{
+The vertical drop of the cable below the upper support at \code{s} (m).
+}
 \description{
 Position verticale (chute depuis le support haut) à l'abscisse curviligne
 \code{s} : c'est elle qui fournit la garde au sol du câble.

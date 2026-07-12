@@ -7,6 +7,26 @@ solution.}
 \usage{
 cable_f_z(th, tv, lo, eao, w, f, s1, h)
 }
+\arguments{
+\item{th}{Horizontal tension component at the upper support (N).}
+
+\item{tv}{Vertical tension component at the upper support (N).}
+
+\item{lo}{Unstretched cable length over the span (m).}
+
+\item{eao}{Young's modulus times the cable section (N).}
+
+\item{w}{Weight of the cable over its whole length (N).}
+
+\item{f}{Gravity force of the load (N).}
+
+\item{s1}{Arc-length position of the load (m).}
+
+\item{h}{Altitude difference between supports (m).}
+}
+\value{
+The vertical residual (m); zero at the solution.
+}
 \description{
 Equation verticale de la caténaire élastique \code{f_z(Th, Tv)}, nulle à la
 solution.

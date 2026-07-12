@@ -28,6 +28,16 @@ fn cablehelp_version() -> String {
 
 /// Equation horizontale de la caténaire élastique `f_x(Th, Tv)`, nulle à la
 /// solution.
+///
+/// @param th Horizontal tension component at the upper support (N).
+/// @param tv Vertical tension component at the upper support (N).
+/// @param lo Unstretched cable length over the span (m).
+/// @param eao Young's modulus times the cable section (N).
+/// @param w Weight of the cable over its whole length (N).
+/// @param f Gravity force of the load (N).
+/// @param s1 Arc-length position of the load (m).
+/// @param d Horizontal span between supports (m).
+/// @return The horizontal residual (m); zero at the solution.
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -37,6 +47,16 @@ fn cable_f_x(th: f64, tv: f64, lo: f64, eao: f64, w: f64, f: f64, s1: f64, d: f6
 
 /// Equation verticale de la caténaire élastique `f_z(Th, Tv)`, nulle à la
 /// solution.
+///
+/// @param th Horizontal tension component at the upper support (N).
+/// @param tv Vertical tension component at the upper support (N).
+/// @param lo Unstretched cable length over the span (m).
+/// @param eao Young's modulus times the cable section (N).
+/// @param w Weight of the cable over its whole length (N).
+/// @param f Gravity force of the load (N).
+/// @param s1 Arc-length position of the load (m).
+/// @param h Altitude difference between supports (m).
+/// @return The vertical residual (m); zero at the solution.
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -45,6 +65,16 @@ fn cable_f_z(th: f64, tv: f64, lo: f64, eao: f64, w: f64, f: f64, s1: f64, h: f6
 }
 
 /// Position horizontale du câble à l'abscisse curviligne `s`.
+///
+/// @param th Horizontal tension component at the upper support (N).
+/// @param tv Vertical tension component at the upper support (N).
+/// @param lo Unstretched cable length over the span (m).
+/// @param eao Young's modulus times the cable section (N).
+/// @param w Weight of the cable over its whole length (N).
+/// @param f Gravity force of the load (N).
+/// @param s1 Arc-length position of the load (m).
+/// @param s Arc-length position at which the cable is evaluated (m).
+/// @return The horizontal position of the cable at `s` (m).
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -54,6 +84,16 @@ fn cable_calcul_xs(th: f64, tv: f64, lo: f64, eao: f64, w: f64, f: f64, s1: f64,
 
 /// Position verticale (chute depuis le support haut) à l'abscisse curviligne
 /// `s` : c'est elle qui fournit la garde au sol du câble.
+///
+/// @param th Horizontal tension component at the upper support (N).
+/// @param tv Vertical tension component at the upper support (N).
+/// @param lo Unstretched cable length over the span (m).
+/// @param eao Young's modulus times the cable section (N).
+/// @param w Weight of the cable over its whole length (N).
+/// @param f Gravity force of the load (N).
+/// @param s1 Arc-length position of the load (m).
+/// @param s Arc-length position at which the cable is evaluated (m).
+/// @return The vertical drop of the cable below the upper support at `s` (m).
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -64,6 +104,17 @@ fn cable_calcul_zs(th: f64, tv: f64, lo: f64, eao: f64, w: f64, f: f64, s1: f64,
 /// Amorçage `(Th, Tv, faisable)` par recherche sur grille sous la tension
 /// admissible. Renvoie un vecteur de longueur 3 ; `faisable` vaut 1 si
 /// `sqrt(Th^2 + Tv^2) <= tmax`, 0 sinon.
+///
+/// @param tmax Admissible cable tension (N).
+/// @param w Weight of the cable over its whole length (N).
+/// @param eao Young's modulus times the cable section (N).
+/// @param f Gravity force of the load (N).
+/// @param pas Arc-length position of the load used for the grid seed (m).
+/// @param d Horizontal span between supports (m).
+/// @param h Altitude difference between supports (m).
+/// @param lo Unstretched cable length over the span (m).
+/// @param step Grid step in tension (N).
+/// @return A length-3 numeric vector `c(Th, Tv, faisable)`.
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -85,6 +136,19 @@ fn cable_find_thtv_tmax(
 /// Résout `f_x = f_z = 0` (tensions `Th, Tv` au support haut) par
 /// Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur
 /// `c(Th, Tv)`.
+///
+/// @param th Initial guess for the horizontal tension component (N).
+/// @param tv Initial guess for the vertical tension component (N).
+/// @param h_alt Altitude difference between supports (m).
+/// @param d Horizontal span between supports (m).
+/// @param lo Unstretched cable length over the span (m).
+/// @param w Weight of the cable over its whole length (N).
+/// @param s1 Arc-length position of the load (m).
+/// @param f Gravity force of the load (N).
+/// @param eao Young's modulus times the cable section (N).
+/// @param tmax Admissible cable tension (N), bounding the grid fallback.
+/// @param err Tolerance on the Newton step (N).
+/// @return A length-2 numeric vector `c(Th, Tv)`.
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]

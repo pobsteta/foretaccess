@@ -8,6 +8,32 @@ Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur
 \usage{
 cable_newton_thtv(th, tv, h_alt, d, lo, w, s1, f, eao, tmax, err)
 }
+\arguments{
+\item{th}{Initial guess for the horizontal tension component (N).}
+
+\item{tv}{Initial guess for the vertical tension component (N).}
+
+\item{h_alt}{Altitude difference between supports (m).}
+
+\item{d}{Horizontal span between supports (m).}
+
+\item{lo}{Unstretched cable length over the span (m).}
+
+\item{w}{Weight of the cable over its whole length (N).}
+
+\item{s1}{Arc-length position of the load (m).}
+
+\item{f}{Gravity force of the load (N).}
+
+\item{eao}{Young's modulus times the cable section (N).}
+
+\item{tmax}{Admissible cable tension (N), bounding the grid fallback.}
+
+\item{err}{Tolerance on the Newton step (N).}
+}
+\value{
+A length-2 numeric vector \code{c(Th, Tv)}.
+}
 \description{
 Résout \code{f_x = f_z = 0} (tensions \verb{Th, Tv} au support haut) par
 Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur

@@ -6,6 +6,26 @@
 \usage{
 cable_calcul_xs(th, tv, lo, eao, w, f, s1, s)
 }
+\arguments{
+\item{th}{Horizontal tension component at the upper support (N).}
+
+\item{tv}{Vertical tension component at the upper support (N).}
+
+\item{lo}{Unstretched cable length over the span (m).}
+
+\item{eao}{Young's modulus times the cable section (N).}
+
+\item{w}{Weight of the cable over its whole length (N).}
+
+\item{f}{Gravity force of the load (N).}
+
+\item{s1}{Arc-length position of the load (m).}
+
+\item{s}{Arc-length position at which the cable is evaluated (m).}
+}
+\value{
+The horizontal position of the cable at \code{s} (m).
+}
 \description{
 Position horizontale du câble à l'abscisse curviligne \code{s}.
 }
