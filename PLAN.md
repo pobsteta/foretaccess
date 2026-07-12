@@ -10,8 +10,8 @@
 - **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release `v0.5.1`, tag posé
   par `release.yml` au merge de la #17 sur `main`)
 - **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec `specs/004-cable.md` validée
-  (2026-07-12). **Incrément 4a livré** (caténaire élastique + Newton-Raphson en Rust,
-  6 bindings extendr, 6 tests cargo + 15 tests R). Suivant : 4b (faisabilité de travée).
+  (2026-07-12). **4a** (caténaire + Newton) et **4b** (faisabilité de travée) livrés :
+  8 bindings extendr, 11 tests cargo + 22 tests R. Suivant : 4c (optimisation des supports).
 
 ## Avancement par lot
 
@@ -350,3 +350,16 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   suite complète 558 PASS. Cycle dev, pas de release (v0.6.0 regroupera 4a-4d).
 - `rextendr` est dans la bibliothèque **globale** (`~/R/...-library/4.6`), pas dans le renv
   du projet : `rextendr::document()` se lance avec `.libPaths(c(.libPaths(), <globale>))`.
+- **Incrément 4b implémenté** (`src/rust/src/cable/faisabilite.rs`) : port de `check_droite`
+  (pré-filtre corde − flèche) et `check_Hlinemin` (balayage de la charge sur toute la travée,
+  Newton *chaud* sans repli amorcé de la position précédente, garde au sol
+  `zcoord − (alts[ind] + hline_min)` dans `[hline_min, hline_max]`, tension ≤ `tmax + 1000`).
+  Renvoie la garde minimale `Hmin_ok`, ou `-1` si infaisable. 2 bindings extendr
+  (`cable_check_droite`, `cable_check_hlinemin`), supports omis (0) — ils viennent en 4c.
+  Oracle : même *solution manufacturée* qu'en 4a (géométrie déduite de `(Tho, Tvo)` centrés),
+  sol plat paramétré pour forcer faisable / trop haut / trop bas. 5 tests cargo + 7 tests R.
+- **Deux corrections CI de 4a** (invisibles localement, pas de clippy sur le système) :
+  `clippy::too_many_arguments` tu au niveau du crate (les 4 fonctions pures à 8 args), et
+  `@param` manquants sur chaque binding exporté (`R CMD check --as-cran`, `error_on=warning`,
+  exige un `\arguments` pour tout `\usage`). Règle : **tout binding extendr exporté documente
+  chaque argument avec `@param`**.

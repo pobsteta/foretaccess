@@ -108,4 +108,57 @@ cable_find_thtv_tmax <- function(tmax, w, eao, f, pas, d, h, lo, step) .Call(wra
 #' @export
 cable_newton_thtv <- function(th, tv, h_alt, d, lo, w, s1, f, eao, tmax, err) .Call(wrap__cable_newton_thtv, th, tv, h_alt, d, lo, w, s1, f, eao, tmax, err)
 
+#' Pré-filtre géométrique : le câble est approximé par la corde entre supports
+#' moins une flèche analytique. Renvoie 1 si le profil `(line_x, line_z)` reste
+#' dans les gardes entre les indices `pg+1` et `pd-1`, 0 sinon. Sans supports
+#' intermédiaires (Lot 4b).
+#'
+#' @param fact Direction of the line (+1 or -1).
+#' @param h_alt Altitude difference between supports (m).
+#' @param d Horizontal span between supports (m).
+#' @param xup Horizontal position of the upper support (m).
+#' @param zup Altitude of the upper support (m).
+#' @param line_x Horizontal positions along the terrain profile (m).
+#' @param line_z Altitudes of the terrain profile (m).
+#' @param hline_min Minimum ground clearance of the cable (m).
+#' @param hline_max Maximum height of the cable (m).
+#' @param tmax Admissible cable tension (N).
+#' @param q1 Linear mass of the skyline (kg/m).
+#' @param q2 Linear mass of the mainline / traction cable (kg/m).
+#' @param q3 Linear mass of the return cable (kg/m).
+#' @param f_o Gravity force of the load and carriage (N).
+#' @param pg Index of the near support in the profile.
+#' @param pd Index of the far support in the profile.
+#' @return 1 if the span passes the pre-filter, 0 otherwise.
+#' @export
+cable_check_droite <- function(fact, h_alt, d, xup, zup, line_x, line_z, hline_min, hline_max, tmax, q1, q2, q3, f_o, pg, pd) .Call(wrap__cable_check_droite, fact, h_alt, d, xup, zup, line_x, line_z, hline_min, hline_max, tmax, q1, q2, q3, f_o, pg, pd)
+
+#' Faisabilité complète d'une travée : la charge balaie la longueur, on résout
+#' les tensions à chaque position et on mesure la garde au sol. Renvoie la
+#' garde minimale rencontrée (m), ou `-1` si la travée est infaisable (garde
+#' hors `[hline_min, hline_max]` ou tension au-delà de `tmax + 1000`). Sans
+#' supports intermédiaires (Lot 4b).
+#'
+#' @param alts Terrain altitudes under the line, sampled every 0.5 m (m).
+#' @param h_alt Altitude difference between supports (m).
+#' @param d Horizontal span between supports (m).
+#' @param lo Unstretched cable length over the span (m).
+#' @param fact Direction of the line (+1 or -1).
+#' @param tho Horizontal tension with the load centred (N).
+#' @param tvo Vertical tension with the load centred (N).
+#' @param xup Horizontal position of the upper support (m).
+#' @param zup Altitude of the upper support (m).
+#' @param f_o Gravity force of the load and carriage (N).
+#' @param tmax Admissible cable tension (N).
+#' @param hline_min Minimum ground clearance of the cable (m).
+#' @param hline_max Maximum height of the cable (m).
+#' @param q1 Linear mass of the skyline (kg/m).
+#' @param q2 Linear mass of the mainline / traction cable (kg/m).
+#' @param q3 Linear mass of the return cable (kg/m).
+#' @param csize Sweep step of the load position (m).
+#' @param eao Young's modulus times the cable section (N).
+#' @return The minimum ground clearance (m), or `-1` if infeasible.
+#' @export
+cable_check_hlinemin <- function(alts, h_alt, d, lo, fact, tho, tvo, xup, zup, f_o, tmax, hline_min, hline_max, q1, q2, q3, csize, eao) .Call(wrap__cable_check_hlinemin, alts, h_alt, d, lo, fact, tho, tvo, xup, zup, f_o, tmax, hline_min, hline_max, q1, q2, q3, csize, eao)
+
 # nolint end
