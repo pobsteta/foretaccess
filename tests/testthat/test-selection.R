@@ -118,6 +118,46 @@ test_that("la sortie sf est valide (CRS, LINESTRING) et la couverture coherente"
   expect_gt(sum(vals), 0)
 })
 
+test_that("une selection sans ligne retenue renvoie une sortie vide coherente", {
+  # Limite de surface inatteignable -> toutes les lignes filtrees.
+  lignes <- ligne_row(313, 90, 40, 0.5)
+  cfg <- foretaccess_config(cable = list(selection = list(
+    poids = list(surface = 1, supports = 0, longueur = 0, volume = 0, ipc = 0),
+    limites = list(surface_min = 99, supports_max = Inf, longueur_min = 0,
+      longueur_max = Inf, volume_min = 0, ipc_min = 0),
+    sens_prefere = 0, contribution_min = 0.6
+  )))
+  sel <- selectionner_lignes(cable_factice(lignes, cfg))
+  expect_s3_class(sel, "foretaccess_selection")
+  expect_equal(nrow(sel$lignes), 0)
+  expect_s3_class(sel$lignes, "sf")
+  expect_true(all(terra::values(sel$couverture) == 0L))
+})
+
+test_that("le sens prefere classe ses lignes d'abord", {
+  # Deux lignes disjointes, l'aval (sens +1) moins bonne en surface que l'amont.
+  lignes <- rbind(
+    ligne_row(313, 90, 40, 0.3, sens = 1L), # aval, surface moindre
+    ligne_row(313, 270, 40, 0.9, sens = -1L) # amont, meilleure surface
+  )
+  cfg <- foretaccess_config(cable = list(selection = list(
+    poids = list(surface = 1, supports = 0, longueur = 0, volume = 0, ipc = 0),
+    limites = list(surface_min = 0, supports_max = Inf, longueur_min = 0,
+      longueur_max = Inf, volume_min = 0, ipc_min = 0),
+    sens_prefere = 1, contribution_min = 0.6
+  )))
+  sel <- selectionner_lignes(cable_factice(lignes, cfg))
+  # Les deux sont disjointes donc retenues ; l'aval prefere est en tete.
+  expect_equal(nrow(sel$lignes), 2)
+  expect_equal(sel$lignes$sens[1], 1L)
+})
+
+test_that("la methode print resume la selection", {
+  lignes <- ligne_row(313, 90, 40, 0.5)
+  sel <- selectionner_lignes(cable_factice(lignes))
+  expect_message(print(sel), "Selection de lignes cable")
+})
+
 test_that("le criteres volume/IPC sont neutralises sans donnee de volume", {
   # Volume tout NA : la selection tourne sur les criteres geometriques.
   lignes <- rbind(
