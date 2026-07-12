@@ -146,6 +146,9 @@
 - [`sb_write_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.md)
   : Écrit une couche vectorielle
 
+- [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
+  : Selection multicritere des lignes cable (Lot 5)
+
 - [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
   : Moteur d'accessibilité skidder (débusqueur)
 

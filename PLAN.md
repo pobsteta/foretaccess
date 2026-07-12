@@ -19,8 +19,13 @@
   16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension
   (spec §11) : placement multi-supports (`OptPyl_Up`, oracle réel),
   pêchage latéral, portage Rust de l’orchestration.
-- **Prochain lot** : **Lot 5 — sélection multicritère des lignes câble**
-  (`specs/005`).
+- **Lot en cours** : **Lot 5 — sélection multicritère des lignes câble**
+  (`specs/005`, validé 2026-07-12). **5a**
+  ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+  émet `$lignes`) et **5b**
+  ([`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md))
+  implémentés : filtrage par limites, score pondéré normalisé, glouton
+  avec contribution, sortie `sf`. Reste : PR + release `v0.7.0`.
 
 ## Avancement par lot
 
@@ -31,7 +36,7 @@
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
 | 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
-| 5 | Sélection lignes câble | à écrire | ⬜ | — |
+| 5 | Sélection lignes câble | `specs/005-selection.md` | 🟡 implémenté | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
 | 7 | Passage à l’échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
@@ -412,6 +417,24 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ### 2026-07-12
 
+- **Lot 5 (sélection multicritère des lignes câble) implémenté** — spec
+  `specs/005` validé sur lecture de
+  `select_best_lines`/`create_best_table` (Sylvaccess
+  `Sylvaccess_0_functions.py`). **5a** :
+  [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+  émet `$lignes` (une candidate par (départ, azimut) faisable : surface
+  forêt couverte, longueur, sens, volume/IPC si `pre$volume`). **5b** :
+  [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
+  — filtrage par limites, **score pondéré normalisé** (maximiser →
+  `v/p98` ; minimiser → `1−v/max`), tri lexicographique stable
+  (déterminisme), **glouton avec contribution** (une ligne retenue
+  apporte ≥ 60 % de surface nouvelle), sortie `sf` LINESTRING (CRS
+  strict) + raster de couverture. Config `config$cable$selection`
+  (poids, limites, sens préféré). Neutralisation auto des critères
+  volume/IPC sans volume. La reproductibilité vs v3.6 (CA2 backlog)
+  reste à confronter à un oracle réel ; le déterminisme est verrouillé.
+  6 critères MVP (EF-7) ; VAM×10 et coût €/m³ repoussés. 21 tests R
+  (oracle analytique).
 - **Lot 4 (noyau câble) livré de bout en bout et publié en `v0.6.0`** —
   incréments 4a (caténaire + Newton, \#19), 4b (faisabilité, \#20), 4c
   (`find_lomin`/`test_span`, \#21), 4d

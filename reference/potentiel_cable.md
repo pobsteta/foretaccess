@@ -47,7 +47,10 @@ potentiel_cable(
 Un objet de classe `foretaccess_cable` : `accessibilite` (raster de
 classes : accessible_cable / non_accessible / hors_foret),
 `longueur_ligne` (m, meilleure ligne couvrant la cellule),
-`azimut_ligne` (deg), `nb_supports` (0 dans ce lot), `recap`, `grid`,
+`azimut_ligne` (deg), `nb_supports` (0 dans ce lot), `lignes`
+(data.frame des lignes candidates : `depart`, `azimut`, `longueur_m`,
+`surface_ha`, `sens`, `supports`, `volume_m3`, `ipc` – une par (depart,
+azimut) faisable, pour la selection du Lot 5), `recap`, `grid`,
 `config`, `fichiers`.
 
 ## Details

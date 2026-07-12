@@ -46,7 +46,7 @@
 <li>
 <strong>Lot terminé</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>, 0 support. <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>) et <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>) livrés et mergés (#19–#22). 10 bindings extendr + <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, 16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension (spec §11) : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust de l’orchestration.</li>
 <li>
-<strong>Prochain lot</strong> : <strong>Lot 5 — sélection multicritère des lignes câble</strong> (<code>specs/005</code>).</li>
+<strong>Lot en cours</strong> : <strong>Lot 5 — sélection multicritère des lignes câble</strong> (<code>specs/005</code>, validé 2026-07-12). <strong>5a</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> émet <code>$lignes</code>) et <strong>5b</strong> (<code><a href="reference/selectionner_lignes.html">selectionner_lignes()</a></code>) implémentés : filtrage par limites, score pondéré normalisé, glouton avec contribution, sortie <code>sf</code>. Reste : PR + release <code>v0.7.0</code>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -86,8 +86,8 @@
 <td><code>v0.6.0</code></td>
 </tr><tr><td>5</td>
 <td>Sélection lignes câble</td>
-<td>à écrire</td>
-<td>⬜</td>
+<td><code>specs/005-selection.md</code></td>
+<td>🟡 implémenté</td>
 <td>—</td>
 </tr><tr><td>6</td>
 <td>Camion DFCI (beta)</td>
@@ -305,6 +305,8 @@
 <div class="section level3">
 <h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
 <ul><li>
+<strong>Lot 5 (sélection multicritère des lignes câble) implémenté</strong> — spec <code>specs/005</code> validé sur lecture de <code>select_best_lines</code>/<code>create_best_table</code> (Sylvaccess <code>Sylvaccess_0_functions.py</code>). <strong>5a</strong> : <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> émet <code>$lignes</code> (une candidate par (départ, azimut) faisable : surface forêt couverte, longueur, sens, volume/IPC si <code>pre$volume</code>). <strong>5b</strong> : <code><a href="reference/selectionner_lignes.html">selectionner_lignes()</a></code> — filtrage par limites, <strong>score pondéré normalisé</strong> (maximiser → <code>v/p98</code> ; minimiser → <code>1−v/max</code>), tri lexicographique stable (déterminisme), <strong>glouton avec contribution</strong> (une ligne retenue apporte ≥ 60 % de surface nouvelle), sortie <code>sf</code> LINESTRING (CRS strict) + raster de couverture. Config <code>config$cable$selection</code> (poids, limites, sens préféré). Neutralisation auto des critères volume/IPC sans volume. La reproductibilité vs v3.6 (CA2 backlog) reste à confronter à un oracle réel ; le déterminisme est verrouillé. 6 critères MVP (EF-7) ; VAM×10 et coût €/m³ repoussés. 21 tests R (oracle analytique).</li>
+<li>
 <strong>Lot 4 (noyau câble) livré de bout en bout et publié en <code>v0.6.0</code></strong> — incréments 4a (caténaire + Newton, #19), 4b (faisabilité, #20), 4c (<code>find_lomin</code>/<code>test_span</code>, #21), 4d (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, #22). Le premier moteur non terrestre, et le point où le portage <code>extendr</code> prend son sens. Trois pièges numériques traversés en 4d (infaisabilité géométrique mal diagnostiquée en 4c, repli grille <code>O(Tmax²)</code> catastrophique, amorçage <code>seed_grid</code>) — détaillés dans le journal 4d ci-dessous. Extensions différées : placement multi-supports (oracle réel), pêchage latéral, portage Rust de l’orchestration. Retour en cycle dev <code>0.6.0.9000</code> après la release.</li>
 <li>
 <strong>Consolidation du porteur mergée et publiée en <code>v0.5.1</code></strong> (PR #17, sept checks verts). Retour en cycle de dev <code>0.5.1.9000</code>.</li>
