@@ -234,6 +234,20 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
 6. **Défauts matériels v3.6** dans `config$cable`, complétés depuis `Tab_Param_cable.csv`
    (masse linéaire 1,85 kg/m, diamètre 18 mm, rupture 35000 kgF, sécurité 2, mât 10,5 m,
    `lmax` 750 m, `lmin` 150 m, garde `[3,5 ; 50]` m, `nb_supports_max` 3).
+9. **Amorçage 4c substitué aux tables (tranché 2026-07-12).** `Find_Lomin` s'amorce dans
+   Sylvaccess depuis les tables `Tabmesh` (`rastLosup`, `rastTh`, `rastTv`, ~80 lignes de
+   pré-calcul indexé par `(H, D)`). On les **remplace** par l'estimation initiale
+   `(Th, Tv) = (0,9·Tmax, 0,1·Tmax)` — celle même que `Tabmesh` utilise pour son premier
+   point — et `Lo = corde + réserve`, avec un solveur interne robuste (Newton **à repli sur
+   grille**). Les tables ne sont qu'un accélérateur : la marche sur `Lo` et Newton convergent
+   quel que soit l'amorçage dans le bassin. C'est un choix de **performance, pas de correction**
+   (le noyau reste fidèle). Un jour, un `Tabmesh` porté pourra accélérer le balayage de 4d.
+10. **`OptPyl_Up` (placement multi-supports) différé.** L'optimiseur de placement des supports
+    intermédiaires (~150 lignes, boucles imbriquées, table `Span` typée) n'est pas validable
+    par oracle manufacturé — comme la double passe du porteur, sa fidélité exige une exécution
+    Sylvaccess réelle. 4c livre les **primitives validables** (`find_lomin`, `test_span` avec
+    la contrainte d'angle `angle_intsup`) ; le placement viendra avec un oracle réel (§8),
+    porté ou orchestré côté R. Principe : pas de code plausible-mais-faux.
 
 ### Questions restantes (non bloquantes)
 
@@ -253,8 +267,13 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
 - **4a** — caténaire élastique + Newton-Raphson en Rust, `cargo test`, binding `extendr`,
   test d'intégration R. Le cœur numérique, l'incrément à plus haute valeur et à risque isolé.
 - **4b** — faisabilité d'une travée : tension `≤ Tmax`, garde au sol via `calcul_zs`.
-- **4c** — optimisation des supports (0…N), `rayon`.
+- **4c** — primitives d'optimisation de travée : `find_lomin` (Lo minimal à tension = Tmax
+  + garde) et `test_span` (segment : pré-filtre, pente bornée, angle inter-support). Le
+  placement multi-supports `OptPyl_Up` est différé (§10.10). Amorçage substitué (§10.9).
 - **4d** — balayage 360°/pixel, orchestration R (`potentiel_cable()`), tuilage (Lot 7).
+  Y traiter : le **placement des supports** (avec oracle réel), et la **fragilité du Newton
+  chaud du balayage au bord de tension** (câble quasi tendu au Lo minimal, `Tmax` matériel) —
+  un `Tabmesh` porté ou un solveur à repli y répondrait.
 
 Chaque incrément est mergeable seul ; 4a livre la mécanique, 4d la carte.
 

@@ -10,8 +10,10 @@
 - **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release `v0.5.1`, tag posé
   par `release.yml` au merge de la #17 sur `main`)
 - **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec `specs/004-cable.md` validée
-  (2026-07-12). **4a** (caténaire + Newton) et **4b** (faisabilité de travée) livrés :
-  8 bindings extendr, 11 tests cargo + 22 tests R. Suivant : 4c (optimisation des supports).
+  (2026-07-12). **4a** (caténaire + Newton), **4b** (faisabilité de travée) et **4c**
+  (primitives d'optimisation : `find_lomin`, `test_span`) livrés : 10 bindings extendr,
+  16 tests cargo + 35 tests R. Le placement multi-supports `OptPyl_Up` est différé (oracle
+  réel requis). Suivant : 4d (balayage 360°/pixel + orchestration R + tuilage).
 
 ## Avancement par lot
 
@@ -363,3 +365,21 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   `@param` manquants sur chaque binding exporté (`R CMD check --as-cran`, `error_on=warning`,
   exige un `\arguments` pour tout `\usage`). Règle : **tout binding extendr exporté documente
   chaque argument avec `@param`**.
+- **Incrément 4c implémenté** (`src/rust/src/cable/supports.rs`) : port de `Find_Lomin`
+  (`find_lomin` : cherche le `Lo` minimal tel que la tension à charge centrée atteigne `Tmax`,
+  par marche à pas variable sur `Lo` + Newton, puis garde au sol via `check_hlinemin`) et
+  `test_Span` (`test_span` : segment — pré-filtre `check_droite`, pente dans `[slope_min,
+  slope_max]`, contrainte d'angle `angle_intsup` au support vis-à-vis du segment précédent,
+  puis `find_lomin`). 2 bindings extendr (`cable_find_lomin`, `cable_test_span`).
+  - **Amorçage substitué aux tables `Tabmesh`** : `(Th,Tv) = (0,9·Tmax, 0,1·Tmax)` + `Lo =
+    corde + réserve`, solveur interne robuste (Newton **à repli sur grille**, `newton_thtv`).
+    Choix de performance, pas de correction (§10.9 du spec). Sans cela, la marche sur `Lo`
+    pousse `Th` négatif près de la zone tendue.
+  - **`OptPyl_Up` (placement multi-supports) différé** : non validable sans oracle Sylvaccess
+    réel (§10.10). 4c livre les primitives validables.
+  - **Fragilité au bord de tension** relevée : au `Lo` minimal, la tension = `Tmax` matériel
+    (~172 kN) rend le câble quasi tendu, et le Newton *chaud* du balayage (`check_hlinemin`,
+    sans repli) devient fragile. Tests conduits à `Tmax` modéré (50 kN), bien conditionné ; le
+    bord matériel est à traiter en 4d (Tabmesh porté ou solveur à repli dans le balayage).
+  - Oracle : solution manufacturée (résidus nuls, `Tcalc ≈ Tmax`, fermeture) + sol/pente
+    paramétrés. 5 tests cargo + 6 tests R. Suite complète verte. Cycle dev, pas de release.
