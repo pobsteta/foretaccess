@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,14 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>specs/004-cable</code>
+<strong>Branche</strong> : <code>release/0.6.0</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1.9000</code> (cycle dev ; dernière release <code>v0.5.1</code>, tag posé par <code>release.yml</code> au merge de la #17 sur <code>main</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.6.0</code> (release du moteur câble ; <code>release.yml</code> pose <code>v0.6.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.6.0.9000</code>)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec validée (2026-07-12). <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité de travée), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>) et <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> : balayage 360°/pixel, orchestration R, 0 support) livrés. 10 bindings extendr, 16 tests cargo + ~45 tests R. Restent en extension : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust de l’orchestration. <strong>Release <code>v0.6.0</code></strong> visée pour clore le moteur câble.</li>
+<strong>Lot terminé</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>, 0 support. <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>) et <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>) livrés et mergés (#19–#22). 10 bindings extendr + <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, 16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension (spec §11) : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust de l’orchestration.</li>
+<li>
+<strong>Prochain lot</strong> : <strong>Lot 5 — sélection multicritère des lignes câble</strong> (<code>specs/005</code>).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -81,8 +83,8 @@
 </tr><tr><td>4</td>
 <td>Noyau Câble (Rust)</td>
 <td><code>specs/004-cable.md</code></td>
-<td>🟡 spec validée</td>
-<td>—</td>
+<td>✅ terminé (0 support)</td>
+<td><code>v0.6.0</code></td>
 </tr><tr><td>5</td>
 <td>Sélection lignes câble</td>
 <td>à écrire</td>
@@ -304,6 +306,8 @@
 <div class="section level3">
 <h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
 <ul><li>
+<strong>Lot 4 (noyau câble) livré de bout en bout et publié en <code>v0.6.0</code></strong> — incréments 4a (caténaire + Newton, #19), 4b (faisabilité, #20), 4c (<code>find_lomin</code>/<code>test_span</code>, #21), 4d (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, #22). Le premier moteur non terrestre, et le point où le portage <code>extendr</code> prend son sens. Trois pièges numériques traversés en 4d (infaisabilité géométrique mal diagnostiquée en 4c, repli grille <code>O(Tmax²)</code> catastrophique, amorçage <code>seed_grid</code>) — détaillés dans le journal 4d ci-dessous. Extensions différées : placement multi-supports (oracle réel), pêchage latéral, portage Rust de l’orchestration. Retour en cycle dev <code>0.6.0.9000</code> après la release.</li>
+<li>
 <strong>Consolidation du porteur mergée et publiée en <code>v0.5.1</code></strong> (PR #17, sept checks verts). Retour en cycle de dev <code>0.5.1.9000</code>.</li>
 <li>
 <strong>Lot 4 (noyau câble) — spec rédigée sur la source</strong> (<code>specs/004-cable.md</code>). Lecture de <code>Sylvaccess_2_cable.py</code> et de <code>sylvaccess_cython3.pyx</code> (lignes ~1040-1400) : la mécanique est une <strong>caténaire élastique</strong> (terme <code>Lo/EAo</code>, allongement sous tension), pas une caténaire idéale, résolue par <strong>Newton-Raphson à Jacobien analytique</strong> (<code>f_x</code>, <code>f_z</code>, <code>df_dTh</code>, <code>dg_dTh</code>) avec <strong>repli sur recherche par grille</strong> quand une tension devient négative. La faisabilité tient à <code>√(Th²+Tv²) ≤ Tmax = c_rupt·g/c_safe</code> et à la garde au sol <code>[c_h_min, c_h_max]</code> = <code>[3,5 ; 50]</code> m via <code>calcul_zs</code>.</li>

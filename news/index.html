@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,24 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.0" id="foretaccess-060-2026-07-12">foretaccess 0.6.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-060-2026-07-12"></a></h2>
+<div class="section level3">
+<h3 id="lot--noyau-câble-rust-cablehelp-0-6-0">Lot 4 — Noyau câble (Rust, CableHelp)<a class="anchor" aria-label="anchor" href="#lot--noyau-c%C3%A2ble-rust-cablehelp-0-6-0"></a></h3>
+<p>Premier moteur <strong>non terrestre</strong>, et point où le portage <code>extendr</code>/<code>rextendr</code> prend son sens. La mécanique de câble-mât (caténaire élastique) est portée depuis le code source Sylvaccess v3.6 (<code>sylvaccess_cython3.pyx</code>, GPL v3) dans le crate Rust <code>cablehelp</code>, exposée via <code>extendr</code> ; l’orchestration SIG reste en R.</p>
+<ul><li>
+<strong>Caténaire élastique + Newton-Raphson</strong> (<code>cable_f_x</code>, <code>cable_f_z</code>, <code>cable_calcul_xs</code>, <code>cable_calcul_zs</code>, <code>cable_newton_thtv</code>, <code>cable_find_thtv_tmax</code>). Le terme <code>Lo/EAo</code> (allongement sous tension) distingue le modèle d’une caténaire idéale. Résolution par Jacobien analytique, repli sur grille.</li>
+<li>
+<strong>Faisabilité d’une travée</strong> (<code>cable_check_droite</code>, <code>cable_check_hlinemin</code>) : la charge balaie la travée, on résout les tensions à chaque position et on vérifie la garde au sol dans <code>[hauteur_cable_min_m, hauteur_cable_max_m]</code> et la tension sous la limite admissible.</li>
+<li>
+<strong>Optimisation de travée</strong> (<code>cable_find_lomin</code>, <code>cable_test_span</code>) : longueur à vide minimale à tension = Tmax, pente bornée, contrainte d’angle au support intermédiaire. Amorçage par grille grossière (substitut aux tables <code>Tabmesh</code>).</li>
+<li>
+<strong>Orchestration</strong> (<code><a href="../reference/potentiel_cable.html">potentiel_cable()</a></code>) : balayage 360°/pixel depuis la desserte, extraction du profil MNT, test d’une ligne <strong>0 support</strong> jusqu’à la longueur maximale, couverture des cellules forestières. Sortie <code>foretaccess_cable</code>.</li>
+<li>
+<strong>Configuration câble</strong> complétée avec les matériels v3.6 (<code>config$cable</code>).</li>
+</ul><p>Extensions prévues (voir <code>specs/004-cable.md</code>) : placement de supports intermédiaires (<code>OptPyl_Up</code>, avec oracle réel), pêchage latéral, portage Rust de l’orchestration.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.1" id="foretaccess-051-2026-07-12">foretaccess 0.5.1 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-051-2026-07-12"></a></h2>
 <div class="section level3">
