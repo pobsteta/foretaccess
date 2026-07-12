@@ -14,6 +14,7 @@ articles:
   navbar: ~
   contents:
   - foretaccess
+  - acquisition
 
 reference:
 - title: Configuration
@@ -78,6 +79,21 @@ reference:
   - sb_read_layer
   - sb_list_layers
   - sb_ensure_schema
+- title: Acquisition depuis une AOI (Lot 10)
+  desc: Téléchargement config-driven des entrées (IGN Géoplateforme, OpenStreetMap).
+  contents:
+  - acquire_inputs
+  - acquire_mnt
+  - acquire_desserte
+  - acquire_foret
+  - acquire_cadastre
+  - acquire_obstacles
+  - datasources
+  - get_country_config
+  - get_data_source
+  - get_layer_service
+  - get_national_crs
+  - list_countries
 - title: Non-régression
   contents:
   - compare_to_oracle

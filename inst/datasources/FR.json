@@ -1,0 +1,41 @@
+{
+  "country": "FR",
+  "country_name": "France metropolitaine",
+  "crs_national": 2154,
+  "crs_name": "RGF93 v1 / Lambert-93",
+  "services": {
+    "ign_wfs": {
+      "url": "https://data.geopf.fr/wfs/ows",
+      "version": "2.0.0",
+      "provider": "IGN Geoplateforme"
+    },
+    "ign_wms": {
+      "url": "https://data.geopf.fr/wms-r/wms",
+      "version": "1.3.0",
+      "provider": "IGN Geoplateforme"
+    }
+  },
+  "layers": {
+    "dem": {
+      "service": "ign_wms",
+      "layer": "ELEVATION.ELEVATIONGRIDCOVERAGE",
+      "description": "RGE ALTI - Modele Numerique de Terrain (MNT)",
+      "resolution_m": 5
+    },
+    "roads": {
+      "service": "ign_wfs",
+      "typename": "BDTOPO_V3:troncon_de_route",
+      "description": "BD TOPO - Reseau routier"
+    },
+    "bdforet_v2": {
+      "service": "ign_wfs",
+      "typename": "LANDCOVER.FORESTINVENTORY.V2:formation_vegetale",
+      "description": "BD Foret V2 - Formations vegetales"
+    },
+    "cadastre": {
+      "service": "ign_wfs",
+      "typename": "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle",
+      "description": "Cadastre - Parcellaire Express (PCI)"
+    }
+  }
+}
