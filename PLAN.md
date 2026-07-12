@@ -6,12 +6,12 @@
 
 ## État courant
 
-- **Branche** : `specs/003-porteur`
-- **Version `DESCRIPTION`** : `0.5.0` (version stable préparée ;
-  `release.yml` pose le tag au merge sur `main`)
-- **Lot en cours** : **Lot 3 — Moteur Porteur** — 3a et 3b implémentés,
-  tests verts, reste la PR. Prochain : **Lot 4 (noyau câble Rust)** ou
-  consolidation.
+- **Branche** : `main`
+- **Version `DESCRIPTION`** : `0.5.0.9000` (cycle de dev ; `NEWS.md` et
+  `CITATION.cff` restent sur `0.5.0`, la dernière release)
+- **Lot en cours** : aucun. Lot 3 clos et publié (`v0.5.0`). Prochain :
+  consolidation du porteur (dette assumée) ou **Lot 4 (noyau câble
+  Rust)**.
 
 ## Avancement par lot
 
@@ -20,7 +20,7 @@
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
-| 3 | Moteur Porteur | `specs/003-porteur.md` | 🟡 code fait, PR à ouvrir | `v0.5.0` (à poser) |
+| 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0` |
 | 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
