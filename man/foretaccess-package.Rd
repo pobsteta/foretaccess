@@ -12,6 +12,7 @@ Cartographie automatique de l'accessibilité des forêts selon le mode d'exploit
 Useful links:
 \itemize{
   \item \url{https://github.com/pobsteta/foretaccess}
+  \item \url{https://pobsteta.github.io/foretaccess}
   \item Report bugs at \url{https://github.com/pobsteta/foretaccess/issues}
 }
 

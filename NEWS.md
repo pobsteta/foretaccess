@@ -1,3 +1,31 @@
+# foretaccess 0.11.0 (2026-07-12)
+
+## Lot 10 — Acquisition des entrées depuis une AOI
+
+Télécharge automatiquement les couches du pipeline à partir d'un simple polygone
+d'emprise (AOI), au lieu de les fournir à la main (étend EF-1). Approche
+**config-driven** (patron nemeton) : endpoints et couches déclarés dans
+`inst/datasources/FR.json`, jamais codés en dur.
+
+* **`acquire_inputs(aoi, sources, cache_dir, res_m, crs, buffer_m, ...)`** :
+  orchestre l'acquisition de MNT (RGE ALTI), desserte (BD TOPO), forêt (BD Forêt
+  v2), obstacles (OpenStreetMap) et parcellaire cadastral (optionnel). Sortie
+  `foretaccess_inputs` **directement consommable par `preprocess()`**.
+* **Fonctions par source** : `acquire_mnt()`, `acquire_desserte()` (dérive le champ
+  `classe` route/piste depuis BD TOPO), `acquire_foret()`, `acquire_cadastre()`
+  (IGN via `happign`), `acquire_obstacles()` (bâti / eau / voies ferrées /
+  falaises via `osmdata`).
+* **Résolveur config-driven** : `get_country_config()`, `get_data_source()`,
+  `get_layer_service()`, `get_national_crs()`, `list_countries()` lisent le JSON
+  par pays. Changer un endpoint ne touche pas au code.
+* **Robustesse** : cache idempotent (`cache_dir/layers/<couche>/`, réutilisé sauf
+  `overwrite`) ; `happign`/`osmdata` en **Suggests** avec message d'installation
+  ciblé ; **verrou CRS** strict sur l'AOI ; buffer 100 m par défaut pour capter la
+  desserte hors emprise. Les appels réseau sont isolés (wrappers mockables) : les
+  tests unitaires tournent **hors-ligne** ; un test d'intégration réseau est
+  **opt-in** (`FORETACCESS_RUN_ONLINE_TESTS=TRUE`).
+* **Vignette** « Acquérir les entrées depuis une AOI » + `specs/010`.
+
 # foretaccess 0.10.0 (2026-07-12)
 
 ## Lot 9 — Documentation & publication
