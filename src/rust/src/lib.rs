@@ -10,6 +10,7 @@ mod cable;
 use cable::catenaire;
 use cable::faisabilite;
 use cable::newton;
+use cable::scan;
 use cable::supports;
 
 /// Version de la crate Rust `cablehelp` (noyau câble).
@@ -440,6 +441,95 @@ fn cable_test_span(
     ]
 }
 
+/// Balayage 360 deg / pixel du potentiel câble (0 support), porté en Rust.
+///
+/// Pour chaque cellule de desserte et chacun des 360 azimuts, extrait le profil
+/// d'altitude, cherche la plus longue travée faisable ([cable_test_span()]) et
+/// accumule couverture et lignes candidates. Parallèle (`rayon`) sur les
+/// départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).
+///
+/// @param alt Elevation values (row-major, NA as NaN).
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param res Cell size (m); square cells assumed.
+/// @param foret Forest mask (1 = forest), row-major.
+/// @param routes Desserte cell indices (1-based) used as line starts.
+/// @param vol Volume per cell (row-major); ignored when `has_vol` is false.
+/// @param has_vol Whether `vol` carries usable volume data.
+/// @param htower Start-support height (m).
+/// @param h_end Terminal-support height (m).
+/// @param hline_min Minimum ground clearance of the carrying cable (m).
+/// @param hline_max Maximum ground clearance of the carrying cable (m).
+/// @param slope_min Minimum line slope (rad).
+/// @param slope_max Maximum line slope (rad).
+/// @param f_o Gravity force of load plus carriage (N).
+/// @param tmax Maximum allowable tension (N).
+/// @param q1 Linear mass of the carrying cable (kg/m).
+/// @param q2 Linear mass of the hauling cable (kg/m).
+/// @param q3 Linear mass of the return cable (kg/m).
+/// @param eao Young's modulus times cable section (N).
+/// @param angle_intsup Inter-support angle constraint (rad).
+/// @param lmax Maximum line length (m).
+/// @param lmin Minimum line length (m).
+/// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
+///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
+///   `li_ipc`.
+/// @export
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn cable_scan(
+    alt: Vec<f64>,
+    nr: i32,
+    nc: i32,
+    res: f64,
+    foret: Vec<i32>,
+    routes: Vec<i32>,
+    vol: Vec<f64>,
+    has_vol: bool,
+    htower: f64,
+    h_end: f64,
+    hline_min: f64,
+    hline_max: f64,
+    slope_min: f64,
+    slope_max: f64,
+    f_o: f64,
+    tmax: f64,
+    q1: f64,
+    q2: f64,
+    q3: f64,
+    eao: f64,
+    angle_intsup: f64,
+    lmax: f64,
+    lmin: f64,
+) -> List {
+    let vopt = if has_vol { Some(vol.as_slice()) } else { None };
+    let out = scan::scan(
+        &alt, nr as usize, nc as usize, res, &foret, &routes, vopt,
+        htower, h_end, hline_min, hline_max, slope_min, slope_max,
+        f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
+    );
+    let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
+    let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();
+    let li_az: Vec<i32> = out.lines.iter().map(|l| l.az).collect();
+    let li_lg: Vec<f64> = out.lines.iter().map(|l| l.lg).collect();
+    let li_surf: Vec<f64> = out.lines.iter().map(|l| l.surf).collect();
+    let li_sens: Vec<i32> = out.lines.iter().map(|l| l.sens).collect();
+    let li_vol: Vec<f64> = out.lines.iter().map(|l| l.vol).collect();
+    let li_ipc: Vec<f64> = out.lines.iter().map(|l| l.ipc).collect();
+    list!(
+        couvert = couvert,
+        longueur = out.longueur,
+        azimut = out.azimut,
+        li_dep = li_dep,
+        li_az = li_az,
+        li_lg = li_lg,
+        li_surf = li_surf,
+        li_sens = li_sens,
+        li_vol = li_vol,
+        li_ipc = li_ipc
+    )
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -456,6 +546,7 @@ extendr_module! {
     fn cable_check_hlinemin;
     fn cable_find_lomin;
     fn cable_test_span;
+    fn cable_scan;
 }
 
 #[cfg(test)]

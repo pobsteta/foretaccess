@@ -44,70 +44,36 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
     cli::cli_abort("Aucune cellule de desserte : le cable n'a pas de point de depart.")
   }
 
-  couvert <- rep(FALSE, n)
-  longueur <- rep(0, n)
-  azimut <- rep(NA_real_, n)
-
-  # Table des lignes candidates (une par (depart, azimut) faisable). Pre-allouee.
-  aire_cell <- res * res
+  # Balayage 360 deg / pixel porte en Rust (crate cablehelp, parallele `rayon`).
+  # L'orchestration -- extraction du profil, recherche de la travee faisable,
+  # accumulation couverture/lignes -- vit desormais dans le noyau ; R prepare les
+  # entrees et reassemble les sorties SIG. Voir src/rust/src/cable/scan.rs.
   vol <- if (!is.null(pre$volume)) as.numeric(terra::values(pre$volume)) else NULL
-  rayons <- .rayons(res, ct$lmax)
-  nmax <- length(routes) * length(rayons)
-  li_dep <- integer(nmax)
-  li_az <- numeric(nmax)
-  li_lg <- numeric(nmax)
-  li_surf <- numeric(nmax)
-  li_sens <- integer(nmax)
-  li_vol <- numeric(nmax)
-  li_ipc <- numeric(nmax)
-  k <- 0L
+  sc <- cable_scan(
+    alt = alt, nr = nr, nc = nc, res = res,
+    foret = as.integer(foret), routes = as.integer(routes),
+    vol = if (is.null(vol)) numeric(0) else vol, has_vol = !is.null(vol),
+    htower = ct$htower, h_end = ct$h_end,
+    hline_min = ct$hline_min, hline_max = ct$hline_max,
+    slope_min = ct$slope_min, slope_max = ct$slope_max,
+    f_o = ct$f_o, tmax = ct$tmax, q1 = ct$q1, q2 = ct$q2, q3 = ct$q3,
+    eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin
+  )
 
-  for (dep in routes) {
-    dl0 <- (dep - 1L) %/% nc + 1L
-    dc0 <- (dep - 1L) %% nc + 1L
-    for (az in seq_along(rayons)) {
-      ligne <- .ligne_cable(rayons[[az]], dl0, dc0, dep, alt, nr, nc, ct, res)
-      if (is.null(ligne)) next
-      garde <- ligne$hdist <= ligne$longueur
-      couv <- ligne$cel[garde]
-      if (!length(couv)) next
-      couvert[couv] <- TRUE
-      idx <- couv[ligne$longueur > longueur[couv]]
-      longueur[idx] <- ligne$longueur
-      azimut[idx] <- az - 1L
+  couvert <- sc$couvert == 1L
+  longueur <- sc$longueur
+  azimut <- sc$azimut
 
-      # Ligne candidate : surface forestiere couverte, sens, volume, IPC.
-      cf <- couv[foret[couv]]
-      if (!length(cf)) next
-      far <- couv[which.max(ligne$hdist[garde])]
-      k <- k + 1L
-      li_dep[k] <- dep
-      li_az[k] <- az - 1L
-      li_lg[k] <- ligne$longueur
-      li_surf[k] <- length(cf) * aire_cell / 10000
-      # Sens de debardage : +1 aval (extremite plus haute -> descente par gravite),
-      # -1 amont (extremite plus basse). Le bois est vidange vers la desserte.
-      li_sens[k] <- as.integer(sign(alt[far] - alt[dep]))
-      if (!is.null(vol)) {
-        v <- sum(vol[cf], na.rm = TRUE) * aire_cell / 10000
-        li_vol[k] <- v
-        li_ipc[k] <- v / ligne$longueur # IPC = volume / longueur (m3/ml)
-      } else {
-        li_vol[k] <- NA_real_
-        li_ipc[k] <- NA_real_
-      }
-    }
-  }
-
+  k <- length(sc$li_dep)
   lignes <- data.frame(
-    depart     = li_dep[seq_len(k)],
-    azimut     = li_az[seq_len(k)],
-    longueur_m = li_lg[seq_len(k)],
-    surface_ha = li_surf[seq_len(k)],
-    sens       = li_sens[seq_len(k)],
+    depart     = sc$li_dep,
+    azimut     = sc$li_az,
+    longueur_m = sc$li_lg,
+    surface_ha = sc$li_surf,
+    sens       = sc$li_sens,
     supports   = rep(0L, k),
-    volume_m3  = li_vol[seq_len(k)],
-    ipc        = li_ipc[seq_len(k)]
+    volume_m3  = sc$li_vol,
+    ipc        = sc$li_ipc
   )
 
   accessible <- couvert & foret
@@ -168,47 +134,6 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
     slope_min = ca$pente_min_rad,
     slope_max = ca$pente_max_rad
   )
-}
-
-# Pour un rayon (offsets dl/dc + hdist) depuis le depart, construit le profil
-# d'altitude echantillonne au demi-metre et cherche la plus longue ligne de
-# cable faisable (0 support), du plus long au plus court. Renvoie les cellules du
-# rayon, leur hdist, et la longueur faisable retenue -- ou NULL si aucune.
-.ligne_cable <- function(ray, dl0, dc0, dep, alt, nr, nc, ct, pas) {
-  lig <- dl0 + ray$dl
-  col <- dc0 + ray$dc
-  dans <- lig >= 1L & lig <= nr & col >= 1L & col <= nc
-  if (!any(dans)) return(NULL)
-  ray <- ray[dans, , drop = FALSE]
-  cel <- (lig[dans] - 1L) * nc + col[dans]
-
-  smax <- max(ray$hdist)
-  if (smax < ct$lmin) return(NULL) # trop court pour une ligne (< longueur_min)
-
-  # Profil au demi-metre : depart (hdist 0) puis cellules du rayon.
-  hd <- c(0, ray$hdist)
-  za <- c(alt[dep], alt[cel])
-  xs <- seq(0, smax, by = 0.5)
-  zs <- stats::approx(hd, za, xout = xs)$y
-
-  # Candidats de longueur, du plus long au plus court (pas = resolution) :
-  # premiere travee faisable = la plus longue. La granularite de la couverture
-  # etant la cellule, un pas plus fin serait inutile (et couteux).
-  hi <- min(smax, ct$lmax)
-  if (hi < ct$lmin) return(NULL)
-  for (l_cand in seq(hi, ct$lmin, by = -pas)) {
-    posi <- as.integer(round(l_cand * 2)) # indice 0.5 m
-    if (posi >= length(xs)) next
-    r <- cable_test_span(
-      xs, zs, 0L, posi, ct$htower, ct$h_end, ct$hline_min, ct$hline_max,
-      ct$slope_min, ct$slope_max, zs, ct$f_o, ct$tmax, ct$q1, ct$q2, ct$q3,
-      ct$eao, 0.5, ct$angle_intsup, 0, -9999
-    )
-    if (r[1] == 1) {
-      return(list(cel = cel, hdist = ray$hdist, longueur = xs[posi + 1L]))
-    }
-  }
-  NULL
 }
 
 .couches_cable <- function() {

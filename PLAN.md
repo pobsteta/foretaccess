@@ -6,14 +6,19 @@
 
 ## État courant
 
-- **Branche** : `docs/cartes-aoi` (cycle dev `0.11.0.9000` ; ajout d'un article carto,
-  pas de release)
-- **Version `DESCRIPTION`** : `0.11.0.9000` (cycle dev ; `NEWS.md`/`CITATION.cff` restent
-  à `0.11.0`)
-- **En cours (doc)** : article pkgdown **« Cartes de sortie sur une AOI réelle »** — pipeline
+- **Branche** : `lot-1-pretraitement` (release `v0.12.0` — portage Rust du balayage câble)
+- **Version `DESCRIPTION`** : `0.12.0` (stable ; `NEWS.md`/`CITATION.cff` alignés)
+- **Fait (0.12.0)** : **portage Rust du balayage câble** (`cable_scan` dans `cablehelp`).
+  L'orchestration 360°/pixel de `potentiel_cable()` — profil, plus longue travée faisable,
+  couverture/lignes — vit dans le crate, parallélisée sur les départs via `rayon`. R prépare
+  les entrées et réassemble les sorties SIG (frontière minimale et typée, ADR-001).
+  **Non-régression bit-pour-bit** vis-à-vis de l'ancienne double boucle R (arrondi demi-au-pair
+  et `seq()` reproduits). Gain **~5×** (60 × 60, 60 départs : 36 s → 6 s), passage à l'échelle
+  par le parallélisme. Ancien helper R `.ligne_cable()` retiré. 18 tests cargo, 728 tests R verts.
+- **Article carto** (livré avec 0.12.0) : **« Cartes de sortie sur une AOI réelle »** — pipeline
   complet sur `data-raw/aoi.gpkg` (Cévennes), chaque sortie sur fond OSM, cartes pré-rendues
   (`data-raw/cartes.R`) et embarquées. Benchmark des durées par étage sur 721 ha documenté
-  (terrestre ~1 min 35 s ; câble = goulot, heures à > 1 jour — confirme la dette portage Rust).
+  (terrestre ~1 min 35 s ; câble = goulot avant portage — désormais accéléré et parallèle).
 - **Lots 0–10 livrés** : prétraitement, moteurs skidder / porteur, noyau câble (Rust) +
   sélection, camion DFCI (beta), passage à l'échelle (tuilage), base spatiale & agrégation,
   doc & publication, et **acquisition depuis AOI** (Lot 10). Périmètre v1 fonctionnel atteint.
@@ -485,5 +490,6 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
        grossière 40 × 40, coût fixe indépendant de `Tmax`) amorce, Newton chaud raffine, la
        marche sur `Lo` réchauffe. Le repli `solve_charge` prototypé en 4b s'est révélé code
        mort et a été retiré. `faisabilite.rs` est revenu à l'état fidèle (Newton chaud pur).
-  - Restent en extension (documentées, spec §11) : placement multi-supports (oracle réel),
-    pêchage latéral `distance_laterale_max_m`, portage Rust de l'orchestration (point chaud).
+  - **Portage Rust de l'orchestration livré en `v0.12.0`** (`cable_scan`, `rayon`, non-régression
+    bit-pour-bit, ~5×). Restent en extension (spec §11) : placement multi-supports (oracle réel),
+    pêchage latéral `distance_laterale_max_m`.
