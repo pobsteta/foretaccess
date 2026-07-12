@@ -66,6 +66,23 @@ de citer :
   Position verticale (chute depuis le support haut) à l'abscisse
   curviligne `s` : c'est elle qui fournit la garde au sol du câble.
 
+- [`cable_check_droite()`](https://pobsteta.github.io/foretaccess/reference/cable_check_droite.md)
+  :
+
+  Pré-filtre géométrique : le câble est approximé par la corde entre
+  supports moins une flèche analytique. Renvoie 1 si le profil
+  `(line_x, line_z)` reste dans les gardes entre les indices `pg+1` et
+  `pd-1`, 0 sinon. Sans supports intermédiaires (Lot 4b).
+
+- [`cable_check_hlinemin()`](https://pobsteta.github.io/foretaccess/reference/cable_check_hlinemin.md)
+  :
+
+  Faisabilité complète d'une travée : la charge balaie la longueur, on
+  résout les tensions à chaque position et on mesure la garde au sol.
+  Renvoie la garde minimale rencontrée (m), ou `-1` si la travée est
+  infaisable (garde hors `[hline_min, hline_max]` ou tension au-delà de
+  `tmax + 1000`). Sans supports intermédiaires (Lot 4b).
+
 - [`cable_f_x()`](https://pobsteta.github.io/foretaccess/reference/cable_f_x.md)
   :
 

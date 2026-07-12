@@ -57,6 +57,20 @@
 
         <dt>
 
+          <code><a href="cable_check_droite.html">cable_check_droite()</a></code>
+
+        </dt>
+        <dd>Pré-filtre géométrique : le câble est approximé par la corde entre supports moins une flèche analytique. Renvoie 1 si le profil <code>(line_x, line_z)</code> reste dans les gardes entre les indices <code>pg+1</code> et <code>pd-1</code>, 0 sinon. Sans supports intermédiaires (Lot 4b).</dd>
+
+        <dt>
+
+          <code><a href="cable_check_hlinemin.html">cable_check_hlinemin()</a></code>
+
+        </dt>
+        <dd>Faisabilité complète d'une travée : la charge balaie la longueur, on résout les tensions à chaque position et on mesure la garde au sol. Renvoie la garde minimale rencontrée (m), ou <code>-1</code> si la travée est infaisable (garde hors <code>[hline_min, hline_max]</code> ou tension au-delà de <code>tmax + 1000</code>). Sans supports intermédiaires (Lot 4b).</dd>
+
+        <dt>
+
           <code><a href="cable_f_x.html">cable_f_x()</a></code>
 
         </dt>

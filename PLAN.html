@@ -45,7 +45,7 @@
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1.9000</code> (cycle dev ; dernière release <code>v0.5.1</code>, tag posé par <code>release.yml</code> au merge de la #17 sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12). <strong>Incrément 4a livré</strong> (caténaire élastique + Newton-Raphson en Rust, 6 bindings extendr, 6 tests cargo + 15 tests R). Suivant : 4b (faisabilité de travée).</li>
+<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12). <strong>4a</strong> (caténaire + Newton) et <strong>4b</strong> (faisabilité de travée) livrés : 8 bindings extendr, 11 tests cargo + 22 tests R. Suivant : 4c (optimisation des supports).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -315,6 +315,10 @@
 <strong>Incrément 4a implémenté</strong> : <code>src/rust/src/cable/{catenaire,newton}.rs</code> portent <code>f_x</code>, <code>f_z</code>, <code>calcul_xs/zs</code>, <code>df_dTh</code>, <code>dg_dTh</code>, <code>newton_ThTv</code>, <code>find_ThTvTmax</code> ; 6 bindings <code>#[extendr]</code> (<code>cable_*</code>). Oracle <strong>sans exécution Sylvaccess</strong> : <em>solution manufacturée</em> — on choisit <code>(Th0, Tv0)</code>, on en déduit <code>(D, H) = (calcul_xs(Lo), calcul_zs(Lo))</code> qui annule <code>f_x</code>, <code>f_z</code> par construction, et Newton la retrouve à ±1 N (fermeture géométrique vérifiée). L’identité <code>calcul_xs(Lo) = f_x + D</code>, <code>calcul_zs(Lo) = f_z + H</code> relie la position du câble à la solution : c’est elle l’oracle. 6 tests cargo + 15 tests R verts, suite complète 558 PASS. Cycle dev, pas de release (v0.6.0 regroupera 4a-4d).</li>
 <li>
 <code>rextendr</code> est dans la bibliothèque <strong>globale</strong> (<code>~/R/...-library/4.6</code>), pas dans le renv du projet : <code>rextendr::document()</code> se lance avec <code>.libPaths(c(.libPaths(), &lt;globale&gt;))</code>.</li>
+<li>
+<strong>Incrément 4b implémenté</strong> (<code>src/rust/src/cable/faisabilite.rs</code>) : port de <code>check_droite</code> (pré-filtre corde − flèche) et <code>check_Hlinemin</code> (balayage de la charge sur toute la travée, Newton <em>chaud</em> sans repli amorcé de la position précédente, garde au sol <code>zcoord − (alts[ind] + hline_min)</code> dans <code>[hline_min, hline_max]</code>, tension ≤ <code>tmax + 1000</code>). Renvoie la garde minimale <code>Hmin_ok</code>, ou <code>-1</code> si infaisable. 2 bindings extendr (<code>cable_check_droite</code>, <code>cable_check_hlinemin</code>), supports omis (0) — ils viennent en 4c. Oracle : même <em>solution manufacturée</em> qu’en 4a (géométrie déduite de <code>(Tho, Tvo)</code> centrés), sol plat paramétré pour forcer faisable / trop haut / trop bas. 5 tests cargo + 7 tests R.</li>
+<li>
+<strong>Deux corrections CI de 4a</strong> (invisibles localement, pas de clippy sur le système) : <code>clippy::too_many_arguments</code> tu au niveau du crate (les 4 fonctions pures à 8 args), et <code>@param</code> manquants sur chaque binding exporté (<code>R CMD check --as-cran</code>, <code>error_on=warning</code>, exige un <code>\arguments</code> pour tout <code>\usage</code>). Règle : <strong>tout binding extendr exporté documente chaque argument avec <code>@param</code></strong>.</li>
 </ul></div>
 </div>
 </div>
