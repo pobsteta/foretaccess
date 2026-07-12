@@ -92,10 +92,12 @@ base des lignes faisables produite ; speedup mesuré vs mono-thread.
 **Critères de sortie** : massif complet traité en tuiles, résultat identique au traitement
 mono-bloc (raccords corrects).
 
-### Lot 8 — Base spatiale & agrégation
-**Livrables** : schéma PostGIS (DDL, **base dédiée `foretaccess`, schéma par run/massif**),
-export GPKG, agrégation zonale SQL (massif/parcelle/commune). `specs/008`, ADR-002.
-**Critères de sortie** : écriture idempotente ; index spatiaux ; requêtes d'agrégation validées.
+### Lot 8 — Base spatiale & agrégation ✅ `v0.9.0`
+**Livrables** : socle `StorageBackend` (Lot 0) complété — **index spatial GiST** à
+l'écriture PostGIS (R-tree auto en GPKG) —, et **agrégation zonale** `agreger_zones()`
+(surfaces/volumes par massif/parcelle/commune). `specs/008`, ADR-002.
+**Critères de sortie** : écriture idempotente ; index spatiaux ; agrégation validée
+(partition = récap global). **Fait.**
 
 ### Lot 9 — Doc & publication
 **Livrables** : README, doc d'usage (CLI `Rscript`), exemples, `NEWS.md`/`CHANGELOG`,

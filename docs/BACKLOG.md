@@ -180,15 +180,16 @@ Couvre ENF-1.
 ## EPIC 8 — Base spatiale & agrégation *(Lot 8)*
 Couvre EF-9, EF-12.
 
-### US-8.1 — Schéma PostGIS (base dédiée, schéma par run/massif)
+### US-8.1 — Schéma PostGIS (base dédiée, schéma par run/massif) ✅ (`v0.9.0`)
 *…je veux* un DDL PostGIS (base `foretaccess`, un schéma par run/massif) + export GPKG.
-- **CA1** : DDL crée le schéma par run/massif ; index spatiaux ; écriture **idempotente**.
-- **CA2** : export GeoPackage équivalent.
+- **CA1** : schéma par run/massif (backend, Lot 0) ; **index spatiaux** (GiST à l'écriture,
+  Lot 8) ; écriture **idempotente**. ✅
+- **CA2** : export GeoPackage équivalent (R-tree auto). ✅
 
-### US-8.2 — Agrégation zonale
+### US-8.2 — Agrégation zonale ✅ (`v0.9.0`)
 *…je veux* agréger surfaces/volumes par massif / parcelle / commune.
-- **CA1** : requêtes d'agrégation validées (SQL PostGIS ; équivalent GeoPackage) ; parcellaire
-  optionnel pris en compte quand fourni.
+- **CA1** : agrégation validée (`agreger_zones()`, R/terra backend-agnostique ; partition =
+  récap global) ; parcellaire optionnel pris en compte quand fourni. ✅
 
 ---
 
