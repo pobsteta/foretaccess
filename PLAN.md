@@ -6,9 +6,9 @@
 
 ## État courant
 
-- **Branche** : `release/0.6.0`
-- **Version `DESCRIPTION`** : `0.6.0` (release du moteur câble ; `release.yml` pose `v0.6.0`
-  au merge sur `main`, puis retour en cycle dev `0.6.0.9000`)
+- **Branche** : cycle dev depuis `main` (dernière release `v0.6.0`, tag posé)
+- **Version `DESCRIPTION`** : `0.6.0.9000` (cycle dev ; `NEWS.md` et `CITATION.cff` restent
+  à `0.6.0`)
 - **Lot terminé** : **Lot 4 — noyau câble (Rust)**, 0 support. **4a** (caténaire + Newton),
   **4b** (faisabilité), **4c** (`find_lomin`, `test_span`) et **4d** (`potentiel_cable()`)
   livrés et mergés (#19–#22). 10 bindings extendr + `potentiel_cable()`, 16 tests cargo +
