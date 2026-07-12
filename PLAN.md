@@ -6,18 +6,22 @@
 
 ## État courant
 
-- **Branche** : `specs/006-dfci` (release du Lot 6 ; `release.yml` pose `v0.8.0` au merge
-  sur `main`, puis retour en cycle dev `0.8.0.9000`)
-- **Version `DESCRIPTION`** : `0.8.0` (release du Lot 6)
-- **Lot terminé** : **Lot 6 — camion DFCI (beta)**. `camion_dfci()` : zone défendable =
-  tampon au terrain (plus court chemin pondere par la pente depuis les dessertes DFCI,
-  plafonne a la portee, coupe au-dela de la pente d'intervention). Reutilise le service
-  partage `propager_cout()` du Lot 2, aucun nouveau noyau. Config `dfci` (portee 100 m,
-  pente 40 %, `classes_source`). Tuilage certifie (identique mono-bloc sur cellules
-  certifiees). 22 tests. Sortie **beta** : limites documentees (ni combustible, ni vent,
-  ni physique de lance ; carrossabilite non qualifiee — QUALIROAD).
-- **Prochain lot** : **Lot 8 — base spatiale & agregation** (index spatial GiST a l'ecriture
-  PostGIS + agregation zonale massif/parcelle/commune).
+- **Branche** : `specs/008-base-spatiale` (release du Lot 8 ; `release.yml` pose `v0.9.0` au
+  merge sur `main`, puis retour en cycle dev `0.9.0.9000`)
+- **Version `DESCRIPTION`** : `0.9.0` (release du Lot 8)
+- **Lots terminés récemment** :
+  - **Lot 6 — camion DFCI (beta)** (`v0.8.0`). `camion_dfci()` : zone défendable = tampon au
+    terrain (plus court chemin pondéré par la pente depuis les dessertes DFCI, plafonné à la
+    portée, coupé au-delà de la pente d'intervention). Réutilise `propager_cout()`, aucun
+    nouveau noyau. Config `dfci`. Tuilage certifié. 22 tests. Beta (limites documentées).
+  - **Lot 8 — base spatiale & agrégation** (`v0.9.0`). `agreger_zones()` : surfaces/volumes
+    par zone (massif/parcelle/commune) et par classe, sortie `sf` large persistable ;
+    propriété de partition (somme zonale = récap global). Index spatial **GiST** à l'écriture
+    PostGIS (R-tree auto en GPKG). Complète le socle `StorageBackend` du Lot 0. 25 tests
+    (+ index PostGIS, skippé sans base).
+- **Prochain lot** : **Lot 9 — doc & publication** (README, doc CLI, exemple bout en bout).
+  Reste aussi le **Lot 10** (acquisition depuis AOI, spec validée) et le placement
+  multi-supports du câble (Lot 4, `OptPyl_Up`, oracle réel).
 - **Derniers lots terminés** :
   - **Lot 4 — noyau câble (Rust)**, 0 support (`v0.6.0`). **4a** (caténaire + Newton),
     **4b** (faisabilité), **4c** (`find_lomin`, `test_span`), **4d** (`potentiel_cable()`).
@@ -42,7 +46,7 @@
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
 | 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
-| 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
+| 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | à écrire | ⬜ | — |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
 
@@ -338,6 +342,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Lot 8 (base spatiale & agrégation) implémenté et préparé en release `v0.9.0`.**
+  `agreger_zones(classes, zones, volume, id)` agrège n'importe quel raster catégoriel
+  d'accessibilité (skidder, porteur, DFCI, couverture câble) en surfaces (ha) et volumes (m³)
+  par zone (massif/parcelle/commune) et par classe — pendant zonal de `recapituler()`.
+  Croisement raster **vectorisé** (`table`/`tapply`, pas de boucle par cellule), verrou CRS
+  strict, sortie `sf` à colonnes larges `surface_<classe>_ha` (+ `volume_<classe>_m3`)
+  directement persistable/requêtable. Test central : **partition** (somme zonale = récap
+  global). Côté stockage, `sb_write_layer()` PostGIS crée désormais un **index GiST**
+  idempotent sur la géométrie ; le R-tree GPKG est automatique. 25 tests d'agrégation
+  (+ index PostGIS skippé sans base) ; suite complète verte. `specs/008-base-spatiale.md`
+  fige les décisions (agrégation en R/terra backend-agnostique). Release enchaînée sans
+  cycle-dev intermédiaire (Lot 6 → Lot 8 demandés à la suite).
 - **Lot 6 (camion DFCI, beta) implémenté et préparé en release `v0.8.0`.** `camion_dfci()`
   modélise la zone défendable comme un tampon au terrain : plus court chemin pondéré par la
   pente (`propager_cout()` + `surface_cout_skidder()`, service partagé du Lot 2) depuis les

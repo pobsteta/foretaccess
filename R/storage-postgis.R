@@ -44,8 +44,21 @@ sb_ensure_schema.foretaccess_storage_postgis <- function(backend) {
   invisible(backend)
 }
 
+#' Écrit une couche en PostGIS (idempotent, index spatial)
+#'
+#' Écrase la couche si elle existe (`delete_layer = TRUE`) puis crée un **index
+#' spatial GiST** sur sa colonne de géométrie (US-8.1). L'index accélère les
+#' requêtes zonales et les jointures spatiales.
+#'
+#' @param backend Objet `foretaccess_storage_postgis`.
+#' @param layer Nom de la couche.
+#' @param data Objet `sf`.
+#' @param spatial_index Créer l'index spatial GiST après l'écriture (défaut `TRUE`).
+#' @param ... Passé à [sf::st_write()].
+#' @return `backend` de façon invisible.
 #' @export
-sb_write_layer.foretaccess_storage_postgis <- function(backend, layer, data, ...) {
+sb_write_layer.foretaccess_storage_postgis <- function(backend, layer, data, ...,
+                                                       spatial_index = TRUE) {
   .assert_write_args(layer, data)
   # Id(schema, table) cible le schéma ; delete_layer = TRUE -> idempotent.
   sf::st_write(
@@ -53,6 +66,35 @@ sb_write_layer.foretaccess_storage_postgis <- function(backend, layer, data, ...
     layer = DBI::Id(schema = backend$schema, table = layer),
     delete_layer = TRUE, quiet = TRUE, ...
   )
+  if (isTRUE(spatial_index)) .creer_index_spatial(backend, layer)
+  invisible(backend)
+}
+
+# Crée un index GiST sur la (les) colonne(s) de géométrie de la table, si
+# absent. La vue PostGIS `geometry_columns` donne le nom de la colonne ; le nom
+# de l'index est stable (idempotence : CREATE INDEX IF NOT EXISTS).
+.creer_index_spatial <- function(backend, layer) {
+  conn <- backend$conn
+  geomcols <- DBI::dbGetQuery(
+    conn,
+    paste(
+      "SELECT f_geometry_column FROM geometry_columns",
+      "WHERE f_table_schema = $1 AND f_table_name = $2"
+    ),
+    params = list(backend$schema, layer)
+  )$f_geometry_column
+  if (!length(geomcols)) {
+    return(invisible(backend))
+  }
+  gc <- geomcols[1]
+  idx <- paste0(layer, "_", gc, "_gist")
+  DBI::dbExecute(conn, DBI::SQL(sprintf(
+    "CREATE INDEX IF NOT EXISTS %s ON %s.%s USING GIST (%s)",
+    DBI::dbQuoteIdentifier(conn, idx),
+    DBI::dbQuoteIdentifier(conn, backend$schema),
+    DBI::dbQuoteIdentifier(conn, layer),
+    DBI::dbQuoteIdentifier(conn, gc)
+  )))
   invisible(backend)
 }
 
