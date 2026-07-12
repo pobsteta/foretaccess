@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,20 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.0" id="foretaccess-070-2026-07-12">foretaccess 0.7.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-070-2026-07-12"></a></h2>
+<div class="section level3">
+<h3 id="lot--sélection-multicritère-des-lignes-câble-0-7-0">Lot 5 — Sélection multicritère des lignes câble<a class="anchor" aria-label="anchor" href="#lot--s%C3%A9lection-multicrit%C3%A8re-des-lignes-c%C3%A2ble-0-7-0"></a></h3>
+<p>Sortie <strong>décisionnelle</strong> du volet câble (EF-7). Parmi les lignes faisables du balayage 360°/pixel (Lot 4), on sélectionne un sous-ensemble non redondant maximisant la couverture selon des critères pondérés. Porté de <code>select_best_lines</code> / <code>create_best_table</code> (Sylvaccess v3.6, GPL v3).</p>
+<ul><li>
+<strong>Table des lignes candidates</strong> : <code><a href="../reference/potentiel_cable.html">potentiel_cable()</a></code> émet désormais <code>$lignes</code>, une candidate par couple (départ, azimut) faisable, avec surface forêt couverte, longueur, sens (amont/aval), nombre de supports, et — si un raster de volume est fourni — volume total et <strong>IPC</strong> (= volume / longueur).</li>
+<li>
+<strong><code><a href="../reference/selectionner_lignes.html">selectionner_lignes()</a></code></strong> : filtrage par limites min/max, score pondéré normalisé (maximiser → <code>valeur / p98</code> ; minimiser → <code>1 − valeur / max</code>), classement déterministe, <strong>sélection gloutonne</strong> (une ligne retenue apporte au moins 60 % de surface nouvelle). Sortie <strong><code>sf</code></strong> des lignes (LINESTRING, CRS strict) et <strong>raster de couverture</strong>.</li>
+<li>
+<strong>Configuration</strong> de la sélection dans <code>config$cable$selection</code> (poids, limites, sens préféré, contribution minimale). Les critères volume/IPC sont neutralisés automatiquement en l’absence de donnée de volume.</li>
+</ul><p>Six critères MVP (surface, supports, sens, longueur, volume, IPC) ; VAM×10 et coût €/m³ de v3.6 repoussés. La reproductibilité vis-à-vis de v3.6 sur le jeu test reste à confronter à un oracle réel ; le déterminisme est verrouillé.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.0" id="foretaccess-060-2026-07-12">foretaccess 0.6.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-060-2026-07-12"></a></h2>
 <div class="section level3">

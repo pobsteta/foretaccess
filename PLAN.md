@@ -19,13 +19,21 @@
   16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension
   (spec §11) : placement multi-supports (`OptPyl_Up`, oracle réel),
   pêchage latéral, portage Rust de l’orchestration.
-- **Lot en cours** : **Lot 5 — sélection multicritère des lignes câble**
-  (`specs/005`, validé 2026-07-12). **5a**
+- **Branche** : `release/0.7.0`
+- **Version `DESCRIPTION`** : `0.7.0` (release du Lot 5 ; `release.yml`
+  pose `v0.7.0` au merge sur `main`, puis retour en cycle dev
+  `0.7.0.9000`)
+- **Lot terminé** : **Lot 5 — sélection multicritère des lignes câble**.
+  **5a**
   ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
   émet `$lignes`) et **5b**
   ([`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md))
-  implémentés : filtrage par limites, score pondéré normalisé, glouton
-  avec contribution, sortie `sf`. Reste : PR + release `v0.7.0`.
+  livrés et mergés (#25). 32 tests R (`selection.R` à 100 %). Extensions
+  différées : reproductibilité vs v3.6 (oracle réel), VAM×10 et coût
+  €/m³.
+- **Prochain lot** : **Lot 8 — base spatiale & agrégation** (persistance
+  PostGIS/GeoPackage des sorties, dont les lignes câble sélectionnées) ;
+  ou **Lot 6 — DFCI** (post-MVP).
 
 ## Avancement par lot
 
@@ -36,7 +44,7 @@
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
 | 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
-| 5 | Sélection lignes câble | `specs/005-selection.md` | 🟡 implémenté | — |
+| 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
 | 7 | Passage à l’échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
@@ -417,6 +425,11 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ### 2026-07-12
 
+- **Lot 5 (sélection multicritère des lignes câble) livré et publié en
+  `v0.7.0`** (PR \#25). Retour en cycle de dev `0.7.0.9000` après la
+  release. `selection.R` à 100 % de couverture (codecov exigeant : sept
+  branches défensives couvertes par des tests ciblés). Détail
+  ci-dessous.
 - **Lot 5 (sélection multicritère des lignes câble) implémenté** — spec
   `specs/005` validé sur lecture de
   `select_best_lines`/`create_best_table` (Sylvaccess
