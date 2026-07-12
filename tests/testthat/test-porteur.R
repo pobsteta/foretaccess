@@ -72,7 +72,9 @@ test_that("porteur ecrit ses couches en COG relisibles", {
     expect_named(po$fichiers, .couches_porteur(), ignore.order = TRUE)
     expect_true(all(file.exists(unlist(po$fichiers))))
     relu <- terra::rast(file.path("sortie", "distance_conduite.tif"))
-    expect_equal(terra::values(relu), terra::values(po$distance_conduite))
+    # Le COG stocke en float32 : la relecture arrondit, d'ou la tolerance.
+    expect_equal(terra::values(relu), terra::values(po$distance_conduite),
+      tolerance = 1e-5)
   })
 })
 

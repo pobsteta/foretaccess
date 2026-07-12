@@ -127,18 +127,64 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   po
 }
 
-# Zone roulable du porteur : foret, pente sous le seuil de la contrainte la plus stricte
-# (la conduite affine ensuite par le sens et le devers), hors obstacles complets. Sylvaccess
-# borne d'abord par `min(travers, montee, descente)`, puis raffine dans le balayage.
+# Zone traversable par le balayage du porteur, fidele a `Zone_OK` de Sylvaccess :
+#
+#   Zone_OK = (foret ∪ saut hors foret) ∩ pente <= max(travers, montee, descente) ∩ hors obstacles
+#
+# Deux points que la premiere version manquait :
+#   * la borne de pente est le **maximum** des trois seuils (30 % par defaut), pas le
+#     minimum. Le balayage raffine ensuite par le sens et le devers (spec 003 §4.2) ; borner
+#     a `min` (15 %) excluait a tort les cellules roulables en montee dans le sens de la pente ;
+#   * un **saut hors foret** de `distance_hors_desserte_max_m` (200 m), pondere par la pente,
+#     depuis le contour de la foret : le porteur peut couper par un terrain recoltable non
+#     forestier pour rejoindre un massif isole. C'est `Pente_ok_forwarder`, l'analogue de
+#     `zone_roulable_connectee()` du skidder.
 .zone_conduite <- function(pre, config) {
   po <- config$porteur
-  seuil <- min(po$pente_travers_max_pct, po$pente_montee_max_pct, po$pente_descente_max_pct)
-  z <- (pre$foret_mask == 1) &
-    (pre$slope_pct <= seuil) &
-    (pre$obstacles_complets_mask == 0)
-  z <- terra::ifel(is.na(z), 0, z)
-  names(z) <- "zone_conduite"
-  z
+  seuil <- max(po$pente_travers_max_pct, po$pente_montee_max_pct, po$pente_descente_max_pct)
+  nr <- terra::nrow(pre$mnt)
+  nc <- terra::ncol(pre$mnt)
+
+  foret <- as.numeric(terra::values(pre$foret_mask)) == 1
+  pente <- as.numeric(terra::values(pre$slope_pct))
+  obst <- as.numeric(terra::values(pre$obstacles_complets_mask)) == 1
+
+  atteint <- .saut_hors_foret(pre, config, foret, pente, obst, nr, nc)
+
+  z <- (foret | atteint) & !is.na(pente) & (pente <= seuil) & !obst
+  r <- terra::rast(pre$mnt)
+  terra::values(r) <- as.numeric(z)
+  names(r) <- "zone_conduite"
+  r
+}
+
+# Cellules non forestieres atteintes par le saut de `distance_hors_desserte_max_m` depuis
+# le contour de la foret, sur du terrain recoltable (pente <= abattage). `FALSE` partout si
+# la couche est sans foret ou sans contour.
+.saut_hors_foret <- function(pre, config, foret, pente, obst, nr, nc) {
+  po <- config$porteur
+  n <- length(foret)
+  if (!any(foret)) {
+    return(rep(FALSE, n))
+  }
+
+  recoltable_hf <- !foret & !obst & !is.na(pente) & (pente <= po$pente_abattage_max_pct)
+  contour <- .contour(foret, nr, nc)
+  if (!any(contour) || !any(recoltable_hf)) {
+    return(rep(FALSE, n))
+  }
+
+  cout <- surface_cout_skidder(pre, config)
+  src <- terra::rast(pre$mnt)
+  v <- rep(NA_real_, n)
+  v[which(contour)] <- which(contour)
+  terra::values(src) <- v
+
+  zone <- terra::rast(pre$mnt)
+  terra::values(zone) <- as.numeric(recoltable_hf)
+
+  prop <- propager_cout(cout, src, zone = zone, cout_max = po$distance_hors_desserte_max_m)
+  !is.na(terra::values(prop$cout_cumule)) & recoltable_hf
 }
 
 # Grappin : front d'onde borne a `portee_grue_m` depuis les cellules conduites, sur le
@@ -164,9 +210,11 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   propager_cout(cout, src, zone = recoltable, cout_max = po$portee_grue_m)
 }
 
-# Sous tuilage, la conduite et le grappin sont des balayages a portee *bornee* : un halo
-# qui couvre `distance_pente_forte_max_m + portee_grue_m` rend la tuile exacte partout.
-# Nul besoin d'un certificat par cellule -- la portee suffit. `NULL` hors tuilage.
+# Sous tuilage, tous les mecanismes du porteur ont une portee *bornee*, donc un halo
+# assez large rend la tuile exacte partout, sans certificat par cellule. La portee a
+# couvrir cumule les trois : le saut hors foret (`distance_hors_desserte_max_m`) etend la
+# zone, le balayage la parcourt sur `distance_pente_forte_max_m`, et le grappin ajoute
+# `portee_grue_m`. `NULL` hors tuilage.
 .certifier_porteur <- function(pre, config, bord, accessible) {
   if (is.null(bord)) {
     return(NULL)
@@ -176,7 +224,8 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   }
   po <- config$porteur
   res <- terra::res(pre$mnt)[1]
-  portee <- po$distance_pente_forte_max_m + po$portee_grue_m + 1.5 * res
+  portee <- po$distance_hors_desserte_max_m + po$distance_pente_forte_max_m +
+    po$portee_grue_m + 1.5 * res
   halo_ok <- !is.null(pre$halo_cel) && pre$halo_cel * res >= portee
   rep(halo_ok, terra::ncell(pre$mnt))
 }
