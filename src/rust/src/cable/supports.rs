@@ -251,7 +251,7 @@ pub fn test_span(
     }
 
     res.diag = (h * h + d * d).sqrt();
-    let slope = -1.0 * fact * (h / d).atan();
+    let slope = -fact * (h / d).atan();
     res.slope = slope;
     if slope < slope_min || slope > slope_max {
         return res;
