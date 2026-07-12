@@ -6,11 +6,13 @@
 
 ## État courant
 
-- **Branche** : `fix/porteur-hors-foret`
-- **Version `DESCRIPTION`** : `0.5.1` (correctif de conformité ;
-  `release.yml` pose le tag au merge sur `main`)
-- **Lot en cours** : **Lot 3 — consolidation du porteur** (zone de
-  conduite). Prochain : **Lot 4 (noyau câble Rust)**.
+- **Branche** : `specs/004-cable`
+- **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release
+  `v0.5.1`, tag posé par `release.yml` au merge de la \#17 sur `main`)
+- **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec
+  `specs/004-cable.md` validée (2026-07-12) sur lecture du code source
+  Sylvaccess ; implémentation à venir (4a caténaire élastique + Newton
+  en Rust).
 
 ## Avancement par lot
 
@@ -19,8 +21,8 @@
 | 0 | Fondations | `specs/000-fondations.md` | ✅ terminé | `v0.1.0` |
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
-| 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0` |
-| 4 | Noyau Câble (Rust) | à écrire | ⬜ | — |
+| 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
+| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | 🟡 spec validée | — |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
 | 7 | Passage à l’échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
@@ -86,20 +88,24 @@ checks, couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`,
 
 ## Prochaine étape
 
-Ouvrir la PR `specs/003-porteur` → `main` (le merge pose le tag
-`v0.5.0`), puis repasser en cycle de dev `0.5.0.9000`. Ensuite, deux
-pistes indépendantes :
+Le spec `specs/004-cable.md` est validé (2026-07-12). Implémenter le
+**Lot 4 — noyau câble (Rust)** par incréments :
 
-- **Consolidation du porteur** : le saut hors forêt (`f_dmax_outfor`) et
-  la double passe réseau/contour, la dette assumée du Lot 3 — à traiter
-  après confrontation à l’AOI réelle, comme la conformité du skidder l’a
-  été.
-- **Lot 4 — Noyau câble (Rust)** : le premier moteur non terrestre, et
-  le point où le portage `extendr` prend son sens (mécanique CableHelp,
-  `rayon`).
+- **4a** — caténaire élastique (`f_x`, `f_z`, Jacobien analytique) +
+  Newton-Raphson (`newton_ThTv`, `find_ThTvTmax`) en Rust, `cargo test`
+  contre les valeurs de référence du `.pyx`, binding `extendr`, test
+  d’intégration R. Le cœur numérique.
+- **4b** — faisabilité d’une travée : tension ≤ `Tmax`, garde au sol via
+  `calcul_zs`.
+- **4c** — optimisation des supports intermédiaires (0…3), `rayon`.
+- **4d** — balayage 360°/pixel, orchestration R (`potentiel_cable()`),
+  tuilage (Lot 7).
 
-Le portage Rust des moteurs terrestres reste **après le tuilage** : à
-l’échelle du département, le Lot 7 suffit (cf. § performance).
+Chaque incrément est mergeable seul ; 4a livre la mécanique, 4d la
+carte. Release visée `v0.6.0` (nouveau moteur).
+
+Le portage Rust des moteurs **terrestres** reste **après le tuilage** :
+à l’échelle du département, le Lot 7 suffit (cf. § performance).
 
 ### Dette assumée du Lot 2
 
@@ -394,3 +400,30 @@ ni `leastcostpath` ne renvoient l’allocation.
   charger le raster entier), puis emballe
   ([`terra::wrap()`](https://rspatial.github.io/terra/reference/wrap.html))
   la seule tuile.
+
+### 2026-07-12
+
+- **Consolidation du porteur mergée et publiée en `v0.5.1`** (PR \#17,
+  sept checks verts). Retour en cycle de dev `0.5.1.9000`.
+- **Lot 4 (noyau câble) — spec rédigée sur la source**
+  (`specs/004-cable.md`). Lecture de `Sylvaccess_2_cable.py` et de
+  `sylvaccess_cython3.pyx` (lignes ~1040-1400) : la mécanique est une
+  **caténaire élastique** (terme `Lo/EAo`, allongement sous tension),
+  pas une caténaire idéale, résolue par **Newton-Raphson à Jacobien
+  analytique** (`f_x`, `f_z`, `df_dTh`, `dg_dTh`) avec **repli sur
+  recherche par grille** quand une tension devient négative. La
+  faisabilité tient à `√(Th²+Tv²) ≤ Tmax = c_rupt·g/c_safe` et à la
+  garde au sol `[c_h_min, c_h_max]` = `[3,5 ; 50]` m via `calcul_zs`.
+- Point relevé à la lecture : `c_E` (module de Young, N/mm²),
+  `c_q2`/`c_q3` (masses des câbles de traction/retour), `c_angle`,
+  `c_l_span` **ne sont pas** dans `Tab_Param_cable.csv` — ils viennent
+  du `paramdict` global (`globals().update(paramdict)`). À porter dans
+  `config$cable` avec des défauts documentés.
+- Découpage acté : **4a** (caténaire + Newton en Rust, `cargo test` +
+  binding `extendr` + test R), **4b** (faisabilité travée), **4c**
+  (optimisation supports, `rayon`), **4d** (balayage 360°/pixel +
+  orchestration R + tuilage). Release visée `v0.6.0`.
+- **Frontière R↔︎Rust** (ADR-001) : R passe des scalaires et vecteurs de
+  `f64` (géométrie, profil d’altitudes, paramètres câble) ; le crate
+  résout et renvoie `(Th, Tv)`, tension max, faisabilité, hauteur au
+  point contraignant. Aucun SIG dans le crate.

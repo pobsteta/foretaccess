@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,12 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>fix/porteur-hors-foret</code>
+<strong>Branche</strong> : <code>specs/004-cable</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1</code> (correctif de conformité ; <code>release.yml</code> pose le tag au merge sur <code>main</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1.9000</code> (cycle dev ; dernière release <code>v0.5.1</code>, tag posé par <code>release.yml</code> au merge de la #17 sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 3 — consolidation du porteur</strong> (zone de conduite). Prochain : <strong>Lot 4 (noyau câble Rust)</strong>.</li>
+<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12) sur lecture du code source Sylvaccess ; implémentation à venir (4a caténaire élastique + Newton en Rust).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -75,11 +75,13 @@
 <td>Moteur Porteur</td>
 <td><code>specs/003-porteur.md</code></td>
 <td>✅ terminé</td>
-<td><code>v0.5.0</code></td>
+<td>
+<code>v0.5.0</code>, <code>v0.5.1</code>
+</td>
 </tr><tr><td>4</td>
 <td>Noyau Câble (Rust)</td>
-<td>à écrire</td>
-<td>⬜</td>
+<td><code>specs/004-cable.md</code></td>
+<td>🟡 spec validée</td>
 <td>—</td>
 </tr><tr><td>5</td>
 <td>Sélection lignes câble</td>
@@ -145,12 +147,17 @@
 </div>
 <div class="section level2">
 <h2 id="prochaine-étape">Prochaine étape<a class="anchor" aria-label="anchor" href="#prochaine-%C3%A9tape"></a></h2>
-<p>Ouvrir la PR <code>specs/003-porteur</code> → <code>main</code> (le merge pose le tag <code>v0.5.0</code>), puis repasser en cycle de dev <code>0.5.0.9000</code>. Ensuite, deux pistes indépendantes :</p>
+<p>Le spec <code>specs/004-cable.md</code> est validé (2026-07-12). Implémenter le <strong>Lot 4 — noyau câble (Rust)</strong> par incréments :</p>
 <ul><li>
-<strong>Consolidation du porteur</strong> : le saut hors forêt (<code>f_dmax_outfor</code>) et la double passe réseau/contour, la dette assumée du Lot 3 — à traiter après confrontation à l’AOI réelle, comme la conformité du skidder l’a été.</li>
+<strong>4a</strong> — caténaire élastique (<code>f_x</code>, <code>f_z</code>, Jacobien analytique) + Newton-Raphson (<code>newton_ThTv</code>, <code>find_ThTvTmax</code>) en Rust, <code>cargo test</code> contre les valeurs de référence du <code>.pyx</code>, binding <code>extendr</code>, test d’intégration R. Le cœur numérique.</li>
 <li>
-<strong>Lot 4 — Noyau câble (Rust)</strong> : le premier moteur non terrestre, et le point où le portage <code>extendr</code> prend son sens (mécanique CableHelp, <code>rayon</code>).</li>
-</ul><p>Le portage Rust des moteurs terrestres reste <strong>après le tuilage</strong> : à l’échelle du département, le Lot 7 suffit (cf. § performance).</p>
+<strong>4b</strong> — faisabilité d’une travée : tension ≤ <code>Tmax</code>, garde au sol via <code>calcul_zs</code>.</li>
+<li>
+<strong>4c</strong> — optimisation des supports intermédiaires (0…3), <code>rayon</code>.</li>
+<li>
+<strong>4d</strong> — balayage 360°/pixel, orchestration R (<code>potentiel_cable()</code>), tuilage (Lot 7).</li>
+</ul><p>Chaque incrément est mergeable seul ; 4a livre la mécanique, 4d la carte. Release visée <code>v0.6.0</code> (nouveau moteur).</p>
+<p>Le portage Rust des moteurs <strong>terrestres</strong> reste <strong>après le tuilage</strong> : à l’échelle du département, le Lot 7 suffit (cf. § performance).</p>
 <div class="section level3">
 <h3 id="dette-assumée-du-lot-2">Dette assumée du Lot 2<a class="anchor" aria-label="anchor" href="#dette-assum%C3%A9e-du-lot-2"></a></h3>
 <ul><li>Seule l’<strong>option de modélisation 1</strong> (privilégier le treuillage) est implémentée ; l’option 2 lève une erreur explicite.</li>
@@ -293,6 +300,17 @@
 <code>mirai_map()</code> traite <code>...</code> comme des vecteurs à itérer ; les constantes passent par <code>.args</code>. Et une erreur de démon revient comme <em>valeur</em> (<code>miraiError</code>), pas comme condition : sans contrôle explicite, elle traverse la boucle en silence.</li>
 </ul></li>
 <li>Les <code>SpatRaster</code> portent des pointeurs C++ : ils ne franchissent pas la frontière de processus. Le parent recadre (lecture de fenêtre, sans charger le raster entier), puis emballe (<code><a href="https://rspatial.github.io/terra/reference/wrap.html" class="external-link">terra::wrap()</a></code>) la seule tuile.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
+<ul><li>
+<strong>Consolidation du porteur mergée et publiée en <code>v0.5.1</code></strong> (PR #17, sept checks verts). Retour en cycle de dev <code>0.5.1.9000</code>.</li>
+<li>
+<strong>Lot 4 (noyau câble) — spec rédigée sur la source</strong> (<code>specs/004-cable.md</code>). Lecture de <code>Sylvaccess_2_cable.py</code> et de <code>sylvaccess_cython3.pyx</code> (lignes ~1040-1400) : la mécanique est une <strong>caténaire élastique</strong> (terme <code>Lo/EAo</code>, allongement sous tension), pas une caténaire idéale, résolue par <strong>Newton-Raphson à Jacobien analytique</strong> (<code>f_x</code>, <code>f_z</code>, <code>df_dTh</code>, <code>dg_dTh</code>) avec <strong>repli sur recherche par grille</strong> quand une tension devient négative. La faisabilité tient à <code>√(Th²+Tv²) ≤ Tmax = c_rupt·g/c_safe</code> et à la garde au sol <code>[c_h_min, c_h_max]</code> = <code>[3,5 ; 50]</code> m via <code>calcul_zs</code>.</li>
+<li>Point relevé à la lecture : <code>c_E</code> (module de Young, N/mm²), <code>c_q2</code>/<code>c_q3</code> (masses des câbles de traction/retour), <code>c_angle</code>, <code>c_l_span</code> <strong>ne sont pas</strong> dans <code>Tab_Param_cable.csv</code> — ils viennent du <code>paramdict</code> global (<code>globals().update(paramdict)</code>). À porter dans <code>config$cable</code> avec des défauts documentés.</li>
+<li>Découpage acté : <strong>4a</strong> (caténaire + Newton en Rust, <code>cargo test</code> + binding <code>extendr</code> + test R), <strong>4b</strong> (faisabilité travée), <strong>4c</strong> (optimisation supports, <code>rayon</code>), <strong>4d</strong> (balayage 360°/pixel + orchestration R + tuilage). Release visée <code>v0.6.0</code>.</li>
+<li>
+<strong>Frontière R↔︎Rust</strong> (ADR-001) : R passe des scalaires et vecteurs de <code>f64</code> (géométrie, profil d’altitudes, paramètres câble) ; le crate résout et renvoie <code>(Th, Tv)</code>, tension max, faisabilité, hauteur au point contraignant. Aucun SIG dans le crate.</li>
 </ul></div>
 </div>
 </div>
