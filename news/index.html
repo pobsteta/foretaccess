@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.0" id="foretaccess-090-2026-07-12">foretaccess 0.9.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-090-2026-07-12"></a></h2>
+<div class="section level3">
+<h3 id="lot--base-spatiale--agrégation-zonale-0-9-0">Lot 8 — Base spatiale &amp; agrégation zonale<a class="anchor" aria-label="anchor" href="#lot--base-spatiale--agr%C3%A9gation-zonale-0-9-0"></a></h3>
+<p>Rend les sorties <strong>exploitables en base</strong> (EF-9, EF-12) : écriture indexée et agrégation par entité de gestion. Complète le socle <code>StorageBackend</code> du Lot 0.</p>
+<ul><li>
+<strong><code>agreger_zones(classes, zones, volume, id)</code></strong> : agrège n’importe quel raster catégoriel d’accessibilité (skidder, porteur, DFCI, couverture câble) en <strong>surfaces</strong> (ha) et <strong>volumes</strong> (m³) <strong>par zone</strong> (massif / parcelle / commune) et par classe. Pendant zonal de <code><a href="../reference/recapituler.html">recapituler()</a></code>. Sortie <code>sf</code> à colonnes larges <code>surface_&lt;classe&gt;_ha</code> (+ <code>volume_&lt;classe&gt;_m3</code>), directement persistable et requêtable. Croisement raster <strong>vectorisé</strong> ; verrou CRS strict ; propriété de <strong>partition</strong> (somme zonale = récap global) vérifiée en test.</li>
+<li>
+<strong>Index spatial PostGIS</strong> : <code><a href="../reference/sb_write_layer.html">sb_write_layer()</a></code> crée désormais un <strong>index GiST</strong> sur la géométrie après l’écriture idempotente (idempotent lui-même, <code>spatial_index = TRUE</code> par défaut). Côté GeoPackage, le R-tree est créé automatiquement — équivalence acquise.</li>
+<li>
+<strong><code>specs/008-base-spatiale.md</code></strong> fige les décisions ; l’agrégation est en R/terra, backend-agnostique (testable sans base, persistable dans les deux backends).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.8.0" id="foretaccess-080-2026-07-12">foretaccess 0.8.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-080-2026-07-12"></a></h2>
 <div class="section level3">

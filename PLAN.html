@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,13 +40,18 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>specs/006-dfci</code> (release du Lot 6 ; <code>release.yml</code> pose <code>v0.8.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.8.0.9000</code>)</li>
+<strong>Branche</strong> : <code>specs/008-base-spatiale</code> (release du Lot 8 ; <code>release.yml</code> pose <code>v0.9.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.9.0.9000</code>)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.8.0</code> (release du Lot 6)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.9.0</code> (release du Lot 8)</li>
 <li>
-<strong>Lot terminé</strong> : <strong>Lot 6 — camion DFCI (beta)</strong>. <code><a href="reference/camion_dfci.html">camion_dfci()</a></code> : zone défendable = tampon au terrain (plus court chemin pondere par la pente depuis les dessertes DFCI, plafonne a la portee, coupe au-dela de la pente d’intervention). Reutilise le service partage <code><a href="reference/propager_cout.html">propager_cout()</a></code> du Lot 2, aucun nouveau noyau. Config <code>dfci</code> (portee 100 m, pente 40 %, <code>classes_source</code>). Tuilage certifie (identique mono-bloc sur cellules certifiees). 22 tests. Sortie <strong>beta</strong> : limites documentees (ni combustible, ni vent, ni physique de lance ; carrossabilite non qualifiee — QUALIROAD).</li>
+<strong>Lots terminés récemment</strong> :
+<ul><li>
+<strong>Lot 6 — camion DFCI (beta)</strong> (<code>v0.8.0</code>). <code><a href="reference/camion_dfci.html">camion_dfci()</a></code> : zone défendable = tampon au terrain (plus court chemin pondéré par la pente depuis les dessertes DFCI, plafonné à la portée, coupé au-delà de la pente d’intervention). Réutilise <code><a href="reference/propager_cout.html">propager_cout()</a></code>, aucun nouveau noyau. Config <code>dfci</code>. Tuilage certifié. 22 tests. Beta (limites documentées).</li>
 <li>
-<strong>Prochain lot</strong> : <strong>Lot 8 — base spatiale &amp; agregation</strong> (index spatial GiST a l’ecriture PostGIS + agregation zonale massif/parcelle/commune).</li>
+<strong>Lot 8 — base spatiale &amp; agrégation</strong> (<code>v0.9.0</code>). <code><a href="reference/agreger_zones.html">agreger_zones()</a></code> : surfaces/volumes par zone (massif/parcelle/commune) et par classe, sortie <code>sf</code> large persistable ; propriété de partition (somme zonale = récap global). Index spatial <strong>GiST</strong> à l’écriture PostGIS (R-tree auto en GPKG). Complète le socle <code>StorageBackend</code> du Lot 0. 25 tests (+ index PostGIS, skippé sans base).</li>
+</ul></li>
+<li>
+<strong>Prochain lot</strong> : <strong>Lot 9 — doc &amp; publication</strong> (README, doc CLI, exemple bout en bout). Reste aussi le <strong>Lot 10</strong> (acquisition depuis AOI, spec validée) et le placement multi-supports du câble (Lot 4, <code>OptPyl_Up</code>, oracle réel).</li>
 <li>
 <strong>Derniers lots terminés</strong> :
 <ul><li>
@@ -110,9 +115,9 @@
 <td><code>v0.4.0</code></td>
 </tr><tr><td>8</td>
 <td>Base spatiale &amp; agrégation</td>
-<td>à écrire</td>
-<td>⬜</td>
-<td>—</td>
+<td><code>specs/008-base-spatiale.md</code></td>
+<td>✅ terminé</td>
+<td><code>v0.9.0</code></td>
 </tr><tr><td>9</td>
 <td>Doc &amp; publication</td>
 <td>à écrire</td>
@@ -314,6 +319,8 @@
 <div class="section level3">
 <h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
 <ul><li>
+<strong>Lot 8 (base spatiale &amp; agrégation) implémenté et préparé en release <code>v0.9.0</code>.</strong> <code>agreger_zones(classes, zones, volume, id)</code> agrège n’importe quel raster catégoriel d’accessibilité (skidder, porteur, DFCI, couverture câble) en surfaces (ha) et volumes (m³) par zone (massif/parcelle/commune) et par classe — pendant zonal de <code><a href="reference/recapituler.html">recapituler()</a></code>. Croisement raster <strong>vectorisé</strong> (<code>table</code>/<code>tapply</code>, pas de boucle par cellule), verrou CRS strict, sortie <code>sf</code> à colonnes larges <code>surface_&lt;classe&gt;_ha</code> (+ <code>volume_&lt;classe&gt;_m3</code>) directement persistable/requêtable. Test central : <strong>partition</strong> (somme zonale = récap global). Côté stockage, <code><a href="reference/sb_write_layer.html">sb_write_layer()</a></code> PostGIS crée désormais un <strong>index GiST</strong> idempotent sur la géométrie ; le R-tree GPKG est automatique. 25 tests d’agrégation (+ index PostGIS skippé sans base) ; suite complète verte. <code>specs/008-base-spatiale.md</code> fige les décisions (agrégation en R/terra backend-agnostique). Release enchaînée sans cycle-dev intermédiaire (Lot 6 → Lot 8 demandés à la suite).</li>
+<li>
 <strong>Lot 6 (camion DFCI, beta) implémenté et préparé en release <code>v0.8.0</code>.</strong> <code><a href="reference/camion_dfci.html">camion_dfci()</a></code> modélise la zone défendable comme un tampon au terrain : plus court chemin pondéré par la pente (<code><a href="reference/propager_cout.html">propager_cout()</a></code> + <code><a href="reference/surface_cout_skidder.html">surface_cout_skidder()</a></code>, service partagé du Lot 2) depuis les dessertes DFCI, plafonné à <code>distance_defense_max_m</code> et coupé au-delà de <code>pente_defense_max_pct</code>. Aucun nouveau noyau. Config <code>dfci</code> (portée 100 m, pente 40 %, <code>classes_source = "dfci"</code>) — hypothèses de travail explicites, non Sylvaccess (le module DFCI n’est pas dans les sources de référence). Sortie catégorielle <code>defendable</code> / <code>non_defendable</code> / <code>hors_foret</code> + <code>distance_defense</code> + <code>allocation</code> + <code>recap</code>. <strong>Tuilage</strong> : bornée par la portée, donc certifiable ; le réseau DFCI étant clairsemé, une tuile sans source reste indéterminée (halo grandit), l’absence de source au top-level lève une erreur. 22 tests DFCI ; suite complète verte. <code>specs/006-dfci.md</code> fige les décisions et les limites beta (ni combustible, ni vent, ni physique de lance ; carrossabilité non qualifiée).</li>
 <li>
 <strong>Release <code>v0.7.0</code> posée</strong> (PR #26 mergée, sept checks verts ; tag <code>v0.7.0</code> + release GitHub posés automatiquement par <code>release.yml</code>). Retour en <strong>cycle de dev <code>0.7.0.9000</code></strong> (bump <code>DESCRIPTION</code> seul ; <code>NEWS.md</code>/<code>CITATION.cff</code> restent à <code>0.7.0</code>).</li>

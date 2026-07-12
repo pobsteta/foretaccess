@@ -55,6 +55,9 @@ de citer :
 
 ## All functions
 
+- [`agreger_zones()`](https://pobsteta.github.io/foretaccess/reference/agreger_zones.md)
+  : Agrégation zonale des surfaces et volumes (Lot 8)
+
 - [`cable_calcul_xs()`](https://pobsteta.github.io/foretaccess/reference/cable_calcul_xs.md)
   :
 
@@ -201,6 +204,9 @@ de citer :
 
 - [`sb_write_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.md)
   : Écrit une couche vectorielle
+
+- [`sb_write_layer(`*`<foretaccess_storage_postgis>`*`)`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.foretaccess_storage_postgis.md)
+  : Écrit une couche en PostGIS (idempotent, index spatial)
 
 - [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
   : Selection multicritere des lignes cable (Lot 5)

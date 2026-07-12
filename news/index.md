@@ -1,5 +1,32 @@
 # Changelog
 
+## foretaccess 0.9.0 (2026-07-12)
+
+### Lot 8 — Base spatiale & agrégation zonale
+
+Rend les sorties **exploitables en base** (EF-9, EF-12) : écriture
+indexée et agrégation par entité de gestion. Complète le socle
+`StorageBackend` du Lot 0.
+
+- **`agreger_zones(classes, zones, volume, id)`** : agrège n’importe
+  quel raster catégoriel d’accessibilité (skidder, porteur, DFCI,
+  couverture câble) en **surfaces** (ha) et **volumes** (m³) **par
+  zone** (massif / parcelle / commune) et par classe. Pendant zonal de
+  [`recapituler()`](https://pobsteta.github.io/foretaccess/reference/recapituler.md).
+  Sortie `sf` à colonnes larges `surface_<classe>_ha` (+
+  `volume_<classe>_m3`), directement persistable et requêtable.
+  Croisement raster **vectorisé** ; verrou CRS strict ; propriété de
+  **partition** (somme zonale = récap global) vérifiée en test.
+- **Index spatial PostGIS** :
+  [`sb_write_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.md)
+  crée désormais un **index GiST** sur la géométrie après l’écriture
+  idempotente (idempotent lui-même, `spatial_index = TRUE` par défaut).
+  Côté GeoPackage, le R-tree est créé automatiquement — équivalence
+  acquise.
+- **`specs/008-base-spatiale.md`** fige les décisions ; l’agrégation est
+  en R/terra, backend-agnostique (testable sans base, persistable dans
+  les deux backends).
+
 ## foretaccess 0.8.0 (2026-07-12)
 
 ### Lot 6 — Camion DFCI (beta) : zone défendable
