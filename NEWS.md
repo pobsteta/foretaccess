@@ -1,3 +1,34 @@
+# foretaccess 0.6.0 (2026-07-12)
+
+## Lot 4 — Noyau câble (Rust, CableHelp)
+
+Premier moteur **non terrestre**, et point où le portage `extendr`/`rextendr`
+prend son sens. La mécanique de câble-mât (caténaire élastique) est portée depuis
+le code source Sylvaccess v3.6 (`sylvaccess_cython3.pyx`, GPL v3) dans le crate
+Rust `cablehelp`, exposée via `extendr` ; l'orchestration SIG reste en R.
+
+* **Caténaire élastique + Newton-Raphson** (`cable_f_x`, `cable_f_z`,
+  `cable_calcul_xs`, `cable_calcul_zs`, `cable_newton_thtv`,
+  `cable_find_thtv_tmax`). Le terme `Lo/EAo` (allongement sous tension) distingue
+  le modèle d'une caténaire idéale. Résolution par Jacobien analytique, repli sur
+  grille.
+* **Faisabilité d'une travée** (`cable_check_droite`, `cable_check_hlinemin`) :
+  la charge balaie la travée, on résout les tensions à chaque position et on
+  vérifie la garde au sol dans `[hauteur_cable_min_m, hauteur_cable_max_m]` et la
+  tension sous la limite admissible.
+* **Optimisation de travée** (`cable_find_lomin`, `cable_test_span`) : longueur à
+  vide minimale à tension = Tmax, pente bornée, contrainte d'angle au support
+  intermédiaire. Amorçage par grille grossière (substitut aux tables `Tabmesh`).
+* **Orchestration** (`potentiel_cable()`) : balayage 360°/pixel depuis la
+  desserte, extraction du profil MNT, test d'une ligne **0 support** jusqu'à la
+  longueur maximale, couverture des cellules forestières. Sortie
+  `foretaccess_cable`.
+* **Configuration câble** complétée avec les matériels v3.6 (`config$cable`).
+
+Extensions prévues (voir `specs/004-cable.md`) : placement de supports
+intermédiaires (`OptPyl_Up`, avec oracle réel), pêchage latéral, portage Rust de
+l'orchestration.
+
 # foretaccess 0.5.1 (2026-07-12)
 
 ## Conformité du porteur — zone de conduite

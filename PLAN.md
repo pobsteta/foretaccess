@@ -6,15 +6,15 @@
 
 ## État courant
 
-- **Branche** : `specs/004-cable`
-- **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release `v0.5.1`, tag posé
-  par `release.yml` au merge de la #17 sur `main`)
-- **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec validée (2026-07-12). **4a**
-  (caténaire + Newton), **4b** (faisabilité de travée), **4c** (`find_lomin`, `test_span`)
-  et **4d** (`potentiel_cable()` : balayage 360°/pixel, orchestration R, 0 support) livrés.
-  10 bindings extendr, 16 tests cargo + ~45 tests R. Restent en extension : placement
-  multi-supports (`OptPyl_Up`, oracle réel), pêchage latéral, portage Rust de l'orchestration.
-  **Release `v0.6.0`** visée pour clore le moteur câble.
+- **Branche** : `release/0.6.0`
+- **Version `DESCRIPTION`** : `0.6.0` (release du moteur câble ; `release.yml` pose `v0.6.0`
+  au merge sur `main`, puis retour en cycle dev `0.6.0.9000`)
+- **Lot terminé** : **Lot 4 — noyau câble (Rust)**, 0 support. **4a** (caténaire + Newton),
+  **4b** (faisabilité), **4c** (`find_lomin`, `test_span`) et **4d** (`potentiel_cable()`)
+  livrés et mergés (#19–#22). 10 bindings extendr + `potentiel_cable()`, 16 tests cargo +
+  ~45 tests R, suite 590 PASS. Restent en extension (spec §11) : placement multi-supports
+  (`OptPyl_Up`, oracle réel), pêchage latéral, portage Rust de l'orchestration.
+- **Prochain lot** : **Lot 5 — sélection multicritère des lignes câble** (`specs/005`).
 
 ## Avancement par lot
 
@@ -24,7 +24,7 @@
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
-| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | 🟡 spec validée | — |
+| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
 | 5 | Sélection lignes câble | à écrire | ⬜ | — |
 | 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
@@ -324,6 +324,14 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Lot 4 (noyau câble) livré de bout en bout et publié en `v0.6.0`** — incréments 4a
+  (caténaire + Newton, #19), 4b (faisabilité, #20), 4c (`find_lomin`/`test_span`, #21), 4d
+  (`potentiel_cable()`, #22). Le premier moteur non terrestre, et le point où le portage
+  `extendr` prend son sens. Trois pièges numériques traversés en 4d (infaisabilité géométrique
+  mal diagnostiquée en 4c, repli grille `O(Tmax²)` catastrophique, amorçage `seed_grid`) —
+  détaillés dans le journal 4d ci-dessous. Extensions différées : placement multi-supports
+  (oracle réel), pêchage latéral, portage Rust de l'orchestration. Retour en cycle dev
+  `0.6.0.9000` après la release.
 - **Consolidation du porteur mergée et publiée en `v0.5.1`** (PR #17, sept checks verts).
   Retour en cycle de dev `0.5.1.9000`.
 - **Lot 4 (noyau câble) — spec rédigée sur la source** (`specs/004-cable.md`). Lecture de
