@@ -22,13 +22,17 @@ test_that("les défauts porteur sont ceux de Sylvaccess v3.6", {
   expect_equal(po$pente_abattage_max_pct, 100)
 })
 
-test_that("les défauts câble posent le schéma (matériels à compléter au Lot 4)", {
+test_that("les défauts câble portent les matériels v3.6 (complétés au Lot 4)", {
   ca <- foretaccess_config()$cable
-  expect_equal(ca$hauteur_cable_min_m, 4)
-  expect_equal(ca$hauteur_cable_max_m, 30)
+  # Gardes au sol v3.6 (c_h_min / c_h_max).
+  expect_equal(ca$hauteur_cable_min_m, 3.5)
+  expect_equal(ca$hauteur_cable_max_m, 50)
   expect_equal(ca$pas_angulaire_deg, 1)
-  expect_type(ca$materiels, "list")
-  expect_length(ca$materiels, 0)
+  # Materiels completes depuis Tab_Param_cable.csv et le paramdict.
+  expect_equal(ca$longueur_max_m, 750)
+  expect_equal(ca$tension_rupture_kgf, 35000)
+  expect_equal(ca$diametre_mm, 18)
+  expect_equal(ca$nb_supports_max, 3)
 })
 
 test_that("les surcharges sont appliquées et validées", {

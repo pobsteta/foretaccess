@@ -234,14 +234,16 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
 6. **Défauts matériels v3.6** dans `config$cable`, complétés depuis `Tab_Param_cable.csv`
    (masse linéaire 1,85 kg/m, diamètre 18 mm, rupture 35000 kgF, sécurité 2, mât 10,5 m,
    `lmax` 750 m, `lmin` 150 m, garde `[3,5 ; 50]` m, `nb_supports_max` 3).
-9. **Amorçage 4c substitué aux tables (tranché 2026-07-12).** `Find_Lomin` s'amorce dans
-   Sylvaccess depuis les tables `Tabmesh` (`rastLosup`, `rastTh`, `rastTv`, ~80 lignes de
-   pré-calcul indexé par `(H, D)`). On les **remplace** par l'estimation initiale
-   `(Th, Tv) = (0,9·Tmax, 0,1·Tmax)` — celle même que `Tabmesh` utilise pour son premier
-   point — et `Lo = corde + réserve`, avec un solveur interne robuste (Newton **à repli sur
-   grille**). Les tables ne sont qu'un accélérateur : la marche sur `Lo` et Newton convergent
-   quel que soit l'amorçage dans le bassin. C'est un choix de **performance, pas de correction**
-   (le noyau reste fidèle). Un jour, un `Tabmesh` porté pourra accélérer le balayage de 4d.
+9. **Amorçage substitué aux tables (tranché 2026-07-12, affiné en 4d).** `Find_Lomin`
+   s'amorce dans Sylvaccess depuis les tables `Tabmesh` (`rastLosup`, `rastTh`, `rastTv`,
+   ~80 lignes de pré-calcul indexé par `(H, D)`). On les **remplace** par une **grille
+   grossière bornée** (`seed_grid`, 40 × 40, coût **indépendant de `Tmax`**) qui fournit un
+   bon amorçage, puis Newton chaud raffine et la marche sur `Lo` progresse en réchauffant
+   chaque solve. Point crucial pour 4d : le repli sur grille de `newton_thtv` coûte
+   `O((Tmax/pas)²)` (≈ 3 M évaluations au `Tmax` matériel) — **prohibitif** dans la boucle
+   chaude du balayage 360°/pixel ; `seed_grid` (1600 évaluations fixes) le remplace. C'est un
+   choix de **performance, pas de correction** (le noyau reste fidèle). Un `Tabmesh` porté
+   accélérerait encore.
 10. **`OptPyl_Up` (placement multi-supports) différé.** L'optimiseur de placement des supports
     intermédiaires (~150 lignes, boucles imbriquées, table `Span` typée) n'est pas validable
     par oracle manufacturé — comme la double passe du porteur, sa fidélité exige une exécution
@@ -270,10 +272,16 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
 - **4c** — primitives d'optimisation de travée : `find_lomin` (Lo minimal à tension = Tmax
   + garde) et `test_span` (segment : pré-filtre, pente bornée, angle inter-support). Le
   placement multi-supports `OptPyl_Up` est différé (§10.10). Amorçage substitué (§10.9).
-- **4d** — balayage 360°/pixel, orchestration R (`potentiel_cable()`), tuilage (Lot 7).
-  Y traiter : le **placement des supports** (avec oracle réel), et la **fragilité du Newton
-  chaud du balayage au bord de tension** (câble quasi tendu au Lo minimal, `Tmax` matériel) —
-  un `Tabmesh` porté ou un solveur à repli y répondrait.
+- **4d** — balayage 360°/pixel, orchestration R (`potentiel_cable()`, **0 support**), tuilage
+  (Lot 7). *Livré : `potentiel_cable()` balaie 360° depuis la desserte, extrait le profil MNT
+  (interpolé à 0,5 m), teste une ligne 0 support via `cable_test_span`, et marque les cellules
+  forestières couvertes. Amorçage `seed_grid` (§10.9). Sortie `foretaccess_cable`
+  (accessibilité, longueur/azimut de ligne, nb_supports).* Restent en extension : le
+  **placement des supports** (`OptPyl_Up`, oracle réel), le **pêchage latéral**
+  (`distance_laterale_max_m`), et le **portage Rust de l'orchestration** (le balayage en R pur
+  est correct mais lent à l'échelle réelle — le câble est le point chaud, cf. PRD). *Note : pas
+  de fragilité numérique au `Tmax` matériel — ce qu'on croyait tel en 4c était une
+  infaisabilité **géométrique** (support trop haut violant `hline_max`).*
 
 Chaque incrément est mergeable seul ; 4a livre la mécanique, 4d la carte.
 

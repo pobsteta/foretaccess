@@ -9,16 +9,15 @@
 //!
 //! **Deviation d'amorçage assumee** : Sylvaccess amorce Newton depuis des
 //! tables precalculees (`Tabmesh` -> `rastTh`, `rastTv`, `rastLosup`). On les
-//! remplace par l'estimation initiale `(Th, Tv) = (0,9*Tmax, 0,1*Tmax)` — celle
-//! meme que `Tabmesh` utilise pour son premier point — et un `Lo` de depart
-//! egal a la corde plus une petite reserve. Les tables ne sont qu'un
-//! accelerateur : la boucle d'ajustement de `Lo` et Newton convergent quel que
-//! soit l'amorçage dans le bassin. C'est un choix de performance, pas de
-//! correction (le noyau reste fidele).
+//! remplace par une **grille grossiere bornee** (`seed_grid`, 40 x 40, cout
+//! independant de `Tmax`) qui fournit un bon amorçage, puis Newton chaud raffine
+//! et la marche sur `Lo` progresse en rechauffant chaque solve. On evite ainsi
+//! le repli sur grille de `newton_thtv` (O(Tmax^2)), prohibitif dans la boucle
+//! chaude du balayage 360 deg / pixel. Les tables ne sont qu'un accelerateur :
+//! c'est un choix de performance, pas de correction (le noyau reste fidele).
 
-use super::catenaire::{calcul_xs, calcul_zs, f_x, f_z};
+use super::catenaire::{calcul_xs, calcul_zs, df_dth, dg_dth, f_x, f_z};
 use super::faisabilite::{check_droite, check_hlinemin};
-use super::newton::newton_thtv;
 
 const G: f64 = 9.80665;
 
@@ -27,17 +26,69 @@ fn f_charge(lo: f64, f_o: f64, q2: f64, q3: f64, s1: f64, dsupdep: f64, dsupend:
     0.5 * ((s1 + dsupdep) * q2 + ((lo - s1) + dsupend) * q3) * G + f_o
 }
 
-/// Resout la catenaire pour la charge centree a `Lo` donne, avec repli sur
-/// grille (via `newton_thtv`). Renvoie `(th, tv, ok)` ; `ok = false` si la
-/// solution est hors domaine (tension negative) ou si le residu reste grand.
-///
-/// C'est ici que se joue la deviation d'amorçage (cf. en-tete) : `newton_thtv`
-/// est le Newton fidele *avec* son repli sur grille, ce qui rend la marche sur
-/// `Lo` robuste sans les tables `Tabmesh`.
+/// Newton-Raphson "chaud" pour la charge centree a `Lo` donne : 20 iterations au
+/// plus, amorce a `(th0, tv0)`, **sans repli sur grille**. Renvoie `(th, tv,
+/// ok)` ; `ok = false` si une tension devient negative ou si le residu reste
+/// grand. La marche sur `Lo` (pas fin, cf. `find_lomin`) garde chaque solve dans
+/// le bassin : un repli sur grille y serait catastrophique (O(Tmax^2)) dans la
+/// boucle chaude du balayage 360 deg / pixel. Un candidat qui ne converge pas
+/// est traite comme infaisable.
 #[allow(clippy::too_many_arguments)]
 fn newton_centre(
-    th0: f64,
-    tv0: f64,
+    mut th: f64,
+    mut tv: f64,
+    lo: f64,
+    eao: f64,
+    w: f64,
+    f: f64,
+    s1: f64,
+    d: f64,
+    h_alt: f64,
+    err: f64,
+) -> (f64, f64, bool) {
+    let mut hh: f64 = 100.0;
+    let mut kk: f64 = 100.0;
+    let mut it = 0u32;
+    let mut ok = true;
+    while hh.abs() > err && kk.abs() > err {
+        let fo = f_x(th, tv, lo, eao, w, f, s1, d);
+        let go = f_z(th, tv, lo, eao, w, f, s1, h_alt);
+        let rac1 = ((tv / th) * (tv / th) + 1.0).sqrt();
+        let rac2 = (((tv - f - w) / th) * ((tv - f - w) / th) + 1.0).sqrt();
+        let rac3 = (((tv - f - w * s1 / lo) / th) * ((tv - f - w * s1 / lo) / th) + 1.0).sqrt();
+        let rac4 = (((tv - w * s1 / lo) / th) * ((tv - w * s1 / lo) / th) + 1.0).sqrt();
+        let dftv = lo / w * (1.0 / rac1 - 1.0 / rac2 + 1.0 / rac3 - 1.0 / rac4);
+        let dfth = df_dth(th, tv, f, w, s1, lo, eao, rac1, rac2, rac3, rac4);
+        let dgtv = lo / eao
+            + lo / (w * th)
+                * (tv / rac1 - (tv - f - w) / rac2 + (tv - f - w * s1 / lo) / rac3
+                    - (tv - w * s1 / lo) / rac4);
+        let dgth = dg_dth(tv, th, lo, w, s1, f, rac1, rac2, rac3, rac4);
+        let coeff = 1.0 / (dfth * dgtv - dftv * dgth);
+        hh = coeff * (-dgtv * fo + dftv * go);
+        kk = coeff * (dgth * fo - dfth * go);
+        th += hh;
+        tv += kk;
+        it += 1;
+        if th.min(tv) < 0.0 {
+            ok = false;
+            break;
+        }
+        if it > 20 {
+            ok = false;
+            break;
+        }
+    }
+    (th, tv, ok)
+}
+
+/// Amorçage `(Th, Tv)` par grille *grossiere bornee* (40 x 40) : on retient le
+/// noeud de residu `|f_x| + |f_z|` minimal. Substitut aux tables `Tabmesh`, avec
+/// un cout **independant** de `tmax` (40^2 evaluations), la ou le repli sur
+/// grille de `newton_thtv` coute O((tmax/pas)^2) -- prohibitif dans la boucle
+/// chaude du balayage. Le noeud sert d'amorçage a `newton_centre` qui raffine.
+#[allow(clippy::too_many_arguments)]
+fn seed_grid(
     lo: f64,
     eao: f64,
     w: f64,
@@ -46,12 +97,24 @@ fn newton_centre(
     d: f64,
     h_alt: f64,
     tmax: f64,
-    err: f64,
-) -> (f64, f64, bool) {
-    let (th, tv) = newton_thtv(th0, tv0, h_alt, d, lo, w, s1, f, eao, tmax, err);
-    let residu = f_x(th, tv, lo, eao, w, f, s1, d).abs() + f_z(th, tv, lo, eao, w, f, s1, h_alt).abs();
-    let ok = th > 0.0 && tv > 0.0 && residu < 0.03;
-    (th, tv, ok)
+) -> (f64, f64) {
+    let step = tmax / 40.0;
+    let mut best = (0.9 * tmax, 0.1 * tmax);
+    let mut best_res = f64::INFINITY;
+    let mut i = step;
+    while i < tmax {
+        let mut j = step;
+        while j < tmax {
+            let res = f_x(i, j, lo, eao, w, f, s1, d).abs() + f_z(i, j, lo, eao, w, f, s1, h_alt).abs();
+            if res < best_res {
+                best_res = res;
+                best = (i, j);
+            }
+            j += step;
+        }
+        i += step;
+    }
+    best
 }
 
 /// Resultat de `find_lomin`.
@@ -65,8 +128,8 @@ pub struct Lomin {
 }
 
 /// Cherche `Lo` minimale telle que la tension (charge au milieu) atteigne
-/// `tmax`, puis verifie la garde au sol sur toute la travee. Amorçage
-/// `(0,9*tmax, 0,1*tmax)` et `Lo = corde + reserve` (cf. deviation en tete).
+/// `tmax`, puis verifie la garde au sol sur toute la travee. Amorçage par
+/// `seed_grid` a `Lo = corde + reserve` (cf. deviation en tete).
 #[allow(clippy::too_many_arguments)]
 pub fn find_lomin(
     d: f64,
@@ -90,32 +153,36 @@ pub fn find_lomin(
     let err = 1.0;
     let error = 50.0; // tolerance sur |Tcalc - Tmax|
     let diag = (d * d + h * h).sqrt();
-    // Amorçage (deviation assumee) : cf. Tabmesh (Tho = 0,9*Tmax, Tvo = 0,1*Tmax).
-    let mut th = 0.9 * tmax;
-    let mut tv = 0.1 * tmax;
-    let mut lo = diag + 2.0; // corde + reserve
+    let mut lo = diag + 2.0; // corde + reserve : proche de la solution a Tmax
     let mut w = q1 * G * lo;
     let mut s1 = 0.5 * lo;
     let mut f = f_charge(lo, f_o, q2, q3, s1, dsupdep, dsupend);
     let mut test;
 
-    // Premiere convergence a Lo de depart.
-    let (nth, ntv, ok) = newton_centre(th, tv, lo, eao, w, f, s1, d, h, tmax, err);
-    th = nth;
-    tv = ntv;
-    test = ok;
+    // Amorçage par grille grossiere (substitut a Tabmesh), puis Newton chaud.
+    let (sth, stv) = seed_grid(lo, eao, w, f, s1, d, h, tmax);
+    let (mut th, mut tv);
+    let ok0;
+    {
+        let (nth, ntv, ok) = newton_centre(sth, stv, lo, eao, w, f, s1, d, h, err);
+        th = nth;
+        tv = ntv;
+        ok0 = ok;
+    }
+    test = ok0;
     let mut tcalc = (th * th + tv * tv).sqrt();
 
     if test {
-        // Ajuste Lo pour que Tcalc ne depasse pas Tmax (dichotomie a pas variable).
-        let mut incr = 0.01;
+        // Ajuste Lo pour que Tcalc atteigne Tmax (pas variable : 1 m, puis
+        // raffine par 0,1 a chaque depassement). Chaque solve est rechauffe.
+        let mut incr = 1.0;
         let mut signe = (tcalc - tmax) / (tcalc - tmax).abs();
         while (tcalc - tmax).abs() > error && test {
             lo += signe * incr;
             w = q1 * G * lo;
             s1 = lo * 0.5;
             f = f_charge(lo, f_o, q2, q3, s1, dsupdep, dsupend);
-            let (nth, ntv, ok) = newton_centre(th, tv, lo, eao, w, f, s1, d, h, tmax, err);
+            let (nth, ntv, ok) = newton_centre(th, tv, lo, eao, w, f, s1, d, h, err);
             th = nth;
             tv = ntv;
             if !ok {
@@ -290,21 +357,20 @@ mod tests {
         (q1, f_o, eao, tmax, 0.9)
     }
 
-    // On teste avec un `tmax` modere (50 kN) : le Lo minimal est alors une
-    // catenaire a sag raisonnable, bien conditionnee. Au tmax materiel
-    // (~172 kN) le cable est quasi tendu et le Newton chaud du balayage devient
-    // fragile -- c'est le comportement au bord, a surveiller en 4d.
-    const TMAX_TEST: f64 = 50000.0;
+    // Tests au `tmax` **materiel** (~172 kN = 35000 kgF * g / 2). Le Newton chaud
+    // du balayage y converge : la seule contrainte au bord est *geometrique* (un
+    // cable tendu depuis un support tres haut violerait `hline_max`), pas
+    // numerique. On choisit donc un support de 45 m (garde <= hline_max = 50 m).
+    const TMAX_TEST: f64 = 35000.0 * 9.80665 / 2.0;
 
     #[test]
     fn find_lomin_atteint_tmax_et_ferme_la_geometrie() {
         let (q1, f_o, eao, _tmax, q) = params();
-        // Travee moderee, sol tres bas (garde large) : faisable.
         let (d, h) = (150.0, 20.0);
         let alts = vec![0.0; 1000];
-        // Support haut a 60 m : le cable reste largement au-dessus du sol a 0.
+        // Support a 45 m sur sol a 0 : le cable tendu reste dans [3,5 ; 50] m.
         let r = find_lomin(
-            d, h, 0.0, 60.0, 1.0, &alts, f_o, TMAX_TEST, q1, q, q, eao, 3.5, 50.0, 5.0, 0.0, 0.0,
+            d, h, 0.0, 45.0, 1.0, &alts, f_o, TMAX_TEST, q1, q, q, eao, 3.5, 50.0, 5.0, 0.0, 0.0,
         );
         assert!(r.test, "attendu faisable, Lo = {}", r.lo);
         // La tension a la charge centree atteint tmax a l'erreur pres (50 N).
@@ -323,10 +389,11 @@ mod tests {
     fn find_lomin_infaisable_si_sol_trop_haut() {
         let (q1, f_o, eao, _tmax, q) = params();
         let (d, h) = (150.0, 20.0);
-        // Sol releve juste sous le support : le cable touche -> infaisable.
-        let alts = vec![58.0; 1000];
+        // Sol releve a 40 m : le cable, qui descend vers ~25 m au support bas,
+        // passe sous la garde -> infaisable.
+        let alts = vec![40.0; 1000];
         let r = find_lomin(
-            d, h, 0.0, 60.0, 1.0, &alts, f_o, TMAX_TEST, q1, q, q, eao, 3.5, 50.0, 5.0, 0.0, 0.0,
+            d, h, 0.0, 45.0, 1.0, &alts, f_o, TMAX_TEST, q1, q, q, eao, 3.5, 50.0, 5.0, 0.0, 0.0,
         );
         assert!(!r.test, "attendu infaisable, Lo = {}", r.lo);
     }

@@ -75,13 +75,35 @@ foretaccess_config <- function(skidder = list(),
       pente_abattage_max_pct       = 100
     ),
     cable = list(
-      hauteur_cable_min_m = 4,
-      hauteur_cable_max_m = 30,
+      # Gardes au sol du cable porteur (v3.6 : c_h_min / c_h_max).
+      hauteur_cable_min_m = 3.5,
+      hauteur_cable_max_m = 50,
       pas_angulaire_deg   = 1,
-      # Tableaux matériels (mât, longueur/diamètre/masse linéaire/tension de
-      # rupture du porteur, nb max supports, coeff. sécurité) : complétés au
-      # Lot 4 depuis l'article + le .pyx (ADR-006). Liste vide = non renseigné.
-      materiels           = list()
+      # Geometrie de la ligne (v3.6).
+      longueur_max_m             = 750,   # c_lmax
+      longueur_min_m             = 150,   # c_lmin
+      hauteur_mat_m              = 10.5,  # c_htower (support de depart)
+      hauteur_support_terminal_m = 12,    # c_h_end
+      distance_laterale_max_m    = 40,    # c_l_hor (pechage lateral)
+      nb_supports_max            = 3,     # c_sup
+      # Materiel cable (v3.6). c_q2/c_q3 (traction/retour), c_E (module de Young)
+      # et c_angle ne sont PAS dans Tab_Param_cable.csv : defauts documentes
+      # (viennent du paramdict global de Sylvaccess). Cf. specs/004 Q7.
+      masse_lineaire_porteur_kg_m  = 1.85,   # c_q1
+      masse_lineaire_traction_kg_m = 0.9,    # c_q2 (defaut)
+      masse_lineaire_retour_kg_m   = 0.9,    # c_q3 (defaut)
+      diametre_mm                  = 18,     # c_d
+      tension_rupture_kgf          = 35000,  # c_rupt_res
+      coeff_securite               = 2,      # c_safe
+      charge_max_kg                = 2500,   # c_load_max
+      poids_chariot_kg             = 400,    # c_car_w
+      module_young_n_mm2           = 160000, # c_E (defaut)
+      angle_intersupport_deg       = 20,     # c_angle (defaut)
+      # Bornes de pente de la ligne (rad). Larges par defaut : la tension et la
+      # garde au sol sont les vraies contraintes. Raffinement (pente min de
+      # descente par gravite pour chariot classique) : travail futur.
+      pente_min_rad = -1.4,
+      pente_max_rad = 1.4
     ),
     general = list(
       resolution_m  = 5,
@@ -154,7 +176,21 @@ validate_config <- function(cfg) {
     ))
   }
   checkmate::assert_number(ca$pas_angulaire_deg, lower = 0, upper = 360)
-  checkmate::assert_list(ca$materiels)
+  # Materiel et geometrie (v3.6), completes au Lot 4.
+  checkmate::assert_number(ca$longueur_max_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$longueur_min_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$diametre_mm, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$tension_rupture_kgf, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$coeff_securite, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$module_young_n_mm2, lower = 0, finite = TRUE)
+  checkmate::assert_int(ca$nb_supports_max, lower = 0)
+  if (ca$longueur_max_m <= ca$longueur_min_m) {
+    cli::cli_abort(c(
+      "Configuration cable incoherente.",
+      "x" = "{.field longueur_max_m} ({ca$longueur_max_m}) doit etre > \\
+             {.field longueur_min_m} ({ca$longueur_min_m})."
+    ))
+  }
 
   ge <- cfg$general
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)
