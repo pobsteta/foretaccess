@@ -6,9 +6,9 @@
 
 ## État courant
 
-- **Branche** : `specs/008-base-spatiale` (release du Lot 8 ; `release.yml` pose `v0.9.0` au
-  merge sur `main`, puis retour en cycle dev `0.9.0.9000`)
-- **Version `DESCRIPTION`** : `0.9.0` (release du Lot 8)
+- **Branche** : cycle dev depuis `main` (dernière release `v0.9.0`, tag posé)
+- **Version `DESCRIPTION`** : `0.9.0.9000` (cycle dev ; `NEWS.md` et `CITATION.cff` restent
+  à `0.9.0`)
 - **Lots terminés récemment** :
   - **Lot 6 — camion DFCI (beta)** (`v0.8.0`). `camion_dfci()` : zone défendable = tampon au
     terrain (plus court chemin pondéré par la pente depuis les dessertes DFCI, plafonné à la
@@ -342,6 +342,8 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Release `v0.9.0` posée** (PR #29 mergée, checks verts ; tag + release GitHub automatiques).
+  Retour en **cycle de dev `0.9.0.9000`** (bump `DESCRIPTION` seul). Lots 6 et 8 clos.
 - **Lot 8 (base spatiale & agrégation) implémenté et préparé en release `v0.9.0`.**
   `agreger_zones(classes, zones, volume, id)` agrège n'importe quel raster catégoriel
   d'accessibilité (skidder, porteur, DFCI, couverture câble) en surfaces (ha) et volumes (m³)
