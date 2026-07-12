@@ -136,6 +136,9 @@ de citer :
 - [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
   : Pente et exposition depuis un MNT
 
+- [`camion_dfci()`](https://pobsteta.github.io/foretaccess/reference/camion_dfci.md)
+  : Moteur camion DFCI — zone défendable (beta)
+
 - [`certifier_propagation()`](https://pobsteta.github.io/foretaccess/reference/certifier_propagation.md)
   : Certificat d'exactitude d'une propagation sur une fenêtre
 

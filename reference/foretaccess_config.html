@@ -13,7 +13,7 @@ moteurs. Les valeurs par défaut sont celles de Sylvaccess v3.6
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,6 +52,7 @@ moteurs. Les valeurs par défaut sont celles de <strong>Sylvaccess v3.6</strong>
 <span>  skidder <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  porteur <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cable <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  dfci <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  general <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -73,6 +74,10 @@ moteurs. Les valeurs par défaut sont celles de <strong>Sylvaccess v3.6</strong>
 les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).</p></dd>
 
 
+<dt id="arg-dfci">dfci<a class="anchor" aria-label="anchor" href="#arg-dfci"></a></dt>
+<dd><p>Liste des paramètres du camion DFCI (beta, Lot 6 ; voir <em>Détails</em>).</p></dd>
+
+
 <dt id="arg-general">general<a class="anchor" aria-label="anchor" href="#arg-general"></a></dt>
 <dd><p>Liste des paramètres généraux (résolution, CRS, méthode de
 calcul de la pente).</p></dd>
@@ -91,6 +96,10 @@ abattage max 100 %.</p>
 <p>Défauts <strong>porteur</strong> (v3.6) : pente en travers max 15 %, pente montée max 30 %,
 pente descente max 25 %, portée de grue 8 m, distance en pente forte 300 m,
 distance hors desserte 200 m, pente abattage max 100 %.</p>
+<p>Défauts <strong>DFCI</strong> (beta) : portée de défense 100 m, pente d'intervention max
+40 %, dessertes-source <code>"dfci"</code>. Ce sont des hypothèses de travail, non des
+valeurs Sylvaccess : le module DFCI est une sortie <strong>beta</strong> (voir
+<code>specs/006-dfci.md</code>).</p>
     </div>
 
     <div class="section level2">

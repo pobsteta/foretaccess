@@ -1,5 +1,45 @@
 # Changelog
 
+## foretaccess 0.8.0 (2026-07-12)
+
+### Lot 6 — Camion DFCI (beta) : zone défendable
+
+Sortie **beta** de défense de la forêt contre les incendies (EF-8).
+Cartographie la **zone défendable** — la forêt qu’un camion peut
+atteindre et défendre depuis les dessertes DFCI. Conception propre (le
+module DFCI n’est pas dans les sources Sylvaccess de référence),
+cohérente avec l’architecture des moteurs terrestres.
+
+- **`camion_dfci(pre, config, write_dir, bord)`** : signature identique
+  à
+  [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
+  /
+  [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md),
+  directement branchable sur
+  [`traiter_par_tuiles()`](https://pobsteta.github.io/foretaccess/reference/traiter_par_tuiles.md).
+  La zone défendable est un **tampon au terrain** — un plus court chemin
+  pondéré par la pente
+  ([`propager_cout()`](https://pobsteta.github.io/foretaccess/reference/propager_cout.md) +
+  [`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md))
+  depuis les dessertes DFCI, plafonné à la portée de défense et coupé
+  au-delà de la pente d’intervention. Aucun nouveau noyau : réutilise le
+  service partagé du Lot 2.
+- **Sorties** : raster catégoriel `accessibilite` (`defendable` /
+  `non_defendable` / `hors_foret`), `distance_defense` (m),
+  `allocation`, `recap` surfaces/volumes, écriture COG optionnelle.
+- **Configuration `config$dfci`** : portée de défense (100 m), pente
+  d’intervention max (40 %), classes de desserte-source (`"dfci"`).
+  Hypothèses de travail explicites, non Sylvaccess (surchargeables,
+  validées au chargement).
+- **Tuilage** : sortie certifiée, identique au mono-bloc sur les
+  cellules certifiées. Le réseau DFCI étant clairsemé, une tuile sans
+  source reste indéterminée (le halo grandit) ; l’absence de source au
+  niveau top-level lève une erreur ciblée.
+- **Limites (beta)** documentées (`specs/006-dfci.md`, roxygen) : ni
+  combustible, ni vent, ni physique de lance ; carrossabilité des
+  dessertes non qualifiée (QUALIROAD). Sortie de **première
+  hiérarchisation**, pas de dimensionnement.
+
 ## foretaccess 0.7.0 (2026-07-12)
 
 ### Lot 5 — Sélection multicritère des lignes câble
