@@ -192,6 +192,36 @@ Agrégation zonale et stockage vectoriel (PostGIS / GeoPackage).
 - [`sb_ensure_schema()`](https://pobsteta.github.io/foretaccess/reference/sb_ensure_schema.md)
   : Crée le schéma PostgreSQL du backend s'il n'existe pas
 
+## Acquisition depuis une AOI (Lot 10)
+
+Téléchargement config-driven des entrées (IGN Géoplateforme,
+OpenStreetMap).
+
+- [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+  : Acquiert les entrées ForêtAccess depuis une AOI
+- [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+  : Acquiert le MNT depuis RGE ALTI (IGN WMS)
+- [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+  : Acquiert la desserte depuis BD TOPO (IGN WFS)
+- [`acquire_foret()`](https://pobsteta.github.io/foretaccess/reference/acquire_foret.md)
+  : Acquiert la forêt depuis BD Forêt v2 (IGN WFS)
+- [`acquire_cadastre()`](https://pobsteta.github.io/foretaccess/reference/acquire_cadastre.md)
+  : Acquiert le parcellaire cadastral (IGN WFS, optionnel)
+- [`acquire_obstacles()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles.md)
+  : Acquiert les obstacles depuis OpenStreetMap
+- [`datasources`](https://pobsteta.github.io/foretaccess/reference/datasources.md)
+  : Sources de données géographiques par pays (config-driven)
+- [`get_country_config()`](https://pobsteta.github.io/foretaccess/reference/get_country_config.md)
+  : Charge la configuration des sources d'un pays
+- [`get_data_source()`](https://pobsteta.github.io/foretaccess/reference/get_data_source.md)
+  : Résout une source de données par sa clé
+- [`get_layer_service()`](https://pobsteta.github.io/foretaccess/reference/get_layer_service.md)
+  : Résout l'URL de service d'une couche
+- [`get_national_crs()`](https://pobsteta.github.io/foretaccess/reference/get_national_crs.md)
+  : CRS national d'un pays
+- [`list_countries()`](https://pobsteta.github.io/foretaccess/reference/list_countries.md)
+  : Liste les pays configurés
+
 ## Non-régression
 
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)

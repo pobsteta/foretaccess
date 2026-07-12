@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -17,6 +17,10 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/foretaccess.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -445,6 +449,99 @@
 
         </dt>
         <dd>Crée le schéma PostgreSQL du backend s'il n'existe pas</dd>
+      </dl></div><div class="section level2">
+      <h2 id="acquisition-depuis-une-aoi-lot-">Acquisition depuis une AOI (Lot 10)<a class="anchor" aria-label="anchor" href="#acquisition-depuis-une-aoi-lot-"></a></h2>
+
+      <div class="section-desc"><p>Téléchargement config-driven des entrées (IGN Géoplateforme, OpenStreetMap).</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="acquire_inputs.html">acquire_inputs()</a></code>
+
+        </dt>
+        <dd>Acquiert les entrées ForêtAccess depuis une AOI</dd>
+
+        <dt>
+
+          <code><a href="acquire_mnt.html">acquire_mnt()</a></code>
+
+        </dt>
+        <dd>Acquiert le MNT depuis RGE ALTI (IGN WMS)</dd>
+
+        <dt>
+
+          <code><a href="acquire_desserte.html">acquire_desserte()</a></code>
+
+        </dt>
+        <dd>Acquiert la desserte depuis BD TOPO (IGN WFS)</dd>
+
+        <dt>
+
+          <code><a href="acquire_foret.html">acquire_foret()</a></code>
+
+        </dt>
+        <dd>Acquiert la forêt depuis BD Forêt v2 (IGN WFS)</dd>
+
+        <dt>
+
+          <code><a href="acquire_cadastre.html">acquire_cadastre()</a></code>
+
+        </dt>
+        <dd>Acquiert le parcellaire cadastral (IGN WFS, optionnel)</dd>
+
+        <dt>
+
+          <code><a href="acquire_obstacles.html">acquire_obstacles()</a></code>
+
+        </dt>
+        <dd>Acquiert les obstacles depuis OpenStreetMap</dd>
+
+        <dt>
+
+          <code><a href="datasources.html">datasources</a></code>
+
+        </dt>
+        <dd>Sources de données géographiques par pays (config-driven)</dd>
+
+        <dt>
+
+          <code><a href="get_country_config.html">get_country_config()</a></code>
+
+        </dt>
+        <dd>Charge la configuration des sources d'un pays</dd>
+
+        <dt>
+
+          <code><a href="get_data_source.html">get_data_source()</a></code>
+
+        </dt>
+        <dd>Résout une source de données par sa clé</dd>
+
+        <dt>
+
+          <code><a href="get_layer_service.html">get_layer_service()</a></code>
+
+        </dt>
+        <dd>Résout l'URL de service d'une couche</dd>
+
+        <dt>
+
+          <code><a href="get_national_crs.html">get_national_crs()</a></code>
+
+        </dt>
+        <dd>CRS national d'un pays</dd>
+
+        <dt>
+
+          <code><a href="list_countries.html">list_countries()</a></code>
+
+        </dt>
+        <dd>Liste les pays configurés</dd>
       </dl></div><div class="section level2">
       <h2 id="non-r-gression">Non-régression<a class="anchor" aria-label="anchor" href="#non-r-gression"></a></h2>
 

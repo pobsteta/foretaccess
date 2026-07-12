@@ -6,24 +6,28 @@
 
 ## État courant
 
-- **Branche** : `specs/009-publication` (release du Lot 9 ;
-  `release.yml` pose `v0.10.0` au merge sur `main`, puis retour en cycle
-  dev `0.10.0.9000`)
-- **Version `DESCRIPTION`** : `0.10.0` (release du Lot 9)
-- **Lots 0–9 livrés** : prétraitement, moteurs skidder / porteur, noyau
+- **Branche** : `specs/010-acquisition` (release du Lot 10 ;
+  `release.yml` pose `v0.11.0` au merge sur `main`, puis retour en cycle
+  dev `0.11.0.9000`)
+- **Version `DESCRIPTION`** : `0.11.0` (release du Lot 10)
+- **Lots 0–10 livrés** : prétraitement, moteurs skidder / porteur, noyau
   câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle
-  (tuilage), base spatiale & agrégation, et **doc & publication** (Lot
-  9). Le périmètre **v1 fonctionnel** est atteint (Lots 0–5, 7–9 « faits
-  » ; DFCI Lot 6 en beta).
-- **Lot 9 (doc & publication)** : vignette `foretaccess` (pipeline
-  bout-en-bout **exécuté** sur le jouet, \< 2 s — documente et teste le
-  pipeline), README à jour (démarrage rapide, statut), index pkgdown
-  groupé par thème/lot, `NEWS.md`. `specs/009-publication.md`.
-- **Prochain jalon possible** : **v1.0.0** — le périmètre v1 est
-  atteint, mais c’est un **bump majeur** (confirmation utilisateur
-  requise, règle `CLAUDE.md`). Sinon : **Lot 10** (acquisition depuis
-  AOI, spec validée), et la dette câble (placement multi-supports
-  `OptPyl_Up`, pêchage latéral — oracle Sylvaccess réel requis).
+  (tuilage), base spatiale & agrégation, doc & publication, et
+  **acquisition depuis AOI** (Lot 10). Périmètre v1 fonctionnel atteint.
+- **Lot 10 (acquisition depuis AOI)** :
+  [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+  télécharge MNT/desserte/forêt/ obstacles/cadastre depuis une AOI (IGN
+  Géoplateforme via `happign`, OSM via `osmdata`), config-driven
+  (`inst/datasources/FR.json` + résolveur), sorties consommables par
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
+  Appels réseau isolés en wrappers mockables : tests unitaires
+  hors-ligne (57 tests), intégration réseau opt-in. `happign`/`osmdata`
+  en Suggests. Vignette d’acquisition. `specs/010`.
+- **Prochain jalon possible** : **v1.0.0** (bump majeur, confirmation
+  requise — l’utilisateur a demandé de rester en `0.x` pour l’instant).
+  Dette câble différée : placement multi-supports `OptPyl_Up`, pêchage
+  latéral (oracle Sylvaccess réel requis). Phase 2 acquisition : MNH
+  LiDAR → volume, BD Forêt v3.
 
 ## Avancement par lot
 
@@ -39,7 +43,7 @@
 | 7 | Passage à l’échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
-| 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
+| 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ✅ terminé | `v0.11.0` |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -415,6 +419,28 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ### 2026-07-12
 
+- **Lot 10 (acquisition depuis AOI) implémenté et préparé en release
+  `v0.11.0`.**
+  `acquire_inputs(aoi, sources, cache_dir, res_m, crs, buffer_m, ...)`
+  télécharge les entrées du pipeline depuis un polygone d’emprise : MNT
+  RGE ALTI (WMS), desserte BD TOPO (WFS, avec dérivation du champ
+  `classe` route/piste), forêt BD Forêt v2 (WFS), obstacles OSM
+  (bâti/eau/rail/falaise), parcellaire cadastral (optionnel).
+  **Config-driven** (patron nemeton) : `inst/datasources/FR.json`
+  - résolveur
+    (`get_country_config`/`get_data_source`/`get_layer_service`/`get_national_crs`).
+    Sorties `foretaccess_inputs` **directement consommables par
+    [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)**.
+    Les appels réseau sont isolés dans des wrappers internes
+    (`.fetch_wms_raster`/`.fetch_wfs`/`.fetch_osm`) **mockables** : 57
+    tests unitaires tournent **hors-ligne** (`local_mocked_bindings`), +
+    un test d’intégration réseau **opt-in**
+    (`FORETACCESS_RUN_ONLINE_TESTS=TRUE` + `skip_if_offline`).
+    `happign`/`osmdata`/`jsonlite` ajoutés (Suggests / Imports). Verrou
+    CRS strict sur l’AOI ; cache idempotent ; buffer 100 m. Vignette «
+    Acquérir les entrées depuis une AOI ». Écart assumé vs spec §10 Q4 :
+    clip sur l’AOI bufferisée (conserve la desserte du voisinage).
+    `specs/010` passé en statut implémenté.
 - **Lot 9 (doc & publication) implémenté et préparé en release
   `v0.10.0`.** Vignette `vignettes/foretaccess.Rmd` : déroule le
   pipeline complet (config → prétraitement → skidder/porteur → DFCI →

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -17,6 +17,10 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="articles/foretaccess.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
@@ -41,15 +45,15 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>specs/009-publication</code> (release du Lot 9 ; <code>release.yml</code> pose <code>v0.10.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.10.0.9000</code>)</li>
+<strong>Branche</strong> : <code>specs/010-acquisition</code> (release du Lot 10 ; <code>release.yml</code> pose <code>v0.11.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.11.0.9000</code>)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.10.0</code> (release du Lot 9)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.11.0</code> (release du Lot 10)</li>
 <li>
-<strong>Lots 0–9 livrés</strong> : prétraitement, moteurs skidder / porteur, noyau câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle (tuilage), base spatiale &amp; agrégation, et <strong>doc &amp; publication</strong> (Lot 9). Le périmètre <strong>v1 fonctionnel</strong> est atteint (Lots 0–5, 7–9 « faits » ; DFCI Lot 6 en beta).</li>
+<strong>Lots 0–10 livrés</strong> : prétraitement, moteurs skidder / porteur, noyau câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle (tuilage), base spatiale &amp; agrégation, doc &amp; publication, et <strong>acquisition depuis AOI</strong> (Lot 10). Périmètre v1 fonctionnel atteint.</li>
 <li>
-<strong>Lot 9 (doc &amp; publication)</strong> : vignette <code>foretaccess</code> (pipeline bout-en-bout <strong>exécuté</strong> sur le jouet, &lt; 2 s — documente et teste le pipeline), README à jour (démarrage rapide, statut), index pkgdown groupé par thème/lot, <code>NEWS.md</code>. <code>specs/009-publication.md</code>.</li>
+<strong>Lot 10 (acquisition depuis AOI)</strong> : <code><a href="reference/acquire_inputs.html">acquire_inputs()</a></code> télécharge MNT/desserte/forêt/ obstacles/cadastre depuis une AOI (IGN Géoplateforme via <code>happign</code>, OSM via <code>osmdata</code>), config-driven (<code>inst/datasources/FR.json</code> + résolveur), sorties consommables par <code><a href="reference/preprocess.html">preprocess()</a></code>. Appels réseau isolés en wrappers mockables : tests unitaires hors-ligne (57 tests), intégration réseau opt-in. <code>happign</code>/<code>osmdata</code> en Suggests. Vignette d’acquisition. <code>specs/010</code>.</li>
 <li>
-<strong>Prochain jalon possible</strong> : <strong>v1.0.0</strong> — le périmètre v1 est atteint, mais c’est un <strong>bump majeur</strong> (confirmation utilisateur requise, règle <code>CLAUDE.md</code>). Sinon : <strong>Lot 10</strong> (acquisition depuis AOI, spec validée), et la dette câble (placement multi-supports <code>OptPyl_Up</code>, pêchage latéral — oracle Sylvaccess réel requis).</li>
+<strong>Prochain jalon possible</strong> : <strong>v1.0.0</strong> (bump majeur, confirmation requise — l’utilisateur a demandé de rester en <code>0.x</code> pour l’instant). Dette câble différée : placement multi-supports <code>OptPyl_Up</code>, pêchage latéral (oracle Sylvaccess réel requis). Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -115,8 +119,8 @@
 </tr><tr><td>10</td>
 <td>Acquisition depuis AOI</td>
 <td><code>specs/010-acquisition-aoi.md</code></td>
-<td>⬜ spec validée</td>
-<td>—</td>
+<td>✅ terminé</td>
+<td><code>v0.11.0</code></td>
 </tr></tbody></table><p>Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.</p>
 </div>
 <div class="section level2">
@@ -308,6 +312,10 @@
 <div class="section level3">
 <h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
 <ul><li>
+<strong>Lot 10 (acquisition depuis AOI) implémenté et préparé en release <code>v0.11.0</code>.</strong> <code>acquire_inputs(aoi, sources, cache_dir, res_m, crs, buffer_m, ...)</code> télécharge les entrées du pipeline depuis un polygone d’emprise : MNT RGE ALTI (WMS), desserte BD TOPO (WFS, avec dérivation du champ <code>classe</code> route/piste), forêt BD Forêt v2 (WFS), obstacles OSM (bâti/eau/rail/falaise), parcellaire cadastral (optionnel). <strong>Config-driven</strong> (patron nemeton) : <code>inst/datasources/FR.json</code>
+<ul><li>résolveur (<code>get_country_config</code>/<code>get_data_source</code>/<code>get_layer_service</code>/<code>get_national_crs</code>). Sorties <code>foretaccess_inputs</code> <strong>directement consommables par <code><a href="reference/preprocess.html">preprocess()</a></code></strong>. Les appels réseau sont isolés dans des wrappers internes (<code>.fetch_wms_raster</code>/<code>.fetch_wfs</code>/<code>.fetch_osm</code>) <strong>mockables</strong> : 57 tests unitaires tournent <strong>hors-ligne</strong> (<code>local_mocked_bindings</code>), + un test d’intégration réseau <strong>opt-in</strong> (<code>FORETACCESS_RUN_ONLINE_TESTS=TRUE</code> + <code>skip_if_offline</code>). <code>happign</code>/<code>osmdata</code>/<code>jsonlite</code> ajoutés (Suggests / Imports). Verrou CRS strict sur l’AOI ; cache idempotent ; buffer 100 m. Vignette « Acquérir les entrées depuis une AOI ». Écart assumé vs spec §10 Q4 : clip sur l’AOI bufferisée (conserve la desserte du voisinage). <code>specs/010</code> passé en statut implémenté.</li>
+</ul></li>
+<li>
 <strong>Lot 9 (doc &amp; publication) implémenté et préparé en release <code>v0.10.0</code>.</strong> Vignette <code>vignettes/foretaccess.Rmd</code> : déroule le pipeline complet (config → prétraitement → skidder/porteur → DFCI → câble potentiel/sélection → agrégation zonale → persistance GPKG) sur le jouet, <strong>exécutée</strong> à la compilation (&lt; 2 s), donc auto-vérifiante par <code>R CMD check</code>. README refondu (démarrage rapide + statut réel des lots) ; <code>_pkgdown.yml</code> doté d’un index de référence groupé (tous les exports) et de l’article ; <code>knitr</code>/<code>rmarkdown</code> en <code>Suggests</code> + <code>VignetteBuilder</code>. <code>specs/009</code> fige les décisions (vignette exécutée, pas de CLI shell, <code>NEWS.md</code> = changelog). <strong>Périmètre v1 fonctionnel atteint</strong> ; <code>v1.0.0</code> reste un bump majeur soumis à confirmation. Releases <code>v0.8.0</code> (Lot 6) et <code>v0.9.0</code> (Lot 8) posées ; le Lot 9 enchaîne en <code>v0.10.0</code> sans cycle-dev intermédiaire.</li>
 <li>
 <strong>Lot 8 (base spatiale &amp; agrégation) implémenté et préparé en release <code>v0.9.0</code>.</strong> <code>agreger_zones(classes, zones, volume, id)</code> agrège n’importe quel raster catégoriel d’accessibilité (skidder, porteur, DFCI, couverture câble) en surfaces (ha) et volumes (m³) par zone (massif/parcelle/commune) et par classe — pendant zonal de <code><a href="reference/recapituler.html">recapituler()</a></code>. Croisement raster <strong>vectorisé</strong> (<code>table</code>/<code>tapply</code>, pas de boucle par cellule), verrou CRS strict, sortie <code>sf</code> à colonnes larges <code>surface_&lt;classe&gt;_ha</code> (+ <code>volume_&lt;classe&gt;_m3</code>) directement persistable/requêtable. Test central : <strong>partition</strong> (somme zonale = récap global). Côté stockage, <code><a href="reference/sb_write_layer.html">sb_write_layer()</a></code> PostGIS crée désormais un <strong>index GiST</strong> idempotent sur la géométrie ; le R-tree GPKG est automatique. 25 tests d’agrégation (+ index PostGIS skippé sans base) ; suite complète verte. <code>specs/008-base-spatiale.md</code> fige les décisions (agrégation en R/terra backend-agnostique). Release enchaînée sans cycle-dev intermédiaire (Lot 6 → Lot 8 demandés à la suite).</li>

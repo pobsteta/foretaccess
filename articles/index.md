@@ -4,3 +4,5 @@
 
 - [ForêtAccess de bout en
   bout](https://pobsteta.github.io/foretaccess/articles/foretaccess.md):
+- [Acquérir les entrées depuis une
+  AOI](https://pobsteta.github.io/foretaccess/articles/acquisition.md):
