@@ -6,9 +6,18 @@
 
 ## État courant
 
-- **Branche** : cycle dev depuis `main` (dernière release `v0.7.0`, tag posé)
-- **Version `DESCRIPTION`** : `0.7.0.9000` (cycle dev ; `NEWS.md` et `CITATION.cff` restent
-  à `0.7.0`)
+- **Branche** : `specs/006-dfci` (release du Lot 6 ; `release.yml` pose `v0.8.0` au merge
+  sur `main`, puis retour en cycle dev `0.8.0.9000`)
+- **Version `DESCRIPTION`** : `0.8.0` (release du Lot 6)
+- **Lot terminé** : **Lot 6 — camion DFCI (beta)**. `camion_dfci()` : zone défendable =
+  tampon au terrain (plus court chemin pondere par la pente depuis les dessertes DFCI,
+  plafonne a la portee, coupe au-dela de la pente d'intervention). Reutilise le service
+  partage `propager_cout()` du Lot 2, aucun nouveau noyau. Config `dfci` (portee 100 m,
+  pente 40 %, `classes_source`). Tuilage certifie (identique mono-bloc sur cellules
+  certifiees). 22 tests. Sortie **beta** : limites documentees (ni combustible, ni vent,
+  ni physique de lance ; carrossabilite non qualifiee — QUALIROAD).
+- **Prochain lot** : **Lot 8 — base spatiale & agregation** (index spatial GiST a l'ecriture
+  PostGIS + agregation zonale massif/parcelle/commune).
 - **Derniers lots terminés** :
   - **Lot 4 — noyau câble (Rust)**, 0 support (`v0.6.0`). **4a** (caténaire + Newton),
     **4b** (faisabilité), **4c** (`find_lomin`, `test_span`), **4d** (`potentiel_cable()`).
@@ -31,7 +40,7 @@
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
 | 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
-| 6 | Camion DFCI (beta) | à écrire | ⬜ (post-MVP) | — |
+| 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | à écrire | ⬜ | — |
 | 9 | Doc & publication | à écrire | ⬜ | — |
@@ -329,6 +338,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Lot 6 (camion DFCI, beta) implémenté et préparé en release `v0.8.0`.** `camion_dfci()`
+  modélise la zone défendable comme un tampon au terrain : plus court chemin pondéré par la
+  pente (`propager_cout()` + `surface_cout_skidder()`, service partagé du Lot 2) depuis les
+  dessertes DFCI, plafonné à `distance_defense_max_m` et coupé au-delà de
+  `pente_defense_max_pct`. Aucun nouveau noyau. Config `dfci` (portée 100 m, pente 40 %,
+  `classes_source = "dfci"`) — hypothèses de travail explicites, non Sylvaccess (le module
+  DFCI n'est pas dans les sources de référence). Sortie catégorielle `defendable` /
+  `non_defendable` / `hors_foret` + `distance_defense` + `allocation` + `recap`. **Tuilage** :
+  bornée par la portée, donc certifiable ; le réseau DFCI étant clairsemé, une tuile sans
+  source reste indéterminée (halo grandit), l'absence de source au top-level lève une erreur.
+  22 tests DFCI ; suite complète verte. `specs/006-dfci.md` fige les décisions et les limites
+  beta (ni combustible, ni vent, ni physique de lance ; carrossabilité non qualifiée).
 - **Release `v0.7.0` posée** (PR #26 mergée, sept checks verts ; tag `v0.7.0` + release GitHub
   posés automatiquement par `release.yml`). Retour en **cycle de dev `0.7.0.9000`** (bump
   `DESCRIPTION` seul ; `NEWS.md`/`CITATION.cff` restent à `0.7.0`).

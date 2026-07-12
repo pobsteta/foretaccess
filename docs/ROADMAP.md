@@ -26,7 +26,7 @@ Sylvaccess ne sont « faits » qu'avec **non-régression verte** contre l'oracle
 | **3** | Moteur Porteur | `specs/003-porteur.md` | ✅ | 1 | — |
 | **4** | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ | 0,1 | 005 |
 | **5** | Sélection lignes câble | `specs/005-selection.md` | ✅ | 4 | — |
-| **6** | Camion DFCI (beta) | `specs/006-dfci.md` | ❌ (post-MVP) | 1,2 | — |
+| **6** | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ (beta) | 1,2 | `v0.8.0` |
 | **7** | Passage à l'échelle | `specs/007-echelle.md` | ✅ | 2,3,4 | 005 |
 | **8** | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ | 0 | 002 |
 | **9** | Doc & publication | `specs/009-publication.md` | ✅ | tous | — |
@@ -83,9 +83,9 @@ base des lignes faisables produite ; speedup mesuré vs mono-thread.
 `specs/005`.
 **Critères de sortie** : sélection reproductible vs v3.6 sur jeu test ; requêtable en base.
 
-### Lot 6 — Camion DFCI (beta) — *post-MVP*
-**Livrables** : zone défendable depuis desserte DFCI. `specs/006`.
-**Critères de sortie** : sortie beta documentée + testée sur zone échantillon.
+### Lot 6 — Camion DFCI (beta) — *post-MVP* ✅ `v0.8.0`
+**Livrables** : zone défendable depuis desserte DFCI (`camion_dfci()`). `specs/006`.
+**Critères de sortie** : sortie beta documentée + testée sur zone échantillon. **Fait.**
 
 ### Lot 7 — Passage à l'échelle
 **Livrables** : tuilage + parallélisme + sorties COG. `specs/007`, ADR-005.

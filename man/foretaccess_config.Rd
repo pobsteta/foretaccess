@@ -8,6 +8,7 @@ foretaccess_config(
   skidder = list(),
   porteur = list(),
   cable = list(),
+  dfci = list(),
   general = list()
 )
 }
@@ -18,6 +19,8 @@ foretaccess_config(
 
 \item{cable}{Liste des paramètres câble. Le \strong{schéma} est posé dès le Lot 0 ;
 les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).}
+
+\item{dfci}{Liste des paramètres du camion DFCI (beta, Lot 6 ; voir \emph{Détails}).}
 
 \item{general}{Liste des paramètres généraux (résolution, CRS, méthode de
 calcul de la pente).}
@@ -40,6 +43,11 @@ abattage max 100 \%.
 Défauts \strong{porteur} (v3.6) : pente en travers max 15 \%, pente montée max 30 \%,
 pente descente max 25 \%, portée de grue 8 m, distance en pente forte 300 m,
 distance hors desserte 200 m, pente abattage max 100 \%.
+
+Défauts \strong{DFCI} (beta) : portée de défense 100 m, pente d'intervention max
+40 \%, dessertes-source \code{"dfci"}. Ce sont des hypothèses de travail, non des
+valeurs Sylvaccess : le module DFCI est une sortie \strong{beta} (voir
+\code{specs/006-dfci.md}).
 }
 \examples{
 cfg <- foretaccess_config()
