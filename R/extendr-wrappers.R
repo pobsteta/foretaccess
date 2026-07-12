@@ -13,4 +13,35 @@ NULL
 #' @export
 cablehelp_version <- function() .Call(wrap__cablehelp_version)
 
+#' Equation horizontale de la caténaire élastique `f_x(Th, Tv)`, nulle à la
+#' solution.
+#' @export
+cable_f_x <- function(th, tv, lo, eao, w, f, s1, d) .Call(wrap__cable_f_x, th, tv, lo, eao, w, f, s1, d)
+
+#' Equation verticale de la caténaire élastique `f_z(Th, Tv)`, nulle à la
+#' solution.
+#' @export
+cable_f_z <- function(th, tv, lo, eao, w, f, s1, h) .Call(wrap__cable_f_z, th, tv, lo, eao, w, f, s1, h)
+
+#' Position horizontale du câble à l'abscisse curviligne `s`.
+#' @export
+cable_calcul_xs <- function(th, tv, lo, eao, w, f, s1, s) .Call(wrap__cable_calcul_xs, th, tv, lo, eao, w, f, s1, s)
+
+#' Position verticale (chute depuis le support haut) à l'abscisse curviligne
+#' `s` : c'est elle qui fournit la garde au sol du câble.
+#' @export
+cable_calcul_zs <- function(th, tv, lo, eao, w, f, s1, s) .Call(wrap__cable_calcul_zs, th, tv, lo, eao, w, f, s1, s)
+
+#' Amorçage `(Th, Tv, faisable)` par recherche sur grille sous la tension
+#' admissible. Renvoie un vecteur de longueur 3 ; `faisable` vaut 1 si
+#' `sqrt(Th^2 + Tv^2) <= tmax`, 0 sinon.
+#' @export
+cable_find_thtv_tmax <- function(tmax, w, eao, f, pas, d, h, lo, step) .Call(wrap__cable_find_thtv_tmax, tmax, w, eao, f, pas, d, h, lo, step)
+
+#' Résout `f_x = f_z = 0` (tensions `Th, Tv` au support haut) par
+#' Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur
+#' `c(Th, Tv)`.
+#' @export
+cable_newton_thtv <- function(th, tv, h_alt, d, lo, w, s1, f, eao, tmax, err) .Call(wrap__cable_newton_thtv, th, tv, h_alt, d, lo, w, s1, f, eao, tmax, err)
+
 # nolint end
