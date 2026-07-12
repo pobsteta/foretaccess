@@ -152,6 +152,54 @@ test_that("le sens prefere classe ses lignes d'abord", {
   expect_equal(sel$lignes$sens[1], 1L)
 })
 
+test_that("avec volume, le filtre volume/IPC et les poids longueur s'appliquent", {
+  # vol_dispo = TRUE -> filtre volume/IPC ; poids longueur -> critere a minimiser.
+  lignes <- rbind(
+    ligne_row(313, 90, 40, 0.5, volume_m3 = 8, ipc = 0.2),
+    ligne_row(313, 270, 60, 0.5, volume_m3 = 3, ipc = 0.05)
+  )
+  cfg <- foretaccess_config(cable = list(selection = list(
+    poids = list(surface = 1, supports = 0, longueur = 1, volume = 1, ipc = 1),
+    limites = list(surface_min = 0, supports_max = Inf, longueur_min = 0,
+      longueur_max = Inf, volume_min = 1, ipc_min = 0),
+    sens_prefere = 0, contribution_min = 0.6
+  )))
+  sel <- selectionner_lignes(cable_factice(lignes, cfg))
+  expect_gt(nrow(sel$lignes), 0)
+})
+
+test_that("un critere pondere entierement nul est neutralise sans erreur", {
+  # Surfaces et supports nuls, mais ponderes : les branches p<=0 / m<=0 du
+  # score renvoient 0 sans division par zero.
+  lignes <- rbind(
+    ligne_row(313, 90, 40, 0),
+    ligne_row(313, 270, 40, 0)
+  )
+  cfg <- foretaccess_config(cable = list(selection = list(
+    poids = list(surface = 1, supports = 1, longueur = 0, volume = 0, ipc = 0),
+    limites = list(surface_min = 0, supports_max = Inf, longueur_min = 0,
+      longueur_max = Inf, volume_min = 0, ipc_min = 0),
+    sens_prefere = 0, contribution_min = 0.6
+  )))
+  sel <- selectionner_lignes(cable_factice(lignes, cfg))
+  expect_s3_class(sel, "foretaccess_selection")
+})
+
+test_that("une ligne trop courte pour couvrir une cellule n'est pas retenue", {
+  # Longueur 1 m < pas d'echantillonnage du rayon : aucune cellule couverte,
+  # la ligne est ecartee par le glouton et la sortie sf est vide.
+  lignes <- ligne_row(313, 90, 1, 0.5)
+  cfg <- foretaccess_config(cable = list(selection = list(
+    poids = list(surface = 1, supports = 0, longueur = 0, volume = 0, ipc = 0),
+    limites = list(surface_min = 0, supports_max = Inf, longueur_min = 0,
+      longueur_max = Inf, volume_min = 0, ipc_min = 0),
+    sens_prefere = 0, contribution_min = 0.6
+  )))
+  sel <- selectionner_lignes(cable_factice(lignes, cfg))
+  expect_equal(nrow(sel$lignes), 0)
+  expect_s3_class(sel$lignes, "sf")
+})
+
 test_that("la methode print resume la selection", {
   lignes <- ligne_row(313, 90, 40, 0.5)
   sel <- selectionner_lignes(cable_factice(lignes))
