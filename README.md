@@ -15,7 +15,36 @@ testable du modèle **Sylvaccess** (INRAE — S. Dupire), sous forme de **packag
 **noyau câble en Rust** (via `extendr`), et des sorties en **base spatiale**
 (PostGIS / GeoPackage).
 
-## Architecture cible
+## Démarrage rapide
+
+```r
+library(foretaccess)
+
+toy <- system.file("extdata", "toy", package = "foretaccess")
+pre <- preprocess(
+  mnt      = file.path(toy, "mnt.tif"),
+  desserte = file.path(toy, "desserte.gpkg"),
+  foret    = file.path(toy, "foret.gpkg")
+)
+
+sk  <- skidder(pre)          # débusqueur
+po  <- porteur(pre)          # porteur
+df  <- camion_dfci(pre)      # zone défendable DFCI (beta)
+cab <- potentiel_cable(pre)  # lignes de câble faisables (noyau Rust)
+sel <- selectionner_lignes(cab)
+
+sk$recap                     # surfaces (ha) par classe d'accessibilité
+```
+
+Le pipeline complet — prétraitement, moteurs, câble, **agrégation zonale**
+(`agreger_zones()`) et **persistance** en base spatiale — est détaillé dans la
+vignette :
+
+```r
+vignette("foretaccess")
+```
+
+## Architecture
 
 ![Architecture ForêtAccess](docs/architecture.svg)
 
@@ -24,9 +53,11 @@ Détail des couches, périmètre et décisions : voir le **brief projet**
 
 ## Statut
 
-Amorçage. Le développement suit un workflow *spec-driven* / agile par lots
-(`specs/0XX-*.md` + ADR + tests de non-régression), piloté via Claude Code.
-La feuille de route est décrite dans le brief (§10 Lotissement).
+Développement *spec-driven* / agile par lots (`specs/0XX-*.md` + ADR + tests de
+non-régression). Les **Lots 0 à 8** sont livrés (prétraitement, moteurs skidder /
+porteur / câble Rust, sélection câble, camion DFCI beta, passage à l'échelle par
+tuilage, base spatiale & agrégation) ; la doc d'usage est en place (Lot 9). La
+feuille de route vit dans [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Stack
 

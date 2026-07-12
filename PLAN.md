@@ -6,33 +6,20 @@
 
 ## État courant
 
-- **Branche** : `specs/008-base-spatiale` (release du Lot 8 ; `release.yml` pose `v0.9.0` au
-  merge sur `main`, puis retour en cycle dev `0.9.0.9000`)
-- **Version `DESCRIPTION`** : `0.9.0` (release du Lot 8)
-- **Lots terminés récemment** :
-  - **Lot 6 — camion DFCI (beta)** (`v0.8.0`). `camion_dfci()` : zone défendable = tampon au
-    terrain (plus court chemin pondéré par la pente depuis les dessertes DFCI, plafonné à la
-    portée, coupé au-delà de la pente d'intervention). Réutilise `propager_cout()`, aucun
-    nouveau noyau. Config `dfci`. Tuilage certifié. 22 tests. Beta (limites documentées).
-  - **Lot 8 — base spatiale & agrégation** (`v0.9.0`). `agreger_zones()` : surfaces/volumes
-    par zone (massif/parcelle/commune) et par classe, sortie `sf` large persistable ;
-    propriété de partition (somme zonale = récap global). Index spatial **GiST** à l'écriture
-    PostGIS (R-tree auto en GPKG). Complète le socle `StorageBackend` du Lot 0. 25 tests
-    (+ index PostGIS, skippé sans base).
-- **Prochain lot** : **Lot 9 — doc & publication** (README, doc CLI, exemple bout en bout).
-  Reste aussi le **Lot 10** (acquisition depuis AOI, spec validée) et le placement
-  multi-supports du câble (Lot 4, `OptPyl_Up`, oracle réel).
-- **Derniers lots terminés** :
-  - **Lot 4 — noyau câble (Rust)**, 0 support (`v0.6.0`). **4a** (caténaire + Newton),
-    **4b** (faisabilité), **4c** (`find_lomin`, `test_span`), **4d** (`potentiel_cable()`).
-    10 bindings extendr, 16 tests cargo + ~45 tests R. Extensions différées (spec §11) :
-    placement multi-supports (`OptPyl_Up`, oracle réel), pêchage latéral, portage Rust.
-  - **Lot 5 — sélection multicritère des lignes câble** (`v0.7.0`, #25/#26). **5a**
-    (`potentiel_cable()` émet `$lignes`) + **5b** (`selectionner_lignes()`). 32 tests R,
-    `selection.R` à 100 %. Extensions différées : reproductibilité vs v3.6 (oracle réel),
-    VAM×10 et coût €/m³.
-- **Prochain lot** : **Lot 8 — base spatiale & agrégation** (persistance PostGIS/GeoPackage
-  des sorties, dont les lignes câble sélectionnées) ; ou **Lot 6 — DFCI** (post-MVP).
+- **Branche** : `specs/009-publication` (release du Lot 9 ; `release.yml` pose `v0.10.0` au
+  merge sur `main`, puis retour en cycle dev `0.10.0.9000`)
+- **Version `DESCRIPTION`** : `0.10.0` (release du Lot 9)
+- **Lots 0–9 livrés** : prétraitement, moteurs skidder / porteur, noyau câble (Rust) +
+  sélection, camion DFCI (beta), passage à l'échelle (tuilage), base spatiale & agrégation,
+  et **doc & publication** (Lot 9). Le périmètre **v1 fonctionnel** est atteint (Lots 0–5,
+  7–9 « faits » ; DFCI Lot 6 en beta).
+- **Lot 9 (doc & publication)** : vignette `foretaccess` (pipeline bout-en-bout **exécuté** sur
+  le jouet, < 2 s — documente et teste le pipeline), README à jour (démarrage rapide, statut),
+  index pkgdown groupé par thème/lot, `NEWS.md`. `specs/009-publication.md`.
+- **Prochain jalon possible** : **v1.0.0** — le périmètre v1 est atteint, mais c'est un **bump
+  majeur** (confirmation utilisateur requise, règle `CLAUDE.md`). Sinon : **Lot 10**
+  (acquisition depuis AOI, spec validée), et la dette câble (placement multi-supports
+  `OptPyl_Up`, pêchage latéral — oracle Sylvaccess réel requis).
 
 ## Avancement par lot
 
@@ -47,7 +34,7 @@
 | 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
-| 9 | Doc & publication | à écrire | ⬜ | — |
+| 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ⬜ spec validée | — |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
@@ -342,6 +329,16 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Lot 9 (doc & publication) implémenté et préparé en release `v0.10.0`.** Vignette
+  `vignettes/foretaccess.Rmd` : déroule le pipeline complet (config → prétraitement →
+  skidder/porteur → DFCI → câble potentiel/sélection → agrégation zonale → persistance GPKG)
+  sur le jouet, **exécutée** à la compilation (< 2 s), donc auto-vérifiante par `R CMD check`.
+  README refondu (démarrage rapide + statut réel des lots) ; `_pkgdown.yml` doté d'un index de
+  référence groupé (tous les exports) et de l'article ; `knitr`/`rmarkdown` en `Suggests` +
+  `VignetteBuilder`. `specs/009` fige les décisions (vignette exécutée, pas de CLI shell,
+  `NEWS.md` = changelog). **Périmètre v1 fonctionnel atteint** ; `v1.0.0` reste un bump majeur
+  soumis à confirmation. Releases `v0.8.0` (Lot 6) et `v0.9.0` (Lot 8) posées ; le Lot 9
+  enchaîne en `v0.10.0` sans cycle-dev intermédiaire.
 - **Lot 8 (base spatiale & agrégation) implémenté et préparé en release `v0.9.0`.**
   `agreger_zones(classes, zones, volume, id)` agrège n'importe quel raster catégoriel
   d'accessibilité (skidder, porteur, DFCI, couverture câble) en surfaces (ha) et volumes (m³)
