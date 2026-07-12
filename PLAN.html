@@ -45,7 +45,7 @@
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1.9000</code> (cycle dev ; dernière release <code>v0.5.1</code>, tag posé par <code>release.yml</code> au merge de la #17 sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12). <strong>4a</strong> (caténaire + Newton) et <strong>4b</strong> (faisabilité de travée) livrés : 8 bindings extendr, 11 tests cargo + 22 tests R. Suivant : 4c (optimisation des supports).</li>
+<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12). <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité de travée) et <strong>4c</strong> (primitives d’optimisation : <code>find_lomin</code>, <code>test_span</code>) livrés : 10 bindings extendr, 16 tests cargo + 35 tests R. Le placement multi-supports <code>OptPyl_Up</code> est différé (oracle réel requis). Suivant : 4d (balayage 360°/pixel + orchestration R + tuilage).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -319,6 +319,16 @@
 <strong>Incrément 4b implémenté</strong> (<code>src/rust/src/cable/faisabilite.rs</code>) : port de <code>check_droite</code> (pré-filtre corde − flèche) et <code>check_Hlinemin</code> (balayage de la charge sur toute la travée, Newton <em>chaud</em> sans repli amorcé de la position précédente, garde au sol <code>zcoord − (alts[ind] + hline_min)</code> dans <code>[hline_min, hline_max]</code>, tension ≤ <code>tmax + 1000</code>). Renvoie la garde minimale <code>Hmin_ok</code>, ou <code>-1</code> si infaisable. 2 bindings extendr (<code>cable_check_droite</code>, <code>cable_check_hlinemin</code>), supports omis (0) — ils viennent en 4c. Oracle : même <em>solution manufacturée</em> qu’en 4a (géométrie déduite de <code>(Tho, Tvo)</code> centrés), sol plat paramétré pour forcer faisable / trop haut / trop bas. 5 tests cargo + 7 tests R.</li>
 <li>
 <strong>Deux corrections CI de 4a</strong> (invisibles localement, pas de clippy sur le système) : <code>clippy::too_many_arguments</code> tu au niveau du crate (les 4 fonctions pures à 8 args), et <code>@param</code> manquants sur chaque binding exporté (<code>R CMD check --as-cran</code>, <code>error_on=warning</code>, exige un <code>\arguments</code> pour tout <code>\usage</code>). Règle : <strong>tout binding extendr exporté documente chaque argument avec <code>@param</code></strong>.</li>
+<li>
+<strong>Incrément 4c implémenté</strong> (<code>src/rust/src/cable/supports.rs</code>) : port de <code>Find_Lomin</code> (<code>find_lomin</code> : cherche le <code>Lo</code> minimal tel que la tension à charge centrée atteigne <code>Tmax</code>, par marche à pas variable sur <code>Lo</code> + Newton, puis garde au sol via <code>check_hlinemin</code>) et <code>test_Span</code> (<code>test_span</code> : segment — pré-filtre <code>check_droite</code>, pente dans <code>[slope_min, slope_max]</code>, contrainte d’angle <code>angle_intsup</code> au support vis-à-vis du segment précédent, puis <code>find_lomin</code>). 2 bindings extendr (<code>cable_find_lomin</code>, <code>cable_test_span</code>).
+<ul><li>
+<strong>Amorçage substitué aux tables <code>Tabmesh</code></strong> : <code>(Th,Tv) = (0,9·Tmax, 0,1·Tmax)</code> + <code>Lo = corde + réserve</code>, solveur interne robuste (Newton <strong>à repli sur grille</strong>, <code>newton_thtv</code>). Choix de performance, pas de correction (§10.9 du spec). Sans cela, la marche sur <code>Lo</code> pousse <code>Th</code> négatif près de la zone tendue.</li>
+<li>
+<strong><code>OptPyl_Up</code> (placement multi-supports) différé</strong> : non validable sans oracle Sylvaccess réel (§10.10). 4c livre les primitives validables.</li>
+<li>
+<strong>Fragilité au bord de tension</strong> relevée : au <code>Lo</code> minimal, la tension = <code>Tmax</code> matériel (~172 kN) rend le câble quasi tendu, et le Newton <em>chaud</em> du balayage (<code>check_hlinemin</code>, sans repli) devient fragile. Tests conduits à <code>Tmax</code> modéré (50 kN), bien conditionné ; le bord matériel est à traiter en 4d (Tabmesh porté ou solveur à repli dans le balayage).</li>
+<li>Oracle : solution manufacturée (résidus nuls, <code>Tcalc ≈ Tmax</code>, fermeture) + sol/pente paramétrés. 5 tests cargo + 6 tests R. Suite complète verte. Cycle dev, pas de release.</li>
+</ul></li>
 </ul></div>
 </div>
 </div>

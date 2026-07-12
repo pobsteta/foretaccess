@@ -42,6 +42,15 @@
   Equation verticale de la caténaire élastique `f_z(Th, Tv)`, nulle à la
   solution.
 
+- [`cable_find_lomin()`](https://pobsteta.github.io/foretaccess/reference/cable_find_lomin.md)
+  :
+
+  Cherche la longueur à vide minimale `Lo` telle que la tension du
+  câble, la charge au milieu, atteigne `tmax`, puis vérifie la garde au
+  sol sur toute la travée. Renvoie un vecteur
+  `c(faisable, Lo, Th, Tv, Tcalc, F)` ; `faisable` vaut 1 ou 0. Sans
+  supports intermédiaires (Lot 4c).
+
 - [`cable_find_thtv_tmax()`](https://pobsteta.github.io/foretaccess/reference/cable_find_thtv_tmax.md)
   :
 
@@ -55,6 +64,16 @@
   Résout `f_x = f_z = 0` (tensions `Th, Tv` au support haut) par
   Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un
   vecteur `c(Th, Tv)`.
+
+- [`cable_test_span()`](https://pobsteta.github.io/foretaccess/reference/cable_test_span.md)
+  :
+
+  Teste un segment de câble entre les points `pg` et `posi` du profil,
+  portant des supports de hauteurs `hg` et `hd` : pré-filtre, pente dans
+  `[slope_min, slope_max]`, contrainte d'angle au support intermédiaire
+  (`angle_intsup`) vis-à-vis du segment précédent (`slope_prev`, `-9999`
+  si aucun), puis `find_lomin`. Renvoie un vecteur
+  `c(faisable, D, H, diag, slope, fact, Xup, Zup, Lo, Th, Tv, Tcalc, F)`.
 
 - [`cablehelp_version()`](https://pobsteta.github.io/foretaccess/reference/cablehelp_version.md)
   :

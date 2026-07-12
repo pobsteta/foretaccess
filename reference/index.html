@@ -85,6 +85,13 @@
 
         <dt>
 
+          <code><a href="cable_find_lomin.html">cable_find_lomin()</a></code>
+
+        </dt>
+        <dd>Cherche la longueur à vide minimale <code>Lo</code> telle que la tension du câble, la charge au milieu, atteigne <code>tmax</code>, puis vérifie la garde au sol sur toute la travée. Renvoie un vecteur <code>c(faisable, Lo, Th, Tv, Tcalc, F)</code> ; <code>faisable</code> vaut 1 ou 0. Sans supports intermédiaires (Lot 4c).</dd>
+
+        <dt>
+
           <code><a href="cable_find_thtv_tmax.html">cable_find_thtv_tmax()</a></code>
 
         </dt>
@@ -96,6 +103,13 @@
 
         </dt>
         <dd>Résout <code>f_x = f_z = 0</code> (tensions <code>Th, Tv</code> au support haut) par Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur <code>c(Th, Tv)</code>.</dd>
+
+        <dt>
+
+          <code><a href="cable_test_span.html">cable_test_span()</a></code>
+
+        </dt>
+        <dd>Teste un segment de câble entre les points <code>pg</code> et <code>posi</code> du profil, portant des supports de hauteurs <code>hg</code> et <code>hd</code> : pré-filtre, pente dans <code>[slope_min, slope_max]</code>, contrainte d'angle au support intermédiaire (<code>angle_intsup</code>) vis-à-vis du segment précédent (<code>slope_prev</code>, <code>-9999</code> si aucun), puis <code>find_lomin</code>. Renvoie un vecteur <code>c(faisable, D, H, diag, slope, fact, Xup, Zup, Lo, Th, Tv, Tcalc, F)</code>.</dd>
 
         <dt>
 
