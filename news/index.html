@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -15,7 +15,8 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/foretaccess.html">Get started</a></li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,6 +33,25 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.10.0" id="foretaccess-0100-2026-07-12">foretaccess 0.10.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-0100-2026-07-12"></a></h2>
+<div class="section level3">
+<h3 id="lot--documentation--publication-0-10-0">Lot 9 — Documentation &amp; publication<a class="anchor" aria-label="anchor" href="#lot--documentation--publication-0-10-0"></a></h3>
+<p>Rend le paquet utilisable par un tiers (DoD produit). Clôt le périmètre v1 fonctionnel (Lots 0–5, 7–9 ; DFCI Lot 6 en beta).</p>
+<ul><li>
+<strong>Vignette <code>foretaccess</code></strong> : le <strong>pipeline complet</strong> de bout en bout sur le jeu jouet — prétraitement, moteurs skidder / porteur, camion DFCI, câble (potentiel
+<ul><li>sélection), agrégation zonale, persistance GeoPackage. <strong>Exécutée</strong> à la compilation : elle documente <em>et</em> teste le pipeline (<code><a href="../articles/foretaccess.html">vignette("foretaccess")</a></code>).</li>
+</ul></li>
+<li>
+<strong>README</strong> à jour : section <em>Démarrage rapide</em>, statut réel des lots, renvoi à la vignette et à la roadmap, attribution Sylvaccess (GPL v3) conservée.</li>
+<li>
+<strong>Site pkgdown</strong> : index de référence groupé par thème/lot + article, listant tous les exports.</li>
+<li>
+<code>DESCRIPTION</code> : <code>knitr</code> / <code>rmarkdown</code> en <code>Suggests</code>, <code>VignetteBuilder: knitr</code>.</li>
+<li>
+<code>specs/009-publication.md</code> fige les décisions (vignette exécutée, pas de CLI shell, <code>NEWS.md</code> tient lieu de changelog).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.0" id="foretaccess-090-2026-07-12">foretaccess 0.9.0 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-090-2026-07-12"></a></h2>
 <div class="section level3">

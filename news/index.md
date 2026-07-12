@@ -1,5 +1,28 @@
 # Changelog
 
+## foretaccess 0.10.0 (2026-07-12)
+
+### Lot 9 — Documentation & publication
+
+Rend le paquet utilisable par un tiers (DoD produit). Clôt le périmètre
+v1 fonctionnel (Lots 0–5, 7–9 ; DFCI Lot 6 en beta).
+
+- **Vignette `foretaccess`** : le **pipeline complet** de bout en bout
+  sur le jeu jouet — prétraitement, moteurs skidder / porteur, camion
+  DFCI, câble (potentiel
+  - sélection), agrégation zonale, persistance GeoPackage. **Exécutée**
+    à la compilation : elle documente *et* teste le pipeline
+    ([`vignette("foretaccess")`](https://pobsteta.github.io/foretaccess/articles/foretaccess.md)).
+- **README** à jour : section *Démarrage rapide*, statut réel des lots,
+  renvoi à la vignette et à la roadmap, attribution Sylvaccess (GPL v3)
+  conservée.
+- **Site pkgdown** : index de référence groupé par thème/lot + article,
+  listant tous les exports.
+- `DESCRIPTION` : `knitr` / `rmarkdown` en `Suggests`,
+  `VignetteBuilder: knitr`.
+- `specs/009-publication.md` fige les décisions (vignette exécutée, pas
+  de CLI shell, `NEWS.md` tient lieu de changelog).
+
 ## foretaccess 0.9.0 (2026-07-12)
 
 ### Lot 8 — Base spatiale & agrégation zonale

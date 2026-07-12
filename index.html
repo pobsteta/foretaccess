@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/foretaccess.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
@@ -53,7 +54,31 @@
 
 <p>Cartographie automatique de l’<strong>accessibilité des forêts</strong> selon le mode d’exploitation (skidder, porteur, câble-mât, camion DFCI). Réimplémentation moderne, découplée et testable du modèle <strong>Sylvaccess</strong> (INRAE — S. Dupire), sous forme de <strong>package R</strong> avec un <strong>noyau câble en Rust</strong> (via <code>extendr</code>), et des sorties en <strong>base spatiale</strong> (PostGIS / GeoPackage).</p>
 <div class="section level2">
-<h2 id="architecture-cible">Architecture cible<a class="anchor" aria-label="anchor" href="#architecture-cible"></a>
+<h2 id="démarrage-rapide">Démarrage rapide<a class="anchor" aria-label="anchor" href="#d%C3%A9marrage-rapide"></a>
+</h2>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/pobsteta/foretaccess" class="external-link">foretaccess</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">toy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"toy"</span>, package <span class="op">=</span> <span class="st">"foretaccess"</span><span class="op">)</span></span>
+<span><span class="va">pre</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/preprocess.html">preprocess</a></span><span class="op">(</span></span>
+<span>  mnt      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"mnt.tif"</span><span class="op">)</span>,</span>
+<span>  desserte <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"desserte.gpkg"</span><span class="op">)</span>,</span>
+<span>  foret    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"foret.gpkg"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">sk</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/skidder.html">skidder</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span>          <span class="co"># débusqueur</span></span>
+<span><span class="va">po</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/porteur.html">porteur</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span>          <span class="co"># porteur</span></span>
+<span><span class="va">df</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/camion_dfci.html">camion_dfci</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span>      <span class="co"># zone défendable DFCI (beta)</span></span>
+<span><span class="va">cab</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/potentiel_cable.html">potentiel_cable</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span>  <span class="co"># lignes de câble faisables (noyau Rust)</span></span>
+<span><span class="va">sel</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/selectionner_lignes.html">selectionner_lignes</a></span><span class="op">(</span><span class="va">cab</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">sk</span><span class="op">$</span><span class="va">recap</span>                     <span class="co"># surfaces (ha) par classe d'accessibilité</span></span></code></pre></div>
+<p>Le pipeline complet — prétraitement, moteurs, câble, <strong>agrégation zonale</strong> (<code><a href="reference/agreger_zones.html">agreger_zones()</a></code>) et <strong>persistance</strong> en base spatiale — est détaillé dans la vignette :</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"foretaccess"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a>
 </h2>
 <div class="float">
 <img src="docs/architecture.svg" alt="Architecture ForêtAccess"><div class="figcaption">Architecture ForêtAccess</div>
@@ -63,7 +88,7 @@
 <div class="section level2">
 <h2 id="statut">Statut<a class="anchor" aria-label="anchor" href="#statut"></a>
 </h2>
-<p>Amorçage. Le développement suit un workflow <em>spec-driven</em> / agile par lots (<code>specs/0XX-*.md</code> + ADR + tests de non-régression), piloté via Claude Code. La feuille de route est décrite dans le brief (§10 Lotissement).</p>
+<p>Développement <em>spec-driven</em> / agile par lots (<code>specs/0XX-*.md</code> + ADR + tests de non-régression). Les <strong>Lots 0 à 8</strong> sont livrés (prétraitement, moteurs skidder / porteur / câble Rust, sélection câble, camion DFCI beta, passage à l’échelle par tuilage, base spatiale &amp; agrégation) ; la doc d’usage est en place (Lot 9). La feuille de route vit dans <a href="docs/ROADMAP.html"><code>docs/ROADMAP.md</code></a>.</p>
 </div>
 <div class="section level2">
 <h2 id="stack">Stack<a class="anchor" aria-label="anchor" href="#stack"></a>

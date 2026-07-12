@@ -1,9 +1,80 @@
 # Package index
 
-## All functions
+## Configuration
 
-- [`agreger_zones()`](https://pobsteta.github.io/foretaccess/reference/agreger_zones.md)
-  : Agrégation zonale des surfaces et volumes (Lot 8)
+Paramètres métier (défauts Sylvaccess v3.6), validés au chargement.
+
+- [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)
+  : Configuration métier de ForêtAccess (défauts Sylvaccess v3.6)
+- [`validate_config()`](https://pobsteta.github.io/foretaccess/reference/validate_config.md)
+  : Valide un objet de configuration ForêtAccess
+- [`read_config()`](https://pobsteta.github.io/foretaccess/reference/read_config.md)
+  : Lit une configuration depuis un fichier YAML
+- [`write_config()`](https://pobsteta.github.io/foretaccess/reference/write_config.md)
+  : Écrit une configuration au format YAML
+
+## Prétraitement (Lot 1)
+
+Chargement, validation, alignement, pente/exposition, rasterisation.
+
+- [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  : Prétraitement commun aux moteurs d'accessibilité
+- [`valider_entrees()`](https://pobsteta.github.io/foretaccess/reference/valider_entrees.md)
+  : Validation des entrées du prétraitement
+- [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
+  : Pente et exposition depuis un MNT
+- [`lire_rasters()`](https://pobsteta.github.io/foretaccess/reference/lire_rasters.md)
+  : Relit un prétraitement écrit sur disque
+
+## Moteurs terrestres (Lots 2-3, 6)
+
+Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
+
+- [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
+  : Moteur d'accessibilité skidder (débusqueur)
+- [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
+  : Moteur d'accessibilité porteur (forwarder)
+- [`camion_dfci()`](https://pobsteta.github.io/foretaccess/reference/camion_dfci.md)
+  : Moteur camion DFCI — zone défendable (beta)
+- [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md)
+  : Balayage radial de conduite du porteur
+- [`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)
+  : Distance de treuillage depuis la desserte (balayage radial)
+- [`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md)
+  : Surface de coût du skidder (pondération de pente)
+- [`ponderation_pente()`](https://pobsteta.github.io/foretaccess/reference/ponderation_pente.md)
+  : Pondération de pente (facteur d'allongement 3D)
+- [`zone_roulage()`](https://pobsteta.github.io/foretaccess/reference/zone_roulage.md)
+  : Zone de roulage du skidder
+- [`terrain_roulable()`](https://pobsteta.github.io/foretaccess/reference/terrain_roulable.md)
+  : Terrain roulable, indépendamment de la forêt
+- [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
+  : Zone effectivement roulable, connectée à la desserte
+- [`zone_treuillable()`](https://pobsteta.github.io/foretaccess/reference/zone_treuillable.md)
+  : Zone treuillable
+- [`coefficients_bascule()`](https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.md)
+  : Coefficients de la loi de bascule
+- [`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)
+  : Distance maximale de treuillage admissible
+
+## Plus court chemin (service partagé)
+
+Propagation de coût mutualisée entre moteurs.
+
+- [`propager_cout()`](https://pobsteta.github.io/foretaccess/reference/propager_cout.md)
+  : Propagation de coût cumulé depuis des sources (service partagé)
+- [`chemin_optimal()`](https://pobsteta.github.io/foretaccess/reference/chemin_optimal.md)
+  : Trajet optimal d'une cellule vers sa source
+
+## Volet câble (Lots 4-5)
+
+Potentiel de lignes (noyau Rust) et sélection multicritère.
+
+- [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+  : Potentiel d'accessibilite par cable-mat (Lot 4d)
+
+- [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
+  : Selection multicritere des lignes cable (Lot 5)
 
 - [`cable_calcul_xs()`](https://pobsteta.github.io/foretaccess/reference/cable_calcul_xs.md)
   :
@@ -83,119 +154,45 @@
 
   Version de la crate Rust `cablehelp` (noyau câble).
 
-- [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
-  : Pente et exposition depuis un MNT
+## Passage à l’échelle (Lot 7)
 
-- [`camion_dfci()`](https://pobsteta.github.io/foretaccess/reference/camion_dfci.md)
-  : Moteur camion DFCI — zone défendable (beta)
-
-- [`certifier_propagation()`](https://pobsteta.github.io/foretaccess/reference/certifier_propagation.md)
-  : Certificat d'exactitude d'une propagation sur une fenêtre
-
-- [`chemin_optimal()`](https://pobsteta.github.io/foretaccess/reference/chemin_optimal.md)
-  : Trajet optimal d'une cellule vers sa source
-
-- [`coefficients_bascule()`](https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.md)
-  : Coefficients de la loi de bascule
-
-- [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
-  : Compare une sortie à un oracle de non-régression
-
-- [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md)
-  : Balayage radial de conduite du porteur
-
-- [`decouper_emprise()`](https://pobsteta.github.io/foretaccess/reference/decouper_emprise.md)
-  : Découper une emprise en tuiles avec halo
-
-- [`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)
-  : Distance maximale de treuillage admissible
-
-- [`fenetre_tuile()`](https://pobsteta.github.io/foretaccess/reference/fenetre_tuile.md)
-  : Emprise d'une tuile
-
-- [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)
-  : Configuration métier de ForêtAccess (défauts Sylvaccess v3.6)
-
-- [`lire_rasters()`](https://pobsteta.github.io/foretaccess/reference/lire_rasters.md)
-  : Relit un prétraitement écrit sur disque
-
-- [`ponderation_pente()`](https://pobsteta.github.io/foretaccess/reference/ponderation_pente.md)
-  : Pondération de pente (facteur d'allongement 3D)
-
-- [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
-  : Moteur d'accessibilité porteur (forwarder)
-
-- [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
-  : Potentiel d'accessibilite par cable-mat (Lot 4d)
-
-- [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
-  : Prétraitement commun aux moteurs d'accessibilité
-
-- [`propager_cout()`](https://pobsteta.github.io/foretaccess/reference/propager_cout.md)
-  : Propagation de coût cumulé depuis des sources (service partagé)
-
-- [`read_config()`](https://pobsteta.github.io/foretaccess/reference/read_config.md)
-  : Lit une configuration depuis un fichier YAML
-
-- [`recapituler()`](https://pobsteta.github.io/foretaccess/reference/recapituler.md)
-  : Tableau récapitulatif surfaces / volumes par classe
-
-- [`sb_ensure_schema()`](https://pobsteta.github.io/foretaccess/reference/sb_ensure_schema.md)
-  : Crée le schéma PostgreSQL du backend s'il n'existe pas
-
-- [`sb_list_layers()`](https://pobsteta.github.io/foretaccess/reference/sb_list_layers.md)
-  : Liste les couches disponibles
-
-- [`sb_read_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_read_layer.md)
-  : Relit une couche vectorielle
-
-- [`sb_write_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.md)
-  : Écrit une couche vectorielle
-
-- [`sb_write_layer(`*`<foretaccess_storage_postgis>`*`)`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.foretaccess_storage_postgis.md)
-  : Écrit une couche en PostGIS (idempotent, index spatial)
-
-- [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
-  : Selection multicritere des lignes cable (Lot 5)
-
-- [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
-  : Moteur d'accessibilité skidder (débusqueur)
-
-- [`storage`](https://pobsteta.github.io/foretaccess/reference/storage.md)
-  : Interface de stockage vectoriel (StorageBackend)
-
-- [`storage_gpkg()`](https://pobsteta.github.io/foretaccess/reference/storage_gpkg.md)
-  : Backend de stockage GeoPackage
-
-- [`storage_postgis()`](https://pobsteta.github.io/foretaccess/reference/storage_postgis.md)
-  : Backend de stockage PostGIS
-
-- [`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md)
-  : Surface de coût du skidder (pondération de pente)
-
-- [`terrain_roulable()`](https://pobsteta.github.io/foretaccess/reference/terrain_roulable.md)
-  : Terrain roulable, indépendamment de la forêt
+Tuilage, halo certifié, découpe d’emprise.
 
 - [`traiter_par_tuiles()`](https://pobsteta.github.io/foretaccess/reference/traiter_par_tuiles.md)
   : Traiter une emprise par tuiles
+- [`certifier_propagation()`](https://pobsteta.github.io/foretaccess/reference/certifier_propagation.md)
+  : Certificat d'exactitude d'une propagation sur une fenêtre
+- [`decouper_emprise()`](https://pobsteta.github.io/foretaccess/reference/decouper_emprise.md)
+  : Découper une emprise en tuiles avec halo
+- [`fenetre_tuile()`](https://pobsteta.github.io/foretaccess/reference/fenetre_tuile.md)
+  : Emprise d'une tuile
 
-- [`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)
-  : Distance de treuillage depuis la desserte (balayage radial)
+## Base spatiale & agrégation (Lot 8)
 
-- [`validate_config()`](https://pobsteta.github.io/foretaccess/reference/validate_config.md)
-  : Valide un objet de configuration ForêtAccess
+Agrégation zonale et stockage vectoriel (PostGIS / GeoPackage).
 
-- [`valider_entrees()`](https://pobsteta.github.io/foretaccess/reference/valider_entrees.md)
-  : Validation des entrées du prétraitement
+- [`agreger_zones()`](https://pobsteta.github.io/foretaccess/reference/agreger_zones.md)
+  : Agrégation zonale des surfaces et volumes (Lot 8)
+- [`recapituler()`](https://pobsteta.github.io/foretaccess/reference/recapituler.md)
+  : Tableau récapitulatif surfaces / volumes par classe
+- [`storage`](https://pobsteta.github.io/foretaccess/reference/storage.md)
+  : Interface de stockage vectoriel (StorageBackend)
+- [`storage_gpkg()`](https://pobsteta.github.io/foretaccess/reference/storage_gpkg.md)
+  : Backend de stockage GeoPackage
+- [`storage_postgis()`](https://pobsteta.github.io/foretaccess/reference/storage_postgis.md)
+  : Backend de stockage PostGIS
+- [`sb_write_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.md)
+  : Écrit une couche vectorielle
+- [`sb_write_layer(`*`<foretaccess_storage_postgis>`*`)`](https://pobsteta.github.io/foretaccess/reference/sb_write_layer.foretaccess_storage_postgis.md)
+  : Écrit une couche en PostGIS (idempotent, index spatial)
+- [`sb_read_layer()`](https://pobsteta.github.io/foretaccess/reference/sb_read_layer.md)
+  : Relit une couche vectorielle
+- [`sb_list_layers()`](https://pobsteta.github.io/foretaccess/reference/sb_list_layers.md)
+  : Liste les couches disponibles
+- [`sb_ensure_schema()`](https://pobsteta.github.io/foretaccess/reference/sb_ensure_schema.md)
+  : Crée le schéma PostgreSQL du backend s'il n'existe pas
 
-- [`write_config()`](https://pobsteta.github.io/foretaccess/reference/write_config.md)
-  : Écrit une configuration au format YAML
+## Non-régression
 
-- [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
-  : Zone effectivement roulable, connectée à la desserte
-
-- [`zone_roulage()`](https://pobsteta.github.io/foretaccess/reference/zone_roulage.md)
-  : Zone de roulage du skidder
-
-- [`zone_treuillable()`](https://pobsteta.github.io/foretaccess/reference/zone_treuillable.md)
-  : Zone treuillable
+- [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
+  : Compare une sortie à un oracle de non-régression
