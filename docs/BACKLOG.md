@@ -160,9 +160,9 @@ Couvre EF-7.
 ## EPIC 6 — Camion DFCI (beta) *(Lot 6, post-MVP)*
 Couvre EF-8.
 
-### US-6.1 — Zone défendable
+### US-6.1 — Zone défendable ✅ (`v0.8.0`)
 *…je veux* cartographier la zone défendable depuis les dessertes DFCI.
-- **CA1** : sortie **beta** documentée (limites explicites) et testée sur une zone échantillon.
+- **CA1** : sortie **beta** documentée (limites explicites) et testée sur une zone échantillon. ✅
 
 ---
 

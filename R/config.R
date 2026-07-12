@@ -9,6 +9,7 @@
 #' @param porteur Liste des paramètres porteur (voir *Détails*).
 #' @param cable Liste des paramètres câble. Le **schéma** est posé dès le Lot 0 ;
 #'   les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).
+#' @param dfci Liste des paramètres du camion DFCI (beta, Lot 6 ; voir *Détails*).
 #' @param general Liste des paramètres généraux (résolution, CRS, méthode de
 #'   calcul de la pente).
 #'
@@ -22,6 +23,11 @@
 #' pente descente max 25 %, portée de grue 8 m, distance en pente forte 300 m,
 #' distance hors desserte 200 m, pente abattage max 100 %.
 #'
+#' Défauts **DFCI** (beta) : portée de défense 100 m, pente d'intervention max
+#' 40 %, dessertes-source `"dfci"`. Ce sont des hypothèses de travail, non des
+#' valeurs Sylvaccess : le module DFCI est une sortie **beta** (voir
+#' `specs/006-dfci.md`).
+#'
 #' @return Un objet de classe `foretaccess_config` (liste structurée), validé.
 #' @export
 #' @examples
@@ -30,6 +36,7 @@
 foretaccess_config <- function(skidder = list(),
                                porteur = list(),
                                cable = list(),
+                               dfci = list(),
                                general = list()) {
   defaults <- .foretaccess_defaults()
 
@@ -37,6 +44,7 @@ foretaccess_config <- function(skidder = list(),
     skidder = utils::modifyList(defaults$skidder, skidder),
     porteur = utils::modifyList(defaults$porteur, porteur),
     cable   = utils::modifyList(defaults$cable, cable),
+    dfci    = utils::modifyList(defaults$dfci, dfci),
     general = utils::modifyList(defaults$general, general)
   )
   class(cfg) <- "foretaccess_config"
@@ -116,6 +124,20 @@ foretaccess_config <- function(skidder = list(),
         sens_prefere = 0,
         contribution_min = 0.6
       )
+    ),
+    # Camion DFCI (beta, Lot 6, EF-8). Modele volontairement simple : zone
+    # defendable = tampon au terrain (plus court chemin pondere par la pente,
+    # comme le skidder) depuis les dessertes DFCI, plafonne a la portee de
+    # defense et coupe au-dela d'une pente d'intervention. Limites documentees
+    # dans specs/006 : ni modele de combustible, ni vent, ni physique de lance.
+    dfci = list(
+      # Portee laterale de defense depuis une desserte carrossable (m).
+      distance_defense_max_m = 100,
+      # Pente au-dela de laquelle le terrain est repute non defendable (%).
+      pente_defense_max_pct  = 40,
+      # Classes de desserte servant de base au camion (sous-ensemble de
+      # route / piste / dfci). Defaut : les seules dessertes DFCI.
+      classes_source         = "dfci"
     ),
     general = list(
       resolution_m  = 5,
@@ -204,6 +226,11 @@ validate_config <- function(cfg) {
     ))
   }
 
+  df <- cfg$dfci
+  checkmate::assert_number(df$distance_defense_max_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(df$pente_defense_max_pct, lower = 0)
+  checkmate::assert_subset(df$classes_source, .classes_desserte(), empty.ok = FALSE)
+
   ge <- cfg$general
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)
   checkmate::assert_int(ge$crs_epsg, na.ok = TRUE)
@@ -238,6 +265,7 @@ read_config <- function(path) {
     skidder = raw$skidder %||% list(),
     porteur = raw$porteur %||% list(),
     cable   = raw$cable %||% list(),
+    dfci    = raw$dfci %||% list(),
     general = raw$general %||% list()
   )
 }
