@@ -1,3 +1,9 @@
+// Les fonctions de la mecanique cable portent la signature des equations
+// physiques (Th, Tv, Lo, EAo, W, F, s1, ...) : leur nombre d'arguments reflete
+// le modele et non un defaut de conception. On tait donc `too_many_arguments`
+// pour tout le crate.
+#![allow(clippy::too_many_arguments)]
+
 use extendr_api::prelude::*;
 
 mod cable;
