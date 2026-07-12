@@ -103,7 +103,19 @@ foretaccess_config <- function(skidder = list(),
       # garde au sol sont les vraies contraintes. Raffinement (pente min de
       # descente par gravite pour chariot classique) : travail futur.
       pente_min_rad = -1.4,
-      pente_max_rad = 1.4
+      pente_max_rad = 1.4,
+      # Selection multicritere des lignes (Lot 5, EF-7). Poids par critere (0 =
+      # ignore) ; limites min/max ; sens prefere (0 aucun, 1 aval, -1 amont) ;
+      # contribution minimale de surface nouvelle pour retenir une ligne.
+      selection = list(
+        poids = list(surface = 1, supports = 0, longueur = 0, volume = 0, ipc = 0),
+        limites = list(
+          surface_min = 0, supports_max = Inf, longueur_min = 0,
+          longueur_max = Inf, volume_min = 0, ipc_min = 0
+        ),
+        sens_prefere = 0,
+        contribution_min = 0.6
+      )
     ),
     general = list(
       resolution_m  = 5,

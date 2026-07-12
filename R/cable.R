@@ -22,7 +22,10 @@
 #' @return Un objet de classe `foretaccess_cable` : `accessibilite` (raster de
 #'   classes : accessible_cable / non_accessible / hors_foret), `longueur_ligne`
 #'   (m, meilleure ligne couvrant la cellule), `azimut_ligne` (deg),
-#'   `nb_supports` (0 dans ce lot), `recap`, `grid`, `config`, `fichiers`.
+#'   `nb_supports` (0 dans ce lot), `lignes` (data.frame des lignes candidates :
+#'   `depart`, `azimut`, `longueur_m`, `surface_ha`, `sens`, `supports`,
+#'   `volume_m3`, `ipc` -- une par (depart, azimut) faisable, pour la selection
+#'   du Lot 5), `recap`, `grid`, `config`, `fichiers`.
 #' @export
 potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL, bord = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
@@ -45,7 +48,19 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
   longueur <- rep(0, n)
   azimut <- rep(NA_real_, n)
 
+  # Table des lignes candidates (une par (depart, azimut) faisable). Pre-allouee.
+  aire_cell <- res * res
+  vol <- if (!is.null(pre$volume)) as.numeric(terra::values(pre$volume)) else NULL
   rayons <- .rayons(res, ct$lmax)
+  nmax <- length(routes) * length(rayons)
+  li_dep <- integer(nmax)
+  li_az <- numeric(nmax)
+  li_lg <- numeric(nmax)
+  li_surf <- numeric(nmax)
+  li_sens <- integer(nmax)
+  li_vol <- numeric(nmax)
+  li_ipc <- numeric(nmax)
+  k <- 0L
 
   for (dep in routes) {
     dl0 <- (dep - 1L) %/% nc + 1L
@@ -53,14 +68,47 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
     for (az in seq_along(rayons)) {
       ligne <- .ligne_cable(rayons[[az]], dl0, dc0, dep, alt, nr, nc, ct, res)
       if (is.null(ligne)) next
-      couv <- ligne$cel[ligne$hdist <= ligne$longueur]
+      garde <- ligne$hdist <= ligne$longueur
+      couv <- ligne$cel[garde]
       if (!length(couv)) next
       couvert[couv] <- TRUE
       idx <- couv[ligne$longueur > longueur[couv]]
       longueur[idx] <- ligne$longueur
       azimut[idx] <- az - 1L
+
+      # Ligne candidate : surface forestiere couverte, sens, volume, IPC.
+      cf <- couv[foret[couv]]
+      if (!length(cf)) next
+      far <- couv[which.max(ligne$hdist[garde])]
+      k <- k + 1L
+      li_dep[k] <- dep
+      li_az[k] <- az - 1L
+      li_lg[k] <- ligne$longueur
+      li_surf[k] <- length(cf) * aire_cell / 10000
+      # Sens de debardage : +1 aval (extremite plus haute -> descente par gravite),
+      # -1 amont (extremite plus basse). Le bois est vidange vers la desserte.
+      li_sens[k] <- as.integer(sign(alt[far] - alt[dep]))
+      if (!is.null(vol)) {
+        v <- sum(vol[cf], na.rm = TRUE) * aire_cell / 10000
+        li_vol[k] <- v
+        li_ipc[k] <- v / ligne$longueur # IPC = volume / longueur (m3/ml)
+      } else {
+        li_vol[k] <- NA_real_
+        li_ipc[k] <- NA_real_
+      }
     }
   }
+
+  lignes <- data.frame(
+    depart     = li_dep[seq_len(k)],
+    azimut     = li_az[seq_len(k)],
+    longueur_m = li_lg[seq_len(k)],
+    surface_ha = li_surf[seq_len(k)],
+    sens       = li_sens[seq_len(k)],
+    supports   = rep(0L, k),
+    volume_m3  = li_vol[seq_len(k)],
+    ipc        = li_ipc[seq_len(k)]
+  )
 
   accessible <- couvert & foret
   codes <- rep(3L, n) # non_accessible
@@ -87,6 +135,7 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
       longueur_ligne = faire(longueur, "longueur_ligne"),
       azimut_ligne   = faire(azimut, "azimut_ligne"),
       nb_supports    = faire(ifelse(accessible, 0L, NA_integer_), "nb_supports"),
+      lignes         = lignes,
       recap          = recapituler(acc, pre$volume),
       grid           = pre$grid,
       config         = config,
