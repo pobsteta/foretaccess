@@ -1,0 +1,150 @@
+---
+title: "ForêtAccess de bout en bout"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ForêtAccess de bout en bout}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 5)
+```
+
+ForêtAccess cartographie l'**accessibilité des forêts** selon le mode
+d'exploitation. Cette vignette déroule le **pipeline complet** sur le jeu de
+données jouet livré avec le paquet : prétraitement, moteurs terrestres (skidder,
+porteur), camion DFCI, volet câble (potentiel + sélection), agrégation zonale et
+persistance en base spatiale. L'exemple est **reproductible** : tout le code
+ci-dessous s'exécute tel quel.
+
+```{r setup}
+library(foretaccess)
+```
+
+## Le jeu de données jouet
+
+Le paquet embarque un petit territoire synthétique sous `inst/extdata/toy/` : un
+modèle numérique de terrain (`mnt.tif`), une desserte classée
+(route / piste / DFCI, `desserte.gpkg`) et un masque de forêt (`foret.gpkg`).
+
+```{r toy}
+toy <- system.file("extdata", "toy", package = "foretaccess")
+list.files(toy)
+```
+
+## Configuration
+
+Tous les paramètres métier vivent dans un objet de configuration validé, dont les
+**défauts sont ceux de Sylvaccess v3.6**. On peut surcharger n'importe quelle clé.
+
+```{r config}
+config <- foretaccess_config()
+config$skidder$pente_skidder_max_pct
+config$dfci$distance_defense_max_m
+```
+
+## Prétraitement
+
+`preprocess()` aligne les entrées sur une grille commune, calcule pente et
+exposition, et rasterise desserte et forêt. Le résultat alimente tous les moteurs.
+
+```{r preprocess}
+pre <- preprocess(
+  mnt      = file.path(toy, "mnt.tif"),
+  desserte = file.path(toy, "desserte.gpkg"),
+  foret    = file.path(toy, "foret.gpkg")
+)
+pre
+```
+
+## Moteurs terrestres
+
+Le **skidder** (débusqueur) combine traînage (plus court chemin) et treuillage
+(balayage radial). Le **porteur** (forwarder) conduit puis grappille. Chaque moteur
+renvoie un raster catégoriel d'accessibilité et un récapitulatif de surfaces.
+
+```{r terrestres}
+sk <- skidder(pre)
+sk$recap[, c("classe", "surface_ha")]
+
+po <- porteur(pre)
+po$recap[, c("classe", "surface_ha")]
+```
+
+## Camion DFCI (beta)
+
+`camion_dfci()` cartographie la **zone défendable** contre l'incendie depuis les
+dessertes DFCI : un tampon au terrain plafonné à la portée de défense. Sortie
+**beta** (voir `?camion_dfci` pour les limites).
+
+```{r dfci}
+df <- camion_dfci(pre)
+df$recap[, c("classe", "surface_ha")]
+```
+
+## Volet câble
+
+Le balayage 360°/pixel produit l'ensemble des **lignes de câble faisables** (noyau
+mécanique en Rust). `selectionner_lignes()` en retient un sous-ensemble non
+redondant maximisant la couverture.
+
+```{r cable}
+cab <- potentiel_cable(pre)
+nrow(cab$lignes)          # lignes candidates
+
+sel <- selectionner_lignes(cab)
+nrow(sel$lignes)          # lignes retenues
+```
+
+## Agrégation zonale
+
+`agreger_zones()` agrège n'importe quel raster d'accessibilité en surfaces (et
+volumes, si fournis) **par zone** — massif, parcelle, commune — et par classe.
+
+```{r agregation}
+# Deux zones : moitie ouest / moitie est de l'emprise.
+e <- terra::ext(pre$mnt)
+xm <- (e[1] + e[2]) / 2
+crs <- terra::crs(pre$mnt)
+za <- sf::st_as_sf(terra::as.polygons(terra::ext(e[1], xm, e[3], e[4]), crs = crs))
+zb <- sf::st_as_sf(terra::as.polygons(terra::ext(xm, e[2], e[3], e[4]), crs = crs))
+zones <- rbind(za, zb)
+zones$nom <- c("ouest", "est")
+
+agg <- agreger_zones(sk$accessibilite, zones[, "nom"], id = "nom")
+sf::st_drop_geometry(agg)
+```
+
+## Persistance en base spatiale
+
+Les sorties vectorielles s'écrivent derrière une interface commune, avec deux
+backends interchangeables : **GeoPackage** et **PostGIS**. L'écriture est
+idempotente ; côté PostGIS, un index spatial GiST est créé automatiquement.
+
+```{r storage}
+gpkg <- tempfile(fileext = ".gpkg")
+sb <- storage_gpkg(gpkg)
+sb_write_layer(sb, "lignes_cable", sel$lignes)
+sb_write_layer(sb, "agregation_massif", agg)
+sb_list_layers(sb)
+```
+
+Pour PostGIS, on remplace le backend sans changer le reste :
+
+```{r postgis, eval = FALSE}
+conn <- DBI::dbConnect(RPostgres::Postgres(), dbname = "foretaccess")
+sb <- storage_postgis(conn, schema = "run_2026")  # un schema par run/massif
+sb_write_layer(sb, "agregation_massif", agg)       # + index GiST
+```
+
+## Passage à l'échelle
+
+Sur un massif réel, `traiter_par_tuiles()` découpe le territoire en tuiles traitées
+en parallèle, avec un halo certifié garantissant un résultat **identique** au
+traitement mono-bloc. Les rasters de sortie s'écrivent en GeoTIFF/COG.
+
+## Attribution
+
+ForêtAccess est un travail dérivé de **Sylvaccess** (INRAE, S. Dupire), distribué
+sous **GPL v3**. Merci de citer Sylvaccess (voir le `README` et `CITATION.cff`).

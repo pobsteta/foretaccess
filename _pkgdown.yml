@@ -8,3 +8,76 @@ template:
 # La documentation projet (PRD, ROADMAP, ADR, brief) vit dans docs/ et n'est PAS
 # la sortie pkgdown : le site est construit dans pkgdown_site/ puis déployé sur la
 # branche gh-pages (cf. .github/workflows/pkgdown.yaml).
+
+articles:
+- title: Guides
+  navbar: ~
+  contents:
+  - foretaccess
+
+reference:
+- title: Configuration
+  desc: Paramètres métier (défauts Sylvaccess v3.6), validés au chargement.
+  contents:
+  - foretaccess_config
+  - validate_config
+  - read_config
+  - write_config
+- title: Prétraitement (Lot 1)
+  desc: Chargement, validation, alignement, pente/exposition, rasterisation.
+  contents:
+  - preprocess
+  - valider_entrees
+  - calculer_terrain
+  - lire_rasters
+- title: Moteurs terrestres (Lots 2-3, 6)
+  desc: Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
+  contents:
+  - skidder
+  - porteur
+  - camion_dfci
+  - conduire
+  - treuiller
+  - surface_cout_skidder
+  - ponderation_pente
+  - zone_roulage
+  - terrain_roulable
+  - zone_roulable_connectee
+  - zone_treuillable
+  - coefficients_bascule
+  - distance_treuillage_max
+- title: Plus court chemin (service partagé)
+  desc: Propagation de coût mutualisée entre moteurs.
+  contents:
+  - propager_cout
+  - chemin_optimal
+- title: Volet câble (Lots 4-5)
+  desc: Potentiel de lignes (noyau Rust) et sélection multicritère.
+  contents:
+  - potentiel_cable
+  - selectionner_lignes
+  - starts_with("cable_")
+  - cablehelp_version
+- title: Passage à l'échelle (Lot 7)
+  desc: Tuilage, halo certifié, découpe d'emprise.
+  contents:
+  - traiter_par_tuiles
+  - certifier_propagation
+  - decouper_emprise
+  - fenetre_tuile
+- title: Base spatiale & agrégation (Lot 8)
+  desc: Agrégation zonale et stockage vectoriel (PostGIS / GeoPackage).
+  contents:
+  - agreger_zones
+  - recapituler
+  - storage
+  - storage_gpkg
+  - storage_postgis
+  - sb_write_layer
+  - sb_write_layer.foretaccess_storage_postgis
+  - sb_read_layer
+  - sb_list_layers
+  - sb_ensure_schema
+- title: Non-régression
+  contents:
+  - compare_to_oracle

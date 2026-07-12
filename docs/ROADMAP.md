@@ -99,11 +99,11 @@ l'écriture PostGIS (R-tree auto en GPKG) —, et **agrégation zonale** `agrege
 **Critères de sortie** : écriture idempotente ; index spatiaux ; agrégation validée
 (partition = récap global). **Fait.**
 
-### Lot 9 — Doc & publication
-**Livrables** : README, doc d'usage (CLI `Rscript`), exemples, `NEWS.md`/`CHANGELOG`,
-packaging. `specs/009`.
+### Lot 9 — Doc & publication ✅ `v0.10.0`
+**Livrables** : vignette `foretaccess` (pipeline bout-en-bout, exécutée), README à jour,
+index pkgdown groupé, `NEWS.md`. `specs/009`.
 **Critères de sortie** : doc à jour ; exemple reproductible de bout en bout ; version taguée
-(via `release.yml`, cf. `CLAUDE.md`).
+(via `release.yml`). **Fait.**
 
 ---
 

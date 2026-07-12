@@ -196,12 +196,13 @@ Couvre EF-9, EF-12.
 ## EPIC 9 — Doc & publication *(Lot 9)*
 Couvre la DoD produit.
 
-### US-9.1 — Documentation d'usage + exemple de bout en bout
-- **CA1** : README + doc CLI à jour ; **exemple reproductible** de bout en bout sur le jeu jouet.
+### US-9.1 — Documentation d'usage + exemple de bout en bout ✅ (`v0.10.0`)
+- **CA1** : README + doc d'usage à jour ; **exemple reproductible** de bout en bout sur le jeu
+  jouet (vignette `foretaccess`, exécutée à la compilation). ✅
 
-### US-9.2 — Packaging & release
-- **CA1** : `NEWS.md`/`CHANGELOG` à jour ; version taguée (via `release.yml`, cf. `CLAUDE.md`) ;
-  attribution Sylvaccess présente (GPL v3).
+### US-9.2 — Packaging & release ✅ (`v0.10.0`)
+- **CA1** : `NEWS.md` à jour (tient lieu de changelog) ; version taguée (via `release.yml`) ;
+  attribution Sylvaccess présente (README, `CITATION.cff`, GPL v3). ✅
 
 ---
 
