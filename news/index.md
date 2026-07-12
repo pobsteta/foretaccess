@@ -1,5 +1,20 @@
 # Changelog
 
+## foretaccess (development version)
+
+- **Article « Cartes de sortie sur une AOI réelle »** (site pkgdown) :
+  le pipeline complet exécuté sur `data-raw/aoi.gpkg` (massif des
+  Cévennes), chaque sortie cartographiée sur **fond OpenStreetMap**
+  (entrées MNT/desserte/forêt, sorties skidder/porteur/DFCI en raster,
+  câble et agrégation zonale en vecteur). Cartes pré-rendues par
+  `data-raw/cartes.R` (acquisition IGN + tuiles OSM via `maptiles`),
+  embarquées en images (aucun calcul ni réseau à la construction du
+  site).
+- **Note de performance** (721 ha) : moteurs terrestres ~1 min 35 s ; le
+  **câble** est le goulot (heures à \> 1 jour à cette échelle — chaque
+  rayon monte à 750 m), ce qui documente la dette de portage Rust /
+  tuilage du noyau câble.
+
 ## foretaccess 0.11.0 (2026-07-12)
 
 ### Lot 10 — Acquisition des entrées depuis une AOI

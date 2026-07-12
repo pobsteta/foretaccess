@@ -6,10 +6,16 @@
 
 ## État courant
 
-- **Branche** : `specs/010-acquisition` (release du Lot 10 ;
-  `release.yml` pose `v0.11.0` au merge sur `main`, puis retour en cycle
-  dev `0.11.0.9000`)
-- **Version `DESCRIPTION`** : `0.11.0` (release du Lot 10)
+- **Branche** : `docs/cartes-aoi` (cycle dev `0.11.0.9000` ; ajout d’un
+  article carto, pas de release)
+- **Version `DESCRIPTION`** : `0.11.0.9000` (cycle dev ;
+  `NEWS.md`/`CITATION.cff` restent à `0.11.0`)
+- **En cours (doc)** : article pkgdown **« Cartes de sortie sur une AOI
+  réelle »** — pipeline complet sur `data-raw/aoi.gpkg` (Cévennes),
+  chaque sortie sur fond OSM, cartes pré-rendues (`data-raw/cartes.R`)
+  et embarquées. Benchmark des durées par étage sur 721 ha documenté
+  (terrestre ~1 min 35 s ; câble = goulot, heures à \> 1 jour — confirme
+  la dette portage Rust).
 - **Lots 0–10 livrés** : prétraitement, moteurs skidder / porteur, noyau
   câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle
   (tuilage), base spatiale & agrégation, doc & publication, et

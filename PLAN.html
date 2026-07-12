@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,6 +20,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
+    <li><a class="dropdown-item" href="articles/cartes.html">Cartes de sortie sur une AOI réelle</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -45,9 +46,11 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>specs/010-acquisition</code> (release du Lot 10 ; <code>release.yml</code> pose <code>v0.11.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.11.0.9000</code>)</li>
+<strong>Branche</strong> : <code>docs/cartes-aoi</code> (cycle dev <code>0.11.0.9000</code> ; ajout d’un article carto, pas de release)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.11.0</code> (release du Lot 10)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.11.0.9000</code> (cycle dev ; <code>NEWS.md</code>/<code>CITATION.cff</code> restent à <code>0.11.0</code>)</li>
+<li>
+<strong>En cours (doc)</strong> : article pkgdown <strong>« Cartes de sortie sur une AOI réelle »</strong> — pipeline complet sur <code>data-raw/aoi.gpkg</code> (Cévennes), chaque sortie sur fond OSM, cartes pré-rendues (<code>data-raw/cartes.R</code>) et embarquées. Benchmark des durées par étage sur 721 ha documenté (terrestre ~1 min 35 s ; câble = goulot, heures à &gt; 1 jour — confirme la dette portage Rust).</li>
 <li>
 <strong>Lots 0–10 livrés</strong> : prétraitement, moteurs skidder / porteur, noyau câble (Rust) + sélection, camion DFCI (beta), passage à l’échelle (tuilage), base spatiale &amp; agrégation, doc &amp; publication, et <strong>acquisition depuis AOI</strong> (Lot 10). Périmètre v1 fonctionnel atteint.</li>
 <li>
