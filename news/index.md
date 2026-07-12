@@ -1,5 +1,28 @@
 # Changelog
 
+## foretaccess 0.5.1 (2026-07-12)
+
+### Conformité du porteur — zone de conduite
+
+Relecture de `Sylvaccess_3_forwarder.py` (construction de `Zone_OK` /
+`Pente_ok_forwarder`). Deux corrections à `.zone_conduite()` :
+
+- **Bug de borne de pente.** La zone bornait la pente par
+  `min(travers, montée, descente)` = 15 %, alors que Sylvaccess la borne
+  par le **maximum** = 30 %, le balayage affinant ensuite par le sens et
+  le dévers. Le `min` excluait à tort les cellules roulables en montée
+  dans le sens de la pente.
+- **Saut hors forêt** (`distance_hors_desserte_max_m`, 200 m). Le
+  porteur peut couper par un terrain récoltable non forestier, depuis le
+  contour de la forêt, pour rejoindre un massif isolé — l’analogue de
+  [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
+  du skidder. Le halo suffisant du tuilage intègre désormais ce saut.
+
+La **double passe** réseau/contour reste une dette assumée : sans sortie
+Sylvaccess de référence, son modèle de distance en composantes séparées
+ne peut être validé sur les fixtures synthétiques. Voir
+`specs/003-porteur.md`.
+
 ## foretaccess 0.5.0 (2026-07-11)
 
 ### Lot 3 — Moteur Porteur (forwarder)

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,18 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.1" id="foretaccess-051-2026-07-12">foretaccess 0.5.1 (2026-07-12)<a class="anchor" aria-label="anchor" href="#foretaccess-051-2026-07-12"></a></h2>
+<div class="section level3">
+<h3 id="conformité-du-porteur--zone-de-conduite-0-5-1">Conformité du porteur — zone de conduite<a class="anchor" aria-label="anchor" href="#conformit%C3%A9-du-porteur--zone-de-conduite-0-5-1"></a></h3>
+<p>Relecture de <code>Sylvaccess_3_forwarder.py</code> (construction de <code>Zone_OK</code> / <code>Pente_ok_forwarder</code>). Deux corrections à <code>.zone_conduite()</code> :</p>
+<ul><li>
+<strong>Bug de borne de pente.</strong> La zone bornait la pente par <code>min(travers, montée, descente)</code> = 15 %, alors que Sylvaccess la borne par le <strong>maximum</strong> = 30 %, le balayage affinant ensuite par le sens et le dévers. Le <code>min</code> excluait à tort les cellules roulables en montée dans le sens de la pente.</li>
+<li>
+<strong>Saut hors forêt</strong> (<code>distance_hors_desserte_max_m</code>, 200 m). Le porteur peut couper par un terrain récoltable non forestier, depuis le contour de la forêt, pour rejoindre un massif isolé — l’analogue de <code><a href="../reference/zone_roulable_connectee.html">zone_roulable_connectee()</a></code> du skidder. Le halo suffisant du tuilage intègre désormais ce saut.</li>
+</ul><p>La <strong>double passe</strong> réseau/contour reste une dette assumée : sans sortie Sylvaccess de référence, son modèle de distance en composantes séparées ne peut être validé sur les fixtures synthétiques. Voir <code>specs/003-porteur.md</code>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.0" id="foretaccess-050-2026-07-11">foretaccess 0.5.0 (2026-07-11)<a class="anchor" aria-label="anchor" href="#foretaccess-050-2026-07-11"></a></h2>
 <div class="section level3">

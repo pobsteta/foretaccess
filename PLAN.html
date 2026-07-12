@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,12 +40,12 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>main</code>
+<strong>Branche</strong> : <code>fix/porteur-hors-foret</code>
 </li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.0.9000</code> (cycle de dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent sur <code>0.5.0</code>, la dernière release)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1</code> (correctif de conformité ; <code>release.yml</code> pose le tag au merge sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : aucun. Lot 3 clos et publié (<code>v0.5.0</code>). Prochain : consolidation du porteur (dette assumée) ou <strong>Lot 4 (noyau câble Rust)</strong>.</li>
+<strong>Lot en cours</strong> : <strong>Lot 3 — consolidation du porteur</strong> (zone de conduite). Prochain : <strong>Lot 4 (noyau câble Rust)</strong>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -271,6 +271,17 @@
 <li>Deux fragilités latentes corrigées : <code>.distance_sur_piste()</code> plantait sur une desserte non catégorisée ; le grappin lisait un champ inexistant de la propagation.</li>
 <li>
 <code><a href="reference/porteur.html">porteur()</a></code> livré, <code><a href="reference/conduire.html">conduire()</a></code> exportée. 533 tests verts, <code>lintr</code> 0, ASCII OK.</li>
+<li>
+<strong>Lot 3 mergé et publié en <code>v0.5.0</code></strong> (PR #15). Retour en cycle de dev <code>0.5.0.9000</code>.</li>
+<li>
+<strong>Consolidation du porteur (<code>v0.5.1</code>).</strong> Relecture de la construction de <code>Zone_OK</code> dans <code>Sylvaccess_3_forwarder.py</code> : deux corrections a <code>.zone_conduite()</code>.
+<ul><li>
+<strong>Bug</strong> : la zone bornait la pente par <code>min(travers, montee, descente)</code> = 15 %, la source la borne par le <strong>maximum</strong> = 30 %. Le <code>min</code> excluait a tort les cellules roulables en montee dans le sens de la pente.</li>
+<li>
+<strong>Saut hors foret</strong> (<code>distance_hors_desserte_max_m</code>) ajoute, analogue de <code><a href="reference/zone_roulable_connectee.html">zone_roulable_connectee()</a></code> du skidder. Le halo suffisant du tuilage l’integre.</li>
+<li>La <strong>double passe</strong> reseau/contour a ete prototypee puis retiree : fidele en esprit a <code>fwd_azimuts_contour</code>, elle rend le devers non bloquant pour la portee sur un plan uniforme (le porteur zigzague), et sans oracle Sylvaccess reel son modele de distance en composantes ne peut etre valide. Gardee en dette documentee plutot que livree plausible-mais-fausse — le principe de fidelite du projet prime.</li>
+</ul></li>
+<li>543 tests verts, <code>lintr</code> 0, ASCII OK.</li>
 <li>
 <code>specs/007-passage-echelle.md</code> rédigée ; ADR-005 passé de « proposé » à <strong>accepté</strong>. Décisions : <strong>certificat d’exactitude + halo adaptatif</strong> (le critère « identique au mono-bloc » de l’US-7.1 n’est pas atteignable par un halo fixe — le traînage est un plus court chemin <strong>sans plafond</strong>) ; <strong><code>mirai</code></strong> plutôt que <code>future</code>/<code>furrr</code> ; sortie <strong>COG recomposé</strong> seul, les cellules non certifiées tombant dans la classe <code>indetermine</code> qui existe déjà. Lot découpé en 7a (théorème), 7b (garantie), 7c (vitesse).</li>
 <li>

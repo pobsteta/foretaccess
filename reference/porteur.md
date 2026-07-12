@@ -74,9 +74,9 @@ pre <- preprocess(file.path(toy, "mnt.tif"), file.path(toy, "desserte.gpkg"),
 po <- porteur(pre)
 po$recap
 #>           classe cellules surface_ha
-#> 1    parcourable      141     0.3525
-#> 2     accessible      286     0.7150
-#> 3 non_accessible     1197     2.9925
-#> 4     hors_foret      680     1.7000
-#> 5    indetermine      196     0.4900
+#> 1    parcourable     1624       4.06
+#> 2     accessible        0       0.00
+#> 3 non_accessible        0       0.00
+#> 4     hors_foret      680       1.70
+#> 5    indetermine      196       0.49
 ```

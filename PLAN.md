@@ -6,12 +6,11 @@
 
 ## État courant
 
-- **Branche** : `main`
-- **Version `DESCRIPTION`** : `0.5.0.9000` (cycle de dev ; `NEWS.md` et
-  `CITATION.cff` restent sur `0.5.0`, la dernière release)
-- **Lot en cours** : aucun. Lot 3 clos et publié (`v0.5.0`). Prochain :
-  consolidation du porteur (dette assumée) ou **Lot 4 (noyau câble
-  Rust)**.
+- **Branche** : `fix/porteur-hors-foret`
+- **Version `DESCRIPTION`** : `0.5.1` (correctif de conformité ;
+  `release.yml` pose le tag au merge sur `main`)
+- **Lot en cours** : **Lot 3 — consolidation du porteur** (zone de
+  conduite). Prochain : **Lot 4 (noyau câble Rust)**.
 
 ## Avancement par lot
 
@@ -346,6 +345,26 @@ ni `leastcostpath` ne renvoient l’allocation.
   livré,
   [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md)
   exportée. 533 tests verts, `lintr` 0, ASCII OK.
+- **Lot 3 mergé et publié en `v0.5.0`** (PR \#15). Retour en cycle de
+  dev `0.5.0.9000`.
+- **Consolidation du porteur (`v0.5.1`).** Relecture de la construction
+  de `Zone_OK` dans `Sylvaccess_3_forwarder.py` : deux corrections a
+  `.zone_conduite()`.
+  - **Bug** : la zone bornait la pente par
+    `min(travers, montee, descente)` = 15 %, la source la borne par le
+    **maximum** = 30 %. Le `min` excluait a tort les cellules roulables
+    en montee dans le sens de la pente.
+  - **Saut hors foret** (`distance_hors_desserte_max_m`) ajoute,
+    analogue de
+    [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
+    du skidder. Le halo suffisant du tuilage l’integre.
+  - La **double passe** reseau/contour a ete prototypee puis retiree :
+    fidele en esprit a `fwd_azimuts_contour`, elle rend le devers non
+    bloquant pour la portee sur un plan uniforme (le porteur zigzague),
+    et sans oracle Sylvaccess reel son modele de distance en composantes
+    ne peut etre valide. Gardee en dette documentee plutot que livree
+    plausible-mais-fausse — le principe de fidelite du projet prime.
+- 543 tests verts, `lintr` 0, ASCII OK.
 - `specs/007-passage-echelle.md` rédigée ; ADR-005 passé de « proposé »
   à **accepté**. Décisions : **certificat d’exactitude + halo
   adaptatif** (le critère « identique au mono-bloc » de l’US-7.1 n’est
