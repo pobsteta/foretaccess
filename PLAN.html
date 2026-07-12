@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,10 +40,9 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : <code>release/0.6.0</code>
-</li>
+<strong>Branche</strong> : cycle dev depuis <code>main</code> (dernière release <code>v0.6.0</code>, tag posé)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.6.0</code> (release du moteur câble ; <code>release.yml</code> pose <code>v0.6.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.6.0.9000</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.6.0.9000</code> (cycle dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent à <code>0.6.0</code>)</li>
 <li>
 <strong>Lot terminé</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>, 0 support. <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>) et <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>) livrés et mergés (#19–#22). 10 bindings extendr + <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, 16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension (spec §11) : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust de l’orchestration.</li>
 <li>
