@@ -26,7 +26,10 @@ longue portee a certifier au-dela du halo).}
 Un objet de classe \code{foretaccess_cable} : \code{accessibilite} (raster de
 classes : accessible_cable / non_accessible / hors_foret), \code{longueur_ligne}
 (m, meilleure ligne couvrant la cellule), \code{azimut_ligne} (deg),
-\code{nb_supports} (0 dans ce lot), \code{recap}, \code{grid}, \code{config}, \code{fichiers}.
+\code{nb_supports} (0 dans ce lot), \code{lignes} (data.frame des lignes candidates :
+\code{depart}, \code{azimut}, \code{longueur_m}, \code{surface_ha}, \code{sens}, \code{supports},
+\code{volume_m3}, \code{ipc} -- une par (depart, azimut) faisable, pour la selection
+du Lot 5), \code{recap}, \code{grid}, \code{config}, \code{fichiers}.
 }
 \description{
 Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
