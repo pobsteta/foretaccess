@@ -6,9 +6,9 @@
 
 ## État courant
 
-- **Branche** : `specs/009-publication` (release du Lot 9 ; `release.yml` pose `v0.10.0` au
-  merge sur `main`, puis retour en cycle dev `0.10.0.9000`)
-- **Version `DESCRIPTION`** : `0.10.0` (release du Lot 9)
+- **Branche** : cycle dev depuis `main` (dernière release `v0.10.0`, tag posé)
+- **Version `DESCRIPTION`** : `0.10.0.9000` (cycle dev ; `NEWS.md` et `CITATION.cff` restent
+  à `0.10.0`)
 - **Lots 0–9 livrés** : prétraitement, moteurs skidder / porteur, noyau câble (Rust) +
   sélection, camion DFCI (beta), passage à l'échelle (tuilage), base spatiale & agrégation,
   et **doc & publication** (Lot 9). Le périmètre **v1 fonctionnel** est atteint (Lots 0–5,
@@ -329,6 +329,9 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
   emballe (`terra::wrap()`) la seule tuile.
 
 ### 2026-07-12
+- **Release `v0.10.0` posée** (PR #31 mergée, `R CMD check` verte — vignette compilée ; tag +
+  release GitHub automatiques). Retour en **cycle de dev `0.10.0.9000`**. Décision utilisateur :
+  **rester en `v0.10.0`**, ne pas passer en `v1.0.0` malgré le périmètre v1 atteint.
 - **Lot 9 (doc & publication) implémenté et préparé en release `v0.10.0`.** Vignette
   `vignettes/foretaccess.Rmd` : déroule le pipeline complet (config → prétraitement →
   skidder/porteur → DFCI → câble potentiel/sélection → agrégation zonale → persistance GPKG)
