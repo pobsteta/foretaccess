@@ -2,6 +2,43 @@
 
 ## All functions
 
+- [`cable_calcul_xs()`](https://pobsteta.github.io/foretaccess/reference/cable_calcul_xs.md)
+  :
+
+  Position horizontale du câble à l'abscisse curviligne `s`.
+
+- [`cable_calcul_zs()`](https://pobsteta.github.io/foretaccess/reference/cable_calcul_zs.md)
+  :
+
+  Position verticale (chute depuis le support haut) à l'abscisse
+  curviligne `s` : c'est elle qui fournit la garde au sol du câble.
+
+- [`cable_f_x()`](https://pobsteta.github.io/foretaccess/reference/cable_f_x.md)
+  :
+
+  Equation horizontale de la caténaire élastique `f_x(Th, Tv)`, nulle à
+  la solution.
+
+- [`cable_f_z()`](https://pobsteta.github.io/foretaccess/reference/cable_f_z.md)
+  :
+
+  Equation verticale de la caténaire élastique `f_z(Th, Tv)`, nulle à la
+  solution.
+
+- [`cable_find_thtv_tmax()`](https://pobsteta.github.io/foretaccess/reference/cable_find_thtv_tmax.md)
+  :
+
+  Amorçage `(Th, Tv, faisable)` par recherche sur grille sous la tension
+  admissible. Renvoie un vecteur de longueur 3 ; `faisable` vaut 1 si
+  `sqrt(Th^2 + Tv^2) <= tmax`, 0 sinon.
+
+- [`cable_newton_thtv()`](https://pobsteta.github.io/foretaccess/reference/cable_newton_thtv.md)
+  :
+
+  Résout `f_x = f_z = 0` (tensions `Th, Tv` au support haut) par
+  Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un
+  vecteur `c(Th, Tv)`.
+
 - [`cablehelp_version()`](https://pobsteta.github.io/foretaccess/reference/cablehelp_version.md)
   :
 

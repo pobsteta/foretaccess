@@ -45,7 +45,7 @@
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>0.5.1.9000</code> (cycle dev ; dernière release <code>v0.5.1</code>, tag posé par <code>release.yml</code> au merge de la #17 sur <code>main</code>)</li>
 <li>
-<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12) sur lecture du code source Sylvaccess ; implémentation à venir (4a caténaire élastique + Newton en Rust).</li>
+<strong>Lot en cours</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>. Spec <code>specs/004-cable.md</code> validée (2026-07-12). <strong>Incrément 4a livré</strong> (caténaire élastique + Newton-Raphson en Rust, 6 bindings extendr, 6 tests cargo + 15 tests R). Suivant : 4b (faisabilité de travée).</li>
 </ul></div>
 <div class="section level2">
 <h2 id="avancement-par-lot">Avancement par lot<a class="anchor" aria-label="anchor" href="#avancement-par-lot"></a></h2>
@@ -311,6 +311,10 @@
 <li>Découpage acté : <strong>4a</strong> (caténaire + Newton en Rust, <code>cargo test</code> + binding <code>extendr</code> + test R), <strong>4b</strong> (faisabilité travée), <strong>4c</strong> (optimisation supports, <code>rayon</code>), <strong>4d</strong> (balayage 360°/pixel + orchestration R + tuilage). Release visée <code>v0.6.0</code>.</li>
 <li>
 <strong>Frontière R↔︎Rust</strong> (ADR-001) : R passe des scalaires et vecteurs de <code>f64</code> (géométrie, profil d’altitudes, paramètres câble) ; le crate résout et renvoie <code>(Th, Tv)</code>, tension max, faisabilité, hauteur au point contraignant. Aucun SIG dans le crate.</li>
+<li>
+<strong>Incrément 4a implémenté</strong> : <code>src/rust/src/cable/{catenaire,newton}.rs</code> portent <code>f_x</code>, <code>f_z</code>, <code>calcul_xs/zs</code>, <code>df_dTh</code>, <code>dg_dTh</code>, <code>newton_ThTv</code>, <code>find_ThTvTmax</code> ; 6 bindings <code>#[extendr]</code> (<code>cable_*</code>). Oracle <strong>sans exécution Sylvaccess</strong> : <em>solution manufacturée</em> — on choisit <code>(Th0, Tv0)</code>, on en déduit <code>(D, H) = (calcul_xs(Lo), calcul_zs(Lo))</code> qui annule <code>f_x</code>, <code>f_z</code> par construction, et Newton la retrouve à ±1 N (fermeture géométrique vérifiée). L’identité <code>calcul_xs(Lo) = f_x + D</code>, <code>calcul_zs(Lo) = f_z + H</code> relie la position du câble à la solution : c’est elle l’oracle. 6 tests cargo + 15 tests R verts, suite complète 558 PASS. Cycle dev, pas de release (v0.6.0 regroupera 4a-4d).</li>
+<li>
+<code>rextendr</code> est dans la bibliothèque <strong>globale</strong> (<code>~/R/...-library/4.6</code>), pas dans le renv du projet : <code>rextendr::document()</code> se lance avec <code>.libPaths(c(.libPaths(), &lt;globale&gt;))</code>.</li>
 </ul></div>
 </div>
 </div>

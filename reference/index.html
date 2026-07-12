@@ -43,6 +43,48 @@
 
       <dl><dt>
 
+          <code><a href="cable_calcul_xs.html">cable_calcul_xs()</a></code>
+
+        </dt>
+        <dd>Position horizontale du câble à l'abscisse curviligne <code>s</code>.</dd>
+
+        <dt>
+
+          <code><a href="cable_calcul_zs.html">cable_calcul_zs()</a></code>
+
+        </dt>
+        <dd>Position verticale (chute depuis le support haut) à l'abscisse curviligne <code>s</code> : c'est elle qui fournit la garde au sol du câble.</dd>
+
+        <dt>
+
+          <code><a href="cable_f_x.html">cable_f_x()</a></code>
+
+        </dt>
+        <dd>Equation horizontale de la caténaire élastique <code>f_x(Th, Tv)</code>, nulle à la solution.</dd>
+
+        <dt>
+
+          <code><a href="cable_f_z.html">cable_f_z()</a></code>
+
+        </dt>
+        <dd>Equation verticale de la caténaire élastique <code>f_z(Th, Tv)</code>, nulle à la solution.</dd>
+
+        <dt>
+
+          <code><a href="cable_find_thtv_tmax.html">cable_find_thtv_tmax()</a></code>
+
+        </dt>
+        <dd>Amorçage <code>(Th, Tv, faisable)</code> par recherche sur grille sous la tension admissible. Renvoie un vecteur de longueur 3 ; <code>faisable</code> vaut 1 si <code>sqrt(Th^2 + Tv^2) &lt;= tmax</code>, 0 sinon.</dd>
+
+        <dt>
+
+          <code><a href="cable_newton_thtv.html">cable_newton_thtv()</a></code>
+
+        </dt>
+        <dd>Résout <code>f_x = f_z = 0</code> (tensions <code>Th, Tv</code> au support haut) par Newton-Raphson à Jacobien analytique, repli sur grille. Renvoie un vecteur <code>c(Th, Tv)</code>.</dd>
+
+        <dt>
+
           <code><a href="cablehelp_version.html">cablehelp_version()</a></code>
 
         </dt>

@@ -10,9 +10,9 @@
 - **Version `DESCRIPTION`** : `0.5.1.9000` (cycle dev ; dernière release
   `v0.5.1`, tag posé par `release.yml` au merge de la \#17 sur `main`)
 - **Lot en cours** : **Lot 4 — noyau câble (Rust)**. Spec
-  `specs/004-cable.md` validée (2026-07-12) sur lecture du code source
-  Sylvaccess ; implémentation à venir (4a caténaire élastique + Newton
-  en Rust).
+  `specs/004-cable.md` validée (2026-07-12). **Incrément 4a livré**
+  (caténaire élastique + Newton-Raphson en Rust, 6 bindings extendr, 6
+  tests cargo + 15 tests R). Suivant : 4b (faisabilité de travée).
 
 ## Avancement par lot
 
@@ -427,3 +427,18 @@ ni `leastcostpath` ne renvoient l’allocation.
   `f64` (géométrie, profil d’altitudes, paramètres câble) ; le crate
   résout et renvoie `(Th, Tv)`, tension max, faisabilité, hauteur au
   point contraignant. Aucun SIG dans le crate.
+- **Incrément 4a implémenté** :
+  `src/rust/src/cable/{catenaire,newton}.rs` portent `f_x`, `f_z`,
+  `calcul_xs/zs`, `df_dTh`, `dg_dTh`, `newton_ThTv`, `find_ThTvTmax` ; 6
+  bindings `#[extendr]` (`cable_*`). Oracle **sans exécution
+  Sylvaccess** : *solution manufacturée* — on choisit `(Th0, Tv0)`, on
+  en déduit `(D, H) = (calcul_xs(Lo), calcul_zs(Lo))` qui annule `f_x`,
+  `f_z` par construction, et Newton la retrouve à ±1 N (fermeture
+  géométrique vérifiée). L’identité `calcul_xs(Lo) = f_x + D`,
+  `calcul_zs(Lo) = f_z + H` relie la position du câble à la solution :
+  c’est elle l’oracle. 6 tests cargo + 15 tests R verts, suite complète
+  558 PASS. Cycle dev, pas de release (v0.6.0 regroupera 4a-4d).
+- `rextendr` est dans la bibliothèque **globale**
+  (`~/R/...-library/4.6`), pas dans le renv du projet :
+  `rextendr::document()` se lance avec
+  `.libPaths(c(.libPaths(), <globale>))`.
