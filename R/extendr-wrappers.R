@@ -161,4 +161,63 @@ cable_check_droite <- function(fact, h_alt, d, xup, zup, line_x, line_z, hline_m
 #' @export
 cable_check_hlinemin <- function(alts, h_alt, d, lo, fact, tho, tvo, xup, zup, f_o, tmax, hline_min, hline_max, q1, q2, q3, csize, eao) .Call(wrap__cable_check_hlinemin, alts, h_alt, d, lo, fact, tho, tvo, xup, zup, f_o, tmax, hline_min, hline_max, q1, q2, q3, csize, eao)
 
+#' Cherche la longueur à vide minimale `Lo` telle que la tension du câble, la
+#' charge au milieu, atteigne `tmax`, puis vérifie la garde au sol sur toute la
+#' travée. Renvoie un vecteur `c(faisable, Lo, Th, Tv, Tcalc, F)` ; `faisable`
+#' vaut 1 ou 0. Sans supports intermédiaires (Lot 4c).
+#'
+#' Amorçage substitué aux tables Sylvaccess (`(Th, Tv) = (0.9*tmax, 0.1*tmax)`,
+#' `Lo = corde + réserve`) : choix de performance, pas de correction.
+#'
+#' @param d Horizontal span between supports (m).
+#' @param h Altitude difference between supports (m).
+#' @param xup Horizontal position of the upper support (m).
+#' @param zup Altitude of the upper support (m).
+#' @param fact Direction of the line (+1 or -1).
+#' @param alts Terrain altitudes under the line, sampled every 0.5 m (m).
+#' @param f_o Gravity force of the load and carriage (N).
+#' @param tmax Admissible cable tension (N).
+#' @param q1 Linear mass of the skyline (kg/m).
+#' @param q2 Linear mass of the mainline / traction cable (kg/m).
+#' @param q3 Linear mass of the return cable (kg/m).
+#' @param eao Young's modulus times the cable section (N).
+#' @param hline_min Minimum ground clearance of the cable (m).
+#' @param hline_max Maximum height of the cable (m).
+#' @param csize Sweep step of the load position (m).
+#' @return A length-6 numeric vector `c(faisable, Lo, Th, Tv, Tcalc, F)`.
+#' @export
+cable_find_lomin <- function(d, h, xup, zup, fact, alts, f_o, tmax, q1, q2, q3, eao, hline_min, hline_max, csize) .Call(wrap__cable_find_lomin, d, h, xup, zup, fact, alts, f_o, tmax, q1, q2, q3, eao, hline_min, hline_max, csize)
+
+#' Teste un segment de câble entre les points `pg` et `posi` du profil, portant
+#' des supports de hauteurs `hg` et `hd` : pré-filtre, pente dans
+#' `[slope_min, slope_max]`, contrainte d'angle au support intermédiaire
+#' (`angle_intsup`) vis-à-vis du segment précédent (`slope_prev`, `-9999` si
+#' aucun), puis `find_lomin`. Renvoie un vecteur
+#' `c(faisable, D, H, diag, slope, fact, Xup, Zup, Lo, Th, Tv, Tcalc, F)`.
+#'
+#' @param line_x Horizontal positions along the terrain profile (m).
+#' @param line_z Terrain altitudes along the profile (m).
+#' @param pg Index of the near support in the profile.
+#' @param posi Index of the far support in the profile.
+#' @param hg Height of the near support (m).
+#' @param hd Height of the far support (m).
+#' @param hline_min Minimum ground clearance of the cable (m).
+#' @param hline_max Maximum height of the cable (m).
+#' @param slope_min Minimum admissible slope of the span (rad).
+#' @param slope_max Maximum admissible slope of the span (rad).
+#' @param alts Terrain altitudes under the line, sampled every 0.5 m (m).
+#' @param f_o Gravity force of the load and carriage (N).
+#' @param tmax Admissible cable tension (N).
+#' @param q1 Linear mass of the skyline (kg/m).
+#' @param q2 Linear mass of the mainline / traction cable (kg/m).
+#' @param q3 Linear mass of the return cable (kg/m).
+#' @param eao Young's modulus times the cable section (N).
+#' @param csize Sweep step of the load position (m).
+#' @param angle_intsup Maximum slope change allowed at an intermediate support (rad).
+#' @param dsupdep Extra cable length on the departure side (m).
+#' @param slope_prev Slope of the previous span (rad), or -9999 if none.
+#' @return A length-13 numeric vector (see the description for the fields).
+#' @export
+cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_max, slope_min, slope_max, alts, f_o, tmax, q1, q2, q3, eao, csize, angle_intsup, dsupdep, slope_prev) .Call(wrap__cable_test_span, line_x, line_z, pg, posi, hg, hd, hline_min, hline_max, slope_min, slope_max, alts, f_o, tmax, q1, q2, q3, eao, csize, angle_intsup, dsupdep, slope_prev)
+
 # nolint end
