@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,18 +40,16 @@
 <div class="section level2">
 <h2 id="état-courant">État courant<a class="anchor" aria-label="anchor" href="#%C3%A9tat-courant"></a></h2>
 <ul><li>
-<strong>Branche</strong> : cycle dev depuis <code>main</code> (dernière release <code>v0.6.0</code>, tag posé)</li>
+<strong>Branche</strong> : cycle dev depuis <code>main</code> (dernière release <code>v0.7.0</code>, tag posé)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.6.0.9000</code> (cycle dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent à <code>0.6.0</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.7.0.9000</code> (cycle dev ; <code>NEWS.md</code> et <code>CITATION.cff</code> restent à <code>0.7.0</code>)</li>
 <li>
-<strong>Lot terminé</strong> : <strong>Lot 4 — noyau câble (Rust)</strong>, 0 support. <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>) et <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>) livrés et mergés (#19–#22). 10 bindings extendr + <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>, 16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension (spec §11) : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust de l’orchestration.</li>
+<strong>Derniers lots terminés</strong> :
+<ul><li>
+<strong>Lot 4 — noyau câble (Rust)</strong>, 0 support (<code>v0.6.0</code>). <strong>4a</strong> (caténaire + Newton), <strong>4b</strong> (faisabilité), <strong>4c</strong> (<code>find_lomin</code>, <code>test_span</code>), <strong>4d</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code>). 10 bindings extendr, 16 tests cargo + ~45 tests R. Extensions différées (spec §11) : placement multi-supports (<code>OptPyl_Up</code>, oracle réel), pêchage latéral, portage Rust.</li>
 <li>
-<strong>Branche</strong> : <code>release/0.7.0</code>
-</li>
-<li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.7.0</code> (release du Lot 5 ; <code>release.yml</code> pose <code>v0.7.0</code> au merge sur <code>main</code>, puis retour en cycle dev <code>0.7.0.9000</code>)</li>
-<li>
-<strong>Lot terminé</strong> : <strong>Lot 5 — sélection multicritère des lignes câble</strong>. <strong>5a</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> émet <code>$lignes</code>) et <strong>5b</strong> (<code><a href="reference/selectionner_lignes.html">selectionner_lignes()</a></code>) livrés et mergés (#25). 32 tests R (<code>selection.R</code> à 100 %). Extensions différées : reproductibilité vs v3.6 (oracle réel), VAM×10 et coût €/m³.</li>
+<strong>Lot 5 — sélection multicritère des lignes câble</strong> (<code>v0.7.0</code>, #25/#26). <strong>5a</strong> (<code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> émet <code>$lignes</code>) + <strong>5b</strong> (<code><a href="reference/selectionner_lignes.html">selectionner_lignes()</a></code>). 32 tests R, <code>selection.R</code> à 100 %. Extensions différées : reproductibilité vs v3.6 (oracle réel), VAM×10 et coût €/m³.</li>
+</ul></li>
 <li>
 <strong>Prochain lot</strong> : <strong>Lot 8 — base spatiale &amp; agrégation</strong> (persistance PostGIS/GeoPackage des sorties, dont les lignes câble sélectionnées) ; ou <strong>Lot 6 — DFCI</strong> (post-MVP).</li>
 </ul></div>
@@ -312,7 +310,9 @@
 <div class="section level3">
 <h3 id="id_2026-07-12">2026-07-12<a class="anchor" aria-label="anchor" href="#id_2026-07-12"></a></h3>
 <ul><li>
-<strong>Lot 5 (sélection multicritère des lignes câble) livré et publié en <code>v0.7.0</code></strong> (PR #25). Retour en cycle de dev <code>0.7.0.9000</code> après la release. <code>selection.R</code> à 100 % de couverture (codecov exigeant : sept branches défensives couvertes par des tests ciblés). Détail ci-dessous.</li>
+<strong>Release <code>v0.7.0</code> posée</strong> (PR #26 mergée, sept checks verts ; tag <code>v0.7.0</code> + release GitHub posés automatiquement par <code>release.yml</code>). Retour en <strong>cycle de dev <code>0.7.0.9000</code></strong> (bump <code>DESCRIPTION</code> seul ; <code>NEWS.md</code>/<code>CITATION.cff</code> restent à <code>0.7.0</code>).</li>
+<li>
+<strong>Lot 5 (sélection multicritère des lignes câble) livré et publié en <code>v0.7.0</code></strong> (PR #25). <code>selection.R</code> à 100 % de couverture (codecov exigeant : sept branches défensives couvertes par des tests ciblés). Détail ci-dessous.</li>
 <li>
 <strong>Lot 5 (sélection multicritère des lignes câble) implémenté</strong> — spec <code>specs/005</code> validé sur lecture de <code>select_best_lines</code>/<code>create_best_table</code> (Sylvaccess <code>Sylvaccess_0_functions.py</code>). <strong>5a</strong> : <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> émet <code>$lignes</code> (une candidate par (départ, azimut) faisable : surface forêt couverte, longueur, sens, volume/IPC si <code>pre$volume</code>). <strong>5b</strong> : <code><a href="reference/selectionner_lignes.html">selectionner_lignes()</a></code> — filtrage par limites, <strong>score pondéré normalisé</strong> (maximiser → <code>v/p98</code> ; minimiser → <code>1−v/max</code>), tri lexicographique stable (déterminisme), <strong>glouton avec contribution</strong> (une ligne retenue apporte ≥ 60 % de surface nouvelle), sortie <code>sf</code> LINESTRING (CRS strict) + raster de couverture. Config <code>config$cable$selection</code> (poids, limites, sens préféré). Neutralisation auto des critères volume/IPC sans volume. La reproductibilité vs v3.6 (CA2 backlog) reste à confronter à un oracle réel ; le déterminisme est verrouillé. 6 critères MVP (EF-7) ; VAM×10 et coût €/m³ repoussés. 21 tests R (oracle analytique).</li>
 <li>

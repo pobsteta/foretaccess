@@ -6,31 +6,25 @@
 
 ## État courant
 
-- **Branche** : cycle dev depuis `main` (dernière release `v0.6.0`, tag
+- **Branche** : cycle dev depuis `main` (dernière release `v0.7.0`, tag
   posé)
-- **Version `DESCRIPTION`** : `0.6.0.9000` (cycle dev ; `NEWS.md` et
-  `CITATION.cff` restent à `0.6.0`)
-- **Lot terminé** : **Lot 4 — noyau câble (Rust)**, 0 support. **4a**
-  (caténaire + Newton), **4b** (faisabilité), **4c** (`find_lomin`,
-  `test_span`) et **4d**
-  ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md))
-  livrés et mergés (#19–#22). 10 bindings extendr +
-  [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md),
-  16 tests cargo + ~45 tests R, suite 590 PASS. Restent en extension
-  (spec §11) : placement multi-supports (`OptPyl_Up`, oracle réel),
-  pêchage latéral, portage Rust de l’orchestration.
-- **Branche** : `release/0.7.0`
-- **Version `DESCRIPTION`** : `0.7.0` (release du Lot 5 ; `release.yml`
-  pose `v0.7.0` au merge sur `main`, puis retour en cycle dev
-  `0.7.0.9000`)
-- **Lot terminé** : **Lot 5 — sélection multicritère des lignes câble**.
-  **5a**
-  ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
-  émet `$lignes`) et **5b**
-  ([`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md))
-  livrés et mergés (#25). 32 tests R (`selection.R` à 100 %). Extensions
-  différées : reproductibilité vs v3.6 (oracle réel), VAM×10 et coût
-  €/m³.
+- **Version `DESCRIPTION`** : `0.7.0.9000` (cycle dev ; `NEWS.md` et
+  `CITATION.cff` restent à `0.7.0`)
+- **Derniers lots terminés** :
+  - **Lot 4 — noyau câble (Rust)**, 0 support (`v0.6.0`). **4a**
+    (caténaire + Newton), **4b** (faisabilité), **4c** (`find_lomin`,
+    `test_span`), **4d**
+    ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)).
+    10 bindings extendr, 16 tests cargo + ~45 tests R. Extensions
+    différées (spec §11) : placement multi-supports (`OptPyl_Up`, oracle
+    réel), pêchage latéral, portage Rust.
+  - **Lot 5 — sélection multicritère des lignes câble** (`v0.7.0`,
+    \#25/#26). **5a**
+    ([`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+    émet `$lignes`) + **5b**
+    ([`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)).
+    32 tests R, `selection.R` à 100 %. Extensions différées :
+    reproductibilité vs v3.6 (oracle réel), VAM×10 et coût €/m³.
 - **Prochain lot** : **Lot 8 — base spatiale & agrégation** (persistance
   PostGIS/GeoPackage des sorties, dont les lignes câble sélectionnées) ;
   ou **Lot 6 — DFCI** (post-MVP).
@@ -425,11 +419,14 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ### 2026-07-12
 
+- **Release `v0.7.0` posée** (PR \#26 mergée, sept checks verts ; tag
+  `v0.7.0` + release GitHub posés automatiquement par `release.yml`).
+  Retour en **cycle de dev `0.7.0.9000`** (bump `DESCRIPTION` seul ;
+  `NEWS.md`/`CITATION.cff` restent à `0.7.0`).
 - **Lot 5 (sélection multicritère des lignes câble) livré et publié en
-  `v0.7.0`** (PR \#25). Retour en cycle de dev `0.7.0.9000` après la
-  release. `selection.R` à 100 % de couverture (codecov exigeant : sept
-  branches défensives couvertes par des tests ciblés). Détail
-  ci-dessous.
+  `v0.7.0`** (PR \#25). `selection.R` à 100 % de couverture (codecov
+  exigeant : sept branches défensives couvertes par des tests ciblés).
+  Détail ci-dessous.
 - **Lot 5 (sélection multicritère des lignes câble) implémenté** — spec
   `specs/005` validé sur lecture de
   `select_best_lines`/`create_best_table` (Sylvaccess
