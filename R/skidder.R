@@ -77,7 +77,10 @@ skidder <- function(pre,
   # --- Treuillage : balayage radial, hors cellules de desserte. ---------------
   zone_tr <- zone_treuillable(pre, config)
   zone_tr[desserte_cel] <- 0
-  treuil <- treuiller(pre$mnt, pre$desserte, zone_tr, config)
+  # Le balayage part des seules cellules de LIVRAISON : on ne treuille pas vers
+  # une route publique. Lui passer `pre$desserte` brut la remettait en jeu comme
+  # source, et c'est de la que venaient 98,9 % de nos cellules en trop.
+  treuil <- treuiller(pre$mnt, .desserte_livraison(pre), zone_tr, config)
 
   # --- Trainage en foret : plus court chemin depuis la desserte. --------------
   # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.

@@ -47,7 +47,10 @@ conduire <- function(pre, config, zone) {
   zv <- as.numeric(terra::values(zone))
   conduisible <- !is.na(zv) & zv != 0
 
-  routes <- which(!is.na(terra::values(pre$desserte)))
+  # Cellules de LIVRAISON seulement : le porteur ne depose pas son bois sur une
+  # route ouverte a la circulation, qui est pour lui une barriere
+  # (`Obstacles_forwarder[Res_pub==1]=1` chez Sylvaccess). Cf. .classes_desserte().
+  routes <- .cellules_livraison(pre)
   if (!length(routes)) {
     cli::cli_abort("{.arg pre$desserte} ne contient aucune cellule.")
   }

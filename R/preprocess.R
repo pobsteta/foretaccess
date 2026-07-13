@@ -186,8 +186,16 @@ preprocess <- function(mnt,
 # Une couche d'obstacles est fréquemment hétérogène (bâti en polygones, cours
 # d'eau et réseau public en lignes). `terra::vect()` ne retient qu'un seul type
 # de géométrie et abandonne les autres sans erreur : on rasterise donc type par
-# type, puis on réunit. Les lignes marquent toute cellule qu'elles traversent
-# (`touches`), un cours d'eau ne passant pas par le centre des cellules.
+# type, puis on réunit.
+#
+# `touches = TRUE` : **toute cellule touchée** est retenue, pas seulement celles
+# dont le centre tombe dans la géométrie. C'est ce que fait Sylvaccess, qui
+# rasterise *chacune* de ses couches vectorielles avec `ALL_TOUCHED=TRUE`
+# (`gdal.RasterizeLayer(..., options=["ALL_TOUCHED=TRUE"])`) -- forêt, desserte,
+# obstacles, zones, départs câble. Au centre de cellule, notre forêt était plus
+# petite, nos obstacles plus fins et notre desserte plus clairsemée que les
+# siens : les rayons de treuillage partaient de moins d'endroits et
+# n'atteignaient pas ce qu'il atteint.
 .masque_vecteur <- function(x, mnt, nom) {
   if (is.null(x)) {
     m <- terra::rast(mnt)
@@ -201,7 +209,7 @@ preprocess <- function(mnt,
       part <- sf::st_sf(geometry = geom[familles == fam])
       couche <- terra::rasterize(
         terra::vect(part), mnt,
-        field = 1, background = 0, touches = (fam == "ligne")
+        field = 1, background = 0, touches = TRUE
       )
       m <- max(m, couche, na.rm = TRUE)
     }
@@ -226,10 +234,17 @@ preprocess <- function(mnt,
   v <- terra::vect(desserte)
   v$code_classe <- match(as.character(desserte$classe), classes)
 
-  # Une route publique et une desserte forestiere peuvent tomber dans la meme
-  # cellule. `touches = TRUE` ferait gagner la derniere ecrite ; on garde le
-  # defaut (centre de cellule), comme Sylvaccess.
-  r <- terra::rasterize(v, mnt, field = "code_classe")
+  # `touches = TRUE` (ALL_TOUCHED de Sylvaccess) : toute cellule effleuree par une
+  # desserte en est une. Le reseau est ainsi bien plus dense qu'au centre de
+  # cellule -- et c'est de la que partent les rayons de treuillage.
+  #
+  # Corollaire : une cellule peut alors etre touchee par une piste ET par une
+  # route publique. Sylvaccess garde ses couches separees et tranche
+  # explicitement -- `from_rast[Res_pub==1] = 0`, la BARRIERE l'emporte. On
+  # reproduit cette priorite par `fun = "max"` : les codes sont ordonnes
+  # route (1) < piste (2) < dfci (3) < reseau_public (4), donc le reseau public
+  # gagne sur tout.
+  r <- terra::rasterize(v, mnt, field = "code_classe", fun = "max", touches = TRUE)
   levels(r) <- data.frame(value = seq_along(classes), classe = classes)
   names(r) <- "desserte"
   r

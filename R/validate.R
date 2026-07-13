@@ -73,6 +73,19 @@ valider_entrees <- function(mnt,
 # (barriere, cf. ci-dessus) n'en fait pas partie.
 .classes_livraison <- function() c("route", "piste", "dfci")
 
+# Raster de desserte restreint aux cellules de livraison (reseau public en NA).
+# Les balayages radiaux (treuiller(), conduire()) consomment un raster, pas des
+# indices : ils doivent voir la MEME desserte que le roulage.
+.desserte_livraison <- function(pre) {
+  r <- terra::rast(pre$desserte)
+  v <- rep(NA_real_, terra::ncell(r))
+  cel <- .cellules_livraison(pre)
+  v[cel] <- as.numeric(terra::values(pre$desserte))[cel]
+  terra::values(r) <- v
+  names(r) <- "desserte"
+  r
+}
+
 # Indices des cellules de desserte ou le bois peut etre livre (reseau public exclu).
 #
 # Sans table de categories -- desserte non categorisee, ou raster de marqueurs des
