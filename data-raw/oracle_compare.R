@@ -24,8 +24,12 @@ SYLVA <- path.expand(SYLVA)
 # mesurerait alors que l'accord sur les cellules que Sylvaccess juge deja
 # accessibles, et l'on ne pourrait JAMAIS se voir trop optimiste. D'ou la
 # binarisation explicite, NA -> FALSE.
+# Le code positif n'est pas le meme partout : `Foret_accessible.tif` vaut 1,
+# `Zone_accessible.tif` (cable) vaut 2. On teste donc "non-NA et > 0", jamais
+# "== 1" -- sinon la couche entiere passe a FALSE et l'on ne peut plus JAMAIS se
+# voir trop conservateur.
 vrai_ou_faux <- function(r) {
-  v <- !is.na(r) & (r == 1)
+  v <- !is.na(r) & (r > 0)
   v[is.na(v)] <- FALSE
   v
 }
@@ -81,10 +85,30 @@ ecart_continu <- function(nous, eux, dans, nom, nodata = c(-9999, 0)) {
   invisible(list(ecart = d))
 }
 
+# PIEGE : Sylvaccess n'ecrit pas toutes ses sorties sur la meme grille. Le moteur
+# cable travaille sur une fenetre bufferisee autour des lignes de depart
+# (`buff_ar`) : `Cable_1/Zone_accessible.tif` fait 405 x 380 la ou le skidder fait
+# 1034 x 894. Compares tels quels, `terra::values()` rend deux vecteurs de
+# longueurs differentes que R RECYCLE en silence -- on obtient alors un taux
+# d'accord parfaitement plausible et parfaitement faux. Toute couche est donc
+# realignee sur la grille de reference, les cellules hors fenetre valant "non
+# accessible" (Sylvaccess ne les a pas calculees).
+GRILLE <- NULL
+
 lire <- function(...) {
   f <- file.path(...)
   if (!file.exists(f)) return(NULL)
-  terra::rast(f)
+  r <- terra::rast(f)
+  if (is.null(GRILLE)) return(r)
+  # Emprise et resolution seules : `compareGeom()` regarde aussi des attributs
+  # (CRS textuel, niveaux de facteur) qui different sans que la grille bouge, et
+  # rejouer un `resample()` sur un raster categoriel lui coute ses niveaux.
+  meme_grille <- isTRUE(all.equal(as.vector(terra::ext(r)), as.vector(terra::ext(GRILLE)))) &&
+    isTRUE(all.equal(terra::res(r), terra::res(GRILLE)))
+  if (meme_grille) return(r)
+  cat(sprintf("  [realigne] %s : %d x %d -> %d x %d\n", basename(f),
+              nrow(r), ncol(r), nrow(GRILLE), ncol(GRILLE)))
+  terra::resample(r, GRILLE, method = "near")
 }
 
 # --- SKIDDER ----------------------------------------------------------------
@@ -93,6 +117,9 @@ acc_s <- lire(s_dir, "Foret_accessible.tif")
 inacc_s <- lire(s_dir, "Foret_inaccessible.tif")
 
 if (is.null(acc_s)) stop("Sorties Sylvaccess introuvables sous ", s_dir)
+
+# La grille du skidder fait reference : toutes les autres couches s'y realignent.
+GRILLE <- terra::rast(acc_s)
 
 foret <- masque_foret(acc_s, inacc_s)
 cat(sprintf("Grille : %d x %d | cellules forestieres : %d\n",
@@ -140,9 +167,8 @@ if (!is.null(acc_cs) && !is.null(acc_cf)) {
   cat("(Sylvaccess tourne a c_sup = 3 supports ; notre noyau est a 0 -> on\n")
   cat(" s'attend a etre plus conservateur. C'est la dette du Lot 4, pas un bug.)\n")
   lev <- terra::levels(acc_cf)[[1]]
-  codes <- if (is.null(lev)) NULL else lev$value[lev[[2]] %in% c("accessible", "couvert")]
-  bin <- if (is.null(codes)) acc_cf > 0 else acc_cf %in% codes
-  accord_binaire(bin, vrai_ou_faux(acc_cs), foret, "Zone accessible (cable)")
+  codes <- lev$value[lev[[2]] == "accessible_cable"]
+  accord_binaire(acc_cf %in% codes, vrai_ou_faux(acc_cs), foret, "Zone accessible (cable)")
 }
 
 cat("\n")

@@ -1,12 +1,25 @@
 #' Potentiel d'accessibilite par cable-mat (Lot 4d)
 #'
 #' Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
-#' depuis chaque cellule de desserte (depart de ligne), un rayon est lance dans
+#' depuis chaque **place de depot** (depart de ligne), un rayon est lance dans
 #' chacune des 360 directions ; le profil d'altitude sous le rayon est extrait du
 #' MNT, echantillonne au demi-metre, et la faisabilite d'une ligne de cable
 #' (travee simple, **sans support intermediaire**) est evaluee par le noyau Rust
 #' [cable_test_span()] jusqu'a `longueur_max_m`. Les cellules forestieres
 #' traversees par une ligne faisable sont marquees accessibles au cable.
+#'
+#' @section Places de depot:
+#' Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
+#' une aire de depot, une plateforme et un acces camion. Sylvaccess en fait une
+#' **entree a part** (`c_file_departure`), dont il ne retient que les troncons
+#' portant l'attribut `CABLE` -- sur son jeu de test officiel, **2 troncons sur
+#' 125**. Passer `departs` reproduit ce comportement.
+#'
+#' Sans `departs`, on retombe sur *toute* la desserte : la couverture est alors
+#' tres **optimiste** (on desservirait de la foret depuis des pistes incapables
+#' d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
+#' devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
+#' d'aucune couche de places de depot.
 #'
 #' Le placement de supports intermediaires (`OptPyl_Up`) et le pechage lateral
 #' (`distance_laterale_max_m`) sont des extensions futures (voir `specs/004`) :
@@ -15,6 +28,11 @@
 #' @param pre Objet `foretaccess_preprocessing` (voir [preprocess()]).
 #' @param config Objet `foretaccess_config`. Les parametres cable (garde au sol,
 #'   materiel, geometrie) vivent dans `config$cable`.
+#' @param departs Places de depot d'ou une ligne de cable peut partir : chemin de
+#'   vecteur ou objet `sf` (lignes, polygones ou points). Si la couche porte un
+#'   champ `cable`, seules les entites dont `cable` est non nul sont retenues
+#'   (equivalent de l'attribut `CABLE` de Sylvaccess). `NULL` (defaut) : repli sur
+#'   toute la desserte -- voir la section *Places de depot*.
 #' @param write_dir Repertoire d'ecriture des rasters (COG), ou `NULL`.
 #' @param bord Reserve au tuilage (Lot 7) ; ignore ici (pas de propagation
 #'   longue portee a certifier au-dela du halo).
@@ -27,7 +45,8 @@
 #'   `volume_m3`, `ipc` -- une par (depart, azimut) faisable, pour la selection
 #'   du Lot 5), `recap`, `grid`, `config`, `fichiers`.
 #' @export
-potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL, bord = NULL) {
+potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
+                            write_dir = NULL, bord = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
 
@@ -39,10 +58,7 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
 
   alt <- as.numeric(terra::values(pre$mnt))
   foret <- as.numeric(terra::values(pre$foret_mask)) == 1
-  routes <- which(!is.na(terra::values(pre$desserte)))
-  if (!length(routes)) {
-    cli::cli_abort("Aucune cellule de desserte : le cable n'a pas de point de depart.")
-  }
+  routes <- .cellules_depart_cable(pre, departs)
 
   # Balayage 360 deg / pixel porte en Rust (crate cablehelp, parallele `rayon`).
   # L'orchestration -- extraction du profil, recherche de la travee faisable,
@@ -134,6 +150,65 @@ potentiel_cable <- function(pre, config = foretaccess_config(), write_dir = NULL
     slope_min = ca$pente_min_rad,
     slope_max = ca$pente_max_rad
   )
+}
+
+# Cellules d'ou une ligne de cable peut partir.
+#
+# Sylvaccess prend une couche de depart dediee (`c_file_departure`) et n'en retient
+# que les troncons portant l'attribut `CABLE` (`Cable_start > 0`) : sur son jeu de
+# test officiel, 2 troncons sur 125. Une place de depot de cable-mat exige une aire
+# de retournement et un acces camion -- ca n'existe pas sur n'importe quelle piste.
+#
+# Sans couche de depart, on retombe sur toute la desserte : couverture tres
+# optimiste et balayage tres long. On le dit, plutot que de le laisser croire.
+.cellules_depart_cable <- function(pre, departs) {
+  if (is.null(departs)) {
+    cel <- which(!is.na(terra::values(pre$desserte)))
+    if (!length(cel)) {
+      cli::cli_abort("Aucune cellule de desserte : le cable n'a pas de point de depart.")
+    }
+    cli::cli_inform(c(
+      "!" = "Aucune couche de places de depot ({.arg departs}) : le balayage part
+             des {length(cel)} cellules de desserte.",
+      "i" = "La couverture cable sera optimiste -- une piste n'accueille pas un
+             cable-mat. Voir la section {.emph Places de depot} de {.fn potentiel_cable}."
+    ))
+    return(cel)
+  }
+
+  dep <- .as_vector(departs, "departs")
+  if (is.na(sf::st_crs(dep))) {
+    cli::cli_abort("La couche {.arg departs} n'a pas de CRS.")
+  }
+  if (sf::st_crs(dep) != sf::st_crs(pre$mnt)) {
+    cli::cli_abort(c(
+      "Le CRS de {.arg departs} differe de celui du MNT.",
+      "i" = "Aucune reprojection implicite : reprojeter en amont (ADR-004)."
+    ))
+  }
+
+  # Attribut `cable` : equivalent du champ `CABLE` de Sylvaccess. Absent, toute la
+  # couche est reputee cable-apte -- c'est deja une couche de places de depot.
+  if ("cable" %in% names(dep)) {
+    v <- dep[["cable"]]
+    dep <- dep[!is.na(v) & v != 0, ]
+    if (!nrow(dep)) {
+      cli::cli_abort(c(
+        "Aucune entite cable-apte dans {.arg departs}.",
+        "i" = "Le champ {.field cable} vaut 0 ou {.val NA} partout."
+      ))
+    }
+  }
+
+  m <- .masque_vecteur(dep, pre$mnt, "departs_cable")
+  cel <- which(as.numeric(terra::values(m)) == 1)
+  if (!length(cel)) {
+    cli::cli_abort(c(
+      "La couche {.arg departs} ne couvre aucune cellule de la grille.",
+      "i" = "Emprise disjointe du MNT ?"
+    ))
+  }
+  cel
 }
 
 .couches_cable <- function() {

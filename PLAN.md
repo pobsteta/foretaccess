@@ -237,6 +237,12 @@ Fait : 44 fichiers de sortie, 3 moteurs + sélection de lignes.
 |---|---|---|---|
 | Skidder | **92,9 %** | 5,06 % | 2,00 % |
 | Porteur | **96,6 %** | 2,89 % | 0,50 % |
+| Câble | **93,6 %** | 1,07 % | 5,32 % |
+
+L'écart du **câble part dans la direction attendue** : nous sommes surtout *trop conservateurs*
+(5,3 %), signature exacte de la dette du Lot 4 — Sylvaccess place jusqu'à 3 supports
+intermédiaires (`c_sup = 3`), notre noyau zéro, donc nos lignes portent moins loin. Le modèle se
+comporte comme sa théorie le prédit.
 
 Le cœur des moteurs est fidèle, et **toutes les distances collent** : débusquage à **0,2 m**
 d'écart médian, traînage sur piste à **7,3 m** (max 1 407,6 contre 1 376,0), distance totale à
@@ -338,25 +344,34 @@ de la source. À arbitrer.
 
 | Moteur | Sylvaccess (Cython) | ForêtAccess |
 |---|---|---|
-| Skidder | 14 s | **12,9 s** |
-| Porteur | 14 s | 26,7 s |
-| Câble | 3 min 18 s (`c_sup = 3`) | > 1 h (`c_sup = 0`) — cf. ci-dessous |
+| Skidder | 14 s | **11,2 s** |
+| Porteur | 14 s | 18,8 s |
+| Câble | 3 min 18 s (`c_sup = 3`) | **2 min 18 s** (`c_sup = 0`) |
 
-Le skidder est **à parité** avec le Cython, le porteur ~2× plus lent. *(Une première mesure
-donnait 39,8 s / 47,2 s : elle était faussée par huit workers `workRSOCK` orphelins laissés par
-une suite de tests interrompue. Toujours vérifier la charge avant de chronométrer.)*
+Le skidder est **à parité** avec le Cython, le porteur ~30 % plus lent, le câble plus rapide —
+mais à périmètre non égal (0 support contre 3). *(Une première mesure donnait 39,8 s / 47,2 s :
+elle était faussée par huit workers `workRSOCK` orphelins laissés par une suite de tests
+interrompue. Toujours vérifier la charge avant de chronométrer.)*
 
-**Le câble est faux, et le chrono n'en était que le symptôme.** Sylvaccess ne lance ses lignes
-que depuis un fichier de départ dédié (`c_file_departure`), filtré sur l'attribut `CABLE` :
-**2 tronçons sur 125** à ColduPre. Une place de dépôt de câble-mât exige une aire de
-retournement et un accès camion — ça n'existe pas sur n'importe quelle piste. Or
-`potentiel_cable()` part de **toute cellule de desserte** (`R/cable.R:42`) : ~60× trop de
-points de départ. La carte de couverture câble est donc **massivement trop optimiste**, et
-l'heure de calcul (contre 3 min 18, sur un problème pourtant plus facile : 0 support contre 3)
-n'est que la conséquence. Décision : ajouter `potentiel_cable(departs = )` (couche de places de
-dépôt, repli sur la desserte entière si absente) — ajout d'argument, pas une rupture. **À faire
-avant `v1.0.0`.** Le scan est sauté dans `oracle_coldupre.R` en attendant (`FA_CABLE=1` pour
-le forcer).
+6. **Le câble partait de toute la desserte** (`R/cable.R`). Sylvaccess ne lance ses lignes que
+   depuis un fichier de départ dédié (`c_file_departure`), filtré sur l'attribut `CABLE` :
+   **2 tronçons sur 125** à ColduPre. Une place de dépôt de câble-mât exige une aire de
+   retournement et un accès camion — ça n'existe pas sur n'importe quelle piste. Or
+   `potentiel_cable()` partait de **toute cellule de desserte** : ~60× trop de départs, donc une
+   couverture massivement trop optimiste — et un balayage de **plus d'une heure** contre 3 min 18,
+   sur un problème pourtant plus facile (0 support contre 3). Corrigé :
+   `potentiel_cable(departs = )` prend une couche de places de dépôt, filtrée sur un champ
+   `cable` s'il existe ; sans elle, repli sur la desserte entière **avec un message explicite**.
+   Le balayage tombe à **138 s** — plus rapide que Sylvaccess (198 s), à périmètre non égal.
+
+**Piège n° 2 du harnais, corrigé.** Sylvaccess n'écrit pas toutes ses sorties sur la même
+grille : le moteur câble travaille sur une **fenêtre bufferisée** autour des départs
+(`Zone_accessible.tif` = 405 × 380, contre 1034 × 894 pour le skidder). Comparés tels quels,
+`terra::values()` rend deux vecteurs de longueurs différentes que **R recycle en silence** —
+d'où un taux d'accord parfaitement plausible (93,89 %) et parfaitement faux, dont le seul indice
+était un recouvrement **nul** entre les deux couvertures. Le harnais réaligne désormais toute
+couche sur la grille de référence. Et le code positif diffère aussi (`Foret_accessible` vaut 1,
+`Zone_accessible` vaut **2**) : on teste « non-NA et > 0 », jamais « == 1 ».
 
 **Restent ouverts** : les **5,06 %** de cellules où nous restons trop optimistes (skidder) —
 cause non identifiée, cf. la liste des hypothèses déjà réfutées ci-dessus ; les **2,89 %** du

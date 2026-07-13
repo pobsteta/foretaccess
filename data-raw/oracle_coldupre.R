@@ -110,15 +110,19 @@ pre <- tic("preprocess", preprocess(
 res_skidder <- tic("skidder", skidder(pre, config = cfg, write_dir = file.path(OUT, "skidder")))
 res_porteur <- tic("porteur", porteur(pre, config = cfg, write_dir = file.path(OUT, "porteur")))
 
-# Le cable part actuellement de TOUTE cellule de desserte, alors que Sylvaccess
-# ne part que des troncons porteurs de l'attribut CABLE (2 sur 125 a ColduPre).
-# Tant que `potentiel_cable(departs=)` n'existe pas, le scan est a la fois faux
-# (trop optimiste) et interminable (> 1 h contre 3 min 18). On le saute par
-# defaut ; FA_CABLE=1 pour le forcer.
-if (identical(Sys.getenv("FA_CABLE"), "1")) {
-  res_cable <- tic("cable", potentiel_cable(pre, config = cfg, write_dir = file.path(OUT, "cable")))
+# Places de depot : Sylvaccess ne lance ses lignes que depuis `c_file_departure`
+# filtre sur l'attribut CABLE. A ColduPre, c'est la desserte elle-meme, dont
+# 2 troncons sur 125 portent CABLE != 0.
+departs <- sf::st_read(file.path(IN, "forest_roadnetwork.gpkg"), quiet = TRUE)
+departs$cable <- departs$CABLE
+message("  places de depot : ", sum(departs$cable != 0), " troncons sur ", nrow(departs))
+
+if (!identical(Sys.getenv("FA_CABLE"), "0")) {
+  res_cable <- tic("cable", potentiel_cable(
+    pre, config = cfg, departs = departs, write_dir = file.path(OUT, "cable")
+  ))
 } else {
-  message("  cable        SAUTE (cf. couche de departs manquante)")
+  message("  cable        SAUTE (FA_CABLE=0)")
 }
 
 saveRDS(chrono, file.path(OUT, "chrono.rds"))

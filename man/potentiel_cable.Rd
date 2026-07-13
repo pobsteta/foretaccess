@@ -7,6 +7,7 @@
 potentiel_cable(
   pre,
   config = foretaccess_config(),
+  departs = NULL,
   write_dir = NULL,
   bord = NULL
 )
@@ -16,6 +17,12 @@ potentiel_cable(
 
 \item{config}{Objet \code{foretaccess_config}. Les parametres cable (garde au sol,
 materiel, geometrie) vivent dans \code{config$cable}.}
+
+\item{departs}{Places de depot d'ou une ligne de cable peut partir : chemin de
+vecteur ou objet \code{sf} (lignes, polygones ou points). Si la couche porte un
+champ \code{cable}, seules les entites dont \code{cable} est non nul sont retenues
+(equivalent de l'attribut \code{CABLE} de Sylvaccess). \code{NULL} (defaut) : repli sur
+toute la desserte -- voir la section \emph{Places de depot}.}
 
 \item{write_dir}{Repertoire d'ecriture des rasters (COG), ou \code{NULL}.}
 
@@ -33,15 +40,29 @@ du Lot 5), \code{recap}, \code{grid}, \code{config}, \code{fichiers}.
 }
 \description{
 Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
-depuis chaque cellule de desserte (depart de ligne), un rayon est lance dans
+depuis chaque \strong{place de depot} (depart de ligne), un rayon est lance dans
 chacune des 360 directions ; le profil d'altitude sous le rayon est extrait du
 MNT, echantillonne au demi-metre, et la faisabilite d'une ligne de cable
 (travee simple, \strong{sans support intermediaire}) est evaluee par le noyau Rust
 \code{\link[=cable_test_span]{cable_test_span()}} jusqu'a \code{longueur_max_m}. Les cellules forestieres
 traversees par une ligne faisable sont marquees accessibles au cable.
 }
-\details{
+\section{Places de depot}{
+
+Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
+une aire de depot, une plateforme et un acces camion. Sylvaccess en fait une
+\strong{entree a part} (\code{c_file_departure}), dont il ne retient que les troncons
+portant l'attribut \code{CABLE} -- sur son jeu de test officiel, \strong{2 troncons sur
+125}. Passer \code{departs} reproduit ce comportement.
+
+Sans \code{departs}, on retombe sur \emph{toute} la desserte : la couverture est alors
+tres \strong{optimiste} (on desservirait de la foret depuis des pistes incapables
+d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
+devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
+d'aucune couche de places de depot.
+
 Le placement de supports intermediaires (\code{OptPyl_Up}) et le pechage lateral
 (\code{distance_laterale_max_m}) sont des extensions futures (voir \code{specs/004}) :
 ce lot livre le potentiel \strong{0 support}, colonne vertebrale testable.
 }
+

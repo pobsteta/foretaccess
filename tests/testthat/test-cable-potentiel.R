@@ -78,3 +78,75 @@ test_that("sans desserte, potentiel_cable leve une erreur", {
   pre$desserte <- vide
   expect_error(potentiel_cable(pre, config_cable_court()), "desserte")
 })
+
+# --- Places de depot (couche `departs`) --------------------------------------
+# Trouve par confrontation a l'oracle : Sylvaccess ne lance ses lignes que depuis
+# une couche de depart dediee, filtree sur l'attribut CABLE (2 troncons sur 125
+# a ColduPre). Partir de TOUTE la desserte rend la couverture massivement trop
+# optimiste -- une piste n'accueille pas un cable-mat.
+
+test_that("sans `departs`, on retombe sur la desserte, et on le dit", {
+  pre <- pre_cable(x_dep = 105, y_dep = 62.5)
+  expect_message(
+    potentiel_cable(pre, config_cable_court()),
+    "places de depot"
+  )
+})
+
+test_that("`departs` restreint le balayage aux seules places de depot", {
+  # Desserte pleine (une ligne traversante) vs une place de depot ponctuelle :
+  # la couverture doit etre strictement plus petite avec la place de depot.
+  mnt <- mnt_plan(pente = 0.2, n = 25, res = 5)
+  ligne <- sf::st_sf(
+    classe = "route",
+    geometry = sf::st_sfc(sf::st_linestring(rbind(c(12.5, 12.5), c(12.5, 112.5))), crs = 2154)
+  )
+  pre <- preprocess(mnt = mnt, desserte = ligne, foret = foret_pleine(mnt))
+
+  place <- sf::st_sf(
+    cable = 1L,
+    geometry = sf::st_sfc(sf::st_point(c(12.5, 62.5)), crs = 2154)
+  )
+
+  couvre <- function(ca) sum(terra::values(ca$accessibilite) ==
+    terra::levels(ca$accessibilite)[[1]]$value[
+      terra::levels(ca$accessibilite)[[1]]$classe == "accessible_cable"
+    ], na.rm = TRUE)
+
+  tout <- suppressMessages(potentiel_cable(pre, config_cable_court()))
+  depuis_place <- potentiel_cable(pre, config_cable_court(), departs = place)
+
+  expect_lt(couvre(depuis_place), couvre(tout))
+  expect_gt(couvre(depuis_place), 0)
+})
+
+test_that("le champ `cable` filtre les entites non cable-aptes", {
+  pre <- pre_cable(x_dep = 105, y_dep = 62.5)
+  # Deux places, une seule cable-apte.
+  places <- sf::st_sf(
+    cable = c(0L, 1L),
+    geometry = sf::st_sfc(
+      sf::st_point(c(105, 32.5)),
+      sf::st_point(c(105, 62.5)),
+      crs = 2154
+    )
+  )
+  ca <- potentiel_cable(pre, config_cable_court(), departs = places)
+  # Seule la place cable-apte a servi de depart.
+  expect_setequal(unique(ca$lignes$depart), terra::cellFromXY(pre$mnt, cbind(105, 62.5)))
+
+  toutes_nulles <- sf::st_sf(cable = c(0L, 0L), geometry = sf::st_geometry(places))
+  expect_error(
+    potentiel_cable(pre, config_cable_court(), departs = toutes_nulles),
+    "cable-apte"
+  )
+})
+
+test_that("`departs` exige un CRS et refuse la reprojection implicite", {
+  pre <- pre_cable(x_dep = 105, y_dep = 62.5)
+  sans_crs <- sf::st_sf(geometry = sf::st_sfc(sf::st_point(c(105, 62.5))))
+  expect_error(potentiel_cable(pre, config_cable_court(), departs = sans_crs), "CRS")
+
+  autre_crs <- sf::st_sf(geometry = sf::st_sfc(sf::st_point(c(6, 45)), crs = 4326))
+  expect_error(potentiel_cable(pre, config_cable_court(), departs = autre_crs), "CRS")
+})
