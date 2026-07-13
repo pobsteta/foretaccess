@@ -235,9 +235,9 @@ Fait : 44 fichiers de sortie, 3 moteurs + sélection de lignes.
 
 | Moteur | Accord | Trop optimistes | Trop conservateurs |
 |---|---|---|---|
-| Skidder | **92,9 %** | 5,06 % | 2,00 % |
-| Porteur | **96,6 %** | 2,89 % | 0,50 % |
-| Câble | **93,6 %** | 1,07 % | 5,32 % |
+| Skidder | **99,95 %** | 177 cellules (0,04 %) | 38 cellules (0,01 %) |
+| Porteur | **97,64 %** | 1,89 % | 0,47 % |
+| Câble | **93,61 %** | 1,07 % | 5,32 % |
 
 L'écart du **câble part dans la direction attendue** : nous sommes surtout *trop conservateurs*
 (5,3 %), signature exacte de la dette du Lot 4 — Sylvaccess place jusqu'à 3 supports
@@ -344,7 +344,7 @@ de la source. À arbitrer.
 
 | Moteur | Sylvaccess (Cython) | ForêtAccess |
 |---|---|---|
-| Skidder | 14 s | **11,2 s** |
+| Skidder | 14 s | **14,1 s** (11,2 s avant la passe contour) |
 | Porteur | 14 s | 18,8 s |
 | Câble | 3 min 18 s (`c_sup = 3`) | **2 min 18 s** (`c_sup = 0`) |
 
@@ -373,10 +373,31 @@ d'où un taux d'accord parfaitement plausible (93,89 %) et parfaitement faux, do
 couche sur la grille de référence. Et le code positif diffère aussi (`Foret_accessible` vaut 1,
 `Zone_accessible` vaut **2**) : on teste « non-NA et > 0 », jamais « == 1 ».
 
-**Restent ouverts** : les **5,06 %** de cellules où nous restons trop optimistes (skidder) —
-cause non identifiée, cf. la liste des hypothèses déjà réfutées ci-dessus ; les **2,89 %** du
-porteur (non instruits) ; et le traînage *en forêt* (médiane 0 m contre 124 m) — les deux
-moteurs ne décomposent visiblement pas la distance totale de la même façon.
+7. **Il manquait la troisième passe de treuillage** (`R/skidder.R`, `R/treuillage.R`).
+   Sylvaccess treuille **trois fois** : depuis les routes (`skid_debusq_RF`), depuis les pistes
+   (`skid_debusq_Piste`), puis depuis le **contour de la zone où l'engin a roulé**
+   (`skid_debusq_contour`, `Sylvaccess_1_skidder.py:496-540`). La machine entre en forêt,
+   s'arrête au bord du terrain roulable, et treuille **de là**. Nous n'avions que les deux
+   premières : une cellule ne pouvait être treuillée que depuis une desserte. La preuve était
+   dans les données — la cellule 437961 reçoit 39 m de débusquage alors qu'elle est à **69,5 m**
+   de toute desserte forestière, et **12,7 %** des cellules de Sylvaccess ont un débusquage
+   *inférieur* à leur distance euclidienne à la desserte (écart médian 17,2 m, max 158,5 m).
+   Impossible depuis une route. Détails de la passe : le contour au sens de `get_contour()`
+   (cellule de la zone dont la fenêtre 3 × 3 n'est pas entièrement dans la zone), purgé des
+   obstacles, du réseau public et des dessertes ; chaque rampe **emporte** sa distance déjà
+   parcourue (traînage en forêt + traînage sur piste) et le critère d'amélioration porte sur le
+   **total**, non sur la seule longueur de câble ; les cibles excluent la zone déjà roulée ; et
+   le remplissage est **purement additif** (`skid_fill_contour` : `if Ddebusquage[y,x] < 0`), il
+   ne corrige jamais une cellule que les deux premières passes ont atteinte. `treuiller()` prend
+   un argument `depart_cout` ; sans lui, comportement inchangé. Gain : **98,24 → 99,95 %**
+   d'accord skidder, les 7 115 cellules trop conservatrices tombent à **38**. C'est la même
+   « double passe réseau/contour » (`fwd_azimuts_contour`) qui avait été prototypée pour le
+   porteur puis retirée faute d'oracle — elle est maintenant justifiée par la mesure.
+
+**Restent ouverts** : les **1,89 %** de cellules où le porteur est trop optimiste (non
+instruits — la passe contour lui manque probablement aussi, mais dans ce sens-là ce n'est pas
+elle qui aidera) ; et le traînage *en forêt* (médiane 0 m contre 124 m) — les deux moteurs ne
+décomposent visiblement pas la distance totale de la même façon.
 
 ### 2026-07-09
 - Lot 0 clos et publié (`v0.1.0`), retour en cycle de dev `0.1.0.9000`.
