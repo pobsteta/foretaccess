@@ -36,7 +36,10 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
 
-  desserte_cel <- which(!is.na(terra::values(pre$desserte)))
+  # Comme pour le skidder, le reseau public est une barriere et non une
+  # destination : Sylvaccess le verse aux obstacles du porteur
+  # (`Obstacles_forwarder[Res_pub==1]=1`). Cf. .classes_desserte().
+  desserte_cel <- .cellules_livraison(pre)
   if (!length(desserte_cel)) {
     cli::cli_abort("Aucune cellule de desserte : le porteur n'a pas de point de depart.")
   }
@@ -147,7 +150,10 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
 
   foret <- as.numeric(terra::values(pre$foret_mask)) == 1
   pente <- as.numeric(terra::values(pre$slope_pct))
-  obst <- as.numeric(terra::values(pre$obstacles_complets_mask)) == 1
+  # Le reseau public rejoint les obstacles du porteur, exactement comme dans
+  # Sylvaccess (`Obstacles_forwarder[Res_pub==1]=1`).
+  obst <- as.numeric(terra::values(pre$obstacles_complets_mask)) == 1 |
+    as.numeric(terra::values(pre$reseau_public_mask)) == 1
 
   atteint <- .saut_hors_foret(pre, config, foret, pente, obst, nr, nc)
 

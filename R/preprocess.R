@@ -12,7 +12,10 @@
 #' @param mnt MNT : chemin de raster ou `SpatRaster`. Définit la grille, la
 #'   résolution et le CRS de référence.
 #' @param desserte Desserte : chemin de vecteur ou `sf` de lignes, avec un champ
-#'   `classe` dans `route`, `piste`, `dfci`.
+#'   `classe` dans `route`, `piste`, `dfci`, `reseau_public`. `reseau_public` est
+#'   la route ouverte à la circulation : point de chargement du camion, mais
+#'   **barrière** pour les engins de débardage — on n'y dépose pas de bois et on
+#'   ne la traverse pas.
 #' @param foret Forêt : chemin de vecteur ou `sf` de polygones.
 #' @param obstacles_complets Obstacles bloquant tous les engins (facultatif).
 #' @param obstacles_partiels Obstacles spécifiques au skidder (facultatif ; la
@@ -30,12 +33,19 @@
 #'     \item{`mnt`}{le MNT, grille de référence. Les moteurs en ont besoin : le
 #'       treuillage du skidder raisonne sur les altitudes (Lot 2).}
 #'     \item{`slope_pct`}{pente en pourcentage.}
+#'     \item{`slope_max_local`}{maximum de la pente sur la fenêtre 3 × 3. C'est lui,
+#'       et non `slope_pct`, que le seuil d'abattage manuel interroge : la zone
+#'       d'exclusion est *dilatée* d'une cellule (`slopes_skid()` de Sylvaccess).}
 #'     \item{`aspect_deg`}{exposition en degrés depuis le nord (plat = `NA`).}
 #'     \item{`foret_mask`}{1 dans les polygones forêt, 0 ailleurs.}
 #'     \item{`desserte`}{raster catégoriel de classe de desserte (`NA` hors desserte).}
 #'     \item{`desserte_sf`}{la desserte vectorielle, conservée pour le least-cost (Lot 2).}
 #'     \item{`obstacles_complets_mask`, `obstacles_partiels_mask`}{1 où obstacle, 0 sinon.}
-#'     \item{`exclusion_mask`}{1 là où la pente dépasse le seuil d'abattage manuel.}
+#'     \item{`reseau_public_mask`}{1 sur le réseau public. Ce n'est pas une desserte
+#'       forestière mais une **barrière** : ni source de débardage, ni terrain
+#'       traversable par les engins.}
+#'     \item{`exclusion_mask`}{1 là où le maximum local de pente dépasse le seuil
+#'       d'abattage manuel.}
 #'     \item{`volume`}{raster de volume aligné, ou `NULL`.}
 #'     \item{`parcellaire`}{objet `sf`, ou `NULL`.}
 #'     \item{`grid`}{métadonnées de grille (emprise, résolution, dimensions, CRS).}
@@ -97,9 +107,29 @@ preprocess <- function(mnt,
   )
   desserte_rast <- .rasteriser_desserte(desserte, mnt)
 
+  # 4bis. Réseau public : barrière pour les engins de débardage (ni source, ni
+  # traversable). Sylvaccess le retire des sources et de la zone roulable, et
+  # l'ajoute aux obstacles du porteur. Cf. `.classes_desserte()`.
+  reseau_public_mask <- .masque_classe(desserte_rast, "reseau_public")
+
   # 5. Masque d'exclusion : pente au-delà du seuil d'abattage manuel (ADR-003).
+  #
+  # Le critère porte sur le MAXIMUM LOCAL de la pente (fenêtre 3 × 3), pas sur la
+  # pente de la cellule seule : une cellule est écartée dès qu'une seule de ses
+  # huit voisines dépasse le seuil. La zone d'exclusion est donc *dilatée* d'une
+  # cellule. C'est ce que fait `slopes_skid()` de Sylvaccess
+  # (`sylvaccess_cython3.pyx:3417-3424`, dont la docstring dit « Calcule le
+  # maximum local sur un raster »), et c'est le SEUL critère dilaté : juste
+  # au-dessus, `Pente_ok_skid` teste bien la cellule elle-même.
+  #
+  # Sans la dilatation, notre zone d'abattage était 1,7 fois trop large, et les
+  # rayons de treuillage traversaient des trous que Sylvaccess referme.
   seuil <- config$skidder$pente_abattage_max_pct
-  exclusion_mask <- terra::ifel(terr$slope_pct > seuil, 1, 0)
+  slope_max_local <- terra::focal(
+    terr$slope_pct, w = 3, fun = "max", na.rm = TRUE, na.policy = "omit"
+  )
+  names(slope_max_local) <- "slope_max_local"
+  exclusion_mask <- terra::ifel(slope_max_local > seuil, 1, 0)
   names(exclusion_mask) <- "exclusion_mask"
 
   # 6. Volume : déjà contrôlé aligné par valider_entrees(), on le nomme seulement.
@@ -110,12 +140,14 @@ preprocess <- function(mnt,
     list(
       mnt                     = mnt,
       slope_pct               = terr$slope_pct,
+      slope_max_local         = slope_max_local,
       aspect_deg              = terr$aspect_deg,
       foret_mask              = foret_mask,
       desserte                = desserte_rast,
       desserte_sf             = desserte,
       obstacles_complets_mask = obstacles_complets_mask,
       obstacles_partiels_mask = obstacles_partiels_mask,
+      reseau_public_mask      = reseau_public_mask,
       exclusion_mask          = exclusion_mask,
       volume                  = volume,
       parcellaire             = parcellaire,
@@ -150,27 +182,67 @@ preprocess <- function(mnt,
 }
 
 # Masque binaire (1 dans les géométries, 0 ailleurs) ; raster nul si couche absente.
+#
+# Une couche d'obstacles est fréquemment hétérogène (bâti en polygones, cours
+# d'eau et réseau public en lignes). `terra::vect()` ne retient qu'un seul type
+# de géométrie et abandonne les autres sans erreur : on rasterise donc type par
+# type, puis on réunit. Les lignes marquent toute cellule qu'elles traversent
+# (`touches`), un cours d'eau ne passant pas par le centre des cellules.
 .masque_vecteur <- function(x, mnt, nom) {
   if (is.null(x)) {
     m <- terra::rast(mnt)
     terra::values(m) <- 0
   } else {
-    m <- terra::rasterize(terra::vect(x), mnt, field = 1, background = 0)
+    geom <- sf::st_geometry(sf::st_zm(sf::st_as_sf(x), drop = TRUE))
+    familles <- .famille_geometrie(sf::st_geometry_type(geom))
+    m <- terra::rast(mnt)
+    terra::values(m) <- 0
+    for (fam in unique(familles)) {
+      part <- sf::st_sf(geometry = geom[familles == fam])
+      couche <- terra::rasterize(
+        terra::vect(part), mnt,
+        field = 1, background = 0, touches = (fam == "ligne")
+      )
+      m <- max(m, couche, na.rm = TRUE)
+    }
   }
   names(m) <- nom
   m
 }
 
-# Raster catégoriel de la desserte, codes stables : route = 1, piste = 2, dfci = 3.
+# Famille de géométrie : le masque ne distingue que surface / ligne / point.
+.famille_geometrie <- function(types) {
+  types <- as.character(types)
+  ifelse(
+    grepl("POLYGON", types), "surface",
+    ifelse(grepl("LINE", types), "ligne", "point")
+  )
+}
+
+# Raster catégoriel de la desserte, codes stables : route = 1, piste = 2,
+# dfci = 3, reseau_public = 4.
 .rasteriser_desserte <- function(desserte, mnt) {
   classes <- .classes_desserte()
   v <- terra::vect(desserte)
   v$code_classe <- match(as.character(desserte$classe), classes)
 
+  # Une route publique et une desserte forestiere peuvent tomber dans la meme
+  # cellule. `touches = TRUE` ferait gagner la derniere ecrite ; on garde le
+  # defaut (centre de cellule), comme Sylvaccess.
   r <- terra::rasterize(v, mnt, field = "code_classe")
   levels(r) <- data.frame(value = seq_along(classes), classe = classes)
   names(r) <- "desserte"
   r
+}
+
+# Masque binaire (1 / 0) d'une classe de desserte donnee.
+.masque_classe <- function(desserte_rast, classe) {
+  code <- match(classe, .classes_desserte())
+  m <- terra::rast(desserte_rast)
+  v <- as.numeric(terra::values(desserte_rast))
+  terra::values(m) <- as.numeric(!is.na(v) & v == code)
+  names(m) <- paste0(classe, "_mask")
+  m
 }
 
 # Couches raster écrites sur disque par write_dir.

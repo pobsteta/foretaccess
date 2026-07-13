@@ -80,3 +80,37 @@ test_that("zone_roulage suit le seuil de pente skidder", {
   cfg <- foretaccess_config(skidder = list(pente_skidder_max_pct = 10))
   expect_equal(sum(terra::values(zone_roulage(toy_preprocess(), cfg))), 0)
 })
+
+test_that("le seuil d'abattage porte sur le MAXIMUM LOCAL de la pente (3 x 3)", {
+  # Trouve par confrontation a l'oracle : `slopes_skid()` de Sylvaccess
+  # (sylvaccess_cython3.pyx:3417-3424) teste le maximum de la pente sur la
+  # fenetre 3 x 3, pas la pente de la cellule. La zone d'exclusion est donc
+  # DILATEE d'une cellule. Sans cela notre zone d'abattage etait 1,7 fois trop
+  # large sur ColduPre, et les rayons de treuillage traversaient des trous que
+  # Sylvaccess referme.
+  #
+  # MNT plat, sauf une falaise ponctuelle : la cellule raide et ses 8 voisines
+  # doivent sortir de la zone treuillable, pas la seule cellule raide.
+  mnt <- terra::rast(nrows = 11, ncols = 11, xmin = 0, xmax = 55, ymin = 0, ymax = 55, crs = "EPSG:2154")
+  terra::values(mnt) <- 100
+  centre <- terra::cellFromRowCol(mnt, 6, 6)
+  mnt[centre] <- 200 # falaise : pente locale tres au-dela de 100 %
+
+  e <- terra::ext(mnt)
+  foret <- sf::st_sf(geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+    c(e[1], e[3]), c(e[2], e[3]), c(e[2], e[4]), c(e[1], e[4]), c(e[1], e[3])
+  ))), crs = 2154))
+  d <- sf::st_sf(
+    classe = "route",
+    geometry = sf::st_sfc(sf::st_linestring(rbind(c(5, 5), c(10, 5))), crs = 2154)
+  )
+  pre <- preprocess(mnt = mnt, desserte = d, foret = foret)
+
+  z <- terra::values(zone_treuillable(pre, foretaccess_config()))
+  voisines <- terra::adjacent(mnt, centre, directions = 8)[1, ]
+
+  expect_equal(as.numeric(z[centre]), 0)
+  # La dilatation : les huit voisines aussi, alors que leur propre pente peut
+  # etre sous le seuil.
+  expect_true(all(z[voisines] == 0))
+})

@@ -70,7 +70,8 @@ zone_roulage <- function(pre, config = foretaccess_config()) {
   z <- (pre$foret_mask == 1) &
     (pre$slope_pct <= config$skidder$pente_skidder_max_pct) &
     (pre$obstacles_complets_mask == 0) &
-    (pre$obstacles_partiels_mask == 0)
+    (pre$obstacles_partiels_mask == 0) &
+    (pre$reseau_public_mask == 0)
 
   z <- terra::ifel(is.na(z), 0, z)
   names(z) <- "zone_roulage"
@@ -93,7 +94,8 @@ terrain_roulable <- function(pre, config = foretaccess_config()) {
 
   z <- (pre$slope_pct <= config$skidder$pente_skidder_max_pct) &
     (pre$obstacles_complets_mask == 0) &
-    (pre$obstacles_partiels_mask == 0)
+    (pre$obstacles_partiels_mask == 0) &
+    (pre$reseau_public_mask == 0)
 
   z <- terra::ifel(is.na(z), 0, z)
   names(z) <- "terrain_roulable"
@@ -124,7 +126,12 @@ zone_roulable_connectee <- function(pre, config = foretaccess_config()) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
 
-  desserte_cel <- which(!is.na(terra::values(pre$desserte)))
+  # Reseau public exclu : ce n'est pas une desserte forestiere mais une BARRIERE.
+  # Le forcer dans la zone roulable (ci-dessous) ferait rouler le skidder le long
+  # de la route publique en payant le surcout d'obstacle -- d'ou des distances de
+  # 1 646 km sur ColduPre. Sylvaccess l'exclut explicitement, trois fois :
+  # `zone_rast[Res_pub==1] = 0`. Cf. `.classes_desserte()`.
+  desserte_cel <- .cellules_livraison(pre)
   if (!length(desserte_cel)) {
     cli::cli_abort("Aucune cellule de desserte : rien n'est connecte.")
   }
@@ -193,9 +200,12 @@ zone_treuillable <- function(pre, config = foretaccess_config()) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   validate_config(config)
 
+  # Le seuil d'abattage porte sur le maximum LOCAL de la pente (fenetre 3 x 3),
+  # pas sur la pente de la cellule : c'est le `Pente_ok_buch` de Sylvaccess, et
+  # la zone d'exclusion s'en trouve dilatee d'une cellule. Cf. preprocess().
   z <- (pre$foret_mask == 1) &
     (pre$obstacles_complets_mask == 0) &
-    (pre$slope_pct <= config$skidder$pente_abattage_max_pct)
+    (pre$slope_max_local <= config$skidder$pente_abattage_max_pct)
 
   z <- terra::ifel(is.na(z), 0, z)
   names(z) <- "zone_treuillable"

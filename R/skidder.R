@@ -66,7 +66,10 @@ skidder <- function(pre,
     ))
   }
 
-  desserte_cel <- which(!is.na(terra::values(pre$desserte)))
+  # Le reseau public n'accueille pas de bois debarde : c'est le point de
+  # chargement du camion, et pour le skidder une barriere. Sylvaccess l'exclut
+  # explicitement des sources (`from_rast[Res_pub==1]=0`). Cf. .classes_desserte().
+  desserte_cel <- .cellules_livraison(pre)
   if (!length(desserte_cel)) {
     cli::cli_abort("Aucune cellule de desserte : le skidder n'a pas de point de depart.")
   }
@@ -100,10 +103,24 @@ skidder <- function(pre,
   # Si le pretraitement la porte deja (tuilage), elle est globale, donc exacte : le
   # reseau est unidimensionnel et creux, on le propage une fois pour toute l'emprise
   # plutot que de faire grandir le halo jusqu'a sa plus longue piste (spec 007 §4.3.1).
+  #
+  # La propagation LE LONG du reseau se fait sur la pente seule, sans surcout
+  # d'obstacle : une desserte n'est pas un obstacle a la circulation sur
+  # elle-meme. Le reseau public est a la fois desserte (on y livre le bois) et
+  # obstacle du skidder (on ne debarde pas au travers) ; lui appliquer le
+  # surcout ferait payer 1000 par cellule de route traversee et rendrait la
+  # distance sur piste absurde. Sylvaccess fait de meme : `Link_tracks_res_pub`
+  # et `Link_RF_res_pub` tournent sur `Pond_pente` (pente pure), et seule la
+  # propagation en foret utilise `Pond_pente2` (pente + 1000 x obstacles).
+  cout_reseau <- ponderation_pente(pre$slope_pct)
   piste <- if (is.null(pre$distance_piste)) {
-    .distance_sur_piste(pre, cout, bord)
+    .distance_sur_piste(pre, cout_reseau, bord)
   } else {
-    list(distance = as.numeric(terra::values(pre$distance_piste)), certifie = NULL)
+    list(
+      distance = as.numeric(terra::values(pre$distance_piste)),
+      injoignable = rep(FALSE, terra::ncell(pre$mnt)),
+      certifie = NULL
+    )
   }
   d_piste <- piste$distance
 
@@ -131,9 +148,16 @@ skidder <- function(pre,
   dist_foret <- ifelse(!treuille & roule, d_rl, 0)
   dist_piste <- .piste_allouee(d_piste, allocation)
 
+  # Une cellule rattachee a une desserte INJOIGNABLE n'est pas accessible : le
+  # bois y arriverait sans pouvoir en repartir (piste orpheline, qui ne rejoint
+  # aucune route). Cf. `.distance_sur_piste()`.
+  orpheline <- rep(FALSE, length(d_tr))
+  ok <- !is.na(allocation)
+  orpheline[ok] <- piste$injoignable[allocation[ok]]
+
   # `parcourable` decrit la praticabilite du terrain (pente sous le seuil), pas le
   # mecanisme d'extraction : une cellule treuillee peut etre parcourable.
-  accessible <- treuille | roule | est_desserte
+  accessible <- (treuille | roule | est_desserte) & !orpheline
   parcourable <- accessible & roulable
 
   codes <- rep(3, length(d_tr)) # non_accessible
@@ -273,11 +297,18 @@ skidder <- function(pre,
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
 
+  # Deux roles distincts, a ne pas confondre : le reseau public n'est pas une
+  # SOURCE de debardage (on n'y depose pas de bois -- cf. `.cellules_livraison()`),
+  # mais il fait bien partie du RESEAU sur lequel se mesure la distance : c'est
+  # le terminus de la chaine piste -> route forestiere -> route publique.
+  # Sylvaccess le passe explicitement en argument de `Link_tracks_res_pub` et
+  # `Link_RF_res_pub`. L'exclure ici orphelinerait des pistes que Sylvaccess
+  # dessert (mesure : -3 points d'accord sur ColduPre).
   est_piste <- !is.na(codes) & codes %in% code_piste
   est_route <- !is.na(codes) & !est_piste
 
   if (!any(est_route) || !any(est_piste)) {
-    return(list(distance = rep(0, n), certifie = NULL))
+    return(list(distance = rep(0, n), injoignable = rep(FALSE, n), certifie = NULL))
   }
 
   zone <- terra::rast(pre$mnt)
@@ -297,9 +328,17 @@ skidder <- function(pre,
     certifie <- cert$certifie
   }
 
+  # Une cellule de desserte dont le cout cumule reste NA ne rejoint AUCUNE route :
+  # le bois y arriverait sans pouvoir en repartir. Elle est INJOIGNABLE, et les
+  # cellules de foret qui lui sont allouees sont inaccessibles. Rendre 0 ici -- la
+  # reponse la plus optimiste possible -- ferait passer une piste orpheline pour
+  # une desserte parfaite. Sylvaccess les recense (`Routes_forestieres_non_connectees`).
+  injoignable <- as.logical((est_piste | est_route) &
+    is.na(as.numeric(terra::values(prop$cout_cumule))))
+
   d <- as.numeric(terra::values(prop$cout_cumule))
   d[is.na(d)] <- 0
-  list(distance = d, certifie = certifie)
+  list(distance = d, injoignable = injoignable, certifie = certifie)
 }
 
 # Reporte la distance sur piste de la cellule de desserte allouee a chaque pixel.

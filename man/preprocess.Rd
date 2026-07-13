@@ -21,7 +21,10 @@ preprocess(
 résolution et le CRS de référence.}
 
 \item{desserte}{Desserte : chemin de vecteur ou \code{sf} de lignes, avec un champ
-\code{classe} dans \code{route}, \code{piste}, \code{dfci}.}
+\code{classe} dans \code{route}, \code{piste}, \code{dfci}, \code{reseau_public}. \code{reseau_public} est
+la route ouverte à la circulation : point de chargement du camion, mais
+\strong{barrière} pour les engins de débardage — on n'y dépose pas de bois et on
+ne la traverse pas.}
 
 \item{foret}{Forêt : chemin de vecteur ou \code{sf} de polygones.}
 
@@ -47,12 +50,19 @@ rasters partagent exactement la grille du MNT.
 \item{\code{mnt}}{le MNT, grille de référence. Les moteurs en ont besoin : le
 treuillage du skidder raisonne sur les altitudes (Lot 2).}
 \item{\code{slope_pct}}{pente en pourcentage.}
+\item{\code{slope_max_local}}{maximum de la pente sur la fenêtre 3 × 3. C'est lui,
+et non \code{slope_pct}, que le seuil d'abattage manuel interroge : la zone
+d'exclusion est \emph{dilatée} d'une cellule (\code{slopes_skid()} de Sylvaccess).}
 \item{\code{aspect_deg}}{exposition en degrés depuis le nord (plat = \code{NA}).}
 \item{\code{foret_mask}}{1 dans les polygones forêt, 0 ailleurs.}
 \item{\code{desserte}}{raster catégoriel de classe de desserte (\code{NA} hors desserte).}
 \item{\code{desserte_sf}}{la desserte vectorielle, conservée pour le least-cost (Lot 2).}
 \item{\code{obstacles_complets_mask}, \code{obstacles_partiels_mask}}{1 où obstacle, 0 sinon.}
-\item{\code{exclusion_mask}}{1 là où la pente dépasse le seuil d'abattage manuel.}
+\item{\code{reseau_public_mask}}{1 sur le réseau public. Ce n'est pas une desserte
+forestière mais une \strong{barrière} : ni source de débardage, ni terrain
+traversable par les engins.}
+\item{\code{exclusion_mask}}{1 là où le maximum local de pente dépasse le seuil
+d'abattage manuel.}
 \item{\code{volume}}{raster de volume aligné, ou \code{NULL}.}
 \item{\code{parcellaire}}{objet \code{sf}, ou \code{NULL}.}
 \item{\code{grid}}{métadonnées de grille (emprise, résolution, dimensions, CRS).}

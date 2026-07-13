@@ -43,8 +43,8 @@ test_that("le raster de desserte relu conserve ses catégories", {
   # GDAL renomme la colonne de catégories d'après la couche : on compare les
   # libellés, pas le nom de colonne.
   niveaux <- terra::levels(desserte)[[1]]
-  expect_equal(niveaux[[1]], 1:3)
-  expect_equal(niveaux[[2]], c("route", "piste", "dfci"))
+  expect_equal(niveaux[[1]], 1:4)
+  expect_equal(niveaux[[2]], c("route", "piste", "dfci", "reseau_public"))
 })
 
 test_that("les couches absentes ne sont pas écrites", {
