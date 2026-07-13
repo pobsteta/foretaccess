@@ -102,6 +102,111 @@ terrain_roulable <- function(pre, config = foretaccess_config()) {
   z
 }
 
+#' Terrain plat au sens du porteur
+#'
+#' Reproduit `Pente_ok_forw` de Sylvaccess (`slopes_skid()`, second retour) : la pente
+#' de la cellule est sous le **minimum** des trois seuils du porteur — c'est le terrain
+#' où l'engin roule *quelle que soit* la direction, et donc celui sur lequel se propage
+#' le plus court chemin. Le balayage radial ([conduire()]), lui, va plus loin en
+#' arbitrant selon le sens et le dévers ; il est borné par le **maximum** des trois.
+#'
+#' Le réseau public rejoint les obstacles (`Obstacles_forwarder[Res_pub==1]=1`).
+#'
+#' @inheritParams surface_cout_skidder
+#' @return Un `SpatRaster` logique (1 = terrain plat pour le porteur).
+#' @export
+terrain_plat <- function(pre, config = foretaccess_config()) {
+  checkmate::assert_class(pre, "foretaccess_preprocessing")
+  validate_config(config)
+  po <- config$porteur
+
+  seuil <- min(po$pente_travers_max_pct, po$pente_montee_max_pct, po$pente_descente_max_pct)
+  z <- (pre$slope_pct <= seuil) &
+    (pre$obstacles_complets_mask == 0) &
+    (pre$reseau_public_mask == 0)
+
+  z <- terra::ifel(is.na(z), 0, z)
+  names(z) <- "terrain_plat"
+  z
+}
+
+#' Zone plate effectivement conduisible, connectée à la desserte
+#'
+#' Analogue porteur de [zone_roulable_connectee()], et fidèle à la construction de
+#' `Pente_ok_forwarder` (`Sylvaccess_3_forwarder.py`, §« Calculation of skidding
+#' distance inside the forest stands ») : mêmes trois temps, sur le [terrain_plat()]
+#' et avec le saut hors forêt du porteur (`f_dmax_outfor`, défaut 200 m).
+#'
+#' C'est la zone sur laquelle le porteur **roule** en plus court chemin, et donc celle
+#' qui contourne obstacles et ravins. Sans elle, la zone conduite se réduit aux rayons
+#' du balayage : une étoile, au périmètre démesuré — que le grappin gonfle ensuite d'un
+#' halo tout autour (mesuré sur ColduPre : 11 119 cellules de grappin pour 14 000
+#' conduites, ratio impossible pour une région compacte).
+#'
+#' @inheritParams surface_cout_skidder
+#' @return Un `SpatRaster` logique (1 = plat et connecté à la desserte).
+#' @export
+zone_plate_connectee <- function(pre, config = foretaccess_config()) {
+  checkmate::assert_class(pre, "foretaccess_preprocessing")
+  validate_config(config)
+
+  desserte_cel <- .cellules_livraison(pre)
+  if (!length(desserte_cel)) {
+    cli::cli_abort("Aucune cellule de desserte : rien n'est connecte.")
+  }
+  .zone_connectee(
+    pre, config,
+    traversable = as.logical(terra::values(terrain_plat(pre, config))),
+    desserte_cel = desserte_cel,
+    saut_m = config$porteur$distance_hors_desserte_max_m,
+    nom = "zone_plate_connectee"
+  )
+}
+
+# Construction en trois temps commune au skidder et au porteur : forêt traversable
+# atteinte depuis la desserte, saut hors forêt plafonné, puis recollement.
+.zone_connectee <- function(pre, config, traversable, desserte_cel, saut_m, nom) {
+  cout <- surface_cout_skidder(pre, config)
+  foret <- as.numeric(terra::values(pre$foret_mask)) == 1
+  nr <- terra::nrow(pre$mnt)
+  nc <- terra::ncol(pre$mnt)
+
+  sources <- function(cellules) {
+    s <- terra::rast(pre$mnt)
+    v <- rep(NA_real_, terra::ncell(s))
+    v[cellules] <- cellules
+    terra::values(s) <- v
+    s
+  }
+  zone <- function(masque) {
+    z <- terra::rast(pre$mnt)
+    terra::values(z) <- as.numeric(masque)
+    z
+  }
+
+  # 1. Foret traversable atteinte depuis la desserte, sans limite.
+  z1 <- traversable & foret
+  z1[desserte_cel] <- TRUE
+  a1 <- .composantes_atteintes(pre$mnt, z1, desserte_cel)
+
+  # 2. Saut hors foret, plafonne. Seul le contour de la zone atteinte sert de source
+  # (les cellules interieures, a cout nul, sont dominees), et la propagation n'explore
+  # pas son interieur : tout chemin qui la traverse repart de son contour.
+  a2 <- a1 | !is.na(terra::values(propager_cout(
+    cout, sources(which(.contour(a1, nr, nc))),
+    zone = zone(traversable & !a1), cout_max = saut_m
+  )$cout_cumule))
+
+  # 3. Recollement de la foret traversable ainsi rendue accessible.
+  a3 <- .composantes_atteintes(pre$mnt, (traversable & foret) | a2, which(a2))
+  a3[desserte_cel] <- TRUE
+
+  z <- terra::rast(pre$mnt)
+  terra::values(z) <- as.numeric(a3)
+  names(z) <- nom
+  z
+}
+
 #' Zone effectivement roulable, connectée à la desserte
 #'
 #' Reproduit la construction de `Pente_ok_skidder` (`Sylvaccess_1_skidder.py`,

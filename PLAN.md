@@ -236,7 +236,7 @@ Fait : 44 fichiers de sortie, 3 moteurs + sélection de lignes.
 | Moteur | Accord | Trop optimistes | Trop conservateurs |
 |---|---|---|---|
 | Skidder | **99,95 %** | 177 cellules (0,04 %) | 38 cellules (0,01 %) |
-| Porteur | **97,64 %** | 1,89 % | 0,47 % |
+| Porteur | **99,72 %** | 892 cellules (0,22 %) | 244 cellules (0,06 %) |
 | Câble | **93,61 %** | 1,07 % | 5,32 % |
 
 L'écart du **câble part dans la direction attendue** : nous sommes surtout *trop conservateurs*
@@ -394,10 +394,44 @@ couche sur la grille de référence. Et le code positif diffère aussi (`Foret_a
    « double passe réseau/contour » (`fwd_azimuts_contour`) qui avait été prototypée pour le
    porteur puis retirée faute d'oracle — elle est maintenant justifiée par la mesure.
 
-**Restent ouverts** : les **1,89 %** de cellules où le porteur est trop optimiste (non
-instruits — la passe contour lui manque probablement aussi, mais dans ce sens-là ce n'est pas
-elle qui aidera) ; et le traînage *en forêt* (médiane 0 m contre 124 m) — les deux moteurs ne
-décomposent visiblement pas la distance totale de la même façon.
+8. **Le porteur grappillait depuis la route** (`R/porteur.R`). `fwd_filter_hoist()` ne
+   retient comme rampes de grappin que les cellules à `Dforet > 0` — les cellules de
+   **forêt effectivement conduites**. Une cellule de desserte est à `Dforet == 0` : elle
+   est donc **exclue**. Nous grappillions depuis toute cellule conduite *ou de desserte*,
+   ce qui entourait chaque voie d'un halo de forêt « accessible » d'une cellule — y compris
+   sur un versant à 90 %, où le porteur ne peut simplement pas se tenir. La signature était
+   dans les chiffres : **11 148 cellules de grappin pour 14 319 conduites**, un rapport
+   périmètre/surface impossible pour une région compacte. Gain : **97,7 → 99,4 %**, l'excès
+   tombe de 7 528 à 499 cellules. *(Fausse piste au passage : j'ai d'abord cru à une zone
+   conduite en étoile et ajouté la propagation Dijkstra manquante — voir ci-dessous. Elle
+   était bel et bien absente, mais ne pouvait pas expliquer un excès : ajouter une source
+   n'enlève jamais de cellule.)*
+
+9. **Le porteur n'avait aucun plus court chemin** (`R/cout.R`, `R/porteur.R`). Sylvaccess le
+   propage d'abord en **Dijkstra** sur le terrain plat (`Dfwd_flat_forest_tracks` /
+   `Dfwd_flat_forest_road`, zone `Pente_ok_forwarder`), et n'ajoute le balayage radial
+   qu'ensuite. Nous n'avions que le balayage — or lui va tout droit : il ne contourne ni un
+   ravin ni un rocher. `terrain_plat()` (pente sous le **minimum** des trois seuils, c'est là
+   que l'engin roule quelle que soit la direction) et `zone_plate_connectee()` ajoutés ; la
+   construction en trois temps est factorisée avec celle du skidder (`.zone_connectee()`).
+
+10. **Le porteur n'avait pas non plus sa passe contour** (`fwd_azimuts_contour`), symétrique
+    de celle du skidder : rampes sur le bord de la zone conduite **et sur terrain plat**
+    (`contour = (Dforet>=0) * (Pente_ok_forw==1)` — on ne relance pas une machine d'un point
+    où elle ne tient déjà plus), coût emporté pondéré `0,1 × d_piste + d_forêt` (la piste
+    compte pour un dixième), cibles hors zone déjà conduite, remplissage additif.
+    `conduire()` prend `sources` et `depart_cout`, comme `treuiller()`. Gain : **99,4 →
+    99,72 %**, les cellules trop conservatrices tombent de 2 119 à **244**.
+
+Au passage, l'accumulateur de distance en pente forte de `conduire()` croissait de
+l'incrément **horizontal** ; Sylvaccess l'incrémente de la distance **3D** (`dpt += dist -
+dist2`). Corrigé — sans effet mesurable sur ColduPre (les rayons font 300 m et le plafond
+aussi : l'accumulateur ne mord jamais), mais il mordra sur un jeu où `f_slope_dmax` est plus
+serré.
+
+**Restent ouverts** : le traînage *en forêt* (médiane 0 m contre 124 m) — les deux moteurs ne
+décomposent visiblement pas la distance totale de la même façon, alors que la distance
+**totale** colle ; et la dette du câble (0 support contre 3).
 
 ### 2026-07-09
 - Lot 0 clos et publié (`v0.1.0`), retour en cycle de dev `0.1.0.9000`.

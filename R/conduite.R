@@ -28,11 +28,17 @@
 #' @param pre Objet `foretaccess_preprocessing` (Lot 1).
 #' @param config Objet [foretaccess_config()].
 #' @param zone `SpatRaster` logique des cellules candidates à la conduite (forêt roulable).
+#' @param sources Indices des cellules de départ. `NULL` (défaut) : les cellules de
+#'   livraison de la desserte. La passe contour (`fwd_azimuts_contour`) y passe les
+#'   cellules du bord de la zone déjà conduite.
+#' @param depart_cout Vecteur de longueur `ncell(pre$mnt)` : distance **déjà parcourue**
+#'   pour atteindre chaque source. `NULL` (défaut) : nulle. Sinon le critère
+#'   d'amélioration porte sur le **total** `depart_cout + distance parcourue`.
 #'
 #' @return Une liste de deux `SpatRaster` : `distance` (3D, m) et `allocation`.
 #' @seealso [treuiller()]
 #' @export
-conduire <- function(pre, config, zone) {
+conduire <- function(pre, config, zone, sources = NULL, depart_cout = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   po <- config$porteur
 
@@ -50,9 +56,15 @@ conduire <- function(pre, config, zone) {
   # Cellules de LIVRAISON seulement : le porteur ne depose pas son bois sur une
   # route ouverte a la circulation, qui est pour lui une barriere
   # (`Obstacles_forwarder[Res_pub==1]=1` chez Sylvaccess). Cf. .classes_desserte().
-  routes <- .cellules_livraison(pre)
+  routes <- if (is.null(sources)) .cellules_livraison(pre) else sources
   if (!length(routes)) {
     cli::cli_abort("{.arg pre$desserte} ne contient aucune cellule.")
+  }
+  if (is.null(depart_cout)) {
+    cout_r <- rep(0, length(routes))
+  } else {
+    checkmate::assert_numeric(depart_cout, len = nr * nc, any.missing = FALSE)
+    cout_r <- depart_cout[routes]
   }
 
   # Seuils en degres.
@@ -63,6 +75,9 @@ conduire <- function(pre, config, zone) {
 
   dist <- rep(Inf, nr * nc)
   alloc <- rep(NA_real_, nr * nc)
+  # Total minimal connu. Sans cout de depart il vaut `dist` : les deux criteres
+  # coincident, et le comportement est celui de `fwd_azimuts_forest_roadnet()`.
+  total <- rep(Inf, nr * nc)
 
   rl <- ((routes - 1L) %/% nc) + 1L
   rc <- ((routes - 1L) %% nc) + 1L
@@ -79,8 +94,14 @@ conduire <- function(pre, config, zone) {
     rl_a <- rl
     rc_a <- rc
     alt_a <- alt_r
-    # Distance deja parcourue en pente forte, par rayon.
+    # Distance deja parcourue en pente forte, par rayon, et distance 3D du pas
+    # precedent : l'accumulateur croit de l'increment de distance **3D**
+    # (`dpt += dist - dist2` dans `fwd_azimuts_forest_roadnet`), pas de l'increment
+    # horizontal. Sur un versant raide les deux different d'autant plus que la pente
+    # est forte -- et c'est justement la que l'accumulateur decide.
     dpt <- rep(0, length(routes))
+    d_prec <- rep(0, length(routes))
+    cout_a <- cout_r
 
     for (i in seq_len(nrow(ray))) {
       lv <- rl_a + ray$dl[i]
@@ -97,6 +118,10 @@ conduire <- function(pre, config, zone) {
       p_j <- pente_deg[cel]
       asp_j <- aspect[cel]
 
+      hd <- ray$hdist[i]
+      dz <- alt[cel] - alt_a
+      d3 <- sqrt(hd^2 + dz^2)
+
       # 1. Pente en long, signee par l'altitude. Le porteur ramene le bois charge vers la
       #    route : une cellule plus haute que la route -> trajet charge en descente (seuil
       #    descente) ; plus basse -> montee (seuil montee).
@@ -111,8 +136,9 @@ conduire <- function(pre, config, zone) {
       p_lat_max <- ifelse(is.na(asp_j) | cos_t == 0, Inf, abs(s_lat / cos_t))
       ok <- ok & (is.na(asp_j) | p_j <= p_lat_max)
 
-      # 3. Accumulateur de pente forte : croit la ou p_j > s_lat, plafonne a lmax.
-      pas_i <- if (i == 1L) ray$hdist[i] else ray$hdist[i] - ray$hdist[i - 1L]
+      # 3. Accumulateur de pente forte : croit de l'increment de distance 3D la ou
+      #    p_j > s_lat, plafonne a lmax.
+      pas_i <- d3 - d_prec
       dpt_j <- dpt + ifelse(!is.na(p_j) & p_j > s_lat, pas_i, 0)
       ok <- ok & (dpt_j <= lmax)
 
@@ -120,27 +146,29 @@ conduire <- function(pre, config, zone) {
       garde <- which(ok)
       if (!length(garde)) break
 
-      hd <- ray$hdist[i]
-      dz <- alt[cel[garde]] - alt_a[garde]
-      d3 <- sqrt(hd^2 + dz^2)
-
       idx <- cel[garde]
+      dd <- d3[garde]
       rr <- act[garde]
-      o <- order(d3, decreasing = TRUE)
+      tt <- cout_a[garde] + dd
+      o <- order(tt, decreasing = TRUE)
       idx <- idx[o]
-      d3 <- d3[o]
+      dd <- dd[o]
       rr <- rr[o]
+      tt <- tt[o]
 
-      mieux <- d3 < dist[idx]
-      dist[idx[mieux]] <- d3[mieux]
+      mieux <- tt < total[idx]
+      total[idx[mieux]] <- tt[mieux]
+      dist[idx[mieux]] <- dd[mieux]
       alloc[idx[mieux]] <- rr[mieux]
 
-      # Compactage sur les survivants, en propageant leur accumulateur.
+      # Compactage sur les survivants, en propageant leurs accumulateurs.
       dpt <- dpt_j[garde]
+      d_prec <- d3[garde]
       act <- act[garde]
       rl_a <- rl_a[garde]
       rc_a <- rc_a[garde]
       alt_a <- alt_a[garde]
+      cout_a <- cout_a[garde]
     }
   }
 
