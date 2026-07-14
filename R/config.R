@@ -94,19 +94,20 @@ foretaccess_config <- function(skidder = list(),
       hauteur_support_terminal_m = 12,    # c_h_end
       distance_laterale_max_m    = 40,    # c_l_hor (pechage lateral)
       nb_supports_max            = 3,     # c_sup
-      # Materiel cable (v3.6). c_q2/c_q3 (traction/retour), c_E (module de Young)
-      # et c_angle ne sont PAS dans Tab_Param_cable.csv : defauts documentes
-      # (viennent du paramdict global de Sylvaccess). Cf. specs/004 Q7.
+      # Materiel cable (v3.6). c_q2/c_q3 (traction/retour), c_E (module de Young),
+      # c_angle et c_safe ne sont pas dans `Tab_Param_cable.csv` -- mais ils sont
+      # dans `dic_AllParam.json` (champ `def_value`), que la spec 004 (Q7) croyait
+      # introuvable et dont elle avait devine les valeurs. Ce sont ces defauts-la.
       masse_lineaire_porteur_kg_m  = 1.85,   # c_q1
-      masse_lineaire_traction_kg_m = 0.9,    # c_q2 (defaut)
-      masse_lineaire_retour_kg_m   = 0.9,    # c_q3 (defaut)
+      masse_lineaire_traction_kg_m = 0.5,    # c_q2
+      masse_lineaire_retour_kg_m   = 0.5,    # c_q3
       diametre_mm                  = 18,     # c_d
       tension_rupture_kgf          = 35000,  # c_rupt_res
-      coeff_securite               = 2,      # c_safe
+      coeff_securite               = 2.5,    # c_safe
       charge_max_kg                = 2500,   # c_load_max
       poids_chariot_kg             = 400,    # c_car_w
-      module_young_n_mm2           = 160000, # c_E (defaut)
-      angle_intersupport_deg       = 20,     # c_angle (defaut)
+      module_young_n_mm2           = 100000, # c_E
+      angle_intersupport_deg       = 30,     # c_angle
       # Bornes de pente de la ligne (rad). Larges par defaut : la tension et la
       # garde au sol sont les vraies contraintes. Raffinement (pente min de
       # descente par gravite pour chariot classique) : travail futur.

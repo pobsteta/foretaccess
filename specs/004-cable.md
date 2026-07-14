@@ -253,12 +253,14 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
 
 ### Questions restantes (non bloquantes)
 
-7. **Paramètres hors `Tab_Param_cable.csv`** : `c_E` (module de Young, N/mm²), `c_q2`/`c_q3`
-   (masses linéaires des câbles de traction/retour, kg/m), `c_angle` (angle de déviation aux
-   supports intermédiaires), `c_l_span` (longueur min de travée). Ils viennent du `paramdict`
-   global de Sylvaccess (`globals().update(paramdict)`), pas du CSV câble : à porter dans
-   `config$cable` avec des défauts documentés. `c_E` n'affecte pas la structure du solveur,
-   seulement la valeur de `EAo`.
+7. ~~**Paramètres hors `Tab_Param_cable.csv`**~~ — **tranché (2026-07-14, Lot 11)**. `c_E`,
+   `c_q2`/`c_q3`, `c_angle` et `c_safe` ne sont effectivement pas dans le CSV câble, mais ils
+   sont dans **`scripts/ressource/dic_AllParam.json`**, champ `def_value` — que cette question
+   croyait introuvable et dont elle avait *deviné* les valeurs. Les vraies :
+   `c_E = 100 000` N/mm² (et non 160 000), `c_q2 = c_q3 = 0,5` kg/m (et non 0,9),
+   `c_angle = 30°` (et non 20°), `c_safe = 2,5` (et non 2). Corrigées dans
+   `foretaccess_config()`. `c_safe` divise `Tmax` : le défaut faux rendait toute ligne
+   **25 % plus tendue** qu'elle ne doit l'être pour qui ne surcharge rien.
 8. **Oracle réel** : les valeurs de référence de la mécanique sont exactes (lues dans la
    source). Une exécution Sylvaccess v3.6 sur un profil valide l'optimisation des supports.
 
