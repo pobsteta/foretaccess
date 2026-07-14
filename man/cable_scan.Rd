@@ -31,7 +31,9 @@ cable_scan(
   hintsup,
   sup_max,
   lmin_span,
-  nbconfig
+  nbconfig,
+  pas_azimut,
+  pas_depart
 )
 }
 \arguments{
@@ -88,6 +90,10 @@ cable_scan(
 \item{lmin_span}{Minimum distance between two supports (m).}
 
 \item{nbconfig}{Beam width of the support-placement search.}
+
+\item{pas_azimut}{Azimuth step of the sweep (degrees).}
+
+\item{pas_depart}{Sample every \code{pas_depart}-th departure cell.}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate

@@ -41,12 +41,31 @@ du Lot 5), \code{recap}, \code{grid}, \code{config}, \code{fichiers}.
 \description{
 Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
 depuis chaque \strong{place de depot} (depart de ligne), un rayon est lance dans
-chacune des 360 directions ; le profil d'altitude sous le rayon est extrait du
-MNT, echantillonne au demi-metre, et la faisabilite d'une ligne de cable
-(travee simple, \strong{sans support intermediaire}) est evaluee par le noyau Rust
-\code{\link[=cable_test_span]{cable_test_span()}} jusqu'a \code{longueur_max_m}. Les cellules forestieres
-traversees par une ligne faisable sont marquees accessibles au cable.
+chaque direction ; le profil d'altitude sous le rayon est extrait du MNT, et le
+noyau Rust place jusqu'a \code{nb_supports_max} \strong{supports intermediaires}
+(\code{OptPyl_Up_NoH}), coupant la ligne au point le plus lointain atteint quand il ne
+peut pas la porter entiere. Les cellules forestieres traversees par une ligne
+faisable sont marquees accessibles au cable.
 }
+\details{
+Le profil sert sous deux formes, comme dans la source : \strong{au pixel} pour poser les
+supports, \strong{au demi-metre} pour la garde au sol.
+}
+\section{Ecarts assumes avec Sylvaccess v3.6}{
+
+Le balayage ne modelise que la ligne \strong{« machine en haut »} (\code{OptPyl_Up_NoH}), ou
+le mat est au depart et le cable descend. Sylvaccess traite aussi la ligne
+« machine en bas » (\code{OptPyl_Down_init_NoH} + \code{OptPyl_Down_NoH}), qu'il choisit quand
+le depart n'est pas le point haut du profil. Les bornes de pente appliquees sont donc
+celles du sens amont (\verb{bornes_pente_cable()$amont_*}), et les lignes montantes ne sont
+pas cherchees : la couverture est \strong{conservatrice} de ce cote.
+
+L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h = 1})
+n'est pas implementee : on tient la variante \verb{_NoH}, qui est le defaut de v3.6.
+
+Le \strong{pechage lateral} (\code{distance_laterale_max_m}) reste une extension future.
+}
+
 \section{Places de depot}{
 
 Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
@@ -60,9 +79,5 @@ tres \strong{optimiste} (on desservirait de la foret depuis des pistes incapable
 d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
 devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
 d'aucune couche de places de depot.
-
-Le placement de supports intermediaires (\code{OptPyl_Up}) et le pechage lateral
-(\code{distance_laterale_max_m}) sont des extensions futures (voir \code{specs/004}) :
-ce lot livre le potentiel \strong{0 support}, colonne vertebrale testable.
 }
 

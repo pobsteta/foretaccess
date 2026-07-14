@@ -74,13 +74,15 @@ foretaccess_config <- function(skidder = list(),
       classes_distance_m           = c(0, 250, 500, 1000, 1500, 2000)
     ),
     porteur = list(
-      pente_travers_max_pct        = 15,
-      pente_montee_max_pct         = 30,
-      pente_descente_max_pct       = 25,
-      portee_grue_m                = 8,
-      distance_pente_forte_max_m   = 300,
-      distance_hors_desserte_max_m = 200,
-      pente_abattage_max_pct       = 100
+      pente_travers_max_pct        = 15,  # f_slope_lat
+      pente_montee_max_pct         = 30,  # f_slope_up
+      # f_slope_down : le defaut v3.6 vaut 40, pas 25. Le 25 vient du *scenario* de
+      # test ColduPre (`Tab_Param_test.csv`), que nous avions pris pour le defaut.
+      pente_descente_max_pct       = 40,  # f_slope_down
+      portee_grue_m                = 8,   # f_reach
+      distance_pente_forte_max_m   = 300, # f_slope_dmax
+      distance_hors_desserte_max_m = 200, # f_dmax_outfor
+      pente_abattage_max_pct       = 100  # g_slope_mharv
     ),
     cable = list(
       # Gardes au sol du cable porteur (v3.6 : c_h_min / c_h_max).
@@ -96,9 +98,17 @@ foretaccess_config <- function(skidder = list(),
       nb_supports_max            = 3,     # c_sup
       hauteur_support_inter_m    = 12,    # c_h_sup
       longueur_min_travee_m      = 50,    # c_l_span
-      # Largeur du faisceau de la recherche de placement des supports. Sylvaccess la
-      # derive de `c_precision` : 5 en precision fine, 1 en precision grossiere.
-      largeur_faisceau           = 5L,    # nbconfig
+      # Precision du balayage (c_precision). Elle ne regle pas le modele mais son
+      # echantillonnage, et Sylvaccess en derive TROIS choses a la fois
+      # (`get_dep_config`) : le pas angulaire, le pas entre cellules de depart, et la
+      # largeur du faisceau de placement des supports. Cf. `precision_cable()`.
+      #   1 = fine      : azimuts 1 deg, tous les departs, faisceau 5
+      #   2 = moyenne   : azimuts 2 deg, tous les departs, faisceau 5
+      #   3 = grossiere : azimuts 2 deg, un depart sur deux, faisceau 1  <- defaut v3.6
+      # On garde 3 pour etre confrontable a l'oracle par defaut. Un balayage plus fin
+      # trouve des lignes que Sylvaccess manque par simple sous-echantillonnage : c'est
+      # plus juste, mais ce n'est plus le meme modele -- que l'utilisateur le demande.
+      precision                  = 3L,    # c_precision
       # Materiel cable (v3.6). c_q2/c_q3 (traction/retour), c_E (module de Young),
       # c_angle et c_safe ne sont pas dans `Tab_Param_cable.csv` -- mais ils sont
       # dans `dic_AllParam.json` (champ `def_value`), que la spec 004 (Q7) croyait
@@ -113,11 +123,18 @@ foretaccess_config <- function(skidder = list(),
       poids_chariot_kg             = 400,    # c_car_w
       module_young_n_mm2           = 100000, # c_E
       angle_intersupport_deg       = 30,     # c_angle
-      # Bornes de pente de la ligne (rad). Larges par defaut : la tension et la
-      # garde au sol sont les vraies contraintes. Raffinement (pente min de
-      # descente par gravite pour chariot classique) : travail futur.
-      pente_min_rad = -1.4,
-      pente_max_rad = 1.4,
+      # Bornes de pente de la ligne : Sylvaccess ne les prend PAS en parametre, il
+      # les DERIVE du materiel et du sens de debardage (`get_cable_configs`). Elles
+      # sont donc calculees par `bornes_pente_cable()` a partir de ce qui suit --
+      # et non posees a la main. Notre ancien defaut `+/- 1,4 rad` autorisait des
+      # lignes montant a 55 deg : pour un chariot classique, Sylvaccess plafonne la
+      # ligne « machine en haut » a +0,1 rad. Le cable doit descendre.
+      type_chariot   = 0L,  # c_car_type : 0 = classique sur mat-cable, 1 = winch-liner
+      type_cable     = 1L,  # c_type : 0 mat sur tracteur, 1 remorque, 2 camion, 3 cable long
+      sens_debardage = 0L,  # Skid_direction : 0 = les deux sens, 1 = amont seul, 2 = aval seul
+      pente_gravite_pct          = 15,   # c_slope_grav
+      pente_winchliner_amont_pct = 15,   # c_slope_wliner_up
+      pente_winchliner_aval_pct  = 100,  # c_slope_wliner_down
       # Selection multicritere des lignes (Lot 5, EF-7). Poids par critere (0 =
       # ignore) ; limites min/max ; sens prefere (0 aucun, 1 aval, -1 amont) ;
       # contribution minimale de surface nouvelle pour retenir une ligne.
@@ -131,18 +148,27 @@ foretaccess_config <- function(skidder = list(),
         contribution_min = 0.6
       )
     ),
-    # Camion DFCI (beta, Lot 6, EF-8). Modele volontairement simple : zone
-    # defendable = tampon au terrain (plus court chemin pondere par la pente,
-    # comme le skidder) depuis les dessertes DFCI, plafonne a la portee de
-    # defense et coupe au-dela d'une pente d'intervention. Limites documentees
-    # dans specs/006 : ni modele de combustible, ni vent, ni physique de lance.
+    # Camion DFCI (Lot 6, EF-8). Modele volontairement simple : zone defendable =
+    # tampon au terrain (plus court chemin pondere par la pente, comme le skidder)
+    # depuis les dessertes DFCI, plafonne a la portee de defense et coupe au-dela
+    # d'une pente d'intervention. Limites documentees dans specs/006 : ni modele de
+    # combustible, ni vent, ni physique de lance -- c'est notre modele, pas celui de
+    # `Sylvaccess_5_dfci.py`. Les SEUILS, eux, sont ceux de Sylvaccess.
     dfci = list(
-      # Portee laterale de defense depuis une desserte carrossable (m).
-      distance_defense_max_m = 100,
-      # Pente au-dela de laquelle le terrain est repute non defendable (%).
-      pente_defense_max_pct  = 40,
+      # Portee laterale de defense depuis une desserte carrossable (m). La spec 006
+      # avait pose 100 m, en croyant Sylvaccess depourvu de module DFCI : il en a un,
+      # et il porte a 440 m. Facteur 4.
+      distance_defense_max_m = 440,  # dfci_lmax
+      # Pente au-dela de laquelle le terrain est repute non defendable (%). Idem :
+      # la spec 006 avait pose 40 %, Sylvaccess admet 110 %.
+      pente_defense_max_pct  = 110,  # dfci_slope_max
+      # Classes de distance des sorties (m), comme `dfci_class`.
+      classes_distance_m     = c(0, 120, 280, 440),  # dfci_class
       # Classes de desserte servant de base au camion (sous-ensemble de
-      # route / piste / dfci). Defaut : les seules dessertes DFCI.
+      # route / piste / dfci). Defaut : les seules dessertes DFCI. Sylvaccess ne
+      # distingue pas : il part de tout le reseau. On garde le filtre, PLUS PERTINENT
+      # ici -- un camion-citerne ne s'engage pas sur une piste de debardage --, et le
+      # rendre permissif ne demande qu'un `classes_source = c("route", "piste")`.
       classes_source         = "dfci"
     ),
     general = list(
@@ -226,7 +252,13 @@ validate_config <- function(cfg) {
   checkmate::assert_int(ca$nb_supports_max, lower = 0)
   checkmate::assert_number(ca$hauteur_support_inter_m, lower = 0, finite = TRUE)
   checkmate::assert_number(ca$longueur_min_travee_m, lower = 0, finite = TRUE)
-  checkmate::assert_int(ca$largeur_faisceau, lower = 1)
+  checkmate::assert_int(ca$precision, lower = 1, upper = 3)
+  checkmate::assert_int(ca$type_chariot, lower = 0, upper = 1)
+  checkmate::assert_int(ca$type_cable, lower = 0, upper = 3)
+  checkmate::assert_int(ca$sens_debardage, lower = 0, upper = 2)
+  checkmate::assert_number(ca$pente_gravite_pct, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$pente_winchliner_amont_pct, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$pente_winchliner_aval_pct, lower = 0, finite = TRUE)
   if (ca$longueur_max_m <= ca$longueur_min_m) {
     cli::cli_abort(c(
       "Configuration cable incoherente.",

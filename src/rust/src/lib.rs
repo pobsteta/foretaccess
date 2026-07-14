@@ -475,6 +475,8 @@ fn cable_test_span(
 /// @param sup_max Maximum number of intermediate supports.
 /// @param lmin_span Minimum distance between two supports (m).
 /// @param nbconfig Beam width of the support-placement search.
+/// @param pas_azimut Azimuth step of the sweep (degrees).
+/// @param pas_depart Sample every `pas_depart`-th departure cell.
 /// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 ///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 ///   `li_ipc`, `li_nsup`.
@@ -509,6 +511,8 @@ fn cable_scan(
     sup_max: i32,
     lmin_span: f64,
     nbconfig: i32,
+    pas_azimut: i32,
+    pas_depart: i32,
 ) -> List {
     let vopt = if has_vol { Some(vol.as_slice()) } else { None };
     let out = scan::scan(
@@ -516,6 +520,7 @@ fn cable_scan(
         htower, h_end, hline_min, hline_max, slope_min, slope_max,
         f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
         hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
+        pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
     let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();

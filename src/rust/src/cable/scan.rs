@@ -174,10 +174,14 @@ pub fn scan(
     sup_max: usize,
     lmin_span: f64,
     nbconfig: usize,
+    pas_azimut: usize,
+    pas_depart: usize,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
     let rays = build_rays(res, lmax);
+    let pas_az = pas_azimut.max(1);
+    let pas_dep = pas_depart.max(1);
 
     // Traitement d'un depart : renvoie ses contributions de couverture + lignes.
     let une_route = |&dep_1based: &i32| -> RouteResult {
@@ -187,7 +191,9 @@ pub fn scan(
         let mut covers = Vec::new();
         let mut lines = Vec::new();
 
-        for (az, ray) in rays.iter().enumerate() {
+        // Pas angulaire : Sylvaccess ne balaie pas les 360 azimuts en precision
+        // grossiere, mais un sur `pas_az` (`Dir_list = range(0, 360, 2)`).
+        for (az, ray) in rays.iter().enumerate().filter(|(a, _)| a % pas_az == 0) {
             // Cellules du rayon dans la grille.
             let mut cel = Vec::with_capacity(ray.dl.len());
             let mut hd = Vec::with_capacity(ray.dl.len());
@@ -317,8 +323,12 @@ pub fn scan(
         RouteResult { covers, lines }
     };
 
-    // Parallelise sur les departs, ordre preserve pour une reduction fidele au R.
-    let per_route: Vec<RouteResult> = routes.par_iter().map(une_route).collect();
+    // Pas entre cellules de depart (`step_route`) : en precision grossiere,
+    // Sylvaccess n'essaie qu'une cellule de desserte sur deux.
+    let departs: Vec<i32> = routes.iter().step_by(pas_dep).cloned().collect();
+
+    // Parallelise sur les departs, ordre preserve pour une reduction deterministe.
+    let per_route: Vec<RouteResult> = departs.par_iter().map(une_route).collect();
 
     let mut couvert = vec![false; n];
     let mut longueur = vec![0.0f64; n];

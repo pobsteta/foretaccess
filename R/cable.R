@@ -2,11 +2,27 @@
 #'
 #' Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
 #' depuis chaque **place de depot** (depart de ligne), un rayon est lance dans
-#' chacune des 360 directions ; le profil d'altitude sous le rayon est extrait du
-#' MNT, echantillonne au demi-metre, et la faisabilite d'une ligne de cable
-#' (travee simple, **sans support intermediaire**) est evaluee par le noyau Rust
-#' [cable_test_span()] jusqu'a `longueur_max_m`. Les cellules forestieres
-#' traversees par une ligne faisable sont marquees accessibles au cable.
+#' chaque direction ; le profil d'altitude sous le rayon est extrait du MNT, et le
+#' noyau Rust place jusqu'a `nb_supports_max` **supports intermediaires**
+#' (`OptPyl_Up_NoH`), coupant la ligne au point le plus lointain atteint quand il ne
+#' peut pas la porter entiere. Les cellules forestieres traversees par une ligne
+#' faisable sont marquees accessibles au cable.
+#'
+#' Le profil sert sous deux formes, comme dans la source : **au pixel** pour poser les
+#' supports, **au demi-metre** pour la garde au sol.
+#'
+#' @section Ecarts assumes avec Sylvaccess v3.6:
+#' Le balayage ne modelise que la ligne **« machine en haut »** (`OptPyl_Up_NoH`), ou
+#' le mat est au depart et le cable descend. Sylvaccess traite aussi la ligne
+#' « machine en bas » (`OptPyl_Down_init_NoH` + `OptPyl_Down_NoH`), qu'il choisit quand
+#' le depart n'est pas le point haut du profil. Les bornes de pente appliquees sont donc
+#' celles du sens amont (`bornes_pente_cable()$amont_*`), et les lignes montantes ne sont
+#' pas cherchees : la couverture est **conservatrice** de ce cote.
+#'
+#' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h = 1`)
+#' n'est pas implementee : on tient la variante `_NoH`, qui est le defaut de v3.6.
+#'
+#' Le **pechage lateral** (`distance_laterale_max_m`) reste une extension future.
 #'
 #' @section Places de depot:
 #' Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
@@ -20,10 +36,6 @@
 #' d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
 #' devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
 #' d'aucune couche de places de depot.
-#'
-#' Le placement de supports intermediaires (`OptPyl_Up`) et le pechage lateral
-#' (`distance_laterale_max_m`) sont des extensions futures (voir `specs/004`) :
-#' ce lot livre le potentiel **0 support**, colonne vertebrale testable.
 #'
 #' @param pre Objet `foretaccess_preprocessing` (voir [preprocess()]).
 #' @param config Objet `foretaccess_config`. Les parametres cable (garde au sol,
@@ -71,11 +83,14 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     vol = if (is.null(vol)) numeric(0) else vol, has_vol = !is.null(vol),
     htower = ct$htower, h_end = ct$h_end,
     hline_min = ct$hline_min, hline_max = ct$hline_max,
-    slope_min = ct$slope_min, slope_max = ct$slope_max,
+    # Bornes du sens AMONT (« machine en haut ») : c'est le seul que le balayage
+    # modelise pour l'instant (cf. `potentiel_cable()`, section Ecarts assumes).
+    slope_min = ct$bornes$amont_min, slope_max = ct$bornes$amont_max,
     f_o = ct$f_o, tmax = ct$tmax, q1 = ct$q1, q2 = ct$q2, q3 = ct$q3,
     eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin,
     hintsup = ct$hintsup, sup_max = ct$sup_max, lmin_span = ct$lmin_span,
-    nbconfig = ct$nbconfig
+    nbconfig = ct$prec$largeur_faisceau,
+    pas_azimut = ct$prec$pas_azimut_deg, pas_depart = ct$prec$pas_depart
   )
 
   couvert <- sc$couvert == 1L
@@ -131,6 +146,83 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
   ca
 }
 
+#' Échantillonnage du balayage câble, dérivé de la précision
+#'
+#' Reproduit `get_dep_config()` de Sylvaccess v3.6. Un seul réglage, `precision`,
+#' gouverne **trois** choses à la fois : le pas angulaire du balayage, le pas entre
+#' cellules de départ, et la largeur du faisceau de placement des supports.
+#'
+#' @param precision `1` (fine), `2` (moyenne) ou `3` (grossière, défaut v3.6).
+#' @return Une liste : `pas_azimut_deg`, `pas_depart` (n'échantillonner qu'une cellule
+#'   de départ sur `pas_depart`), `largeur_faisceau`.
+#' @export
+precision_cable <- function(precision = 3L) {
+  p <- as.integer(precision)
+  checkmate::assert_int(p, lower = 1, upper = 3)
+  list(
+    pas_azimut_deg   = if (p > 1L) 2L else 1L,
+    pas_depart       = if (p == 3L) 2L else 1L,
+    largeur_faisceau = if (p == 3L) 1L else 5L
+  )
+}
+
+#' Bornes de pente admissibles d'une ligne de câble
+#'
+#' Reproduit `get_cable_configs()` de Sylvaccess v3.6. Ces bornes ne sont **pas** des
+#' paramètres : elles se **déduisent** du type de chariot, du type de câble et du sens
+#' de débardage autorisé. C'est une contrainte de la machine, pas un réglage.
+#'
+#' @details
+#' Pour un **chariot classique** sur mât-câble (`type_chariot = 0`, `type_cable < 3`),
+#' débardage dans les deux sens : la ligne « machine en haut » est bornée à
+#' \eqn{[-1{,}4\;;\;+0{,}1]} rad — elle **doit descendre**, avec 0,1 rad de tolérance —
+#' et la ligne « machine en bas » à \eqn{[-0{,}1\;;\;+1{,}4]}. Débardage à l'amont seul
+#' (`sens_debardage = 1`), la borne haute devient \eqn{-\arctan(p_{grav}/100)} : le
+#' chariot descend **par gravité**, il lui faut donc une pente minimale.
+#'
+#' Pour un **winch-liner** (`type_chariot = 1`), les bornes viennent de
+#' `pente_winchliner_amont_pct` / `_aval_pct` : le chariot est tracté, il ne dépend plus
+#' de la gravité.
+#'
+#' @param ca La liste `config$cable`.
+#' @return Une liste de quatre bornes en radians : `amont_min`, `amont_max`,
+#'   `aval_min`, `aval_max`.
+#' @export
+bornes_pente_cable <- function(ca) {
+  ang <- function(pct) atan(pct / 100)
+  grav <- ang(ca$pente_gravite_pct)
+  wl_up <- ang(ca$pente_winchliner_amont_pct)
+  wl_dn <- ang(ca$pente_winchliner_aval_pct)
+  sens <- as.integer(ca$sens_debardage)
+
+  b <- function(amont_min, amont_max, aval_min, aval_max) {
+    list(amont_min = amont_min, amont_max = amont_max, aval_min = aval_min, aval_max = aval_max)
+  }
+
+  if (as.integer(ca$type_chariot) == 1L) {
+    # Winch-liner : le chariot est tracte, la pente vient du materiel.
+    return(switch(as.character(sens),
+      "0" = b(-wl_up, 0.1, -0.1, wl_dn),
+      "1" = b(-wl_up, 0.1, 0, 0),
+      b(0, 0, -0.1, wl_dn)
+    ))
+  }
+  if (as.integer(ca$type_cable) < 3L) {
+    # Chariot classique sur mat-cable.
+    return(switch(as.character(sens),
+      "0" = b(-1.4, 0.1, -0.1, 1.4),
+      "1" = b(-1.4, -grav, 0, 0),
+      b(0, 0, -0.1, 1.4)
+    ))
+  }
+  # Cable long classique : la descente par gravite est requise dans les deux sens.
+  switch(as.character(sens),
+    "0" = b(-1.4, -grav, grav, 1.4),
+    "1" = b(-1.4, -grav, 0, 0),
+    b(0, 0, grav, 1.4)
+  )
+}
+
 # Constantes physiques et parametres derives de config$cable (v3.6).
 .constantes_cable <- function(ca) {
   g <- 9.80665
@@ -151,10 +243,9 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     hintsup = ca$hauteur_support_inter_m,
     sup_max = as.integer(ca$nb_supports_max),
     lmin_span = ca$longueur_min_travee_m,
-    nbconfig = as.integer(ca$largeur_faisceau),
+    prec = precision_cable(ca$precision),
     angle_intsup = ca$angle_intersupport_deg * pi / 180,
-    slope_min = ca$pente_min_rad,
-    slope_max = ca$pente_max_rad
+    bornes = bornes_pente_cable(ca)
   )
 }
 

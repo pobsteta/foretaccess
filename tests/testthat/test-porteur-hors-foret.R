@@ -14,8 +14,8 @@ test_that("la zone de conduite borne la pente par le max des trois seuils, pas l
 })
 
 test_that("au-dela du max des seuils, la cellule sort de la zone", {
-  # Plan a 35 % : au-dessus de max(15,30,25)=30 %. Aucune cellule conduisible.
-  pre <- pre_plan(pente = 0.35, n = 41)
+  # Plan a 45 % : au-dessus de max(15,30,40)=40 %. Aucune cellule conduisible.
+  pre <- pre_plan(pente = 0.45, n = 41)
   z <- terra::values(.zone_conduite(pre, foretaccess_config()))
   expect_equal(sum(z == 1), 0)
 })
