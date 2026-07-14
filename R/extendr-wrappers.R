@@ -239,8 +239,10 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param h_end Terminal-support height (m).
 #' @param hline_min Minimum ground clearance of the carrying cable (m).
 #' @param hline_max Maximum ground clearance of the carrying cable (m).
-#' @param slope_min Minimum line slope (rad).
-#' @param slope_max Maximum line slope (rad).
+#' @param slope_min Minimum line slope, uphill yarding (rad).
+#' @param slope_max Maximum line slope, uphill yarding (rad).
+#' @param slope_min_aval Minimum line slope, downhill yarding (rad).
+#' @param slope_max_aval Maximum line slope, downhill yarding (rad).
 #' @param f_o Gravity force of load plus carriage (N).
 #' @param tmax Maximum allowable tension (N).
 #' @param q1 Linear mass of the carrying cable (kg/m).
@@ -267,6 +269,6 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 #'   `li_ipc`, `li_nsup`.
 #' @export
-cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope)
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope)
 
 # nolint end

@@ -2,8 +2,8 @@
 //!
 //! Porte la boucle chaude de `potentiel_cable()` (R) dans le crate : pour chaque
 //! cellule de desserte et chacun des 360 azimuts, extraction du profil, puis
-//! placement des supports intermediaires (`optpyl::optpyl_up_noh`), qui coupe la
-//! ligne au plus loin s'il ne peut pas la porter entiere. Parallelise sur les
+//! placement des supports (`optpyl`), qui coupe la ligne ou la retourne (machine en bas). Il
+//! coupe au plus loin s'il ne peut pas la porter entiere. Parallelise sur les
 //! cellules de desserte avec `rayon`.
 //!
 //! Le profil sert sous deux formes, comme chez Sylvaccess : **au pixel** pour poser
@@ -162,6 +162,8 @@ pub fn scan(
     hline_max: f64,
     slope_min: f64,
     slope_max: f64,
+    slope_min_aval: f64,
+    slope_max_aval: f64,
     f_o: f64,
     tmax: f64,
     q1: f64,
@@ -285,14 +287,21 @@ pub fn scan(
             let xs: Vec<f64> = (0..m).map(|i| i as f64 * 0.5).collect();
             let zs = interp_dropna(&prof_hd, &prof_za, &xs);
 
-            // Placement des supports intermediaires, avec coupe de la ligne a defaut.
-            let par = optpyl::OptParams {
+            // Sens de la ligne. Sylvaccess ne compare pas les altitudes brutes : il
+            // regarde si le mat, depuis la desserte, **domine** le point le plus haut
+            // de la ligne augmente de l'ancrage. Si oui la machine est en haut, sinon
+            // elle est en bas -- et la ligne se resout alors a l'envers.
+            let idlinemin = prof_hd.iter().position(|&d| d >= lmin).unwrap_or(0);
+            let zmax = prof_za[idlinemin..].iter().cloned().fold(f64::MIN, f64::max);
+            let machine_en_haut = prof_za[0] + htower >= zmax + h_end;
+
+            let base = optpyl::OptParams {
                 line_x: &prof_hd,
                 line_z: &prof_za,
                 alts: &zs,
-                htower,
+                h_debut: htower,
                 hintsup,
-                hend: h_end,
+                h_fin: h_end,
                 hline_min,
                 hline_max,
                 slope_min,
@@ -308,16 +317,68 @@ pub fn scan(
                 sup_max,
                 lmin_span,
                 nbconfig,
+                heriter_tension: true,
             };
-            let spans = optpyl::optpyl_up_noh(&par);
-            if spans.is_empty() {
-                continue;
-            }
-            let longueur = prof_hd[spans.last().unwrap().posi()];
+
+            // Portee retenue, en index du profil aller, et nombre de supports poses.
+            let (iterm, nb_sup) = if machine_en_haut {
+                // Placement des supports, avec coupe de la ligne a defaut.
+                let spans = optpyl::optpyl(&base);
+                match spans.last() {
+                    Some(l) => (l.posi(), spans.len() - 1),
+                    None => continue,
+                }
+            } else {
+                // Machine en bas. Deux passes, comme Sylvaccess.
+                //
+                // 1. Amorce (`OptPyl_Down_init_NoH`) sur le profil ALLER, bornes de
+                //    pente aval : elle ne sert qu'a savoir jusqu'ou la ligne peut
+                //    raisonnablement porter. Chaque travee y repart de `tmax` -- la
+                //    tension n'est pas heritee, l'amorce n'est pas une vraie ligne.
+                let init = optpyl::optpyl(&optpyl::OptParams {
+                    slope_min: slope_min_aval,
+                    slope_max: slope_max_aval,
+                    heriter_tension: false,
+                    ..base
+                });
+                let extent = match init.last() {
+                    Some(l) => l.posi(),
+                    None => continue,
+                };
+                if init.iter().map(|s| s.diag()).sum::<f64>() < lmin {
+                    continue;
+                }
+                // 2. Ligne reelle sur le profil RETOURNE (`OptPyl_Down_NoH`). Les
+                //    hauteurs d'extremite s'echangent (l'ancrage ouvre, le mat ferme) et
+                //    les bornes de pente changent de signe avec le sens de parcours.
+                let ilast = (extent + 2).min(prof_hd.len() - 1);
+                let (rx, rz) = optpyl::retourner_profil(&prof_hd[..=ilast], &prof_za[..=ilast]);
+                let rlline = *rx.last().unwrap();
+                let rm = (rlline / 0.5).floor() as usize + 2;
+                let rxs: Vec<f64> = (0..rm).map(|i| i as f64 * 0.5).collect();
+                let rzs = interp_dropna(&rx, &rz, &rxs);
+                let res_down = optpyl::optpyl_down_noh(&optpyl::OptParams {
+                    line_x: &rx,
+                    line_z: &rz,
+                    alts: &rzs,
+                    h_debut: h_end,
+                    h_fin: htower,
+                    slope_min: (-slope_min_aval).min(-slope_max_aval),
+                    slope_max: (-slope_min_aval).max(-slope_max_aval),
+                    ..base
+                });
+                match res_down {
+                    // `rogne` pixels ont ete retires en tete du profil retourne, donc
+                    // au bout de la ligne aller : la portee recule d'autant.
+                    Some((spans, rogne)) => (ilast - rogne, spans.len() - 1),
+                    None => continue,
+                }
+            };
+
+            let longueur = prof_hd[iterm];
             if longueur < lmin {
                 continue;
             }
-            let nb_sup = spans.len() - 1;
 
             // Cellules couvertes (hdist <= longueur).
             let mut couv = Vec::new();

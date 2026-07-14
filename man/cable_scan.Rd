@@ -19,6 +19,8 @@ cable_scan(
   hline_max,
   slope_min,
   slope_max,
+  slope_min_aval,
+  slope_max_aval,
   f_o,
   tmax,
   q1,
@@ -68,9 +70,13 @@ cable_scan(
 
 \item{hline_max}{Maximum ground clearance of the carrying cable (m).}
 
-\item{slope_min}{Minimum line slope (rad).}
+\item{slope_min}{Minimum line slope, uphill yarding (rad).}
 
-\item{slope_max}{Maximum line slope (rad).}
+\item{slope_max}{Maximum line slope, uphill yarding (rad).}
+
+\item{slope_min_aval}{Minimum line slope, downhill yarding (rad).}
+
+\item{slope_max_aval}{Maximum line slope, downhill yarding (rad).}
 
 \item{f_o}{Gravity force of load plus carriage (N).}
 

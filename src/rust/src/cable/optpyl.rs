@@ -65,14 +65,19 @@ fn span_row(r: &SpanResult, hd: f64, posi: usize, q1: f64) -> SpanRow {
 }
 
 /// Parametres constants d'une optimisation de ligne.
+#[derive(Clone, Copy)]
 #[allow(clippy::too_many_arguments)]
 pub struct OptParams<'a> {
     pub line_x: &'a [f64], // distance horizontale au depart, par pixel (m)
     pub line_z: &'a [f64], // altitude du terrain, par pixel (m)
     pub alts: &'a [f64],   // altitude du terrain au demi-metre (m)
-    pub htower: f64,       // hauteur du mat de depart (m)
+    // Hauteurs de fixation aux deux extremites. Elles ne disent PAS ou est la machine :
+    // « machine en haut » les prend dans l'ordre (mat, ancrage) ; « machine en bas »
+    // travaille sur le profil RETOURNE et les prend a l'envers (ancrage, mat). C'est la
+    // seule difference entre `OptPyl_Up_NoH` et `OptPyl_Up2_NoH` de Sylvaccess.
+    pub h_debut: f64,      // hauteur du support a l'index 0 (m)
+    pub h_fin: f64,        // hauteur du support terminal (m)
     pub hintsup: f64,      // hauteur de fixation sur support intermediaire (m)
-    pub hend: f64,         // hauteur du support terminal (m)
     pub hline_min: f64,
     pub hline_max: f64,
     pub slope_min: f64,
@@ -88,6 +93,10 @@ pub struct OptParams<'a> {
     pub sup_max: usize,
     pub lmin_span: f64, // distance minimale entre deux supports (m)
     pub nbconfig: usize,
+    // La travee suivante herite-t-elle du plafond de tension de la precedente ?
+    // `OptPyl_Up_NoH` : oui. `OptPyl_Down_init_NoH` : non -- chaque travee repart de
+    // `tmax`. Ce n'est pas une symetrie : c'est ce que fait la source.
+    pub heriter_tension: bool,
 }
 
 impl OptParams<'_> {
@@ -203,7 +212,7 @@ fn premier_index_valide(line_x: &[f64], depuis: usize, seuil: f64) -> Option<usi
 /// Rend les travees de la ligne retenue, du mat vers l'aval. Vide si aucune ligne
 /// n'est faisable. La derniere travee porte l'index du terminus : c'est lui qui donne
 /// la longueur effective de la ligne, eventuellement **coupee** en deca du profil.
-pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
+pub fn optpyl(p: &OptParams) -> Vec<SpanRow> {
     let indmax = p.line_x.len() - 1;
     if indmax == 0 {
         return Vec::new();
@@ -211,9 +220,9 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
     let seuil = p.csize.max(p.lmin_span);
 
     // --- 1. Sans support intermediaire : la portee directe suffit-elle ? -----
-    let r = p.essai(0, indmax, p.htower, p.hend, p.tmax, 0.0, -9999.0);
+    let r = p.essai(0, indmax, p.h_debut, p.h_fin, p.tmax, 0.0, -9999.0);
     if r.test {
-        return vec![span_row(&r, p.hend, indmax, p.q1)];
+        return vec![span_row(&r, p.h_fin, indmax, p.q1)];
     }
 
     // --- 2. Aucun support autorise : couper la ligne au plus loin. -----------
@@ -223,9 +232,9 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
             None => return Vec::new(),
         };
         for posi in (indmin..indmax).rev() {
-            let r = p.essai(0, posi, p.htower, p.hend, p.tmax, 0.0, -9999.0);
+            let r = p.essai(0, posi, p.h_debut, p.h_fin, p.tmax, 0.0, -9999.0);
             if r.test {
-                return vec![span_row(&r, p.hend, posi, p.q1)];
+                return vec![span_row(&r, p.h_fin, posi, p.q1)];
             }
         }
         return Vec::new();
@@ -254,11 +263,12 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
         for prefixe in &faisceau {
             // Etat porte par la configuration partielle.
             let (pg, hg, tmax_c, dsupdep, slope_prev, indmin) = match prefixe.last() {
-                None => (0usize, p.htower, p.tmax, 0.0, -9999.0, 0usize),
+                None => (0usize, p.h_debut, p.tmax, 0.0, -9999.0, 0usize),
                 Some(last) => {
                     let pg = last.posi();
                     let dsup: f64 = prefixe.iter().map(|s| s.diag()).sum();
-                    (pg, last.hd(), last.tcalc(), dsup, last.slope(), pg)
+                    let t = if p.heriter_tension { last.tcalc() } else { p.tmax };
+                    (pg, last.hd(), t, dsup, last.slope(), pg)
                 }
             };
 
@@ -276,17 +286,18 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
                 niveau.push(cfg.clone());
 
                 // La derniere travee rejoint-elle le terminus ?
+                let t2 = if p.heriter_tension { tdown } else { p.tmax };
                 let r2 = p.essai(
                     posi,
                     indmax,
                     p.hintsup,
-                    p.hend,
-                    tdown,
+                    p.h_fin,
+                    t2,
                     r1.diag + dsupdep,
                     r1.slope,
                 );
                 if r2.test {
-                    cfg.push(span_row(&r2, p.hend, indmax, p.q1));
+                    cfg.push(span_row(&r2, p.h_fin, indmax, p.q1));
                     return cfg;
                 }
             }
@@ -309,7 +320,7 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
         };
         let pg = last.posi();
         let hg = last.hd();
-        let tmax_c = last.tcalc();
+        let tmax_c = if p.heriter_tension { last.tcalc() } else { p.tmax };
         let dsupdep: f64 = prefixe.iter().map(|s| s.diag()).sum();
         let slope_prev = last.slope();
         let indmin = match premier_index_valide(p.line_x, pg, seuil) {
@@ -318,10 +329,10 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
         };
         for posi in (indmin..indmax).rev() {
             // Le terminus devient `posi` : il porte donc la hauteur terminale.
-            let r = p.essai(pg, posi, hg, p.hend, tmax_c, dsupdep, slope_prev);
+            let r = p.essai(pg, posi, hg, p.h_fin, tmax_c, dsupdep, slope_prev);
             if r.test {
                 let mut cfg = prefixe.clone();
-                cfg.push(span_row(&r, p.hend, posi, p.q1));
+                cfg.push(span_row(&r, p.h_fin, posi, p.q1));
                 candidats.push(cfg);
                 break;
             }
@@ -334,6 +345,48 @@ pub fn optpyl_up_noh(p: &OptParams) -> Vec<SpanRow> {
         .into_iter()
         .next()
         .unwrap_or_default()
+}
+
+/// Retourne un profil bout pour bout : le terminus devient le depart.
+///
+/// C'est `return_profile` de Sylvaccess. Les distances sont recomptees depuis le
+/// nouveau depart (`Dmax - x`), les altitudes suivent. Une ligne « machine en bas »
+/// se resout ainsi avec exactement le meme solveur que « machine en haut » -- il
+/// suffit de la parcourir a l'envers.
+pub fn retourner_profil(line_x: &[f64], line_z: &[f64]) -> (Vec<f64>, Vec<f64>) {
+    let n = line_x.len();
+    let dmax = line_x[n - 1];
+    let x = (0..n).map(|i| dmax - line_x[n - 1 - i]).collect();
+    let z = (0..n).map(|i| line_z[n - 1 - i]).collect();
+    (x, z)
+}
+
+/// Optimise une ligne « machine en bas » sur un profil **deja retourne**
+/// (`OptPyl_Down_NoH`).
+///
+/// Sylvaccess n'accepte ici aucune coupe : soit les supports portent la ligne jusqu'au
+/// mat, soit il **raccourcit la ligne par le haut** (`Line = Line[1:]`, cote ancrage,
+/// qui est le debut du profil retourne) et recommence. La machine est en bas : c'est
+/// elle qui fixe le terminus, on ne peut pas rogner de son cote.
+///
+/// Rend les travees et le nombre de pixels rognes en tete -- soustraire ce nombre de
+/// l'index du terminus donne la portee dans les indices du profil d'origine.
+pub fn optpyl_down_noh(p: &OptParams) -> Option<(Vec<SpanRow>, usize)> {
+    let n = p.line_x.len();
+    for rogne in 0..n.saturating_sub(1) {
+        let q = OptParams {
+            line_x: &p.line_x[rogne..],
+            line_z: &p.line_z[rogne..],
+            ..*p
+        };
+        let spans = optpyl(&q);
+        if let Some(last) = spans.last() {
+            if last.posi() == q.line_x.len() - 1 {
+                return Some((spans, rogne));
+            }
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -389,5 +442,79 @@ mod tests {
         let x: Vec<f64> = (0..20).map(|i| i as f64 * 5.0).collect();
         assert_eq!(premier_index_valide(&x, 0, 50.0), Some(10));
         assert_eq!(premier_index_valide(&x, 15, 50.0), None);
+    }
+
+    // ---- Ligne « machine en bas » ----------------------------------------
+
+    #[test]
+    fn retourner_profil_inverse_distances_et_altitudes() {
+        let x = [0.0, 10.0, 25.0, 40.0];
+        let z = [100.0, 130.0, 160.0, 180.0];
+        let (rx, rz) = retourner_profil(&x, &z);
+        assert_eq!(rx, vec![0.0, 15.0, 30.0, 40.0]);
+        assert_eq!(rz, vec![180.0, 160.0, 130.0, 100.0]);
+    }
+
+    // Profil « machine en bas » : depart en bas (mat), ancrage en haut. Une fois
+    // retourne, il descend de l'ancrage vers le mat -- et la portee directe passe.
+    fn params_down<'a>(x: &'a [f64], z: &'a [f64], alts: &'a [f64]) -> OptParams<'a> {
+        let ao = 0.25 * std::f64::consts::PI * 18.0_f64.powi(2);
+        OptParams {
+            line_x: x,
+            line_z: z,
+            alts,
+            h_debut: 5.0,   // ancrage (le profil est retourne)
+            h_fin: 9.0,     // mat
+            hintsup: 12.0,
+            hline_min: 3.5,
+            hline_max: 50.0,
+            slope_min: -1.4,
+            slope_max: 0.1,
+            f_o: G * (2500.0 + 400.0),
+            tmax: 35000.0 * G / 2.0,
+            q1: 1.85,
+            q2: 0.9,
+            q3: 0.9,
+            eao: 160000.0 * ao,
+            csize: 5.0,
+            angle_intsup: 30.0_f64.to_radians(),
+            sup_max: 3,
+            lmin_span: 50.0,
+            nbconfig: 1,
+            heriter_tension: true,
+        }
+    }
+
+    #[test]
+    fn optpyl_down_porte_la_ligne_entiere_sans_rognage() {
+        // 150 m de long, 30 m de denivele : le mat de 9 m tient la portee directe.
+        let n = 31;
+        let x: Vec<f64> = (0..n).map(|i| i as f64 * 5.0).collect();
+        let z: Vec<f64> = (0..n).map(|i| 180.0 - i as f64).collect();
+        // Meme terrain, au demi-metre : z(x) = 180 - x/5.
+        let alts: Vec<f64> = (0..400).map(|k| 180.0 - 0.1 * k as f64).collect();
+        let p = params_down(&x, &z, &alts);
+        let (spans, rogne) = optpyl_down_noh(&p).expect("ligne faisable attendue");
+        assert_eq!(rogne, 0, "aucun pixel ne devrait etre rogne");
+        assert_eq!(spans.last().unwrap().posi(), n - 1);
+    }
+
+    // Le solveur ne peut pas couper une ligne « machine en bas » du cote machine :
+    // s'il n'y arrive pas, il rogne l'**ancrage**. Ici une butte de 11 m barre les 40
+    // premiers metres -- le cable y passerait sous le sol -- donc la ligne recule son
+    // ancrage jusqu'a franchir l'obstacle, sans jamais deplacer le mat.
+    #[test]
+    fn optpyl_down_rogne_par_lancrage_quand_le_depart_ne_passe_pas() {
+        let n = 31;
+        let x: Vec<f64> = (0..n).map(|i| i as f64 * 5.0).collect();
+        let z: Vec<f64> = (0..n).map(|i| 180.0 - i as f64).collect();
+        let alts: Vec<f64> = (0..400)
+            .map(|k| 180.0 - 0.1 * k as f64 + if k <= 80 { 11.0 } else { 0.0 })
+            .collect();
+        let p = params_down(&x, &z, &alts);
+        let (spans, rogne) = optpyl_down_noh(&p).expect("ligne faisable apres rognage");
+        assert!(rogne > 0, "un rognage etait attendu");
+        // Le terminus reste le dernier pixel du profil : la machine ne bouge pas.
+        assert_eq!(spans.last().unwrap().posi(), n - 1 - rogne);
     }
 }

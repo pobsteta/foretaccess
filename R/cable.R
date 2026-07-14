@@ -22,14 +22,16 @@
 #' `longueur_max_m` a travers n'importe quel terrain : sur le jeu ColduPre, cela declare
 #' accessible a tort **10 %** de la foret.
 #'
-#' @section Ecarts assumes avec Sylvaccess v3.6:
-#' Le balayage ne modelise que la ligne **« machine en haut »** (`OptPyl_Up_NoH`), ou
-#' le mat est au depart et le cable descend. Sylvaccess traite aussi la ligne
-#' « machine en bas » (`OptPyl_Down_init_NoH` + `OptPyl_Down_NoH`), qu'il choisit quand
-#' le depart n'est pas le point haut du profil. Les bornes de pente appliquees sont donc
-#' celles du sens amont (`bornes_pente_cable()$amont_*`), et les lignes montantes ne sont
-#' pas cherchees : la couverture est **conservatrice** de ce cote.
+#' @section Sens de debardage:
+#' Une ligne se resout dans l'un ou l'autre sens selon que la machine, posee sur la
+#' desserte, **domine** ou non le profil (mat au depart + `hauteur_mat_m` contre point
+#' haut de la ligne + `hauteur_ancrage_m`). « Machine en haut » : le cable descend, les
+#' bornes de pente sont `bornes_pente_cable()$amont_*`. « Machine en bas » : le cable
+#' monte, la ligne se resout sur le profil **retourne** (l'ancrage ouvre, le mat ferme)
+#' avec les bornes `aval_*` niees, et elle ne peut pas etre coupee du cote machine --
+#' seulement raccourcie par le haut.
 #'
+#' @section Ecarts assumes avec Sylvaccess v3.6:
 #' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h = 1`)
 #' n'est pas implementee : on tient la variante `_NoH`, qui est le defaut de v3.6.
 #'
@@ -94,9 +96,10 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     vol = if (is.null(vol)) numeric(0) else vol, has_vol = !is.null(vol),
     htower = ct$htower, h_end = ct$h_end,
     hline_min = ct$hline_min, hline_max = ct$hline_max,
-    # Bornes du sens AMONT (« machine en haut ») : c'est le seul que le balayage
-    # modelise pour l'instant (cf. `potentiel_cable()`, section Ecarts assumes).
+    # Les deux jeux de bornes : le noyau choisit le sens ligne par ligne, selon que
+    # la machine domine ou non le profil (cf. `potentiel_cable()`, Sens de debardage).
     slope_min = ct$bornes$amont_min, slope_max = ct$bornes$amont_max,
+    slope_min_aval = ct$bornes$aval_min, slope_max_aval = ct$bornes$aval_max,
     f_o = ct$f_o, tmax = ct$tmax, q1 = ct$q1, q2 = ct$q2, q3 = ct$q3,
     eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin,
     hintsup = ct$hintsup, sup_max = ct$sup_max, lmin_span = ct$lmin_span,

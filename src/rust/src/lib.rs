@@ -460,8 +460,10 @@ fn cable_test_span(
 /// @param h_end Terminal-support height (m).
 /// @param hline_min Minimum ground clearance of the carrying cable (m).
 /// @param hline_max Maximum ground clearance of the carrying cable (m).
-/// @param slope_min Minimum line slope (rad).
-/// @param slope_max Maximum line slope (rad).
+/// @param slope_min Minimum line slope, uphill yarding (rad).
+/// @param slope_max Maximum line slope, uphill yarding (rad).
+/// @param slope_min_aval Minimum line slope, downhill yarding (rad).
+/// @param slope_max_aval Maximum line slope, downhill yarding (rad).
 /// @param f_o Gravity force of load plus carriage (N).
 /// @param tmax Maximum allowable tension (N).
 /// @param q1 Linear mass of the carrying cable (kg/m).
@@ -505,6 +507,8 @@ fn cable_scan(
     hline_max: f64,
     slope_min: f64,
     slope_max: f64,
+    slope_min_aval: f64,
+    slope_max_aval: f64,
     f_o: f64,
     tmax: f64,
     q1: f64,
@@ -532,7 +536,7 @@ fn cable_scan(
     let out = scan::scan(
         &alt, nr as usize, nc as usize, res, &foret, &routes, vopt,
         htower, h_end, hline_min, hline_max, slope_min, slope_max,
-        f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
+        slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
         hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
         pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
         &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope,

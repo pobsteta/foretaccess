@@ -64,14 +64,18 @@ n'installe pas un cable pour desservir un pre), elle ne traverse pas plus de
 accessible a tort \strong{10 \%} de la foret.
 }
 
-\section{Ecarts assumes avec Sylvaccess v3.6}{
+\section{Sens de debardage}{
 
-Le balayage ne modelise que la ligne \strong{« machine en haut »} (\code{OptPyl_Up_NoH}), ou
-le mat est au depart et le cable descend. Sylvaccess traite aussi la ligne
-« machine en bas » (\code{OptPyl_Down_init_NoH} + \code{OptPyl_Down_NoH}), qu'il choisit quand
-le depart n'est pas le point haut du profil. Les bornes de pente appliquees sont donc
-celles du sens amont (\verb{bornes_pente_cable()$amont_*}), et les lignes montantes ne sont
-pas cherchees : la couverture est \strong{conservatrice} de ce cote.
+Une ligne se resout dans l'un ou l'autre sens selon que la machine, posee sur la
+desserte, \strong{domine} ou non le profil (mat au depart + \code{hauteur_mat_m} contre point
+haut de la ligne + \code{hauteur_ancrage_m}). « Machine en haut » : le cable descend, les
+bornes de pente sont \verb{bornes_pente_cable()$amont_*}. « Machine en bas » : le cable
+monte, la ligne se resout sur le profil \strong{retourne} (l'ancrage ouvre, le mat ferme)
+avec les bornes \verb{aval_*} niees, et elle ne peut pas etre coupee du cote machine --
+seulement raccourcie par le haut.
+}
+
+\section{Ecarts assumes avec Sylvaccess v3.6}{
 
 L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h = 1})
 n'est pas implementee : on tient la variante \verb{_NoH}, qui est le defaut de v3.6.
