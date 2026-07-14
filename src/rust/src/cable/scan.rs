@@ -1,15 +1,16 @@
 //! Balayage 360 deg / pixel du potentiel cable (portage Rust de l'orchestration).
 //!
 //! Porte la boucle chaude de `potentiel_cable()` (R) dans le crate : pour chaque
-//! cellule de desserte et chacun des 360 azimuts, extraction du profil, recherche
-//! de la plus longue travee faisable (`supports::test_span`, 0 support), et
-//! accumulation de la couverture et des lignes candidates. Parallelise sur les
+//! cellule de desserte et chacun des 360 azimuts, extraction du profil, puis
+//! placement des supports (`optpyl`), qui coupe la ligne ou la retourne (machine en bas). Il
+//! coupe au plus loin s'il ne peut pas la porter entiere. Parallelise sur les
 //! cellules de desserte avec `rayon`.
 //!
-//! Fidele au R (non-regression) : meme ordre de reduction (routes puis azimuts
-//! croissants) pour un depart de ligne / azimut / longueur identiques.
+//! Le profil sert sous deux formes, comme chez Sylvaccess : **au pixel** pour poser
+//! les supports (`Line`), **au demi-metre** pour la garde au sol (`Alts`).
 
-use crate::cable::supports;
+use crate::cable::ligne;
+use crate::cable::optpyl;
 use rayon::prelude::*;
 
 /// Un rayon precalcule : cellules traversees (decalages ligne/colonne) et leur
@@ -121,6 +122,7 @@ pub struct Line {
     pub sens: i32,  // +1 aval, -1 amont, 0 plat
     pub vol: f64,   // volume (m3) ou NaN
     pub ipc: f64,   // volume / longueur ou NaN
+    pub nsup: i32,  // nombre de supports intermediaires poses
 }
 
 /// Resultat du balayage.
@@ -160,6 +162,8 @@ pub fn scan(
     hline_max: f64,
     slope_min: f64,
     slope_max: f64,
+    slope_min_aval: f64,
+    slope_max_aval: f64,
     f_o: f64,
     tmax: f64,
     q1: f64,
@@ -169,10 +173,25 @@ pub fn scan(
     angle_intsup: f64,
     lmax: f64,
     lmin: f64,
+    hintsup: f64,
+    sup_max: usize,
+    lmin_span: f64,
+    nbconfig: usize,
+    pas_azimut: usize,
+    pas_depart: usize,
+    aspect: &[f64],
+    pente: &[f64],
+    lsans_foret: f64,
+    angle_transv: f64,
+    slope_trans: f64,
+    l_slope: f64,
+    prop_slope: f64,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
     let rays = build_rays(res, lmax);
+    let pas_az = pas_azimut.max(1);
+    let pas_dep = pas_depart.max(1);
 
     // Traitement d'un depart : renvoie ses contributions de couverture + lignes.
     let une_route = |&dep_1based: &i32| -> RouteResult {
@@ -182,7 +201,9 @@ pub fn scan(
         let mut covers = Vec::new();
         let mut lines = Vec::new();
 
-        for (az, ray) in rays.iter().enumerate() {
+        // Pas angulaire : Sylvaccess ne balaie pas les 360 azimuts en precision
+        // grossiere, mais un sur `pas_az` (`Dir_list = range(0, 360, 2)`).
+        for (az, ray) in rays.iter().enumerate().filter(|(a, _)| a % pas_az == 0) {
             // Cellules du rayon dans la grille.
             let mut cel = Vec::with_capacity(ray.dl.len());
             let mut hd = Vec::with_capacity(ray.dl.len());
@@ -202,44 +223,160 @@ pub fn scan(
                 continue;
             }
 
-            // Profil au demi-metre.
+            // Profil AU PIXEL : c'est lui qui porte les travees (`Line` chez
+            // Sylvaccess). Les supports se posent sur une cellule, pas au demi-metre.
             let mut prof_hd = Vec::with_capacity(cel.len() + 1);
             let mut prof_za = Vec::with_capacity(cel.len() + 1);
+            let mut prof_fo = Vec::with_capacity(cel.len() + 1);
+            let mut prof_as = Vec::with_capacity(cel.len() + 1);
+            let mut prof_pe = Vec::with_capacity(cel.len() + 1);
             prof_hd.push(0.0);
             prof_za.push(alt[dep]);
+            prof_fo.push(foret[dep] == 1);
+            prof_as.push(aspect[dep]);
+            prof_pe.push(pente[dep]);
             for i in 0..cel.len() {
+                if hd[i] > lmax {
+                    break;
+                }
                 prof_hd.push(hd[i]);
                 prof_za.push(alt[cel[i]]);
+                prof_fo.push(foret[cel[i]] == 1);
+                prof_as.push(aspect[cel[i]]);
+                prof_pe.push(pente[cel[i]]);
             }
-            let m = (smax / 0.5).floor() as usize + 1;
+            // Un NA d'altitude coupe le profil : on ne pose pas de cable sur un trou.
+            if prof_za.iter().any(|z| z.is_nan()) {
+                continue;
+            }
+
+            // Validite geometrique de la ligne (`check_line`) : elle finit en foret, ne
+            // traverse pas trop de non-foret, et ne court pas en travers d'un versant
+            // raide. C'est ce filtre qui donne sa longueur utile a la ligne -- sans lui,
+            // elle file jusqu'a `lmax` a travers n'importe quoi.
+            let prof = ligne::Profil {
+                hd: &prof_hd,
+                alt: &prof_za,
+                foret: &prof_fo,
+                aspect: &prof_as,
+                pente: &prof_pe,
+            };
+            let garde = match ligne::check_line(&prof, &ligne::Seuils {
+                az: az as f64,
+                lmax,
+                lmin,
+                lsans_foret,
+                angle_transv,
+                slope_trans,
+                l_slope,
+                prop_slope,
+            }) {
+                Some(k) => k,
+                None => continue,
+            };
+            prof_hd.truncate(garde);
+            prof_za.truncate(garde);
+            if prof_hd.len() < 2 {
+                continue;
+            }
+
+            // Meme terrain, echantillonne au demi-metre : c'est la garde au sol
+            // (`Alts`), indexee par `int(x * 2)` dans la mecanique.
+            let lline = *prof_hd.last().unwrap();
+            let m = (lline / 0.5).floor() as usize + 2;
             let xs: Vec<f64> = (0..m).map(|i| i as f64 * 0.5).collect();
             let zs = interp_dropna(&prof_hd, &prof_za, &xs);
 
-            // Plus longue travee faisable (du plus long au plus court, pas = res).
-            let hi = smax.min(lmax);
-            if hi < lmin {
-                continue;
-            }
-            // seq(hi, lmin, by = -res) : l_i = hi - i*res, tant que l_i >= lmin.
-            let mut longueur = f64::NAN;
-            let nl = ((hi - lmin) / res + 1e-10).floor() as i64;
-            for i in 0..=nl {
-                let l_cand = hi - i as f64 * res;
-                let posi = round_half_even(l_cand * 2.0) as usize;
-                if posi >= xs.len() {
+            // Sens de la ligne. Sylvaccess ne compare pas les altitudes brutes : il
+            // regarde si le mat, depuis la desserte, **domine** le point le plus haut
+            // de la ligne augmente de l'ancrage. Si oui la machine est en haut, sinon
+            // elle est en bas -- et la ligne se resout alors a l'envers.
+            let idlinemin = prof_hd.iter().position(|&d| d >= lmin).unwrap_or(0);
+            let zmax = prof_za[idlinemin..].iter().cloned().fold(f64::MIN, f64::max);
+            let machine_en_haut = prof_za[0] + htower >= zmax + h_end;
+
+            let base = optpyl::OptParams {
+                line_x: &prof_hd,
+                line_z: &prof_za,
+                alts: &zs,
+                h_debut: htower,
+                hintsup,
+                h_fin: h_end,
+                hline_min,
+                hline_max,
+                slope_min,
+                slope_max,
+                f_o,
+                tmax,
+                q1,
+                q2,
+                q3,
+                eao,
+                csize: res,
+                angle_intsup,
+                sup_max,
+                lmin_span,
+                nbconfig,
+                heriter_tension: true,
+            };
+
+            // Portee retenue, en index du profil aller, et nombre de supports poses.
+            let (iterm, nb_sup) = if machine_en_haut {
+                // Placement des supports, avec coupe de la ligne a defaut.
+                let spans = optpyl::optpyl(&base);
+                match spans.last() {
+                    Some(l) => (l.posi(), spans.len() - 1),
+                    None => continue,
+                }
+            } else {
+                // Machine en bas. Deux passes, comme Sylvaccess.
+                //
+                // 1. Amorce (`OptPyl_Down_init_NoH`) sur le profil ALLER, bornes de
+                //    pente aval : elle ne sert qu'a savoir jusqu'ou la ligne peut
+                //    raisonnablement porter. Chaque travee y repart de `tmax` -- la
+                //    tension n'est pas heritee, l'amorce n'est pas une vraie ligne.
+                let init = optpyl::optpyl(&optpyl::OptParams {
+                    slope_min: slope_min_aval,
+                    slope_max: slope_max_aval,
+                    heriter_tension: false,
+                    ..base
+                });
+                let extent = match init.last() {
+                    Some(l) => l.posi(),
+                    None => continue,
+                };
+                if init.iter().map(|s| s.diag()).sum::<f64>() < lmin {
                     continue;
                 }
-                let r = supports::test_span(
-                    &xs, &zs, 0, posi as i64, htower, h_end, hline_min, hline_max,
-                    slope_min, slope_max, &zs, f_o, tmax, q1, q2, q3, eao, 0.5,
-                    angle_intsup, 0.0, -9999.0,
-                );
-                if r.test {
-                    longueur = xs[posi];
-                    break;
+                // 2. Ligne reelle sur le profil RETOURNE (`OptPyl_Down_NoH`). Les
+                //    hauteurs d'extremite s'echangent (l'ancrage ouvre, le mat ferme) et
+                //    les bornes de pente changent de signe avec le sens de parcours.
+                let ilast = (extent + 2).min(prof_hd.len() - 1);
+                let (rx, rz) = optpyl::retourner_profil(&prof_hd[..=ilast], &prof_za[..=ilast]);
+                let rlline = *rx.last().unwrap();
+                let rm = (rlline / 0.5).floor() as usize + 2;
+                let rxs: Vec<f64> = (0..rm).map(|i| i as f64 * 0.5).collect();
+                let rzs = interp_dropna(&rx, &rz, &rxs);
+                let res_down = optpyl::optpyl_down_noh(&optpyl::OptParams {
+                    line_x: &rx,
+                    line_z: &rz,
+                    alts: &rzs,
+                    h_debut: h_end,
+                    h_fin: htower,
+                    slope_min: (-slope_min_aval).min(-slope_max_aval),
+                    slope_max: (-slope_min_aval).max(-slope_max_aval),
+                    ..base
+                });
+                match res_down {
+                    // `rogne` pixels ont ete retires en tete du profil retourne, donc
+                    // au bout de la ligne aller : la portee recule d'autant.
+                    Some((spans, rogne)) => (ilast - rogne, spans.len() - 1),
+                    None => continue,
                 }
-            }
-            if longueur.is_nan() {
+            };
+
+            let longueur = prof_hd[iterm];
+            if longueur < lmin {
                 continue;
             }
 
@@ -285,13 +422,18 @@ pub fn scan(
                 sens,
                 vol: vol_l,
                 ipc: ipc_l,
+                nsup: nb_sup as i32,
             });
         }
         RouteResult { covers, lines }
     };
 
-    // Parallelise sur les departs, ordre preserve pour une reduction fidele au R.
-    let per_route: Vec<RouteResult> = routes.par_iter().map(une_route).collect();
+    // Pas entre cellules de depart (`step_route`) : en precision grossiere,
+    // Sylvaccess n'essaie qu'une cellule de desserte sur deux.
+    let departs: Vec<i32> = routes.iter().step_by(pas_dep).cloned().collect();
+
+    // Parallelise sur les departs, ordre preserve pour une reduction deterministe.
+    let per_route: Vec<RouteResult> = departs.par_iter().map(une_route).collect();
 
     let mut couvert = vec![false; n];
     let mut longueur = vec![0.0f64; n];

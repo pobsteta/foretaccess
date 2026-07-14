@@ -3,7 +3,9 @@
 
 test_that("la zone defendable est un tampon borne autour de la desserte DFCI (CA-6.1)", {
   pre <- pre_plan_dfci(pente = 0.05, n = 61)
-  cfg <- foretaccess_config()
+  # Portee explicite : le jouet fait 305 m de cote, la portee reelle de Sylvaccess
+  # (440 m) le couvrirait en entier et le test ne montrerait plus de bord.
+  cfg <- foretaccess_config(dfci = list(distance_defense_max_m = 100))
   df <- camion_dfci(pre, cfg)
 
   codes <- as.numeric(terra::values(df$accessibilite))
@@ -29,10 +31,13 @@ test_that("une portee plus grande etend la zone defendable", {
 })
 
 test_that("le terrain au-dela de la pente d'intervention n'est pas defendable", {
+  # Seuil explicite : c'est le MECANISME qu'on teste, pas le defaut. Le defaut reel
+  # de Sylvaccess (dfci_slope_max = 110 %) laisserait passer un plan a 60 %.
+  cfg <- foretaccess_config(dfci = list(pente_defense_max_pct = 40))
   # Plan doux : large zone defendable. Plan raide (> 40 %) : le terrain est
   # infranchissable, la zone defendable s'effondre.
-  doux  <- camion_dfci(pre_plan_dfci(pente = 0.05, n = 61))
-  raide <- camion_dfci(pre_plan_dfci(pente = 0.60, n = 61))
+  doux  <- camion_dfci(pre_plan_dfci(pente = 0.05, n = 61), cfg)
+  raide <- camion_dfci(pre_plan_dfci(pente = 0.60, n = 61), cfg)
 
   n_doux  <- sum(terra::values(doux$accessibilite) == 1, na.rm = TRUE)
   n_raide <- sum(terra::values(raide$accessibilite) == 1, na.rm = TRUE)

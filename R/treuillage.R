@@ -122,11 +122,18 @@ coefficients_bascule <- function(config = foretaccess_config()) {
 #' @param desserte `SpatRaster` des cellules de desserte (non `NA` = desserte).
 #' @param zone `SpatRaster` logique des cellules treuillables.
 #' @param config Objet [foretaccess_config()].
+#' @param depart_cout Vecteur de longueur `ncell(mnt)` : distance **déjà
+#'   parcourue** pour atteindre chaque cellule de départ. `NULL` (défaut) : les
+#'   départs sont sur la desserte, ils ne coûtent rien. Sinon le critère
+#'   d'amélioration porte sur le **total** `depart_cout + distance de treuil`,
+#'   et non sur la seule distance de treuil (cf. `skid_debusq_contour()` de
+#'   Sylvaccess, où chaque point du contour porte son `Dfor + Dpis`).
 #'
 #' @return Une liste de deux `SpatRaster` : `distance` (m, distance 3D ; `NA` si
 #'   non treuillable) et `allocation` (indice de la cellule de desserte).
 #' @export
-treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
+treuiller <- function(mnt, desserte, zone, config = foretaccess_config(),
+                      depart_cout = NULL) {
   mnt <- .as_raster(mnt, "mnt")
   cf <- coefficients_bascule(config)
   sk <- config$skidder
@@ -142,8 +149,17 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
   routes <- which(!is.na(terra::values(desserte)))
   dist <- rep(Inf, nr * nc)
   alloc <- rep(NA_real_, nr * nc)
+  # Total minimal connu par cellule. Sans cout de depart il vaut `dist` : les deux
+  # criteres coincident, et le comportement est celui de `skid_debusq_RF()`.
+  total <- rep(Inf, nr * nc)
   if (!length(routes)) {
     cli::cli_abort("{.arg desserte} ne contient aucune cellule.")
+  }
+  if (is.null(depart_cout)) {
+    cout_r <- rep(0, length(routes))
+  } else {
+    checkmate::assert_numeric(depart_cout, len = nr * nc, any.missing = FALSE)
+    cout_r <- depart_cout[routes]
   }
 
   rl <- ((routes - 1L) %/% nc) + 1L
@@ -164,6 +180,7 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
     rl_a <- rl
     rc_a <- rc
     alt_a <- alt_r
+    cout_a <- cout_r
     # Bornes cumulees de la pente admissible, imposees par les pixels deja
     # traverses : la corde doit rester dans [sol, sol + degagement].
     lo <- rep(-Inf, length(routes))
@@ -194,17 +211,20 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
       garde <- which(ok)
       if (!length(garde)) break
 
-      # Ecriture du minimum : on ordonne par distance decroissante pour que la
-      # plus petite valeur soit ecrite en dernier sur les cellules dupliquees.
+      # Ecriture du minimum : on ordonne par total decroissant pour que la plus
+      # petite valeur soit ecrite en dernier sur les cellules dupliquees.
       idx <- cel[garde]
       dd <- d3[garde]
       rr <- act[garde]
-      o <- order(dd, decreasing = TRUE)
+      tt <- cout_a[garde] + dd
+      o <- order(tt, decreasing = TRUE)
       idx <- idx[o]
       dd <- dd[o]
       rr <- rr[o]
+      tt <- tt[o]
 
-      mieux <- dd < dist[idx]
+      mieux <- tt < total[idx]
+      total[idx[mieux]] <- tt[mieux]
       dist[idx[mieux]] <- dd[mieux]
       alloc[idx[mieux]] <- rr[mieux]
 
@@ -215,6 +235,7 @@ treuiller <- function(mnt, desserte, zone, config = foretaccess_config()) {
       rl_a <- rl_a[garde]
       rc_a <- rc_a[garde]
       alt_a <- alt_a[garde]
+      cout_a <- cout_a[garde]
     }
   }
 

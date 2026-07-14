@@ -60,6 +60,15 @@ Deux mécanismes coexistent, et ils n'ont pas la même nature :
 L'option de modélisation \code{1} (défaut v3.6, « limiter l'impact sur le sol »)
 \strong{privilégie le treuillage} : une cellule treuillable l'est, même si l'engin
 pourrait y rouler. L'option \code{2} n'est pas implémentée.
+
+Le treuillage se fait en \strong{trois passes}, comme dans Sylvaccess :
+depuis les routes, depuis les pistes, puis — c'est le point qu'on oublie —
+depuis le \strong{contour de la zone où l'engin a roulé} (\code{skid_debusq_contour}).
+La machine entre en forêt, s'arrête au bord du terrain roulable, et treuille
+de là en \strong{emportant la distance déjà parcourue} : le critère de choix porte
+alors sur le \strong{total} traînage + câble, non sur la seule longueur de câble.
+Cette troisième passe est purement additive — elle ne corrige jamais une
+cellule que les deux premières ont atteinte.
 }
 \section{Écarts assumés avec Sylvaccess v3.6}{
 

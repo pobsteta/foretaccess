@@ -15,9 +15,9 @@ test_that("la desserte est un raster catégoriel à 3 classes", {
 
   expect_true(terra::is.factor(pre$desserte))
   niveaux <- terra::levels(pre$desserte)[[1]]
-  expect_equal(niveaux$classe, c("route", "piste", "dfci"))
+  expect_equal(niveaux$classe, c("route", "piste", "dfci", "reseau_public"))
 
-  # Les trois classes sont effectivement présentes sur le jouet.
+  # Le jouet ne porte pas de réseau public : ses trois premières classes seulement.
   codes <- unique(as.numeric(terra::values(pre$desserte)))
   expect_setequal(sort(codes[!is.na(codes)]), c(1, 2, 3))
 
@@ -45,6 +45,37 @@ test_that("un obstacle fourni est rasterisé en 1 sur son emprise", {
   expect_setequal(unique(as.numeric(v)), c(0, 1))
   # Carré [50, 100]^2 : centres de 52.5 à 97.5, soit 10 x 10 cellules.
   expect_equal(sum(v == 1), 10 * 10)
+})
+
+test_that("une couche d'obstacles mixte (polygones + lignes) est rasterisée en entier", {
+  # terra::vect() ne retient qu'un seul type de geometrie et abandonne les
+  # autres sans erreur : une couche bati (polygones) + cours d'eau (lignes)
+  # perdait silencieusement ses lignes. Cas reel, trouve sur le jeu ColduPre.
+  carre <- toy_obstacles()
+  crs <- sf::st_crs(carre)
+
+  # Ligne traversante, franchement hors du carre d'obstacles [50, 100]^2.
+  ligne <- sf::st_sf(geometry = sf::st_sfc(
+    sf::st_linestring(cbind(c(150, 240), c(150, 240))),
+    crs = crs
+  ))
+  mixte <- sf::st_sf(geometry = c(sf::st_geometry(carre), sf::st_geometry(ligne)))
+
+  pre_poly <- preprocess(
+    mnt = toy_mnt(), desserte = toy_desserte(), foret = toy_foret(),
+    obstacles_complets = carre
+  )
+  pre_mixte <- preprocess(
+    mnt = toy_mnt(), desserte = toy_desserte(), foret = toy_foret(),
+    obstacles_complets = mixte
+  )
+
+  n_poly <- sum(terra::values(pre_poly$obstacles_complets_mask) == 1)
+  n_mixte <- sum(terra::values(pre_mixte$obstacles_complets_mask) == 1)
+
+  # La ligne doit ajouter des cellules : sans elle, le masque serait identique.
+  expect_gt(n_mixte, n_poly)
+  expect_setequal(unique(as.numeric(terra::values(pre_mixte$obstacles_complets_mask))), c(0, 1))
 })
 
 test_that("exclusion_mask vaut 0 partout sur le jouet (20 % < 100 %)", {

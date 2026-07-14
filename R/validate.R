@@ -59,7 +59,46 @@ valider_entrees <- function(mnt,
 }
 
 # Classes de desserte reconnues (spec 001 §3).
-.classes_desserte <- function() c("route", "piste", "dfci")
+#
+# `reseau_public` (CL_SVAC = 3 chez Sylvaccess) n'est PAS une desserte forestiere :
+# c'est le point de chargement du camion, et pour les engins de debardage une
+# BARRIERE (on ne debarde ni sur ni au travers d'une route ouverte a la
+# circulation). Sylvaccess l'exclut explicitement des sources et de la zone
+# roulable (`from_rast[Res_pub==1]=0`, `zone_rast[Res_pub==1]=0`,
+# `Obstacles_forwarder[Res_pub==1]=1`). L'omettre coute 6,8 % de la carte
+# skidder, entierement dans le sens optimiste (mesure sur le jeu ColduPre).
+.classes_desserte <- function() c("route", "piste", "dfci", "reseau_public")
+
+# Classes qui accueillent effectivement le bois debarde : le reseau public
+# (barriere, cf. ci-dessus) n'en fait pas partie.
+.classes_livraison <- function() c("route", "piste", "dfci")
+
+# Raster de desserte restreint aux cellules de livraison (reseau public en NA).
+# Les balayages radiaux (treuiller(), conduire()) consomment un raster, pas des
+# indices : ils doivent voir la MEME desserte que le roulage.
+.desserte_livraison <- function(pre) {
+  r <- terra::rast(pre$desserte)
+  v <- rep(NA_real_, terra::ncell(r))
+  cel <- .cellules_livraison(pre)
+  v[cel] <- as.numeric(terra::values(pre$desserte))[cel]
+  terra::values(r) <- v
+  names(r) <- "desserte"
+  r
+}
+
+# Indices des cellules de desserte ou le bois peut etre livre (reseau public exclu).
+#
+# Sans table de categories -- desserte non categorisee, ou raster de marqueurs des
+# fixtures --, il n'y a pas de reseau public a distinguer : toute cellule livre.
+.cellules_livraison <- function(pre) {
+  v <- as.numeric(terra::values(pre$desserte))
+  cl <- terra::levels(pre$desserte)[[1]]
+  if (!is.data.frame(cl) || ncol(cl) < 2L) {
+    return(which(!is.na(v)))
+  }
+  codes <- cl[[1]][as.character(cl[[2]]) %in% .classes_livraison()]
+  which(!is.na(v) & v %in% codes)
+}
 
 # Le champ `classe` existe et ne contient que des valeurs reconnues.
 .valider_desserte <- function(desserte) {

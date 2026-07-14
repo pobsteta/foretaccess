@@ -53,3 +53,7 @@ tests/testthat/testthat-problems.rds
 # Artefacts de couverture (covr / gcov)
 *.gcda
 *.gcno
+
+# Sorties du banc de confrontation a l oracle Sylvaccess (Lot 11) : produites
+# par data-raw/oracle_coldupre.R, jamais versionnees.
+data-raw/oracle/

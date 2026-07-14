@@ -1,3 +1,78 @@
+# foretaccess 0.13.0 (2026-07-14)
+
+## Lot 11 — confrontation à l'oracle Sylvaccess réel
+
+Sylvaccess v3.6 tourne désormais en local et produit son oracle sur son propre jeu de
+test officiel (`test/ColduPre`, 411 309 cellules forestières), qui ne livre aucune sortie
+de référence — il faut l'exécuter. Banc : `data-raw/oracle_coldupre.R` (ForêtAccess sur
+les mêmes entrées) et `data-raw/oracle_compare.R` (comparaison cellule à cellule).
+
+Accord cellule à cellule après correctifs :
+
+| Moteur | Accord | Trop optimistes | Trop conservateurs |
+|---|---|---|---|
+| Skidder | **99,95 %** | 0,04 % | 0,01 % |
+| Porteur | **99,72 %** | 0,22 % | 0,06 % |
+| Câble | **96,58 %** | 0,63 % | 2,79 % |
+
+Les distances collent, **décomposition comprise** : débusquage à 0,0 m d'écart médian, traînage
+en forêt à 0,2 m, traînage sur piste à 0,4 m, distance totale à 0,2 m. Le reliquat est l'arrondi
+(Sylvaccess stocke ses distances en `int16`), borné par la demi-cellule.
+
+### Divergences corrigées (moteurs terrestres)
+
+* **`.masque_vecteur()` perdait les géométries non-polygonales** : `terra::vect()` sur une
+  couche `sf` hétérogène ne retient qu'un seul type et abandonne les autres sans erreur.
+  Rasterisation par famille (surface / ligne / point) puis union.
+* **Rasterisation `ALL_TOUCHED`** : Sylvaccess rasterise chacune de ses couches vectorielles
+  avec `ALL_TOUCHED=TRUE` ; toute cellule effleurée compte. Aligné (`.masque_vecteur()`,
+  `.rasteriser_desserte()`), avec priorité `route < piste < dfci < reseau_public`.
+* **Nouvelle classe de desserte `reseau_public`** : la route ouverte à la circulation est le
+  point de chargement du camion, pas une place de dépôt — et pour les engins de débardage,
+  une barrière. Exclue des sources de balayage et de la zone roulable, versée aux obstacles
+  du porteur.
+* **Le traînage sur piste ne paie plus le surcoût d'obstacle** : une route n'est pas un
+  obstacle à la circulation sur elle-même (`Pond_pente` réseau vs `Pond_pente2` forêt).
+* **Le seuil d'abattage porte sur le maximum local 3 × 3 de la pente**, pas sur la pente de
+  la cellule (`slopes_skid()`) : la zone d'exclusion est dilatée d'une cellule.
+  `pre$slope_max_local` ajouté.
+* **Troisième passe de treuillage du skidder** (`skid_debusq_contour`) : la machine entre en
+  forêt, s'arrête au bord du terrain roulable et treuille **de là**, en emportant sa distance
+  déjà parcourue. `treuiller(depart_cout = )`.
+* **Porteur** : grappin depuis la seule forêt conduite (`Dforet > 0`), propagation
+  **Dijkstra sur terrain plat** qui manquait entièrement (`terrain_plat()`,
+  `zone_plate_connectee()`), et passe contour symétrique (`conduire(sources=, depart_cout=)`).
+
+### Câble
+
+* **`potentiel_cable(departs = )`** : les lignes ne partent plus de toute cellule de desserte
+  mais d'une couche de **places de dépôt** (attribut `cable`) — 2 tronçons sur 125 à ColduPre.
+
+## Lot 4 — clôture du noyau câble (supports intermédiaires)
+
+* **Placement des supports intermédiaires** (`OptPyl_Up_NoH`, recherche en faisceau
+  `get_Tabis`, jusqu'à `c_sup = 3`), avec coupe de la ligne au point le plus lointain atteint.
+  La dette « zéro support » du Lot 4 est soldée.
+* **`check_line()`** — validité géométrique de la ligne : elle finit en forêt, ne traverse pas
+  plus de 75 m de non-forêt d'affilée, et ne court pas en travers d'un versant raide.
+* **Ligne « machine en bas »** (`OptPyl_Down_init_NoH` / `OptPyl_Down_NoH`) : le balayage
+  traite désormais les deux sens de débardage et choisit par dominance mât / ancrage.
+
+Balayage câble : **79 s** contre 198 s à Sylvaccess, à périmètre désormais égal (3 supports).
+
+## Défauts de configuration alignés sur Sylvaccess
+
+Audit complet de `foretaccess_config()` contre `dic_AllParam.json` (règle : Sylvaccess fait foi).
+
+* Câble : `c_E` 160 000 → **100 000**, `c_q2`/`c_q3` 0,9 → **0,5**, `c_angle` 20 → **30°**,
+  `c_safe` 2 → **2,5** (il divise `Tmax`).
+* Porteur : `pente_descente_max_pct` 25 → **40**.
+* DFCI : `distance_defense_max_m` 100 → **440**, `pente_defense_max_pct` 40 → **110**,
+  classes `0;120;280;440`. `Sylvaccess_5_dfci.py` existe — `specs/006` supposait l'inverse.
+* Bornes de pente du câble **dérivées** du type de chariot/câble et du sens de débardage
+  (`bornes_pente_cable()`), et précision du balayage gouvernée par `c_precision`
+  (`precision_cable()`).
+
 # foretaccess 0.12.0 (2026-07-13)
 
 ## Portage Rust du balayage câble (point chaud)

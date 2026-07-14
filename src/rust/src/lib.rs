@@ -460,8 +460,10 @@ fn cable_test_span(
 /// @param h_end Terminal-support height (m).
 /// @param hline_min Minimum ground clearance of the carrying cable (m).
 /// @param hline_max Maximum ground clearance of the carrying cable (m).
-/// @param slope_min Minimum line slope (rad).
-/// @param slope_max Maximum line slope (rad).
+/// @param slope_min Minimum line slope, uphill yarding (rad).
+/// @param slope_max Maximum line slope, uphill yarding (rad).
+/// @param slope_min_aval Minimum line slope, downhill yarding (rad).
+/// @param slope_max_aval Maximum line slope, downhill yarding (rad).
 /// @param f_o Gravity force of load plus carriage (N).
 /// @param tmax Maximum allowable tension (N).
 /// @param q1 Linear mass of the carrying cable (kg/m).
@@ -471,9 +473,22 @@ fn cable_test_span(
 /// @param angle_intsup Inter-support angle constraint (rad).
 /// @param lmax Maximum line length (m).
 /// @param lmin Minimum line length (m).
+/// @param hintsup Attachment height on an intermediate support (m).
+/// @param sup_max Maximum number of intermediate supports.
+/// @param lmin_span Minimum distance between two supports (m).
+/// @param nbconfig Beam width of the support-placement search.
+/// @param pas_azimut Azimuth step of the sweep (degrees).
+/// @param pas_depart Sample every `pas_depart`-th departure cell.
+/// @param aspect Terrain aspect (degrees, NaN on flats), row-major.
+/// @param pente Terrain slope (percent), row-major.
+/// @param lsans_foret Longest stretch a line may cross outside the forest (m).
+/// @param angle_transv Minimum angle to the contour line (degrees).
+/// @param slope_trans Terrain slope above which a cross-slope stretch counts (percent).
+/// @param l_slope Maximum cumulated length on a steep cross-slope (m).
+/// @param prop_slope Maximum share of the line on a steep cross-slope.
 /// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 ///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
-///   `li_ipc`.
+///   `li_ipc`, `li_nsup`.
 /// @export
 #[extendr]
 #[allow(clippy::too_many_arguments)]
@@ -492,6 +507,8 @@ fn cable_scan(
     hline_max: f64,
     slope_min: f64,
     slope_max: f64,
+    slope_min_aval: f64,
+    slope_max_aval: f64,
     f_o: f64,
     tmax: f64,
     q1: f64,
@@ -501,12 +518,28 @@ fn cable_scan(
     angle_intsup: f64,
     lmax: f64,
     lmin: f64,
+    hintsup: f64,
+    sup_max: i32,
+    lmin_span: f64,
+    nbconfig: i32,
+    pas_azimut: i32,
+    pas_depart: i32,
+    aspect: Vec<f64>,
+    pente: Vec<f64>,
+    lsans_foret: f64,
+    angle_transv: f64,
+    slope_trans: f64,
+    l_slope: f64,
+    prop_slope: f64,
 ) -> List {
     let vopt = if has_vol { Some(vol.as_slice()) } else { None };
     let out = scan::scan(
         &alt, nr as usize, nc as usize, res, &foret, &routes, vopt,
         htower, h_end, hline_min, hline_max, slope_min, slope_max,
-        f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
+        slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
+        hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
+        pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
+        &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
     let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();
@@ -516,6 +549,7 @@ fn cable_scan(
     let li_sens: Vec<i32> = out.lines.iter().map(|l| l.sens).collect();
     let li_vol: Vec<f64> = out.lines.iter().map(|l| l.vol).collect();
     let li_ipc: Vec<f64> = out.lines.iter().map(|l| l.ipc).collect();
+    let li_nsup: Vec<i32> = out.lines.iter().map(|l| l.nsup).collect();
     list!(
         couvert = couvert,
         longueur = out.longueur,
@@ -526,7 +560,8 @@ fn cable_scan(
         li_surf = li_surf,
         li_sens = li_sens,
         li_vol = li_vol,
-        li_ipc = li_ipc
+        li_ipc = li_ipc,
+        li_nsup = li_nsup
     )
 }
 

@@ -19,6 +19,8 @@ cable_scan(
   hline_max,
   slope_min,
   slope_max,
+  slope_min_aval,
+  slope_max_aval,
   f_o,
   tmax,
   q1,
@@ -27,7 +29,20 @@ cable_scan(
   eao,
   angle_intsup,
   lmax,
-  lmin
+  lmin,
+  hintsup,
+  sup_max,
+  lmin_span,
+  nbconfig,
+  pas_azimut,
+  pas_depart,
+  aspect,
+  pente,
+  lsans_foret,
+  angle_transv,
+  slope_trans,
+  l_slope,
+  prop_slope
 )
 }
 \arguments{
@@ -55,9 +70,13 @@ cable_scan(
 
 \item{hline_max}{Maximum ground clearance of the carrying cable (m).}
 
-\item{slope_min}{Minimum line slope (rad).}
+\item{slope_min}{Minimum line slope, uphill yarding (rad).}
 
-\item{slope_max}{Maximum line slope (rad).}
+\item{slope_max}{Maximum line slope, uphill yarding (rad).}
+
+\item{slope_min_aval}{Minimum line slope, downhill yarding (rad).}
+
+\item{slope_max_aval}{Maximum line slope, downhill yarding (rad).}
 
 \item{f_o}{Gravity force of load plus carriage (N).}
 
@@ -76,11 +95,37 @@ cable_scan(
 \item{lmax}{Maximum line length (m).}
 
 \item{lmin}{Minimum line length (m).}
+
+\item{hintsup}{Attachment height on an intermediate support (m).}
+
+\item{sup_max}{Maximum number of intermediate supports.}
+
+\item{lmin_span}{Minimum distance between two supports (m).}
+
+\item{nbconfig}{Beam width of the support-placement search.}
+
+\item{pas_azimut}{Azimuth step of the sweep (degrees).}
+
+\item{pas_depart}{Sample every \code{pas_depart}-th departure cell.}
+
+\item{aspect}{Terrain aspect (degrees, NaN on flats), row-major.}
+
+\item{pente}{Terrain slope (percent), row-major.}
+
+\item{lsans_foret}{Longest stretch a line may cross outside the forest (m).}
+
+\item{angle_transv}{Minimum angle to the contour line (degrees).}
+
+\item{slope_trans}{Terrain slope above which a cross-slope stretch counts (percent).}
+
+\item{l_slope}{Maximum cumulated length on a steep cross-slope (m).}
+
+\item{prop_slope}{Maximum share of the line on a steep cross-slope.}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate
 line vectors \code{li_dep}, \code{li_az}, \code{li_lg}, \code{li_surf}, \code{li_sens}, \code{li_vol},
-\code{li_ipc}.
+\code{li_ipc}, \code{li_nsup}.
 }
 \description{
 Pour chaque cellule de desserte et chacun des 360 azimuts, extrait le profil

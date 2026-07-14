@@ -15,7 +15,9 @@ test_that("les défauts porteur sont ceux de Sylvaccess v3.6", {
   po <- foretaccess_config()$porteur
   expect_equal(po$pente_travers_max_pct, 15)
   expect_equal(po$pente_montee_max_pct, 30)
-  expect_equal(po$pente_descente_max_pct, 25)
+  # f_slope_down = 40 dans `dic_AllParam.json`. Le 25 qu'on lisait ici venait du
+  # SCENARIO de test ColduPre, pas du defaut du modele.
+  expect_equal(po$pente_descente_max_pct, 40)
   expect_equal(po$portee_grue_m, 8)
   expect_equal(po$distance_pente_forte_max_m, 300)
   expect_equal(po$distance_hors_desserte_max_m, 200)

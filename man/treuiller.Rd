@@ -4,7 +4,13 @@
 \alias{treuiller}
 \title{Distance de treuillage depuis la desserte (balayage radial)}
 \usage{
-treuiller(mnt, desserte, zone, config = foretaccess_config())
+treuiller(
+  mnt,
+  desserte,
+  zone,
+  config = foretaccess_config(),
+  depart_cout = NULL
+)
 }
 \arguments{
 \item{mnt}{\code{SpatRaster} du MNT.}
@@ -14,6 +20,13 @@ treuiller(mnt, desserte, zone, config = foretaccess_config())
 \item{zone}{\code{SpatRaster} logique des cellules treuillables.}
 
 \item{config}{Objet \code{\link[=foretaccess_config]{foretaccess_config()}}.}
+
+\item{depart_cout}{Vecteur de longueur \code{ncell(mnt)} : distance \strong{déjà
+parcourue} pour atteindre chaque cellule de départ. \code{NULL} (défaut) : les
+départs sont sur la desserte, ils ne coûtent rien. Sinon le critère
+d'amélioration porte sur le \strong{total} \verb{depart_cout + distance de treuil},
+et non sur la seule distance de treuil (cf. \code{skid_debusq_contour()} de
+Sylvaccess, où chaque point du contour porte son \code{Dfor + Dpis}).}
 }
 \value{
 Une liste de deux \code{SpatRaster} : \code{distance} (m, distance 3D ; \code{NA} si

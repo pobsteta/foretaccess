@@ -239,8 +239,10 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param h_end Terminal-support height (m).
 #' @param hline_min Minimum ground clearance of the carrying cable (m).
 #' @param hline_max Maximum ground clearance of the carrying cable (m).
-#' @param slope_min Minimum line slope (rad).
-#' @param slope_max Maximum line slope (rad).
+#' @param slope_min Minimum line slope, uphill yarding (rad).
+#' @param slope_max Maximum line slope, uphill yarding (rad).
+#' @param slope_min_aval Minimum line slope, downhill yarding (rad).
+#' @param slope_max_aval Maximum line slope, downhill yarding (rad).
 #' @param f_o Gravity force of load plus carriage (N).
 #' @param tmax Maximum allowable tension (N).
 #' @param q1 Linear mass of the carrying cable (kg/m).
@@ -250,10 +252,23 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param angle_intsup Inter-support angle constraint (rad).
 #' @param lmax Maximum line length (m).
 #' @param lmin Minimum line length (m).
+#' @param hintsup Attachment height on an intermediate support (m).
+#' @param sup_max Maximum number of intermediate supports.
+#' @param lmin_span Minimum distance between two supports (m).
+#' @param nbconfig Beam width of the support-placement search.
+#' @param pas_azimut Azimuth step of the sweep (degrees).
+#' @param pas_depart Sample every `pas_depart`-th departure cell.
+#' @param aspect Terrain aspect (degrees, NaN on flats), row-major.
+#' @param pente Terrain slope (percent), row-major.
+#' @param lsans_foret Longest stretch a line may cross outside the forest (m).
+#' @param angle_transv Minimum angle to the contour line (degrees).
+#' @param slope_trans Terrain slope above which a cross-slope stretch counts (percent).
+#' @param l_slope Maximum cumulated length on a steep cross-slope (m).
+#' @param prop_slope Maximum share of the line on a steep cross-slope.
 #' @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 #'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
-#'   `li_ipc`.
+#'   `li_ipc`, `li_nsup`.
 #' @export
-cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin)
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope)
 
 # nolint end

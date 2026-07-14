@@ -129,3 +129,40 @@ test_that("une desserte vide leve une erreur ciblee", {
   terra::values(vide) <- NA_real_
   expect_error(treuiller(mnt, vide, zone_pleine(mnt)), regexp = "aucune cellule")
 })
+
+# `depart_cout` : le critere d'amelioration porte sur le total (skid_debusq_contour).
+
+test_that("depart_cout fait arbitrer sur le total, pas sur la longueur de cable", {
+  mnt <- mnt_plat()
+  des <- terra::rast(mnt)
+  a <- terra::cellFromRowCol(des, 26, 20) # a 30 m de la cible
+  b <- terra::cellFromRowCol(des, 26, 30) # a 20 m de la cible : plus proche
+  v <- rep(NA_real_, terra::ncell(des))
+  v[c(a, b)] <- 1
+  terra::values(des) <- v
+  cible <- terra::cellFromRowCol(des, 26, 26)
+
+  # Sans cout de depart : la source la plus proche gagne.
+  tr <- treuiller(mnt, des, zone_pleine(mnt, des))
+  expect_equal(tr$allocation[cible][[1]], b)
+  expect_equal(tr$distance[cible][[1]], 20)
+
+  # B porte 100 m de trainage : son total (120) perd contre celui de A (30),
+  # alors meme que son cable est plus court.
+  cout <- rep(0, terra::ncell(mnt))
+  cout[b] <- 100
+  tr2 <- treuiller(mnt, des, zone_pleine(mnt, des), depart_cout = cout)
+  expect_equal(tr2$allocation[cible][[1]], a)
+  expect_equal(tr2$distance[cible][[1]], 30)
+})
+
+test_that("depart_cout nul redonne exactement le balayage depuis la desserte", {
+  mnt <- mnt_plat()
+  des <- desserte_ponctuelle(mnt)
+  ref <- treuiller(mnt, des, zone_pleine(mnt, des))
+  bis <- treuiller(mnt, des, zone_pleine(mnt, des),
+    depart_cout = rep(0, terra::ncell(mnt))
+  )
+  expect_equal(terra::values(bis$distance), terra::values(ref$distance))
+  expect_equal(terra::values(bis$allocation), terra::values(ref$allocation))
+})

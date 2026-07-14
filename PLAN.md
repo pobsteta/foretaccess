@@ -6,8 +6,28 @@
 
 ## État courant
 
-- **Branche** : `main` (release `v0.12.0` posée ; cycle dev `0.12.0.9000` ouvert)
-- **Version `DESCRIPTION`** : `0.12.0.9000` (cycle dev ; `NEWS.md`/`CITATION.cff` restent à `0.12.0`)
+- **Lot 11 (confrontation à l'oracle Sylvaccess réel) livré en `v0.13.0`**, et **Lot 4 clos**
+  (supports intermédiaires du câble). Décidé le 2026-07-13 : **l'oracle passe avant `v1.0.0`**,
+  pour que la version majeure signifie « validée contre le vrai moteur » et non « périmètre
+  atteint ». Accord cellule à cellule sur le jeu officiel ColduPre (411 309 cellules
+  forestières) : **skidder 99,95 %**, **porteur 99,72 %**, **câble 96,58 %**.
+- **Branche** : `main` (release `v0.13.0`)
+- **Version `DESCRIPTION`** : `0.13.0`
+- **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
+  débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
+  traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
+  Sylvaccess stocke ses distances en `int16` (`int(dist + 0.5)`), nous en flottant — l'écart est
+  borné par la demi-cellule. *(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07
+  était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir
+  l'entrée du 14/07 ci-dessous.)*
+- **Reste un écart assumé, sans effet sur ColduPre** : la **pondération de la piste dans
+  l'arbitrage**. Sylvaccess ne minimise pas la seule distance en forêt — il minimise
+  `d_foret + 0,5 · d_piste` dans sa propagation (`pyx:3714`) et arbitre route/piste sur
+  `d_foret + 0,1 · d_piste` (`pyx:4283`). Nous minimisons `d_foret` **seul**, puis ajoutons la
+  distance réseau *a posteriori* (pondération 0). Nul sur ColduPre (réseau dense, écart piste
+  0,4 m), mais sur un massif où une piste longue jouxte une route forestière plus lointaine, les
+  deux moteurs choisiront des dessertes différentes — et le **total** divergera. À traiter avant
+  `v1.0.0`.
 - **Fait (0.12.0)** : **portage Rust du balayage câble** (`cable_scan` dans `cablehelp`).
   L'orchestration 360°/pixel de `potentiel_cable()` — profil, plus longue travée faisable,
   couverture/lignes — vit dans le crate, parallélisée sur les départs via `rayon`. R prépare
@@ -29,9 +49,13 @@
   (57 tests), intégration réseau opt-in. `happign`/`osmdata` en Suggests. Vignette
   d'acquisition. `specs/010`.
 - **Prochain jalon possible** : **v1.0.0** (bump majeur, confirmation requise — l'utilisateur
-  a demandé de rester en `0.x` pour l'instant). Dette câble différée : placement multi-supports
-  `OptPyl_Up`, pêchage latéral (oracle Sylvaccess réel requis). Phase 2 acquisition : MNH
-  LiDAR → volume, BD Forêt v3.
+  a demandé de rester en `0.x` pour l'instant). Le préalable qui la justifiait — la validation
+  contre le vrai moteur — est **fait**. Restent avant de la poser : la décomposition des
+  distances (ci-dessus), et le **Lot 6 (DFCI)**, construit sur l'hypothèse fausse que
+  Sylvaccess n'avait pas de module DFCI (`Sylvaccess_5_dfci.py` existe ; `specs/006` est à
+  reprendre — les défauts sont corrigés depuis `v0.13.0`, mais le moteur n'est pas confronté).
+- **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
+  défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
 
 ## Avancement par lot
 
@@ -41,13 +65,15 @@
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
-| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
+| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (3 supports) | `v0.6.0`, `v0.13.0` |
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
 | 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ✅ terminé | `v0.11.0` |
+| 11 | Oracle Sylvaccess réel | *(journal 2026-07-13/14)* | ✅ terminé | `v0.13.0` |
+| 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -209,6 +235,296 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-13 — Lot 11 : confrontation à l'oracle Sylvaccess réel
+
+**Décision de séquencement** : l'oracle passe **avant** `v1.0.0`. La raison d'être du projet
+est la fidélité à Sylvaccess ; une `v1.0.0` qui ne l'a jamais vérifiée est une promesse non
+tenue. Périmètre : les 3 moteurs (skidder, porteur, câble).
+
+**Le banc.** Le dépôt `forge.inrae.fr/sylvain.dupire/sylvaccess` est clone en lecture seule
+sous `~/dev/sylvaccess-upstream` (hors du repo, jamais commité). Sylvaccess **tourne** ici :
+`.so` Cython précompilé pour Linux/py3.9, environnement conda (`sylvaccess_environment.yml`),
+lanceur headless `0_Lance_sylvaccess.py -file <param>`. Scripts du banc :
+`data-raw/oracle_coldupre.R` (fait tourner ForêtAccess sur les entrées de l'oracle) et
+`data-raw/oracle_compare.R` (comparaison cellule à cellule).
+
+**Il n'existe aucun oracle livré.** Le jeu de test officiel `test/ColduPre` ne contient qu'un
+`Input/` — pas de sortie de référence. L'oracle doit être **produit** en exécutant Sylvaccess.
+Fait : 44 fichiers de sortie, 3 moteurs + sélection de lignes.
+
+**Résultats sur ColduPre** (894 × 1034, 411 309 cellules forestières), après correctifs :
+
+| Moteur | Accord | Trop optimistes | Trop conservateurs |
+|---|---|---|---|
+| Skidder | **99,95 %** | 177 cellules (0,04 %) | 38 cellules (0,01 %) |
+| Porteur | **99,72 %** | 892 cellules (0,22 %) | 244 cellules (0,06 %) |
+| Câble | **96,58 %** | 0,63 % | 2,79 % |
+
+Le cœur des moteurs est fidèle, et **toutes les distances collent** : débusquage à **0,2 m**
+d'écart médian, traînage sur piste à **7,3 m** (max 1 407,6 contre 1 376,0), distance totale à
+**1,9 m** (max 1 464,6 contre 1 440,0). Le Dijkstra, le balayage radial et la loi de bascule
+reproduisent la source.
+
+**Quatre bugs trouvés, tous invisibles sur le jouet ET sur l'AOI des Cévennes** — c'est
+l'argument qui justifiait de roder le banc sur le jeu de l'auteur avant l'AOI réelle :
+
+1. **`.masque_vecteur()` perdait les géométries non-polygonales** (`R/preprocess.R`).
+   `terra::vect()` sur une couche `sf` hétérogène ne retient qu'un seul type de géométrie et
+   **abandonne les autres sans erreur**. Sur ColduPre : 1 676 obstacles en entrée, 1 467
+   rasterisés — les 209 lignes (cours d'eau, réseau public) disparaissaient. Corrigé :
+   rasterisation par famille (surface / ligne / point) puis union, `touches = TRUE` pour les
+   lignes (un cours d'eau ne passe pas par le centre des cellules). Test de non-régression
+   ajouté.
+2. **Le traînage sur piste payait le surcoût d'obstacle** (`R/skidder.R`). Le réseau public
+   est à la fois **desserte** (on y livre le bois) et **obstacle du skidder** (on ne débarde
+   pas au travers). Notre propagation *le long du réseau* utilisait la surface de coût
+   complète : elle payait 1000 par cellule de route publique empruntée, d'où des distances de
+   **198 529 m** (Sylvaccess plafonne à 1 376 m). Une route n'est pas un obstacle à la
+   circulation sur elle-même. Sylvaccess sépare les deux surfaces : `Pond_pente` (pente pure)
+   pour `Link_RF_res_pub`/`Link_tracks_res_pub` — les distances réseau, calculées **avant**
+   que les obstacles n'existent — et `Pond_pente2` (pente + 1000 × obstacles) pour la seule
+   propagation en forêt. Corrigé.
+
+3. **Le `reseau_public` manquait au modèle de desserte** (`R/validate.R`, `R/cout.R`,
+   `R/skidder.R`, `R/porteur.R`). Nos classes étaient `route` / `piste` / `dfci` : la route
+   ouverte à la circulation était comptée comme une route forestière. Or c'est le point de
+   chargement du **camion**, pas une place de dépôt, et pour les engins de débardage une
+   **barrière**. Sylvaccess l'exclut des sources (`from_rast[Res_pub==1]=0`), de la zone
+   roulable (`zone_rast[Res_pub==1]=0`, trois fois) et le verse aux obstacles du porteur
+   (`Obstacles_forwarder[Res_pub==1]=1`). Quatrième classe ajoutée, plus `.classes_livraison()`
+   et `.cellules_livraison()`.
+4. **Le skidder roulait sur la route publique au tarif obstacle** (`R/cout.R:160`).
+   `zone_roulable_connectee()` **forçait** toutes les cellules de desserte dans la zone
+   roulable (`z1[desserte_cel] <- TRUE`), réseau public compris — lequel porte le surcoût
+   d'obstacle de 1000. Le skidder roulait donc le long de la route publique à 1000 par
+   cellule : **1 646 174 m** de distance de débardage, soit 1 646 km. Invisible dans la
+   comparaison, qui est bornée au masque forêt de Sylvaccess — il a fallu regarder le raster
+   entier. Après correctif : max 1 466 m, zéro cellule au-delà de 2 000 m.
+
+5. **Le seuil d'abattage porte sur le MAXIMUM LOCAL de la pente**, pas sur la pente de la
+   cellule (`R/preprocess.R`, `R/cout.R`). `slopes_skid()` de Sylvaccess
+   (`sylvaccess_cython3.pyx:3417-3424`, docstring : « Calcule le maximum local sur un
+   raster ») teste `max(pente)` sur la fenêtre **3 × 3** : une cellule est écartée dès qu'une
+   seule de ses huit voisines dépasse `g_slope_mharv`. La zone d'exclusion est donc **dilatée
+   d'une cellule** — et c'est le seul critère dilaté (`Pente_ok_skid`, juste au-dessus, teste
+   bien la cellule elle-même). Sans la dilatation, notre zone d'abattage était **1,7× trop
+   large**, et les rayons de treuillage traversaient des trous que Sylvaccess referme (le rayon
+   `break` dès qu'il sort de `Zone_OK`). Gain mesuré : **+1,4 point** d'accord skidder
+   (91,5 → 92,9 %). `pre$slope_max_local` ajouté ; le seuil reste appliqué à l'appel (ADR-003).
+   *Vérifié par expérience contrôlée* : en injectant le `Pente_OK_bucheronnage_manuel.tif` de
+   Sylvaccess à la place de notre masque, on obtient **exactement** le même chiffre (20 826
+   cellules en litige) — notre réimplémentation reproduit son raster à la cellule près.
+
+**Ce que ce n'est PAS** (hypothèses testées et réfutées, pour ne pas les refaire) :
+- **la méthode de pente** : `gdaldem slope -p -compute_edges` et `terra::terrain(neighbors=8)`
+  donnent des résultats **identiques à 100 %** sur ce MNT (57 858 contre 57 867 cellules
+  > 100 %). Notre pente est juste ; c'était le *critère* qui différait, pas le calcul ;
+- un artefact de `computeEdges` au bord des zones sans données : les cellules divergentes sont
+  à **720 m** d'un trou en médiane ;
+- des pistes non reliées au réseau public : les cellules en litige y sont **moins** souvent
+  rattachées (2,4 %) que celles où l'on s'accorde (5,5 %) ;
+- le balayage de treuillage lui-même : tracé à la main sur cinq cellules litigieuses, la corde
+  reste entre 3,5 et 15 m au-dessus du sol (bornes [0, 30]) sur 25 à 59 m — Sylvaccess *devrait*
+  les treuiller selon ses propres règles. Nos bornes cumulées `lo = max_j (dz_j − 10)/hd_j` et
+  `hi = min_j (dz_j + 20)/hd_j` sont l'équivalent algébrique exact de son test, `dmin` inclus.
+
+**Deux fausses pistes, consignées pour mémoire.** (a) J'ai cru que les 6,8 % de cellules en
+litige s'expliquaient par leur allocation au réseau public (85 % y allaient) : c'était un
+**symptôme**, pas la cause — les en priver ne change l'accord que de 0,06 point, elles se
+rabattent sur une desserte forestière voisine. (b) J'ai déclaré inaccessibles les cellules
+servies par des pistes « orphelines » (ne rejoignant aucune route) : l'accord a **chuté de
+3 points**. J'avais confondu deux rôles du réseau public — **source** de débardage (exclue) et
+**terminus du réseau** sur lequel se mesure la distance (incluse : Sylvaccess passe `Res_pub`
+en argument de `Link_tracks_res_pub` et `Link_RF_res_pub`). Le garde-fou « piste injoignable →
+inaccessible » est conservé : il est correct sur le principe, et neutre sur ColduPre (zéro
+piste orpheline une fois les rôles séparés).
+
+**Piège du harnais, corrigé** : `Foret_accessible.tif` vaut 1 sur les accessibles et
+**NoData ailleurs** (pas 0). Lues telles quelles, les cellules inaccessibles arrivent en `NA`
+et sortent de la comparaison : on ne mesurait alors que l'accord sur les cellules déjà jugées
+accessibles, et l'on ne pouvait **jamais** se voir trop optimiste. Binarisation explicite
+`NA → FALSE`.
+
+**Quatre défauts de config faux**, relevés en mappant `dic_AllParam.json` (les valeurs
+`def_value` y sont, alors que `specs/004 Q7` les disait introuvables et les avait devinées) :
+`c_E` 160 000 → **100 000**, `c_q2`/`c_q3` 0,9 → **0,5**, `c_angle` 20° → **30°**, `c_safe`
+2 → **2,5**. Le `c_safe` ne fausse pas la comparaison ColduPre (le scénario y vaut 2, comme
+notre défaut) mais touche tout utilisateur qui ne surcharge rien : il divise `Tmax`.
+
+**`specs/006` est faux sur un point de fait** : `Sylvaccess_5_dfci.py` **existe** (356 lignes,
+`process_dfci`, `dfci_lmax = 440 m`, `dfci_slope_max = 110 %`, classes `0;120;280;440`). Le
+Lot 6 a été construit sur l'hypothèse inverse, avec des défauts (100 m / 40 %) à un facteur 4
+de la source. À arbitrer.
+
+**Performance** (temps écoulé, même machine, même jeu, machine au repos) :
+
+| Moteur | Sylvaccess (Cython) | ForêtAccess |
+|---|---|---|
+| Skidder | 14 s | **14,1 s** (11,2 s avant la passe contour) |
+| Porteur | 14 s | 18,8 s |
+| Câble | 3 min 18 s (`c_sup = 3`) | **2 min 18 s** (`c_sup = 0`) |
+
+Le skidder est **à parité** avec le Cython, le porteur ~30 % plus lent, le câble plus rapide —
+mais à périmètre non égal (0 support contre 3). *(Une première mesure donnait 39,8 s / 47,2 s :
+elle était faussée par huit workers `workRSOCK` orphelins laissés par une suite de tests
+interrompue. Toujours vérifier la charge avant de chronométrer.)*
+
+6. **Le câble partait de toute la desserte** (`R/cable.R`). Sylvaccess ne lance ses lignes que
+   depuis un fichier de départ dédié (`c_file_departure`), filtré sur l'attribut `CABLE` :
+   **2 tronçons sur 125** à ColduPre. Une place de dépôt de câble-mât exige une aire de
+   retournement et un accès camion — ça n'existe pas sur n'importe quelle piste. Or
+   `potentiel_cable()` partait de **toute cellule de desserte** : ~60× trop de départs, donc une
+   couverture massivement trop optimiste — et un balayage de **plus d'une heure** contre 3 min 18,
+   sur un problème pourtant plus facile (0 support contre 3). Corrigé :
+   `potentiel_cable(departs = )` prend une couche de places de dépôt, filtrée sur un champ
+   `cable` s'il existe ; sans elle, repli sur la desserte entière **avec un message explicite**.
+   Le balayage tombe à **138 s** — plus rapide que Sylvaccess (198 s), à périmètre non égal.
+
+**Piège n° 2 du harnais, corrigé.** Sylvaccess n'écrit pas toutes ses sorties sur la même
+grille : le moteur câble travaille sur une **fenêtre bufferisée** autour des départs
+(`Zone_accessible.tif` = 405 × 380, contre 1034 × 894 pour le skidder). Comparés tels quels,
+`terra::values()` rend deux vecteurs de longueurs différentes que **R recycle en silence** —
+d'où un taux d'accord parfaitement plausible (93,89 %) et parfaitement faux, dont le seul indice
+était un recouvrement **nul** entre les deux couvertures. Le harnais réaligne désormais toute
+couche sur la grille de référence. Et le code positif diffère aussi (`Foret_accessible` vaut 1,
+`Zone_accessible` vaut **2**) : on teste « non-NA et > 0 », jamais « == 1 ».
+
+7. **Il manquait la troisième passe de treuillage** (`R/skidder.R`, `R/treuillage.R`).
+   Sylvaccess treuille **trois fois** : depuis les routes (`skid_debusq_RF`), depuis les pistes
+   (`skid_debusq_Piste`), puis depuis le **contour de la zone où l'engin a roulé**
+   (`skid_debusq_contour`, `Sylvaccess_1_skidder.py:496-540`). La machine entre en forêt,
+   s'arrête au bord du terrain roulable, et treuille **de là**. Nous n'avions que les deux
+   premières : une cellule ne pouvait être treuillée que depuis une desserte. La preuve était
+   dans les données — la cellule 437961 reçoit 39 m de débusquage alors qu'elle est à **69,5 m**
+   de toute desserte forestière, et **12,7 %** des cellules de Sylvaccess ont un débusquage
+   *inférieur* à leur distance euclidienne à la desserte (écart médian 17,2 m, max 158,5 m).
+   Impossible depuis une route. Détails de la passe : le contour au sens de `get_contour()`
+   (cellule de la zone dont la fenêtre 3 × 3 n'est pas entièrement dans la zone), purgé des
+   obstacles, du réseau public et des dessertes ; chaque rampe **emporte** sa distance déjà
+   parcourue (traînage en forêt + traînage sur piste) et le critère d'amélioration porte sur le
+   **total**, non sur la seule longueur de câble ; les cibles excluent la zone déjà roulée ; et
+   le remplissage est **purement additif** (`skid_fill_contour` : `if Ddebusquage[y,x] < 0`), il
+   ne corrige jamais une cellule que les deux premières passes ont atteinte. `treuiller()` prend
+   un argument `depart_cout` ; sans lui, comportement inchangé. Gain : **98,24 → 99,95 %**
+   d'accord skidder, les 7 115 cellules trop conservatrices tombent à **38**. C'est la même
+   « double passe réseau/contour » (`fwd_azimuts_contour`) qui avait été prototypée pour le
+   porteur puis retirée faute d'oracle — elle est maintenant justifiée par la mesure.
+
+8. **Le porteur grappillait depuis la route** (`R/porteur.R`). `fwd_filter_hoist()` ne
+   retient comme rampes de grappin que les cellules à `Dforet > 0` — les cellules de
+   **forêt effectivement conduites**. Une cellule de desserte est à `Dforet == 0` : elle
+   est donc **exclue**. Nous grappillions depuis toute cellule conduite *ou de desserte*,
+   ce qui entourait chaque voie d'un halo de forêt « accessible » d'une cellule — y compris
+   sur un versant à 90 %, où le porteur ne peut simplement pas se tenir. La signature était
+   dans les chiffres : **11 148 cellules de grappin pour 14 319 conduites**, un rapport
+   périmètre/surface impossible pour une région compacte. Gain : **97,7 → 99,4 %**, l'excès
+   tombe de 7 528 à 499 cellules. *(Fausse piste au passage : j'ai d'abord cru à une zone
+   conduite en étoile et ajouté la propagation Dijkstra manquante — voir ci-dessous. Elle
+   était bel et bien absente, mais ne pouvait pas expliquer un excès : ajouter une source
+   n'enlève jamais de cellule.)*
+
+9. **Le porteur n'avait aucun plus court chemin** (`R/cout.R`, `R/porteur.R`). Sylvaccess le
+   propage d'abord en **Dijkstra** sur le terrain plat (`Dfwd_flat_forest_tracks` /
+   `Dfwd_flat_forest_road`, zone `Pente_ok_forwarder`), et n'ajoute le balayage radial
+   qu'ensuite. Nous n'avions que le balayage — or lui va tout droit : il ne contourne ni un
+   ravin ni un rocher. `terrain_plat()` (pente sous le **minimum** des trois seuils, c'est là
+   que l'engin roule quelle que soit la direction) et `zone_plate_connectee()` ajoutés ; la
+   construction en trois temps est factorisée avec celle du skidder (`.zone_connectee()`).
+
+10. **Le porteur n'avait pas non plus sa passe contour** (`fwd_azimuts_contour`), symétrique
+    de celle du skidder : rampes sur le bord de la zone conduite **et sur terrain plat**
+    (`contour = (Dforet>=0) * (Pente_ok_forw==1)` — on ne relance pas une machine d'un point
+    où elle ne tient déjà plus), coût emporté pondéré `0,1 × d_piste + d_forêt` (la piste
+    compte pour un dixième), cibles hors zone déjà conduite, remplissage additif.
+    `conduire()` prend `sources` et `depart_cout`, comme `treuiller()`. Gain : **99,4 →
+    99,72 %**, les cellules trop conservatrices tombent de 2 119 à **244**.
+
+Au passage, l'accumulateur de distance en pente forte de `conduire()` croissait de
+l'incrément **horizontal** ; Sylvaccess l'incrémente de la distance **3D** (`dpt += dist -
+dist2`). Corrigé — sans effet mesurable sur ColduPre (les rayons font 300 m et le plafond
+aussi : l'accumulateur ne mord jamais), mais il mordra sur un jeu où `f_slope_dmax` est plus
+serré.
+
+### 2026-07-14 — Lot 4d : fin du câble (placement des supports)
+
+**La dette du Lot 4 est soldée.** Le noyau câble était à **zéro support intermédiaire**
+quand Sylvaccess en pose jusqu'à trois : c'était la cause connue des 5,3 % de cellules où
+nous restions trop conservateurs. Porté dans `src/rust/src/cable/optpyl.rs`
+(`OptPyl_Up_NoH` + recherche en faisceau `get_Tabis`), avec **coupe de la ligne** au point
+le plus lointain atteint quand aucune configuration ne rejoint le terminus.
+
+`c_option_h = 0` est le défaut de v3.6 : ce sont les variantes **`_NoH`** qui tournent, où
+la hauteur de fixation n'est pas optimisée (12 m partout). Beaucoup plus simple que les
+variantes complètes — il fallait le voir avant de porter 200 lignes de Cython inutiles.
+
+**Trois infidélités du câblage, trouvées en portant** — aucune n'était une dette assumée :
+* `scan` passait le profil **au demi-mètre** comme profil de travée, là où Sylvaccess pose
+  ses supports **au pixel** (`Line`) ;
+* il passait `csize = 0.5` au lieu de la taille de cellule : la position de la charge était
+  balayée **10× plus finement** que dans la source ;
+* la garde au sol indexait `Alts` en **arrondissant**, là où Sylvaccess **tronque**
+  (`int(xcoord * 2)`) — un demi-échantillon de décalage.
+
+**`get_Tabis` dépend de l'ordre de sa table d'entrée.** `idline` ne bouge que sur une
+hauteur *strictement* plus basse, et les hauteurs sont uniformes en `_NoH`. Triée (un seul
+préfixe alimente la table), la sélection est correcte ; non triée (plusieurs préfixes
+concatènent leurs suites), elle peut rendre deux fois la même configuration. Défaut de la
+source, reproduit tel quel et figé par un test ; `dedupe` en absorbe le coût.
+
+**Puis le câble a basculé dans l'autre sens** : 5,3 % trop conservateurs → **10,15 % trop
+optimistes**. Les supports marchaient trop bien, parce qu'il manquait le garde-fou :
+
+* **`check_line`** (`src/rust/src/cable/ligne.rs`). Avant de savoir si le câble *tient*, il
+  faut savoir jusqu'où la ligne a un *sens*. Sylvaccess la coupe sur trois critères
+  géométriques : elle **finit en forêt** (on n'installe pas un câble pour desservir un pré),
+  elle ne traverse pas plus de 75 m de non-forêt d'affilée, et elle ne **court pas en travers
+  d'un versant raide** (`c_angle_transv` 60°, `c_slope_trans` 30 %, `c_l_slope` 75 m,
+  `c_prop_slope` 0,15). Sans lui, nos lignes filaient à 750 m à travers n'importe quoi.
+  Gain : **89,27 → 96,15 %**, et le balayage tombe de **358 s à 50 s** (Sylvaccess : 198 s).
+
+**Le « traînage en forêt à 0 m contre 124 m » n'était pas un problème de comptabilité.**
+Rejouée sur les sorties d'après la 3ᵉ passe, la comparaison donne **120,2 contre 124,0** de
+médiane (écart 0,2 m) : la décomposition est juste. Le 0 était le **symptôme** de la passe
+contour manquante — nos rasters de distance valent `0` (et non `NA`) sur les cellules non
+atteintes, et le sous-ensemble comparé pour le traînage en forêt (`DTrain_foret ∉ {0, -9999}`)
+est **exactement** l'ensemble des cellules du contour. On comparait donc nos zéros à ses 124 m.
+Que le **total** collât malgré tout n'avait rien de paradoxal : les sous-ensembles sont
+**disjoints** — le total est dominé par les 87 685 cellules treuillées des passes 1-2, où nos
+trois composantes étaient déjà justes ; 3 920 cellules fausses n'y déplacent pas la médiane.
+
+**Reste un vrai écart, structurel et assumé** : Sylvaccess **pondère la piste** dans son
+arbitrage (`d_foret + 0,5 · d_piste` en propagation, `pyx:3714` ; `d_foret + 0,1 · d_piste`
+pour l'arbitrage route/piste, `pyx:4283`). Nous minimisons `d_foret` seul et ajoutons la
+distance réseau *a posteriori*. Sans effet sur ColduPre, dont le réseau est dense ; à corriger
+avant `v1.0.0`.
+
+### 2026-07-14 — Câble : la ligne « machine en bas »
+
+Le balayage ne cherchait que la ligne **« machine en haut »** : mât sur la desserte, câble qui
+descend. Sylvaccess traite les deux sens, et choisit par une comparaison de dominance — le mât
+(`hauteur_mat_m`) posé sur la desserte domine-t-il le point haut du profil augmenté de l'ancrage
+(`hauteur_ancrage_m`) ? Sinon, la machine est **en bas** et le câble monte.
+
+La découverte qui a fait tenir le portage : `OptPyl_Up2_NoH` n'est **pas** un second solveur.
+C'est le même, appliqué au profil **retourné**, avec les deux hauteurs d'extrémité échangées
+(l'ancrage ouvre, le mât ferme) et les bornes de pente niées. `OptPyl_Down_init_NoH`, lui, est
+`OptPyl_Up_NoH` **sans héritage de tension** entre travées — ce n'est pas une vraie ligne, juste
+une amorce qui dit jusqu'où porter. Trois fonctions Cython se réduisent donc à un seul
+`optpyl()` paramétré par `(h_debut, h_fin, heriter_tension)`.
+
+Une asymétrie compte : une ligne « machine en bas » ne peut pas être **coupée** du côté machine
+— c'est elle qui fixe le terminus. Quand rien ne passe, Sylvaccess **rogne l'ancrage** (retire
+un pixel en tête du profil retourné) et recommence.
+
+**Accord câble : 96,15 → 96,58 %.** Le gain est modeste, mais il tombe des **deux côtés** :
+trop conservateur 3,08 → 2,79 %, trop optimiste 0,77 → 0,63 %. Une simple permissivité
+n'aurait fait baisser que le premier ; que le second baisse aussi dit que la passe « en bas »
+*remplace* de mauvaises lignes par des bonnes. Coût : le balayage passe de 50 s à **79 s**
+(Sylvaccess : 198 s), deux résolutions par ligne descendante.
+
+**Le Lot 4 est clos.** Restent assumés : l'optimisation de la hauteur de fixation
+(`c_option_h = 1`, hors défaut v3.6) et le pêchage latéral.
 
 ### 2026-07-09
 - Lot 0 clos et publié (`v0.1.0`), retour en cycle de dev `0.1.0.9000`.

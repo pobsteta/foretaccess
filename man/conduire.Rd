@@ -4,7 +4,7 @@
 \alias{conduire}
 \title{Balayage radial de conduite du porteur}
 \usage{
-conduire(pre, config, zone)
+conduire(pre, config, zone, sources = NULL, depart_cout = NULL)
 }
 \arguments{
 \item{pre}{Objet \code{foretaccess_preprocessing} (Lot 1).}
@@ -12,6 +12,14 @@ conduire(pre, config, zone)
 \item{config}{Objet \code{\link[=foretaccess_config]{foretaccess_config()}}.}
 
 \item{zone}{\code{SpatRaster} logique des cellules candidates à la conduite (forêt roulable).}
+
+\item{sources}{Indices des cellules de départ. \code{NULL} (défaut) : les cellules de
+livraison de la desserte. La passe contour (\code{fwd_azimuts_contour}) y passe les
+cellules du bord de la zone déjà conduite.}
+
+\item{depart_cout}{Vecteur de longueur \code{ncell(pre$mnt)} : distance \strong{déjà parcourue}
+pour atteindre chaque source. \code{NULL} (défaut) : nulle. Sinon le critère
+d'amélioration porte sur le \strong{total} \verb{depart_cout + distance parcourue}.}
 }
 \value{
 Une liste de deux \code{SpatRaster} : \code{distance} (3D, m) et \code{allocation}.

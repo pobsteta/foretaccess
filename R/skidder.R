@@ -15,6 +15,15 @@
 #' **privilégie le treuillage** : une cellule treuillable l'est, même si l'engin
 #' pourrait y rouler. L'option `2` n'est pas implémentée.
 #'
+#' Le treuillage se fait en **trois passes**, comme dans Sylvaccess :
+#' depuis les routes, depuis les pistes, puis — c'est le point qu'on oublie —
+#' depuis le **contour de la zone où l'engin a roulé** (`skid_debusq_contour`).
+#' La machine entre en forêt, s'arrête au bord du terrain roulable, et treuille
+#' de là en **emportant la distance déjà parcourue** : le critère de choix porte
+#' alors sur le **total** traînage + câble, non sur la seule longueur de câble.
+#' Cette troisième passe est purement additive — elle ne corrige jamais une
+#' cellule que les deux premières ont atteinte.
+#'
 #' @section Écarts assumés avec Sylvaccess v3.6:
 #' La hiérarchie route / piste est réduite à deux niveaux (`route` et `dfci`
 #' comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
@@ -66,7 +75,10 @@ skidder <- function(pre,
     ))
   }
 
-  desserte_cel <- which(!is.na(terra::values(pre$desserte)))
+  # Le reseau public n'accueille pas de bois debarde : c'est le point de
+  # chargement du camion, et pour le skidder une barriere. Sylvaccess l'exclut
+  # explicitement des sources (`from_rast[Res_pub==1]=0`). Cf. .classes_desserte().
+  desserte_cel <- .cellules_livraison(pre)
   if (!length(desserte_cel)) {
     cli::cli_abort("Aucune cellule de desserte : le skidder n'a pas de point de depart.")
   }
@@ -74,7 +86,10 @@ skidder <- function(pre,
   # --- Treuillage : balayage radial, hors cellules de desserte. ---------------
   zone_tr <- zone_treuillable(pre, config)
   zone_tr[desserte_cel] <- 0
-  treuil <- treuiller(pre$mnt, pre$desserte, zone_tr, config)
+  # Le balayage part des seules cellules de LIVRAISON : on ne treuille pas vers
+  # une route publique. Lui passer `pre$desserte` brut la remettait en jeu comme
+  # source, et c'est de la que venaient 98,9 % de nos cellules en trop.
+  treuil <- treuiller(pre$mnt, .desserte_livraison(pre), zone_tr, config)
 
   # --- Trainage en foret : plus court chemin depuis la desserte. --------------
   # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.
@@ -100,10 +115,24 @@ skidder <- function(pre,
   # Si le pretraitement la porte deja (tuilage), elle est globale, donc exacte : le
   # reseau est unidimensionnel et creux, on le propage une fois pour toute l'emprise
   # plutot que de faire grandir le halo jusqu'a sa plus longue piste (spec 007 §4.3.1).
+  #
+  # La propagation LE LONG du reseau se fait sur la pente seule, sans surcout
+  # d'obstacle : une desserte n'est pas un obstacle a la circulation sur
+  # elle-meme. Le reseau public est a la fois desserte (on y livre le bois) et
+  # obstacle du skidder (on ne debarde pas au travers) ; lui appliquer le
+  # surcout ferait payer 1000 par cellule de route traversee et rendrait la
+  # distance sur piste absurde. Sylvaccess fait de meme : `Link_tracks_res_pub`
+  # et `Link_RF_res_pub` tournent sur `Pond_pente` (pente pure), et seule la
+  # propagation en foret utilise `Pond_pente2` (pente + 1000 x obstacles).
+  cout_reseau <- ponderation_pente(pre$slope_pct)
   piste <- if (is.null(pre$distance_piste)) {
-    .distance_sur_piste(pre, cout, bord)
+    .distance_sur_piste(pre, cout_reseau, bord)
   } else {
-    list(distance = as.numeric(terra::values(pre$distance_piste)), certifie = NULL)
+    list(
+      distance = as.numeric(terra::values(pre$distance_piste)),
+      injoignable = rep(FALSE, terra::ncell(pre$mnt)),
+      certifie = NULL
+    )
   }
   d_piste <- piste$distance
 
@@ -131,9 +160,36 @@ skidder <- function(pre,
   dist_foret <- ifelse(!treuille & roule, d_rl, 0)
   dist_piste <- .piste_allouee(d_piste, allocation)
 
+  # --- Treuillage depuis le CONTOUR de la zone roulee (troisieme passe). ------
+  # L'engin entre en foret, s'arrete au bord du terrain roulable, et treuille
+  # DEPUIS LA. Sans cette passe, une cellule ne peut etre treuillee que depuis
+  # une desserte : c'est ce qui nous rendait trop conservateurs sur 1,7 % de la
+  # carte ColduPre (des cellules a 70 m de toute route y recoivent pourtant du
+  # debusquage). Cf. `skid_debusq_contour()` / `skid_fill_contour()`.
+  ct <- .treuillage_contour(
+    pre, config, zone_tr, d_rl, a_rl, d_piste, foret, roule | est_desserte
+  )
+  if (!is.null(ct)) {
+    # Merge additif, jamais correctif : Sylvaccess ne remplit que les cellules
+    # qu'aucune passe precedente n'a atteintes (`if Ddebusquage[y,x]<0`).
+    neuf <- !is.na(ct$distance) & !treuille & !roule & !est_desserte
+    dist_treuil[neuf] <- ct$distance[neuf]
+    dist_foret[neuf] <- ct$distance_foret[neuf]
+    dist_piste[neuf] <- ct$distance_piste[neuf]
+    allocation[neuf] <- ct$allocation[neuf]
+    treuille <- treuille | neuf
+  }
+
+  # Une cellule rattachee a une desserte INJOIGNABLE n'est pas accessible : le
+  # bois y arriverait sans pouvoir en repartir (piste orpheline, qui ne rejoint
+  # aucune route). Cf. `.distance_sur_piste()`.
+  orpheline <- rep(FALSE, length(d_tr))
+  ok <- !is.na(allocation)
+  orpheline[ok] <- piste$injoignable[allocation[ok]]
+
   # `parcourable` decrit la praticabilite du terrain (pente sous le seuil), pas le
   # mecanisme d'extraction : une cellule treuillee peut etre parcourable.
-  accessible <- treuille | roule | est_desserte
+  accessible <- (treuille | roule | est_desserte) & !orpheline
   parcourable <- accessible & roulable
 
   codes <- rep(3, length(d_tr)) # non_accessible
@@ -188,6 +244,75 @@ skidder <- function(pre,
     sk$fichiers <- .ecrire_rasters_skidder(sk, write_dir)
   }
   sk
+}
+
+# Treuillage depuis le contour de la zone atteinte en roulant (`skid_debusq_contour`).
+#
+# `zone_tracteur` = les cellules de foret ou l'engin peut se rendre en roulant. Son
+# CONTOUR (au sens de `get_contour()` : cellule de la zone dont la fenetre 3x3 n'est
+# pas entierement dans la zone) sert de nouvelle rampe de treuillage. Chaque point du
+# contour PORTE la distance deja parcourue pour l'atteindre -- trainage en foret plus
+# trainage sur piste --, et le critere d'amelioration porte sur le TOTAL, pas sur la
+# seule longueur de cable. Les cibles sont les cellules treuillables HORS de la zone
+# roulee : on ne treuille pas vers un point ou l'on peut se rendre.
+#
+# Rend `NULL` si le contour est vide (pas de zone roulee, ou zone sans bord).
+.treuillage_contour <- function(pre, config, zone_tr, d_rl, a_rl, d_piste, foret, roule) {
+  n <- terra::ncell(pre$mnt)
+  zt <- roule & foret
+
+  # Contour : cellule de la zone dont la fenetre 3x3 compte moins de 9 cellules de
+  # zone. Les cellules de bord de grille en font partie, comme chez Sylvaccess (le
+  # denominateur y vaut 9 quelle que soit la troncature de la fenetre).
+  ztr <- terra::rast(pre$mnt)
+  terra::values(ztr) <- as.numeric(zt)
+  voisins <- terra::focal(ztr, w = 3, fun = "sum", na.rm = TRUE)
+  contour <- zt & (as.numeric(terra::values(voisins)) < 9)
+
+  # Un point du contour n'est une rampe de treuillage que s'il est praticable :
+  # ni obstacle, ni reseau public, ni desserte (deja traitee par les deux
+  # premieres passes).
+  contour <- contour &
+    as.numeric(terra::values(pre$obstacles_complets_mask)) == 0 &
+    as.numeric(terra::values(pre$obstacles_partiels_mask)) == 0 &
+    as.numeric(terra::values(pre$reseau_public_mask)) == 0 &
+    is.na(terra::values(pre$desserte))
+  contour[is.na(contour)] <- FALSE
+  if (!any(contour)) {
+    return(NULL)
+  }
+
+  src <- terra::rast(pre$mnt)
+  v <- rep(NA_real_, n)
+  v[contour] <- 1
+  terra::values(src) <- v
+
+  # Cibles : treuillables, mais hors de la zone deja roulee (`Zone_OK[zone_tracteur==1]=0`).
+  zone_ct <- terra::deepcopy(zone_tr)
+  zone_ct[which(zt)] <- 0
+
+  # Cout porte par chaque rampe : trainage en foret + trainage sur la piste de sa
+  # desserte de rattachement.
+  cout <- rep(0, n)
+  cout[contour] <- d_rl[contour] + .piste_allouee(d_piste, a_rl)[contour]
+
+  tr <- treuiller(pre$mnt, src, zone_ct, config, depart_cout = cout)
+
+  d <- as.numeric(terra::values(tr$distance))
+  a <- as.numeric(terra::values(tr$allocation)) # cellule du contour, pas la desserte
+  d[contour] <- NA_real_ # les rampes elles-memes restent traitees par le roulage
+
+  atteint <- !is.na(d) & !is.na(a)
+  dfor <- rep(NA_real_, n)
+  dpis <- rep(NA_real_, n)
+  alloc <- rep(NA_real_, n)
+  # On herite de la rampe : sa distance de trainage, sa piste, et sa desserte.
+  dfor[atteint] <- d_rl[a[atteint]]
+  dpis[atteint] <- .piste_allouee(d_piste, a_rl)[a[atteint]]
+  alloc[atteint] <- a_rl[a[atteint]]
+  d[!atteint] <- NA_real_
+
+  list(distance = d, distance_foret = dfor, distance_piste = dpis, allocation = alloc)
 }
 
 # Sur-approximation locale de la zone traversable globale : tout terrain roulable, plus
@@ -273,11 +398,18 @@ skidder <- function(pre,
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))
 
+  # Deux roles distincts, a ne pas confondre : le reseau public n'est pas une
+  # SOURCE de debardage (on n'y depose pas de bois -- cf. `.cellules_livraison()`),
+  # mais il fait bien partie du RESEAU sur lequel se mesure la distance : c'est
+  # le terminus de la chaine piste -> route forestiere -> route publique.
+  # Sylvaccess le passe explicitement en argument de `Link_tracks_res_pub` et
+  # `Link_RF_res_pub`. L'exclure ici orphelinerait des pistes que Sylvaccess
+  # dessert (mesure : -3 points d'accord sur ColduPre).
   est_piste <- !is.na(codes) & codes %in% code_piste
   est_route <- !is.na(codes) & !est_piste
 
   if (!any(est_route) || !any(est_piste)) {
-    return(list(distance = rep(0, n), certifie = NULL))
+    return(list(distance = rep(0, n), injoignable = rep(FALSE, n), certifie = NULL))
   }
 
   zone <- terra::rast(pre$mnt)
@@ -297,9 +429,17 @@ skidder <- function(pre,
     certifie <- cert$certifie
   }
 
+  # Une cellule de desserte dont le cout cumule reste NA ne rejoint AUCUNE route :
+  # le bois y arriverait sans pouvoir en repartir. Elle est INJOIGNABLE, et les
+  # cellules de foret qui lui sont allouees sont inaccessibles. Rendre 0 ici -- la
+  # reponse la plus optimiste possible -- ferait passer une piste orpheline pour
+  # une desserte parfaite. Sylvaccess les recense (`Routes_forestieres_non_connectees`).
+  injoignable <- as.logical((est_piste | est_route) &
+    is.na(as.numeric(terra::values(prop$cout_cumule))))
+
   d <- as.numeric(terra::values(prop$cout_cumule))
   d[is.na(d)] <- 0
-  list(distance = d, certifie = certifie)
+  list(distance = d, injoignable = injoignable, certifie = certifie)
 }
 
 # Reporte la distance sur piste de la cellule de desserte allouee a chaque pixel.

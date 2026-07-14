@@ -7,6 +7,7 @@
 potentiel_cable(
   pre,
   config = foretaccess_config(),
+  departs = NULL,
   write_dir = NULL,
   bord = NULL
 )
@@ -16,6 +17,12 @@ potentiel_cable(
 
 \item{config}{Objet \code{foretaccess_config}. Les parametres cable (garde au sol,
 materiel, geometrie) vivent dans \code{config$cable}.}
+
+\item{departs}{Places de depot d'ou une ligne de cable peut partir : chemin de
+vecteur ou objet \code{sf} (lignes, polygones ou points). Si la couche porte un
+champ \code{cable}, seules les entites dont \code{cable} est non nul sont retenues
+(equivalent de l'attribut \code{CABLE} de Sylvaccess). \code{NULL} (defaut) : repli sur
+toute la desserte -- voir la section \emph{Places de depot}.}
 
 \item{write_dir}{Repertoire d'ecriture des rasters (COG), ou \code{NULL}.}
 
@@ -33,15 +40,61 @@ du Lot 5), \code{recap}, \code{grid}, \code{config}, \code{fichiers}.
 }
 \description{
 Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable) :
-depuis chaque cellule de desserte (depart de ligne), un rayon est lance dans
-chacune des 360 directions ; le profil d'altitude sous le rayon est extrait du
-MNT, echantillonne au demi-metre, et la faisabilite d'une ligne de cable
-(travee simple, \strong{sans support intermediaire}) est evaluee par le noyau Rust
-\code{\link[=cable_test_span]{cable_test_span()}} jusqu'a \code{longueur_max_m}. Les cellules forestieres
-traversees par une ligne faisable sont marquees accessibles au cable.
+depuis chaque \strong{place de depot} (depart de ligne), un rayon est lance dans
+chaque direction ; le profil d'altitude sous le rayon est extrait du MNT, et le
+noyau Rust place jusqu'a \code{nb_supports_max} \strong{supports intermediaires}
+(\code{OptPyl_Up_NoH}), coupant la ligne au point le plus lointain atteint quand il ne
+peut pas la porter entiere. Les cellules forestieres traversees par une ligne
+faisable sont marquees accessibles au cable.
 }
 \details{
-Le placement de supports intermediaires (\code{OptPyl_Up}) et le pechage lateral
-(\code{distance_laterale_max_m}) sont des extensions futures (voir \code{specs/004}) :
-ce lot livre le potentiel \strong{0 support}, colonne vertebrale testable.
+Le profil sert sous deux formes, comme dans la source : \strong{au pixel} pour poser les
+supports, \strong{au demi-metre} pour la garde au sol.
 }
+\section{Validite de la ligne}{
+
+Avant meme de savoir si le cable TIENT, il faut savoir jusqu'ou la ligne a un SENS.
+\code{check_line} la coupe sur trois criteres geometriques : elle \strong{finit en foret} (on
+n'installe pas un cable pour desservir un pre), elle ne traverse pas plus de
+\verb{min(0,1 x longueur_max_m, longueur_min_m)} metres de non-foret d'affilee, et elle ne
+\strong{court pas en travers d'un versant raide} (\code{angle_transversal_deg},
+\code{pente_transversale_max_pct}, \code{distance_transversale_max_m},
+\code{proportion_transversale_max}). Sans ce filtre, les lignes filent jusqu'a
+\code{longueur_max_m} a travers n'importe quel terrain : sur le jeu ColduPre, cela declare
+accessible a tort \strong{10 \%} de la foret.
+}
+
+\section{Sens de debardage}{
+
+Une ligne se resout dans l'un ou l'autre sens selon que la machine, posee sur la
+desserte, \strong{domine} ou non le profil (mat au depart + \code{hauteur_mat_m} contre point
+haut de la ligne + \code{hauteur_ancrage_m}). « Machine en haut » : le cable descend, les
+bornes de pente sont \verb{bornes_pente_cable()$amont_*}. « Machine en bas » : le cable
+monte, la ligne se resout sur le profil \strong{retourne} (l'ancrage ouvre, le mat ferme)
+avec les bornes \verb{aval_*} niees, et elle ne peut pas etre coupee du cote machine --
+seulement raccourcie par le haut.
+}
+
+\section{Ecarts assumes avec Sylvaccess v3.6}{
+
+L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h = 1})
+n'est pas implementee : on tient la variante \verb{_NoH}, qui est le defaut de v3.6.
+
+Le \strong{pechage lateral} (\code{distance_laterale_max_m}) reste une extension future.
+}
+
+\section{Places de depot}{
+
+Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
+une aire de depot, une plateforme et un acces camion. Sylvaccess en fait une
+\strong{entree a part} (\code{c_file_departure}), dont il ne retient que les troncons
+portant l'attribut \code{CABLE} -- sur son jeu de test officiel, \strong{2 troncons sur
+125}. Passer \code{departs} reproduit ce comportement.
+
+Sans \code{departs}, on retombe sur \emph{toute} la desserte : la couverture est alors
+tres \strong{optimiste} (on desservirait de la foret depuis des pistes incapables
+d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
+devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
+d'aucune couche de places de depot.
+}
+
