@@ -33,7 +33,14 @@ cable_scan(
   lmin_span,
   nbconfig,
   pas_azimut,
-  pas_depart
+  pas_depart,
+  aspect,
+  pente,
+  lsans_foret,
+  angle_transv,
+  slope_trans,
+  l_slope,
+  prop_slope
 )
 }
 \arguments{
@@ -94,6 +101,20 @@ cable_scan(
 \item{pas_azimut}{Azimuth step of the sweep (degrees).}
 
 \item{pas_depart}{Sample every \code{pas_depart}-th departure cell.}
+
+\item{aspect}{Terrain aspect (degrees, NaN on flats), row-major.}
+
+\item{pente}{Terrain slope (percent), row-major.}
+
+\item{lsans_foret}{Longest stretch a line may cross outside the forest (m).}
+
+\item{angle_transv}{Minimum angle to the contour line (degrees).}
+
+\item{slope_trans}{Terrain slope above which a cross-slope stretch counts (percent).}
+
+\item{l_slope}{Maximum cumulated length on a steep cross-slope (m).}
+
+\item{prop_slope}{Maximum share of the line on a steep cross-slope.}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate

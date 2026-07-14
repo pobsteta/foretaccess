@@ -51,6 +51,19 @@ faisable sont marquees accessibles au cable.
 Le profil sert sous deux formes, comme dans la source : \strong{au pixel} pour poser les
 supports, \strong{au demi-metre} pour la garde au sol.
 }
+\section{Validite de la ligne}{
+
+Avant meme de savoir si le cable TIENT, il faut savoir jusqu'ou la ligne a un SENS.
+\code{check_line} la coupe sur trois criteres geometriques : elle \strong{finit en foret} (on
+n'installe pas un cable pour desservir un pre), elle ne traverse pas plus de
+\verb{min(0,1 x longueur_max_m, longueur_min_m)} metres de non-foret d'affilee, et elle ne
+\strong{court pas en travers d'un versant raide} (\code{angle_transversal_deg},
+\code{pente_transversale_max_pct}, \code{distance_transversale_max_m},
+\code{proportion_transversale_max}). Sans ce filtre, les lignes filent jusqu'a
+\code{longueur_max_m} a travers n'importe quel terrain : sur le jeu ColduPre, cela declare
+accessible a tort \strong{10 \%} de la foret.
+}
+
 \section{Ecarts assumes avec Sylvaccess v3.6}{
 
 Le balayage ne modelise que la ligne \strong{« machine en haut »} (\code{OptPyl_Up_NoH}), ou

@@ -9,6 +9,7 @@
 //! Le profil sert sous deux formes, comme chez Sylvaccess : **au pixel** pour poser
 //! les supports (`Line`), **au demi-metre** pour la garde au sol (`Alts`).
 
+use crate::cable::ligne;
 use crate::cable::optpyl;
 use rayon::prelude::*;
 
@@ -176,6 +177,13 @@ pub fn scan(
     nbconfig: usize,
     pas_azimut: usize,
     pas_depart: usize,
+    aspect: &[f64],
+    pente: &[f64],
+    lsans_foret: f64,
+    angle_transv: f64,
+    slope_trans: f64,
+    l_slope: f64,
+    prop_slope: f64,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
@@ -217,20 +225,56 @@ pub fn scan(
             // Sylvaccess). Les supports se posent sur une cellule, pas au demi-metre.
             let mut prof_hd = Vec::with_capacity(cel.len() + 1);
             let mut prof_za = Vec::with_capacity(cel.len() + 1);
+            let mut prof_fo = Vec::with_capacity(cel.len() + 1);
+            let mut prof_as = Vec::with_capacity(cel.len() + 1);
+            let mut prof_pe = Vec::with_capacity(cel.len() + 1);
             prof_hd.push(0.0);
             prof_za.push(alt[dep]);
+            prof_fo.push(foret[dep] == 1);
+            prof_as.push(aspect[dep]);
+            prof_pe.push(pente[dep]);
             for i in 0..cel.len() {
                 if hd[i] > lmax {
                     break;
                 }
                 prof_hd.push(hd[i]);
                 prof_za.push(alt[cel[i]]);
-            }
-            if prof_hd.len() < 2 || *prof_hd.last().unwrap() < lmin {
-                continue;
+                prof_fo.push(foret[cel[i]] == 1);
+                prof_as.push(aspect[cel[i]]);
+                prof_pe.push(pente[cel[i]]);
             }
             // Un NA d'altitude coupe le profil : on ne pose pas de cable sur un trou.
             if prof_za.iter().any(|z| z.is_nan()) {
+                continue;
+            }
+
+            // Validite geometrique de la ligne (`check_line`) : elle finit en foret, ne
+            // traverse pas trop de non-foret, et ne court pas en travers d'un versant
+            // raide. C'est ce filtre qui donne sa longueur utile a la ligne -- sans lui,
+            // elle file jusqu'a `lmax` a travers n'importe quoi.
+            let prof = ligne::Profil {
+                hd: &prof_hd,
+                alt: &prof_za,
+                foret: &prof_fo,
+                aspect: &prof_as,
+                pente: &prof_pe,
+            };
+            let garde = match ligne::check_line(&prof, &ligne::Seuils {
+                az: az as f64,
+                lmax,
+                lmin,
+                lsans_foret,
+                angle_transv,
+                slope_trans,
+                l_slope,
+                prop_slope,
+            }) {
+                Some(k) => k,
+                None => continue,
+            };
+            prof_hd.truncate(garde);
+            prof_za.truncate(garde);
+            if prof_hd.len() < 2 {
                 continue;
             }
 

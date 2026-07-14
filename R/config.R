@@ -98,6 +98,18 @@ foretaccess_config <- function(skidder = list(),
       nb_supports_max            = 3,     # c_sup
       hauteur_support_inter_m    = 12,    # c_h_sup
       longueur_min_travee_m      = 50,    # c_l_span
+      # Validite geometrique de la ligne (`check_line`) : elle doit finir en foret, ne
+      # pas traverser trop de non-foret d'affilee, et ne pas courir en travers d'un
+      # versant raide. Sans ces bornes, les lignes filent jusqu'a `longueur_max_m` a
+      # travers n'importe quel terrain (mesure sur ColduPre : 10 % de foret declaree
+      # accessible a tort).
+      angle_transversal_deg      = 60,    # c_angle_transv (angle min a la courbe de niveau)
+      pente_transversale_max_pct = 30,    # c_slope_trans
+      distance_transversale_max_m = 75,   # c_l_slope
+      proportion_transversale_max = 0.15, # c_prop_slope
+      # Longueur max traversee sans foret. Sylvaccess la DERIVE (`min(c_lmax * 0,1,
+      # c_lmin)`) sauf si `c_l_without_forest` est fourni : `NA` reprend la derivation.
+      longueur_sans_foret_max_m  = NA_real_,  # c_l_without_forest
       # Precision du balayage (c_precision). Elle ne regle pas le modele mais son
       # echantillonnage, et Sylvaccess en derive TROIS choses a la fois
       # (`get_dep_config`) : le pas angulaire, le pas entre cellules de depart, et la
@@ -252,6 +264,11 @@ validate_config <- function(cfg) {
   checkmate::assert_int(ca$nb_supports_max, lower = 0)
   checkmate::assert_number(ca$hauteur_support_inter_m, lower = 0, finite = TRUE)
   checkmate::assert_number(ca$longueur_min_travee_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$angle_transversal_deg, lower = 0, upper = 90)
+  checkmate::assert_number(ca$pente_transversale_max_pct, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$distance_transversale_max_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$proportion_transversale_max, lower = 0, upper = 1)
+  checkmate::assert_number(ca$longueur_sans_foret_max_m, lower = 0, na.ok = TRUE)
   checkmate::assert_int(ca$precision, lower = 1, upper = 3)
   checkmate::assert_int(ca$type_chariot, lower = 0, upper = 1)
   checkmate::assert_int(ca$type_cable, lower = 0, upper = 3)

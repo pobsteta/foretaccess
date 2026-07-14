@@ -10,4 +10,5 @@ pub mod newton;
 pub mod faisabilite;
 pub mod supports;
 pub mod optpyl;
+pub mod ligne;
 pub mod scan;

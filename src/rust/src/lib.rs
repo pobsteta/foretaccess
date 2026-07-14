@@ -477,6 +477,13 @@ fn cable_test_span(
 /// @param nbconfig Beam width of the support-placement search.
 /// @param pas_azimut Azimuth step of the sweep (degrees).
 /// @param pas_depart Sample every `pas_depart`-th departure cell.
+/// @param aspect Terrain aspect (degrees, NaN on flats), row-major.
+/// @param pente Terrain slope (percent), row-major.
+/// @param lsans_foret Longest stretch a line may cross outside the forest (m).
+/// @param angle_transv Minimum angle to the contour line (degrees).
+/// @param slope_trans Terrain slope above which a cross-slope stretch counts (percent).
+/// @param l_slope Maximum cumulated length on a steep cross-slope (m).
+/// @param prop_slope Maximum share of the line on a steep cross-slope.
 /// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 ///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 ///   `li_ipc`, `li_nsup`.
@@ -513,6 +520,13 @@ fn cable_scan(
     nbconfig: i32,
     pas_azimut: i32,
     pas_depart: i32,
+    aspect: Vec<f64>,
+    pente: Vec<f64>,
+    lsans_foret: f64,
+    angle_transv: f64,
+    slope_trans: f64,
+    l_slope: f64,
+    prop_slope: f64,
 ) -> List {
     let vopt = if has_vol { Some(vol.as_slice()) } else { None };
     let out = scan::scan(
@@ -521,6 +535,7 @@ fn cable_scan(
         f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin,
         hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
         pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
+        &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
     let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();

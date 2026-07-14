@@ -237,7 +237,7 @@ Fait : 44 fichiers de sortie, 3 moteurs + sélection de lignes.
 |---|---|---|---|
 | Skidder | **99,95 %** | 177 cellules (0,04 %) | 38 cellules (0,01 %) |
 | Porteur | **99,72 %** | 892 cellules (0,22 %) | 244 cellules (0,06 %) |
-| Câble | **93,61 %** | 1,07 % | 5,32 % |
+| Câble | **96,15 %** | 0,77 % | 3,08 % |
 
 L'écart du **câble part dans la direction attendue** : nous sommes surtout *trop conservateurs*
 (5,3 %), signature exacte de la dette du Lot 4 — Sylvaccess place jusqu'à 3 supports
@@ -429,9 +429,49 @@ dist2`). Corrigé — sans effet mesurable sur ColduPre (les rayons font 300 m e
 aussi : l'accumulateur ne mord jamais), mais il mordra sur un jeu où `f_slope_dmax` est plus
 serré.
 
-**Restent ouverts** : le traînage *en forêt* (médiane 0 m contre 124 m) — les deux moteurs ne
-décomposent visiblement pas la distance totale de la même façon, alors que la distance
-**totale** colle ; et la dette du câble (0 support contre 3).
+### 2026-07-14 — Lot 4d : fin du câble (placement des supports)
+
+**La dette du Lot 4 est soldée.** Le noyau câble était à **zéro support intermédiaire**
+quand Sylvaccess en pose jusqu'à trois : c'était la cause connue des 5,3 % de cellules où
+nous restions trop conservateurs. Porté dans `src/rust/src/cable/optpyl.rs`
+(`OptPyl_Up_NoH` + recherche en faisceau `get_Tabis`), avec **coupe de la ligne** au point
+le plus lointain atteint quand aucune configuration ne rejoint le terminus.
+
+`c_option_h = 0` est le défaut de v3.6 : ce sont les variantes **`_NoH`** qui tournent, où
+la hauteur de fixation n'est pas optimisée (12 m partout). Beaucoup plus simple que les
+variantes complètes — il fallait le voir avant de porter 200 lignes de Cython inutiles.
+
+**Trois infidélités du câblage, trouvées en portant** — aucune n'était une dette assumée :
+* `scan` passait le profil **au demi-mètre** comme profil de travée, là où Sylvaccess pose
+  ses supports **au pixel** (`Line`) ;
+* il passait `csize = 0.5` au lieu de la taille de cellule : la position de la charge était
+  balayée **10× plus finement** que dans la source ;
+* la garde au sol indexait `Alts` en **arrondissant**, là où Sylvaccess **tronque**
+  (`int(xcoord * 2)`) — un demi-échantillon de décalage.
+
+**`get_Tabis` dépend de l'ordre de sa table d'entrée.** `idline` ne bouge que sur une
+hauteur *strictement* plus basse, et les hauteurs sont uniformes en `_NoH`. Triée (un seul
+préfixe alimente la table), la sélection est correcte ; non triée (plusieurs préfixes
+concatènent leurs suites), elle peut rendre deux fois la même configuration. Défaut de la
+source, reproduit tel quel et figé par un test ; `dedupe` en absorbe le coût.
+
+**Puis le câble a basculé dans l'autre sens** : 5,3 % trop conservateurs → **10,15 % trop
+optimistes**. Les supports marchaient trop bien, parce qu'il manquait le garde-fou :
+
+* **`check_line`** (`src/rust/src/cable/ligne.rs`). Avant de savoir si le câble *tient*, il
+  faut savoir jusqu'où la ligne a un *sens*. Sylvaccess la coupe sur trois critères
+  géométriques : elle **finit en forêt** (on n'installe pas un câble pour desservir un pré),
+  elle ne traverse pas plus de 75 m de non-forêt d'affilée, et elle ne **court pas en travers
+  d'un versant raide** (`c_angle_transv` 60°, `c_slope_trans` 30 %, `c_l_slope` 75 m,
+  `c_prop_slope` 0,15). Sans lui, nos lignes filaient à 750 m à travers n'importe quoi.
+  Gain : **89,27 → 96,15 %**, et le balayage tombe de **358 s à 50 s** (Sylvaccess : 198 s).
+
+**Restent ouverts** : les **3,08 %** où le câble est trop conservateur — c'est la ligne
+« **machine en bas** » (`OptPyl_Down_init_NoH` + `OptPyl_Down_NoH`), que nous ne cherchons
+pas encore : nos bornes de pente sont celles du sens amont, les lignes montantes sont donc
+ignorées. L'écart part dans la direction que cela prédit. Et le traînage *en forêt*
+(médiane 0 m contre 124 m) — les deux moteurs ne décomposent visiblement pas la distance
+totale de la même façon, alors que la distance **totale** colle.
 
 ### 2026-07-09
 - Lot 0 clos et publié (`v0.1.0`), retour en cycle de dev `0.1.0.9000`.

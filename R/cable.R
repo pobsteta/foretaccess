@@ -11,6 +11,17 @@
 #' Le profil sert sous deux formes, comme dans la source : **au pixel** pour poser les
 #' supports, **au demi-metre** pour la garde au sol.
 #'
+#' @section Validite de la ligne:
+#' Avant meme de savoir si le cable TIENT, il faut savoir jusqu'ou la ligne a un SENS.
+#' `check_line` la coupe sur trois criteres geometriques : elle **finit en foret** (on
+#' n'installe pas un cable pour desservir un pre), elle ne traverse pas plus de
+#' `min(0,1 x longueur_max_m, longueur_min_m)` metres de non-foret d'affilee, et elle ne
+#' **court pas en travers d'un versant raide** (`angle_transversal_deg`,
+#' `pente_transversale_max_pct`, `distance_transversale_max_m`,
+#' `proportion_transversale_max`). Sans ce filtre, les lignes filent jusqu'a
+#' `longueur_max_m` a travers n'importe quel terrain : sur le jeu ColduPre, cela declare
+#' accessible a tort **10 %** de la foret.
+#'
 #' @section Ecarts assumes avec Sylvaccess v3.6:
 #' Le balayage ne modelise que la ligne **« machine en haut »** (`OptPyl_Up_NoH`), ou
 #' le mat est au depart et le cable descend. Sylvaccess traite aussi la ligne
@@ -90,7 +101,11 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin,
     hintsup = ct$hintsup, sup_max = ct$sup_max, lmin_span = ct$lmin_span,
     nbconfig = ct$prec$largeur_faisceau,
-    pas_azimut = ct$prec$pas_azimut_deg, pas_depart = ct$prec$pas_depart
+    pas_azimut = ct$prec$pas_azimut_deg, pas_depart = ct$prec$pas_depart,
+    aspect = as.numeric(terra::values(pre$aspect_deg)),
+    pente = as.numeric(terra::values(pre$slope_pct)),
+    lsans_foret = ct$lsans_foret, angle_transv = ct$angle_transv,
+    slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope
   )
 
   couvert <- sc$couvert == 1L
@@ -244,6 +259,16 @@ bornes_pente_cable <- function(ca) {
     sup_max = as.integer(ca$nb_supports_max),
     lmin_span = ca$longueur_min_travee_m,
     prec = precision_cable(ca$precision),
+    angle_transv = ca$angle_transversal_deg,
+    slope_trans = ca$pente_transversale_max_pct,
+    l_slope = ca$distance_transversale_max_m,
+    prop_slope = ca$proportion_transversale_max,
+    # `Lsans_foret = min(c_lmax * 0,1, c_lmin)` chez Sylvaccess, sauf surcharge.
+    lsans_foret = if (is.na(ca$longueur_sans_foret_max_m)) {
+      min(ca$longueur_max_m * 0.1, ca$longueur_min_m)
+    } else {
+      ca$longueur_sans_foret_max_m
+    },
     angle_intsup = ca$angle_intersupport_deg * pi / 180,
     bornes = bornes_pente_cable(ca)
   )
