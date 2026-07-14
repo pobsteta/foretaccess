@@ -94,6 +94,11 @@ foretaccess_config <- function(skidder = list(),
       hauteur_support_terminal_m = 12,    # c_h_end
       distance_laterale_max_m    = 40,    # c_l_hor (pechage lateral)
       nb_supports_max            = 3,     # c_sup
+      hauteur_support_inter_m    = 12,    # c_h_sup
+      longueur_min_travee_m      = 50,    # c_l_span
+      # Largeur du faisceau de la recherche de placement des supports. Sylvaccess la
+      # derive de `c_precision` : 5 en precision fine, 1 en precision grossiere.
+      largeur_faisceau           = 5L,    # nbconfig
       # Materiel cable (v3.6). c_q2/c_q3 (traction/retour), c_E (module de Young),
       # c_angle et c_safe ne sont pas dans `Tab_Param_cable.csv` -- mais ils sont
       # dans `dic_AllParam.json` (champ `def_value`), que la spec 004 (Q7) croyait
@@ -219,6 +224,9 @@ validate_config <- function(cfg) {
   checkmate::assert_number(ca$coeff_securite, lower = 0, finite = TRUE)
   checkmate::assert_number(ca$module_young_n_mm2, lower = 0, finite = TRUE)
   checkmate::assert_int(ca$nb_supports_max, lower = 0)
+  checkmate::assert_number(ca$hauteur_support_inter_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$longueur_min_travee_m, lower = 0, finite = TRUE)
+  checkmate::assert_int(ca$largeur_faisceau, lower = 1)
   if (ca$longueur_max_m <= ca$longueur_min_m) {
     cli::cli_abort(c(
       "Configuration cable incoherente.",

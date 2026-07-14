@@ -250,10 +250,14 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param angle_intsup Inter-support angle constraint (rad).
 #' @param lmax Maximum line length (m).
 #' @param lmin Minimum line length (m).
+#' @param hintsup Attachment height on an intermediate support (m).
+#' @param sup_max Maximum number of intermediate supports.
+#' @param lmin_span Minimum distance between two supports (m).
+#' @param nbconfig Beam width of the support-placement search.
 #' @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 #'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
-#'   `li_ipc`.
+#'   `li_ipc`, `li_nsup`.
 #' @export
-cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin)
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig)
 
 # nolint end

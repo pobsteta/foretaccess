@@ -27,7 +27,11 @@ cable_scan(
   eao,
   angle_intsup,
   lmax,
-  lmin
+  lmin,
+  hintsup,
+  sup_max,
+  lmin_span,
+  nbconfig
 )
 }
 \arguments{
@@ -76,11 +80,19 @@ cable_scan(
 \item{lmax}{Maximum line length (m).}
 
 \item{lmin}{Minimum line length (m).}
+
+\item{hintsup}{Attachment height on an intermediate support (m).}
+
+\item{sup_max}{Maximum number of intermediate supports.}
+
+\item{lmin_span}{Minimum distance between two supports (m).}
+
+\item{nbconfig}{Beam width of the support-placement search.}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate
 line vectors \code{li_dep}, \code{li_az}, \code{li_lg}, \code{li_surf}, \code{li_sens}, \code{li_vol},
-\code{li_ipc}.
+\code{li_ipc}, \code{li_nsup}.
 }
 \description{
 Pour chaque cellule de desserte et chacun des 360 azimuts, extrait le profil

@@ -9,4 +9,5 @@ pub mod catenaire;
 pub mod newton;
 pub mod faisabilite;
 pub mod supports;
+pub mod optpyl;
 pub mod scan;

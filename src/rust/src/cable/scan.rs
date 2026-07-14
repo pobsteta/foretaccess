@@ -1,15 +1,15 @@
 //! Balayage 360 deg / pixel du potentiel cable (portage Rust de l'orchestration).
 //!
 //! Porte la boucle chaude de `potentiel_cable()` (R) dans le crate : pour chaque
-//! cellule de desserte et chacun des 360 azimuts, extraction du profil, recherche
-//! de la plus longue travee faisable (`supports::test_span`, 0 support), et
-//! accumulation de la couverture et des lignes candidates. Parallelise sur les
+//! cellule de desserte et chacun des 360 azimuts, extraction du profil, puis
+//! placement des supports intermediaires (`optpyl::optpyl_up_noh`), qui coupe la
+//! ligne au plus loin s'il ne peut pas la porter entiere. Parallelise sur les
 //! cellules de desserte avec `rayon`.
 //!
-//! Fidele au R (non-regression) : meme ordre de reduction (routes puis azimuts
-//! croissants) pour un depart de ligne / azimut / longueur identiques.
+//! Le profil sert sous deux formes, comme chez Sylvaccess : **au pixel** pour poser
+//! les supports (`Line`), **au demi-metre** pour la garde au sol (`Alts`).
 
-use crate::cable::supports;
+use crate::cable::optpyl;
 use rayon::prelude::*;
 
 /// Un rayon precalcule : cellules traversees (decalages ligne/colonne) et leur
@@ -121,6 +121,7 @@ pub struct Line {
     pub sens: i32,  // +1 aval, -1 amont, 0 plat
     pub vol: f64,   // volume (m3) ou NaN
     pub ipc: f64,   // volume / longueur ou NaN
+    pub nsup: i32,  // nombre de supports intermediaires poses
 }
 
 /// Resultat du balayage.
@@ -169,6 +170,10 @@ pub fn scan(
     angle_intsup: f64,
     lmax: f64,
     lmin: f64,
+    hintsup: f64,
+    sup_max: usize,
+    lmin_span: f64,
+    nbconfig: usize,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
@@ -202,46 +207,67 @@ pub fn scan(
                 continue;
             }
 
-            // Profil au demi-metre.
+            // Profil AU PIXEL : c'est lui qui porte les travees (`Line` chez
+            // Sylvaccess). Les supports se posent sur une cellule, pas au demi-metre.
             let mut prof_hd = Vec::with_capacity(cel.len() + 1);
             let mut prof_za = Vec::with_capacity(cel.len() + 1);
             prof_hd.push(0.0);
             prof_za.push(alt[dep]);
             for i in 0..cel.len() {
+                if hd[i] > lmax {
+                    break;
+                }
                 prof_hd.push(hd[i]);
                 prof_za.push(alt[cel[i]]);
             }
-            let m = (smax / 0.5).floor() as usize + 1;
+            if prof_hd.len() < 2 || *prof_hd.last().unwrap() < lmin {
+                continue;
+            }
+            // Un NA d'altitude coupe le profil : on ne pose pas de cable sur un trou.
+            if prof_za.iter().any(|z| z.is_nan()) {
+                continue;
+            }
+
+            // Meme terrain, echantillonne au demi-metre : c'est la garde au sol
+            // (`Alts`), indexee par `int(x * 2)` dans la mecanique.
+            let lline = *prof_hd.last().unwrap();
+            let m = (lline / 0.5).floor() as usize + 2;
             let xs: Vec<f64> = (0..m).map(|i| i as f64 * 0.5).collect();
             let zs = interp_dropna(&prof_hd, &prof_za, &xs);
 
-            // Plus longue travee faisable (du plus long au plus court, pas = res).
-            let hi = smax.min(lmax);
-            if hi < lmin {
+            // Placement des supports intermediaires, avec coupe de la ligne a defaut.
+            let par = optpyl::OptParams {
+                line_x: &prof_hd,
+                line_z: &prof_za,
+                alts: &zs,
+                htower,
+                hintsup,
+                hend: h_end,
+                hline_min,
+                hline_max,
+                slope_min,
+                slope_max,
+                f_o,
+                tmax,
+                q1,
+                q2,
+                q3,
+                eao,
+                csize: res,
+                angle_intsup,
+                sup_max,
+                lmin_span,
+                nbconfig,
+            };
+            let spans = optpyl::optpyl_up_noh(&par);
+            if spans.is_empty() {
                 continue;
             }
-            // seq(hi, lmin, by = -res) : l_i = hi - i*res, tant que l_i >= lmin.
-            let mut longueur = f64::NAN;
-            let nl = ((hi - lmin) / res + 1e-10).floor() as i64;
-            for i in 0..=nl {
-                let l_cand = hi - i as f64 * res;
-                let posi = round_half_even(l_cand * 2.0) as usize;
-                if posi >= xs.len() {
-                    continue;
-                }
-                let r = supports::test_span(
-                    &xs, &zs, 0, posi as i64, htower, h_end, hline_min, hline_max,
-                    slope_min, slope_max, &zs, f_o, tmax, q1, q2, q3, eao, 0.5,
-                    angle_intsup, 0.0, -9999.0,
-                );
-                if r.test {
-                    longueur = xs[posi];
-                    break;
-                }
-            }
-            if longueur.is_nan() {
+            let longueur = prof_hd[spans.last().unwrap().posi()];
+            if longueur < lmin {
                 continue;
             }
+            let nb_sup = spans.len() - 1;
 
             // Cellules couvertes (hdist <= longueur).
             let mut couv = Vec::new();
@@ -285,6 +311,7 @@ pub fn scan(
                 sens,
                 vol: vol_l,
                 ipc: ipc_l,
+                nsup: nb_sup as i32,
             });
         }
         RouteResult { covers, lines }

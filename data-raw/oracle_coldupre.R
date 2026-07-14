@@ -87,8 +87,9 @@ cfg <- foretaccess_config(
     coeff_securite               = 2,      # c_safe (scenario ColduPre)
     charge_max_kg                = 2500,   # c_load_max
     poids_chariot_kg             = 400,    # c_car_w
-    # Sylvaccess tourne a c_sup = 3 ; notre noyau est 0 support (dette Lot 4).
-    nb_supports_max              = 0L
+    nb_supports_max              = 3L,     # c_sup (Lot 4d : placement porte)
+    hauteur_support_inter_m      = 12,     # c_h_sup
+    longueur_min_travee_m        = 50      # c_l_span
   )
 )
 

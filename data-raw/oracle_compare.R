@@ -164,8 +164,7 @@ acc_cs <- lire(c_dir, "Zone_accessible.tif")
 acc_cf <- lire(FA, "cable", "accessibilite.tif")
 if (!is.null(acc_cs) && !is.null(acc_cf)) {
   cat("\n\n#############  CABLE  #############\n")
-  cat("(Sylvaccess tourne a c_sup = 3 supports ; notre noyau est a 0 -> on\n")
-  cat(" s'attend a etre plus conservateur. C'est la dette du Lot 4, pas un bug.)\n")
+  cat("(c_sup = 3 supports intermediaires des deux cotes, depuis le Lot 4d.)\n")
   lev <- terra::levels(acc_cf)[[1]]
   codes <- lev$value[lev[[2]] == "accessible_cable"]
   accord_binaire(acc_cf %in% codes, vrai_ou_faux(acc_cs), foret, "Zone accessible (cable)")

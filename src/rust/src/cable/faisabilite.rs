@@ -162,7 +162,9 @@ pub fn check_hlinemin(
         }
         let xcoord = xup + fact * calcul_xs(th, tv, lo, eao, w, f, s1, s1);
         let zcoord = zup - calcul_zs(th, tv, lo, eao, w, f, s1, s1);
-        let ind = (xcoord * 2.0 + 0.5) as usize;
+        // `int(xcoord * 2)` chez Sylvaccess : TRONCATURE, pas arrondi. Le demi-pas
+        // d'ecart deplace la garde au sol d'un echantillon sur deux.
+        let ind = (xcoord * 2.0) as usize;
         if ind >= alts.len() {
             // Hors profil : on refuse plutot que de paniquer (garde defensive).
             test = false;
@@ -196,7 +198,9 @@ pub fn check_hlinemin(
             }
             let xcoord = xup + fact * calcul_xs(th, tv, lo, eao, w, f, s1, s1);
             let zcoord = zup - calcul_zs(th, tv, lo, eao, w, f, s1, s1);
-            let ind = (xcoord * 2.0 + 0.5) as usize;
+            // `int(xcoord * 2)` chez Sylvaccess : TRONCATURE, pas arrondi. Le demi-pas
+        // d'ecart deplace la garde au sol d'un echantillon sur deux.
+        let ind = (xcoord * 2.0) as usize;
             if ind >= alts.len() {
                 test = false;
                 break;

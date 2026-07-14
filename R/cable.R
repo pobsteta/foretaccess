@@ -73,7 +73,9 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     hline_min = ct$hline_min, hline_max = ct$hline_max,
     slope_min = ct$slope_min, slope_max = ct$slope_max,
     f_o = ct$f_o, tmax = ct$tmax, q1 = ct$q1, q2 = ct$q2, q3 = ct$q3,
-    eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin
+    eao = ct$eao, angle_intsup = ct$angle_intsup, lmax = ct$lmax, lmin = ct$lmin,
+    hintsup = ct$hintsup, sup_max = ct$sup_max, lmin_span = ct$lmin_span,
+    nbconfig = ct$nbconfig
   )
 
   couvert <- sc$couvert == 1L
@@ -87,7 +89,7 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     longueur_m = sc$li_lg,
     surface_ha = sc$li_surf,
     sens       = sc$li_sens,
-    supports   = rep(0L, k),
+    supports   = sc$li_nsup,
     volume_m3  = sc$li_vol,
     ipc        = sc$li_ipc
   )
@@ -146,6 +148,10 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     h_end = ca$hauteur_support_terminal_m,
     lmax = ca$longueur_max_m,
     lmin = ca$longueur_min_m,
+    hintsup = ca$hauteur_support_inter_m,
+    sup_max = as.integer(ca$nb_supports_max),
+    lmin_span = ca$longueur_min_travee_m,
+    nbconfig = as.integer(ca$largeur_faisceau),
     angle_intsup = ca$angle_intersupport_deg * pi / 180,
     slope_min = ca$pente_min_rad,
     slope_max = ca$pente_max_rad
