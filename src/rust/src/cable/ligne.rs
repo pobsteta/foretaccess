@@ -115,8 +115,12 @@ mod tests {
         }
     }
 
+    // Les cinq colonnes d'un profil : hd, alt, foret, aspect, pente. Les tests les
+    // gardent en Vec pour que `Profil` puisse les emprunter.
+    type Colonnes = (Vec<f64>, Vec<f64>, Vec<bool>, Vec<f64>, Vec<f64>);
+
     // Profil de `n` pixels au pas de 5 m, tout en foret, plat.
-    fn plat(n: usize) -> (Vec<f64>, Vec<f64>, Vec<bool>, Vec<f64>, Vec<f64>) {
+    fn plat(n: usize) -> Colonnes {
         let hd: Vec<f64> = (0..n).map(|i| i as f64 * 5.0).collect();
         (hd, vec![100.0; n], vec![true; n], vec![f64::NAN; n], vec![0.0; n])
     }

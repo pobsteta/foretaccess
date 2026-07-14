@@ -46,6 +46,8 @@ reference:
   - terrain_roulable
   - zone_roulable_connectee
   - zone_treuillable
+  - terrain_plat
+  - zone_plate_connectee
   - coefficients_bascule
   - distance_treuillage_max
 - title: Plus court chemin (service partagé)
@@ -58,6 +60,8 @@ reference:
   contents:
   - potentiel_cable
   - selectionner_lignes
+  - bornes_pente_cable
+  - precision_cable
   - starts_with("cable_")
   - cablehelp_version
 - title: Passage à l'échelle (Lot 7)
