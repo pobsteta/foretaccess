@@ -6,12 +6,28 @@
 
 ## État courant
 
-- **EN COURS — Lot 11 : confrontation à l'oracle Sylvaccess réel.** Décidé le 2026-07-13 :
-  **l'oracle passe avant `v1.0.0`**, pour que la version majeure signifie « validée contre le
-  vrai moteur » et non « périmètre atteint ». Périmètre : les 3 moteurs Sylvaccess (skidder,
-  porteur, câble). Le banc tourne (cf. journal 2026-07-13).
-- **Branche** : `main` (release `v0.12.0` posée ; cycle dev `0.12.0.9000` ouvert)
-- **Version `DESCRIPTION`** : `0.12.0.9000` (cycle dev ; `NEWS.md`/`CITATION.cff` restent à `0.12.0`)
+- **Lot 11 (confrontation à l'oracle Sylvaccess réel) livré en `v0.13.0`**, et **Lot 4 clos**
+  (supports intermédiaires du câble). Décidé le 2026-07-13 : **l'oracle passe avant `v1.0.0`**,
+  pour que la version majeure signifie « validée contre le vrai moteur » et non « périmètre
+  atteint ». Accord cellule à cellule sur le jeu officiel ColduPre (411 309 cellules
+  forestières) : **skidder 99,95 %**, **porteur 99,72 %**, **câble 96,58 %**.
+- **Branche** : `main` (release `v0.13.0`)
+- **Version `DESCRIPTION`** : `0.13.0`
+- **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
+  débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
+  traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
+  Sylvaccess stocke ses distances en `int16` (`int(dist + 0.5)`), nous en flottant — l'écart est
+  borné par la demi-cellule. *(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07
+  était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir
+  l'entrée du 14/07 ci-dessous.)*
+- **Reste un écart assumé, sans effet sur ColduPre** : la **pondération de la piste dans
+  l'arbitrage**. Sylvaccess ne minimise pas la seule distance en forêt — il minimise
+  `d_foret + 0,5 · d_piste` dans sa propagation (`pyx:3714`) et arbitre route/piste sur
+  `d_foret + 0,1 · d_piste` (`pyx:4283`). Nous minimisons `d_foret` **seul**, puis ajoutons la
+  distance réseau *a posteriori* (pondération 0). Nul sur ColduPre (réseau dense, écart piste
+  0,4 m), mais sur un massif où une piste longue jouxte une route forestière plus lointaine, les
+  deux moteurs choisiront des dessertes différentes — et le **total** divergera. À traiter avant
+  `v1.0.0`.
 - **Fait (0.12.0)** : **portage Rust du balayage câble** (`cable_scan` dans `cablehelp`).
   L'orchestration 360°/pixel de `potentiel_cable()` — profil, plus longue travée faisable,
   couverture/lignes — vit dans le crate, parallélisée sur les départs via `rayon`. R prépare
@@ -33,9 +49,13 @@
   (57 tests), intégration réseau opt-in. `happign`/`osmdata` en Suggests. Vignette
   d'acquisition. `specs/010`.
 - **Prochain jalon possible** : **v1.0.0** (bump majeur, confirmation requise — l'utilisateur
-  a demandé de rester en `0.x` pour l'instant). Dette câble différée : placement multi-supports
-  `OptPyl_Up`, pêchage latéral (oracle Sylvaccess réel requis). Phase 2 acquisition : MNH
-  LiDAR → volume, BD Forêt v3.
+  a demandé de rester en `0.x` pour l'instant). Le préalable qui la justifiait — la validation
+  contre le vrai moteur — est **fait**. Restent avant de la poser : la décomposition des
+  distances (ci-dessus), et le **Lot 6 (DFCI)**, construit sur l'hypothèse fausse que
+  Sylvaccess n'avait pas de module DFCI (`Sylvaccess_5_dfci.py` existe ; `specs/006` est à
+  reprendre — les défauts sont corrigés depuis `v0.13.0`, mais le moteur n'est pas confronté).
+- **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
+  défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
 
 ## Avancement par lot
 
@@ -45,13 +65,15 @@
 | 1 | I/O & prétraitement | `specs/001-pretraitement.md` | ✅ terminé | `v0.2.0` |
 | 2 | Moteur Skidder | `specs/002-skidder.md` | ✅ terminé | `v0.3.0`, `v0.3.1` |
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
-| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (0 support) | `v0.6.0` |
+| 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (3 supports) | `v0.6.0`, `v0.13.0` |
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
 | 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ✅ terminé | `v0.11.0` |
+| 11 | Oracle Sylvaccess réel | *(journal 2026-07-13/14)* | ✅ terminé | `v0.13.0` |
+| 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -461,9 +483,21 @@ optimistes**. Les supports marchaient trop bien, parce qu'il manquait le garde-f
   `c_prop_slope` 0,15). Sans lui, nos lignes filaient à 750 m à travers n'importe quoi.
   Gain : **89,27 → 96,15 %**, et le balayage tombe de **358 s à 50 s** (Sylvaccess : 198 s).
 
-**Restent ouverts** : le traînage *en forêt* (médiane 0 m contre 124 m) — les deux moteurs
-ne décomposent visiblement pas la distance totale de la même façon, alors que la distance
-**totale** colle.
+**Le « traînage en forêt à 0 m contre 124 m » n'était pas un problème de comptabilité.**
+Rejouée sur les sorties d'après la 3ᵉ passe, la comparaison donne **120,2 contre 124,0** de
+médiane (écart 0,2 m) : la décomposition est juste. Le 0 était le **symptôme** de la passe
+contour manquante — nos rasters de distance valent `0` (et non `NA`) sur les cellules non
+atteintes, et le sous-ensemble comparé pour le traînage en forêt (`DTrain_foret ∉ {0, -9999}`)
+est **exactement** l'ensemble des cellules du contour. On comparait donc nos zéros à ses 124 m.
+Que le **total** collât malgré tout n'avait rien de paradoxal : les sous-ensembles sont
+**disjoints** — le total est dominé par les 87 685 cellules treuillées des passes 1-2, où nos
+trois composantes étaient déjà justes ; 3 920 cellules fausses n'y déplacent pas la médiane.
+
+**Reste un vrai écart, structurel et assumé** : Sylvaccess **pondère la piste** dans son
+arbitrage (`d_foret + 0,5 · d_piste` en propagation, `pyx:3714` ; `d_foret + 0,1 · d_piste`
+pour l'arbitrage route/piste, `pyx:4283`). Nous minimisons `d_foret` seul et ajoutons la
+distance réseau *a posteriori*. Sans effet sur ColduPre, dont le réseau est dense ; à corriger
+avant `v1.0.0`.
 
 ### 2026-07-14 — Câble : la ligne « machine en bas »
 
