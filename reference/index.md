@@ -52,6 +52,10 @@ Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
   : Zone effectivement roulable, connectée à la desserte
 - [`zone_treuillable()`](https://pobsteta.github.io/foretaccess/reference/zone_treuillable.md)
   : Zone treuillable
+- [`terrain_plat()`](https://pobsteta.github.io/foretaccess/reference/terrain_plat.md)
+  : Terrain plat au sens du porteur
+- [`zone_plate_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_plate_connectee.md)
+  : Zone plate effectivement conduisible, connectée à la desserte
 - [`coefficients_bascule()`](https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.md)
   : Coefficients de la loi de bascule
 - [`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)
@@ -75,6 +79,12 @@ Potentiel de lignes (noyau Rust) et sélection multicritère.
 
 - [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
   : Selection multicritere des lignes cable (Lot 5)
+
+- [`bornes_pente_cable()`](https://pobsteta.github.io/foretaccess/reference/bornes_pente_cable.md)
+  : Bornes de pente admissibles d'une ligne de câble
+
+- [`precision_cable()`](https://pobsteta.github.io/foretaccess/reference/precision_cable.md)
+  : Échantillonnage du balayage câble, dérivé de la précision
 
 - [`cable_calcul_xs()`](https://pobsteta.github.io/foretaccess/reference/cable_calcul_xs.md)
   :

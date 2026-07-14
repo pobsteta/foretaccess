@@ -109,6 +109,16 @@ L'option de modélisation `1` (défaut v3.6, « limiter l'impact sur le sol
 ») **privilégie le treuillage** : une cellule treuillable l'est, même si
 l'engin pourrait y rouler. L'option `2` n'est pas implémentée.
 
+Le treuillage se fait en **trois passes**, comme dans Sylvaccess :
+depuis les routes, depuis les pistes, puis — c'est le point qu'on oublie
+— depuis le **contour de la zone où l'engin a roulé**
+(`skid_debusq_contour`). La machine entre en forêt, s'arrête au bord du
+terrain roulable, et treuille de là en **emportant la distance déjà
+parcourue** : le critère de choix porte alors sur le **total**
+traînage + câble, non sur la seule longueur de câble. Cette troisième
+passe est purement additive — elle ne corrige jamais une cellule que les
+deux premières ont atteinte.
+
 ## Écarts assumés avec Sylvaccess v3.6
 
 La hiérarchie route / piste est réduite à deux niveaux (`route` et
@@ -124,9 +134,9 @@ pre <- preprocess(file.path(toy, "mnt.tif"), file.path(toy, "desserte.gpkg"),
 sk <- skidder(pre)
 sk$recap
 #>           classe cellules surface_ha
-#> 1    parcourable     1624       4.06
+#> 1    parcourable     1632       4.08
 #> 2     accessible        0       0.00
 #> 3 non_accessible        0       0.00
-#> 4     hors_foret      680       1.70
+#> 4     hors_foret      672       1.68
 #> 5    indetermine      196       0.49
 ```

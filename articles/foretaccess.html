@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -101,7 +101,7 @@ On peut surcharger n’importe quelle clé.</p>
 <span><span class="va">config</span><span class="op">$</span><span class="va">skidder</span><span class="op">$</span><span class="va">pente_skidder_max_pct</span></span>
 <span><span class="co">#&gt; [1] 30</span></span>
 <span><span class="va">config</span><span class="op">$</span><span class="va">dfci</span><span class="op">$</span><span class="va">distance_defense_max_m</span></span>
-<span><span class="co">#&gt; [1] 100</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 440</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="prétraitement">Prétraitement<a class="anchor" aria-label="anchor" href="#pr%C3%A9traitement"></a>
@@ -133,19 +133,19 @@ catégoriel d’accessibilité et un récapitulatif de surfaces.</p>
 <code class="sourceCode R"><span><span class="va">sk</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/skidder.html">skidder</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">sk</span><span class="op">$</span><span class="va">recap</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"classe"</span>, <span class="st">"surface_ha"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;           classe surface_ha</span></span>
-<span><span class="co">#&gt; 1    parcourable       4.06</span></span>
+<span><span class="co">#&gt; 1    parcourable       4.08</span></span>
 <span><span class="co">#&gt; 2     accessible       0.00</span></span>
 <span><span class="co">#&gt; 3 non_accessible       0.00</span></span>
-<span><span class="co">#&gt; 4     hors_foret       1.70</span></span>
+<span><span class="co">#&gt; 4     hors_foret       1.68</span></span>
 <span><span class="co">#&gt; 5    indetermine       0.49</span></span>
 <span></span>
 <span><span class="va">po</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/porteur.html">porteur</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">po</span><span class="op">$</span><span class="va">recap</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"classe"</span>, <span class="st">"surface_ha"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;           classe surface_ha</span></span>
-<span><span class="co">#&gt; 1    parcourable       4.06</span></span>
+<span><span class="co">#&gt; 1    parcourable       4.08</span></span>
 <span><span class="co">#&gt; 2     accessible       0.00</span></span>
 <span><span class="co">#&gt; 3 non_accessible       0.00</span></span>
-<span><span class="co">#&gt; 4     hors_foret       1.70</span></span>
+<span><span class="co">#&gt; 4     hors_foret       1.68</span></span>
 <span><span class="co">#&gt; 5    indetermine       0.49</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -160,10 +160,10 @@ limites).</p>
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/camion_dfci.html">camion_dfci</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">df</span><span class="op">$</span><span class="va">recap</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"classe"</span>, <span class="st">"surface_ha"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;           classe surface_ha</span></span>
-<span><span class="co">#&gt; 1     defendable     3.6075</span></span>
-<span><span class="co">#&gt; 2 non_defendable     0.3925</span></span>
-<span><span class="co">#&gt; 3     hors_foret     1.7600</span></span>
-<span><span class="co">#&gt; 4    indetermine     0.4900</span></span></code></pre></div>
+<span><span class="co">#&gt; 1     defendable       4.00</span></span>
+<span><span class="co">#&gt; 2 non_defendable       0.00</span></span>
+<span><span class="co">#&gt; 3     hors_foret       1.76</span></span>
+<span><span class="co">#&gt; 4    indetermine       0.49</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="volet-câble">Volet câble<a class="anchor" aria-label="anchor" href="#volet-c%C3%A2ble"></a>
@@ -174,12 +174,16 @@ faisables</strong> (noyau mécanique en Rust).
 redondant maximisant la couverture.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/potentiel_cable.html">potentiel_cable</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Aucune couche de places de depot (`departs`) : le balayage part des 195</span></span>
+<span><span class="co">#&gt;   cellules de desserte.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> La couverture cable sera optimiste -- une piste n'accueille pas un cable-mat.</span></span>
+<span><span class="co">#&gt;   Voir la section <span style="font-style: italic;">Places de depot</span> de `potentiel_cable()`.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">cab</span><span class="op">$</span><span class="va">lignes</span><span class="op">)</span>          <span class="co"># lignes candidates</span></span>
-<span><span class="co">#&gt; [1] 15999</span></span>
+<span><span class="co">#&gt; [1] 3128</span></span>
 <span></span>
 <span><span class="va">sel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/selectionner_lignes.html">selectionner_lignes</a></span><span class="op">(</span><span class="va">cab</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">sel</span><span class="op">$</span><span class="va">lignes</span><span class="op">)</span>          <span class="co"># lignes retenues</span></span>
-<span><span class="co">#&gt; [1] 62</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 36</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="agrégation-zonale">Agrégation zonale<a class="anchor" aria-label="anchor" href="#agr%C3%A9gation-zonale"></a>
@@ -206,11 +210,11 @@ zone</strong> — massif, parcelle, commune — et par classe.</p>
 <span><span class="co">#&gt;   surface_totale_ha</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> surface totale : 6.25 ha</span></span>
 <span><span class="co">#&gt;     nom surface_parcourable_ha surface_accessible_ha surface_non_accessible_ha</span></span>
-<span><span class="co">#&gt; 1 ouest                   2.02                     0                         0</span></span>
-<span><span class="co">#&gt; 2   est                   2.04                     0                         0</span></span>
+<span><span class="co">#&gt; 1 ouest                   2.03                     0                         0</span></span>
+<span><span class="co">#&gt; 2   est                   2.05                     0                         0</span></span>
 <span><span class="co">#&gt;   surface_hors_foret_ha surface_indetermine_ha surface_totale_ha</span></span>
-<span><span class="co">#&gt; 1                  0.86                  0.245             3.125</span></span>
-<span><span class="co">#&gt; 2                  0.84                  0.245             3.125</span></span></code></pre></div>
+<span><span class="co">#&gt; 1                  0.85                  0.245             3.125</span></span>
+<span><span class="co">#&gt; 2                  0.83                  0.245             3.125</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="persistance-en-base-spatiale">Persistance en base spatiale<a class="anchor" aria-label="anchor" href="#persistance-en-base-spatiale"></a>

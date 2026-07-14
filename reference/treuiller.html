@@ -11,7 +11,7 @@ desserte, on balaie 360 azimuts au pas de 1°, en ligne droite."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,13 @@ desserte, on balaie 360 azimuts au pas de 1°, en <strong>ligne droite</strong>.
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">treuiller</span><span class="op">(</span><span class="va">mnt</span>, <span class="va">desserte</span>, <span class="va">zone</span>, config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">treuiller</span><span class="op">(</span></span>
+<span>  <span class="va">mnt</span>,</span>
+<span>  <span class="va">desserte</span>,</span>
+<span>  <span class="va">zone</span>,</span>
+<span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  depart_cout <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -72,6 +78,15 @@ desserte, on balaie 360 azimuts au pas de 1°, en <strong>ligne droite</strong>.
 
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>
 <dd><p>Objet <code><a href="foretaccess_config.html">foretaccess_config()</a></code>.</p></dd>
+
+
+<dt id="arg-depart-cout">depart_cout<a class="anchor" aria-label="anchor" href="#arg-depart-cout"></a></dt>
+<dd><p>Vecteur de longueur <code>ncell(mnt)</code> : distance <strong>déjà
+parcourue</strong> pour atteindre chaque cellule de départ. <code>NULL</code> (défaut) : les
+départs sont sur la desserte, ils ne coûtent rien. Sinon le critère
+d'amélioration porte sur le <strong>total</strong> <code>depart_cout + distance de treuil</code>,
+et non sur la seule distance de treuil (cf. <code>skid_debusq_contour()</code> de
+Sylvaccess, où chaque point du contour porte son <code>Dfor + Dpis</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

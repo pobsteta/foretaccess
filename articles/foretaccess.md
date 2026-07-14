@@ -39,7 +39,7 @@ config <- foretaccess_config()
 config$skidder$pente_skidder_max_pct
 #> [1] 30
 config$dfci$distance_defense_max_m
-#> [1] 100
+#> [1] 440
 ```
 
 ## Prétraitement
@@ -75,19 +75,19 @@ un récapitulatif de surfaces.
 sk <- skidder(pre)
 sk$recap[, c("classe", "surface_ha")]
 #>           classe surface_ha
-#> 1    parcourable       4.06
+#> 1    parcourable       4.08
 #> 2     accessible       0.00
 #> 3 non_accessible       0.00
-#> 4     hors_foret       1.70
+#> 4     hors_foret       1.68
 #> 5    indetermine       0.49
 
 po <- porteur(pre)
 po$recap[, c("classe", "surface_ha")]
 #>           classe surface_ha
-#> 1    parcourable       4.06
+#> 1    parcourable       4.08
 #> 2     accessible       0.00
 #> 3 non_accessible       0.00
-#> 4     hors_foret       1.70
+#> 4     hors_foret       1.68
 #> 5    indetermine       0.49
 ```
 
@@ -105,10 +105,10 @@ pour les limites).
 df <- camion_dfci(pre)
 df$recap[, c("classe", "surface_ha")]
 #>           classe surface_ha
-#> 1     defendable     3.6075
-#> 2 non_defendable     0.3925
-#> 3     hors_foret     1.7600
-#> 4    indetermine     0.4900
+#> 1     defendable       4.00
+#> 2 non_defendable       0.00
+#> 3     hors_foret       1.76
+#> 4    indetermine       0.49
 ```
 
 ## Volet câble
@@ -121,12 +121,16 @@ en retient un sous-ensemble non redondant maximisant la couverture.
 ``` r
 
 cab <- potentiel_cable(pre)
+#> ! Aucune couche de places de depot (`departs`) : le balayage part des 195
+#>   cellules de desserte.
+#> ℹ La couverture cable sera optimiste -- une piste n'accueille pas un cable-mat.
+#>   Voir la section Places de depot de `potentiel_cable()`.
 nrow(cab$lignes)          # lignes candidates
-#> [1] 15999
+#> [1] 3128
 
 sel <- selectionner_lignes(cab)
 nrow(sel$lignes)          # lignes retenues
-#> [1] 62
+#> [1] 36
 ```
 
 ## Agrégation zonale
@@ -155,11 +159,11 @@ sf::st_drop_geometry(agg)
 #>   surface_totale_ha
 #> • surface totale : 6.25 ha
 #>     nom surface_parcourable_ha surface_accessible_ha surface_non_accessible_ha
-#> 1 ouest                   2.02                     0                         0
-#> 2   est                   2.04                     0                         0
+#> 1 ouest                   2.03                     0                         0
+#> 2   est                   2.05                     0                         0
 #>   surface_hors_foret_ha surface_indetermine_ha surface_totale_ha
-#> 1                  0.86                  0.245             3.125
-#> 2                  0.84                  0.245             3.125
+#> 1                  0.85                  0.245             3.125
+#> 2                  0.83                  0.245             3.125
 ```
 
 ## Persistance en base spatiale

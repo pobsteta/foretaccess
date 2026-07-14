@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,71 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.13.0" id="foretaccess-0130-2026-07-14">foretaccess 0.13.0 (2026-07-14)<a class="anchor" aria-label="anchor" href="#foretaccess-0130-2026-07-14"></a></h2>
+<div class="section level3">
+<h3 id="lot--confrontation-à-loracle-sylvaccess-réel-0-13-0">Lot 11 — confrontation à l’oracle Sylvaccess réel<a class="anchor" aria-label="anchor" href="#lot--confrontation-%C3%A0-loracle-sylvaccess-r%C3%A9el-0-13-0"></a></h3>
+<p>Sylvaccess v3.6 tourne désormais en local et produit son oracle sur son propre jeu de test officiel (<code>test/ColduPre</code>, 411 309 cellules forestières), qui ne livre aucune sortie de référence — il faut l’exécuter. Banc : <code>data-raw/oracle_coldupre.R</code> (ForêtAccess sur les mêmes entrées) et <code>data-raw/oracle_compare.R</code> (comparaison cellule à cellule).</p>
+<p>Accord cellule à cellule après correctifs :</p>
+<table class="table"><thead><tr><th>Moteur</th>
+<th>Accord</th>
+<th>Trop optimistes</th>
+<th>Trop conservateurs</th>
+</tr></thead><tbody><tr><td>Skidder</td>
+<td><strong>99,95 %</strong></td>
+<td>0,04 %</td>
+<td>0,01 %</td>
+</tr><tr><td>Porteur</td>
+<td><strong>99,72 %</strong></td>
+<td>0,22 %</td>
+<td>0,06 %</td>
+</tr><tr><td>Câble</td>
+<td><strong>96,58 %</strong></td>
+<td>0,63 %</td>
+<td>2,79 %</td>
+</tr></tbody></table><p>Les distances collent, <strong>décomposition comprise</strong> : débusquage à 0,0 m d’écart médian, traînage en forêt à 0,2 m, traînage sur piste à 0,4 m, distance totale à 0,2 m. Le reliquat est l’arrondi (Sylvaccess stocke ses distances en <code>int16</code>), borné par la demi-cellule.</p>
+<div class="section level4">
+<h4 id="divergences-corrigées-moteurs-terrestres-0-13-0">Divergences corrigées (moteurs terrestres)<a class="anchor" aria-label="anchor" href="#divergences-corrig%C3%A9es-moteurs-terrestres-0-13-0"></a></h4>
+<ul><li>
+<strong><code>.masque_vecteur()</code> perdait les géométries non-polygonales</strong> : <code><a href="https://rspatial.github.io/terra/reference/vect.html" class="external-link">terra::vect()</a></code> sur une couche <code>sf</code> hétérogène ne retient qu’un seul type et abandonne les autres sans erreur. Rasterisation par famille (surface / ligne / point) puis union.</li>
+<li>
+<strong>Rasterisation <code>ALL_TOUCHED</code></strong> : Sylvaccess rasterise chacune de ses couches vectorielles avec <code>ALL_TOUCHED=TRUE</code> ; toute cellule effleurée compte. Aligné (<code>.masque_vecteur()</code>, <code>.rasteriser_desserte()</code>), avec priorité <code>route &lt; piste &lt; dfci &lt; reseau_public</code>.</li>
+<li>
+<strong>Nouvelle classe de desserte <code>reseau_public</code></strong> : la route ouverte à la circulation est le point de chargement du camion, pas une place de dépôt — et pour les engins de débardage, une barrière. Exclue des sources de balayage et de la zone roulable, versée aux obstacles du porteur.</li>
+<li>
+<strong>Le traînage sur piste ne paie plus le surcoût d’obstacle</strong> : une route n’est pas un obstacle à la circulation sur elle-même (<code>Pond_pente</code> réseau vs <code>Pond_pente2</code> forêt).</li>
+<li>
+<strong>Le seuil d’abattage porte sur le maximum local 3 × 3 de la pente</strong>, pas sur la pente de la cellule (<code>slopes_skid()</code>) : la zone d’exclusion est dilatée d’une cellule. <code>pre$slope_max_local</code> ajouté.</li>
+<li>
+<strong>Troisième passe de treuillage du skidder</strong> (<code>skid_debusq_contour</code>) : la machine entre en forêt, s’arrête au bord du terrain roulable et treuille <strong>de là</strong>, en emportant sa distance déjà parcourue. <code>treuiller(depart_cout = )</code>.</li>
+<li>
+<strong>Porteur</strong> : grappin depuis la seule forêt conduite (<code>Dforet &gt; 0</code>), propagation <strong>Dijkstra sur terrain plat</strong> qui manquait entièrement (<code><a href="../reference/terrain_plat.html">terrain_plat()</a></code>, <code><a href="../reference/zone_plate_connectee.html">zone_plate_connectee()</a></code>), et passe contour symétrique (<code>conduire(sources=, depart_cout=)</code>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="câble-0-13-0">Câble<a class="anchor" aria-label="anchor" href="#c%C3%A2ble-0-13-0"></a></h4>
+<ul><li>
+<strong><code>potentiel_cable(departs = )</code></strong> : les lignes ne partent plus de toute cellule de desserte mais d’une couche de <strong>places de dépôt</strong> (attribut <code>cable</code>) — 2 tronçons sur 125 à ColduPre.</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="lot--clôture-du-noyau-câble-supports-intermédiaires-0-13-0">Lot 4 — clôture du noyau câble (supports intermédiaires)<a class="anchor" aria-label="anchor" href="#lot--cl%C3%B4ture-du-noyau-c%C3%A2ble-supports-interm%C3%A9diaires-0-13-0"></a></h3>
+<ul><li>
+<strong>Placement des supports intermédiaires</strong> (<code>OptPyl_Up_NoH</code>, recherche en faisceau <code>get_Tabis</code>, jusqu’à <code>c_sup = 3</code>), avec coupe de la ligne au point le plus lointain atteint. La dette « zéro support » du Lot 4 est soldée.</li>
+<li>
+<strong><code>check_line()</code></strong> — validité géométrique de la ligne : elle finit en forêt, ne traverse pas plus de 75 m de non-forêt d’affilée, et ne court pas en travers d’un versant raide.</li>
+<li>
+<strong>Ligne « machine en bas »</strong> (<code>OptPyl_Down_init_NoH</code> / <code>OptPyl_Down_NoH</code>) : le balayage traite désormais les deux sens de débardage et choisit par dominance mât / ancrage.</li>
+</ul><p>Balayage câble : <strong>79 s</strong> contre 198 s à Sylvaccess, à périmètre désormais égal (3 supports).</p>
+</div>
+<div class="section level3">
+<h3 id="défauts-de-configuration-alignés-sur-sylvaccess-0-13-0">Défauts de configuration alignés sur Sylvaccess<a class="anchor" aria-label="anchor" href="#d%C3%A9fauts-de-configuration-align%C3%A9s-sur-sylvaccess-0-13-0"></a></h3>
+<p>Audit complet de <code><a href="../reference/foretaccess_config.html">foretaccess_config()</a></code> contre <code>dic_AllParam.json</code> (règle : Sylvaccess fait foi).</p>
+<ul><li>Câble : <code>c_E</code> 160 000 → <strong>100 000</strong>, <code>c_q2</code>/<code>c_q3</code> 0,9 → <strong>0,5</strong>, <code>c_angle</code> 20 → <strong>30°</strong>, <code>c_safe</code> 2 → <strong>2,5</strong> (il divise <code>Tmax</code>).</li>
+<li>Porteur : <code>pente_descente_max_pct</code> 25 → <strong>40</strong>.</li>
+<li>DFCI : <code>distance_defense_max_m</code> 100 → <strong>440</strong>, <code>pente_defense_max_pct</code> 40 → <strong>110</strong>, classes <code>0;120;280;440</code>. <code>Sylvaccess_5_dfci.py</code> existe — <code>specs/006</code> supposait l’inverse.</li>
+<li>Bornes de pente du câble <strong>dérivées</strong> du type de chariot/câble et du sens de débardage (<code><a href="../reference/bornes_pente_cable.html">bornes_pente_cable()</a></code>), et précision du balayage gouvernée par <code>c_precision</code> (<code><a href="../reference/precision_cable.html">precision_cable()</a></code>).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.12.0" id="foretaccess-0120-2026-07-13">foretaccess 0.12.0 (2026-07-13)<a class="anchor" aria-label="anchor" href="#foretaccess-0120-2026-07-13"></a></h2>
 <div class="section level3">

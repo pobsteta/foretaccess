@@ -8,7 +8,13 @@ au pas de 1°, en **ligne droite**.
 ## Usage
 
 ``` r
-treuiller(mnt, desserte, zone, config = foretaccess_config())
+treuiller(
+  mnt,
+  desserte,
+  zone,
+  config = foretaccess_config(),
+  depart_cout = NULL
+)
 ```
 
 ## Arguments
@@ -29,6 +35,15 @@ treuiller(mnt, desserte, zone, config = foretaccess_config())
 
   Objet
   [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md).
+
+- depart_cout:
+
+  Vecteur de longueur `ncell(mnt)` : distance **déjà parcourue** pour
+  atteindre chaque cellule de départ. `NULL` (défaut) : les départs sont
+  sur la desserte, ils ne coûtent rien. Sinon le critère d'amélioration
+  porte sur le **total** `depart_cout + distance de treuil`, et non sur
+  la seule distance de treuil (cf. `skid_debusq_contour()` de
+  Sylvaccess, où chaque point du contour porte son `Dfor + Dpis`).
 
 ## Value
 

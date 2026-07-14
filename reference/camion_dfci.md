@@ -108,8 +108,8 @@ pre <- preprocess(file.path(toy, "mnt.tif"), file.path(toy, "desserte.gpkg"),
 df <- camion_dfci(pre)
 df$recap
 #>           classe cellules surface_ha
-#> 1     defendable     1443     3.6075
-#> 2 non_defendable      157     0.3925
-#> 3     hors_foret      704     1.7600
-#> 4    indetermine      196     0.4900
+#> 1     defendable     1600       4.00
+#> 2 non_defendable        0       0.00
+#> 3     hors_foret      704       1.76
+#> 4    indetermine      196       0.49
 ```

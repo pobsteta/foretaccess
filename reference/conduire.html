@@ -13,7 +13,7 @@ sous trois contraintes de pente, distinctes de celles du skidder (spec 003 §4.2
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ sous trois contraintes de pente, distinctes de celles du skidder (spec 003 §4.2
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">conduire</span><span class="op">(</span><span class="va">pre</span>, <span class="va">config</span>, <span class="va">zone</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">conduire</span><span class="op">(</span><span class="va">pre</span>, <span class="va">config</span>, <span class="va">zone</span>, sources <span class="op">=</span> <span class="cn">NULL</span>, depart_cout <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,6 +71,18 @@ sous trois contraintes de pente, distinctes de celles du skidder (spec 003 §4.2
 
 <dt id="arg-zone">zone<a class="anchor" aria-label="anchor" href="#arg-zone"></a></dt>
 <dd><p><code>SpatRaster</code> logique des cellules candidates à la conduite (forêt roulable).</p></dd>
+
+
+<dt id="arg-sources">sources<a class="anchor" aria-label="anchor" href="#arg-sources"></a></dt>
+<dd><p>Indices des cellules de départ. <code>NULL</code> (défaut) : les cellules de
+livraison de la desserte. La passe contour (<code>fwd_azimuts_contour</code>) y passe les
+cellules du bord de la zone déjà conduite.</p></dd>
+
+
+<dt id="arg-depart-cout">depart_cout<a class="anchor" aria-label="anchor" href="#arg-depart-cout"></a></dt>
+<dd><p>Vecteur de longueur <code>ncell(pre$mnt)</code> : distance <strong>déjà parcourue</strong>
+pour atteindre chaque source. <code>NULL</code> (défaut) : nulle. Sinon le critère
+d'amélioration porte sur le <strong>total</strong> <code>depart_cout + distance parcourue</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

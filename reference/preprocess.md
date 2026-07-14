@@ -31,7 +31,10 @@ preprocess(
 - desserte:
 
   Desserte : chemin de vecteur ou `sf` de lignes, avec un champ `classe`
-  dans `route`, `piste`, `dfci`.
+  dans `route`, `piste`, `dfci`, `reseau_public`. `reseau_public` est la
+  route ouverte à la circulation : point de chargement du camion, mais
+  **barrière** pour les engins de débardage — on n'y dépose pas de bois
+  et on ne la traverse pas.
 
 - foret:
 
@@ -79,6 +82,13 @@ rasters partagent exactement la grille du MNT.
 
   pente en pourcentage.
 
+- `slope_max_local`:
+
+  maximum de la pente sur la fenêtre 3 × 3. C'est lui, et non
+  `slope_pct`, que le seuil d'abattage manuel interroge : la zone
+  d'exclusion est *dilatée* d'une cellule (`slopes_skid()` de
+  Sylvaccess).
+
 - `aspect_deg`:
 
   exposition en degrés depuis le nord (plat = `NA`).
@@ -99,9 +109,15 @@ rasters partagent exactement la grille du MNT.
 
   1 où obstacle, 0 sinon.
 
+- `reseau_public_mask`:
+
+  1 sur le réseau public. Ce n'est pas une desserte forestière mais une
+  **barrière** : ni source de débardage, ni terrain traversable par les
+  engins.
+
 - `exclusion_mask`:
 
-  1 là où la pente dépasse le seuil d'abattage manuel.
+  1 là où le maximum local de pente dépasse le seuil d'abattage manuel.
 
 - `volume`:
 

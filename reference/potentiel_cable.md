@@ -1,14 +1,13 @@
 # Potentiel d'accessibilite par cable-mat (Lot 4d)
 
 Reproduit le balayage 360 deg / pixel de Sylvaccess v3.6 (moteur cable)
-: depuis chaque cellule de desserte (depart de ligne), un rayon est
-lance dans chacune des 360 directions ; le profil d'altitude sous le
-rayon est extrait du MNT, echantillonne au demi-metre, et la faisabilite
-d'une ligne de cable (travee simple, **sans support intermediaire**) est
-evaluee par le noyau Rust
-[`cable_test_span()`](https://pobsteta.github.io/foretaccess/reference/cable_test_span.md)
-jusqu'a `longueur_max_m`. Les cellules forestieres traversees par une
-ligne faisable sont marquees accessibles au cable.
+: depuis chaque **place de depot** (depart de ligne), un rayon est lance
+dans chaque direction ; le profil d'altitude sous le rayon est extrait
+du MNT, et le noyau Rust place jusqu'a `nb_supports_max` **supports
+intermediaires** (`OptPyl_Up_NoH`), coupant la ligne au point le plus
+lointain atteint quand il ne peut pas la porter entiere. Les cellules
+forestieres traversees par une ligne faisable sont marquees accessibles
+au cable.
 
 ## Usage
 
@@ -16,6 +15,7 @@ ligne faisable sont marquees accessibles au cable.
 potentiel_cable(
   pre,
   config = foretaccess_config(),
+  departs = NULL,
   write_dir = NULL,
   bord = NULL
 )
@@ -32,6 +32,15 @@ potentiel_cable(
 
   Objet `foretaccess_config`. Les parametres cable (garde au sol,
   materiel, geometrie) vivent dans `config$cable`.
+
+- departs:
+
+  Places de depot d'ou une ligne de cable peut partir : chemin de
+  vecteur ou objet `sf` (lignes, polygones ou points). Si la couche
+  porte un champ `cable`, seules les entites dont `cable` est non nul
+  sont retenues (equivalent de l'attribut `CABLE` de Sylvaccess). `NULL`
+  (defaut) : repli sur toute la desserte – voir la section *Places de
+  depot*.
 
 - write_dir:
 
@@ -55,7 +64,53 @@ azimut) faisable, pour la selection du Lot 5), `recap`, `grid`,
 
 ## Details
 
-Le placement de supports intermediaires (`OptPyl_Up`) et le pechage
-lateral (`distance_laterale_max_m`) sont des extensions futures (voir
-`specs/004`) : ce lot livre le potentiel **0 support**, colonne
-vertebrale testable.
+Le profil sert sous deux formes, comme dans la source : **au pixel**
+pour poser les supports, **au demi-metre** pour la garde au sol.
+
+## Validite de la ligne
+
+Avant meme de savoir si le cable TIENT, il faut savoir jusqu'ou la ligne
+a un SENS. `check_line` la coupe sur trois criteres geometriques : elle
+**finit en foret** (on n'installe pas un cable pour desservir un pre),
+elle ne traverse pas plus de `min(0,1 x longueur_max_m, longueur_min_m)`
+metres de non-foret d'affilee, et elle ne **court pas en travers d'un
+versant raide** (`angle_transversal_deg`, `pente_transversale_max_pct`,
+`distance_transversale_max_m`, `proportion_transversale_max`). Sans ce
+filtre, les lignes filent jusqu'a `longueur_max_m` a travers n'importe
+quel terrain : sur le jeu ColduPre, cela declare accessible a tort **10
+%** de la foret.
+
+## Sens de debardage
+
+Une ligne se resout dans l'un ou l'autre sens selon que la machine,
+posee sur la desserte, **domine** ou non le profil (mat au depart +
+`hauteur_mat_m` contre point haut de la ligne + `hauteur_ancrage_m`). «
+Machine en haut » : le cable descend, les bornes de pente sont
+`bornes_pente_cable()$amont_*`. « Machine en bas » : le cable monte, la
+ligne se resout sur le profil **retourne** (l'ancrage ouvre, le mat
+ferme) avec les bornes `aval_*` niees, et elle ne peut pas etre coupee
+du cote machine – seulement raccourcie par le haut.
+
+## Ecarts assumes avec Sylvaccess v3.6
+
+L'optimisation de la **hauteur de fixation** sur chaque support
+(`c_option_h = 1`) n'est pas implementee : on tient la variante `_NoH`,
+qui est le defaut de v3.6.
+
+Le **pechage lateral** (`distance_laterale_max_m`) reste une extension
+future.
+
+## Places de depot
+
+Une ligne de cable ne part pas de n'importe ou : installer un cable-mat
+exige une aire de depot, une plateforme et un acces camion. Sylvaccess
+en fait une **entree a part** (`c_file_departure`), dont il ne retient
+que les troncons portant l'attribut `CABLE` – sur son jeu de test
+officiel, **2 troncons sur 125**. Passer `departs` reproduit ce
+comportement.
+
+Sans `departs`, on retombe sur *toute* la desserte : la couverture est
+alors tres **optimiste** (on desservirait de la foret depuis des pistes
+incapables d'accueillir un cable) et le balayage, proportionnel au
+nombre de departs, devient tres long. Ce repli n'existe que pour les cas
+ou l'on ne dispose d'aucune couche de places de depot.

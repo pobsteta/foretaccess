@@ -9,7 +9,7 @@ distinctes de celles du skidder (spec 003 §4.2).
 ## Usage
 
 ``` r
-conduire(pre, config, zone)
+conduire(pre, config, zone, sources = NULL, depart_cout = NULL)
 ```
 
 ## Arguments
@@ -27,6 +27,19 @@ conduire(pre, config, zone)
 
   `SpatRaster` logique des cellules candidates à la conduite (forêt
   roulable).
+
+- sources:
+
+  Indices des cellules de départ. `NULL` (défaut) : les cellules de
+  livraison de la desserte. La passe contour (`fwd_azimuts_contour`) y
+  passe les cellules du bord de la zone déjà conduite.
+
+- depart_cout:
+
+  Vecteur de longueur `ncell(pre$mnt)` : distance **déjà parcourue**
+  pour atteindre chaque source. `NULL` (défaut) : nulle. Sinon le
+  critère d'amélioration porte sur le **total**
+  `depart_cout + distance parcourue`.
 
 ## Value
 

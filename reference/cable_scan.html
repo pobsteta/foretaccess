@@ -13,7 +13,7 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur)."><
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,6 +69,8 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 <span>  <span class="va">hline_max</span>,</span>
 <span>  <span class="va">slope_min</span>,</span>
 <span>  <span class="va">slope_max</span>,</span>
+<span>  <span class="va">slope_min_aval</span>,</span>
+<span>  <span class="va">slope_max_aval</span>,</span>
 <span>  <span class="va">f_o</span>,</span>
 <span>  <span class="va">tmax</span>,</span>
 <span>  <span class="va">q1</span>,</span>
@@ -77,7 +79,20 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 <span>  <span class="va">eao</span>,</span>
 <span>  <span class="va">angle_intsup</span>,</span>
 <span>  <span class="va">lmax</span>,</span>
-<span>  <span class="va">lmin</span></span>
+<span>  <span class="va">lmin</span>,</span>
+<span>  <span class="va">hintsup</span>,</span>
+<span>  <span class="va">sup_max</span>,</span>
+<span>  <span class="va">lmin_span</span>,</span>
+<span>  <span class="va">nbconfig</span>,</span>
+<span>  <span class="va">pas_azimut</span>,</span>
+<span>  <span class="va">pas_depart</span>,</span>
+<span>  <span class="va">aspect</span>,</span>
+<span>  <span class="va">pente</span>,</span>
+<span>  <span class="va">lsans_foret</span>,</span>
+<span>  <span class="va">angle_transv</span>,</span>
+<span>  <span class="va">slope_trans</span>,</span>
+<span>  <span class="va">l_slope</span>,</span>
+<span>  <span class="va">prop_slope</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -134,11 +149,19 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 
 
 <dt id="arg-slope-min">slope_min<a class="anchor" aria-label="anchor" href="#arg-slope-min"></a></dt>
-<dd><p>Minimum line slope (rad).</p></dd>
+<dd><p>Minimum line slope, uphill yarding (rad).</p></dd>
 
 
 <dt id="arg-slope-max">slope_max<a class="anchor" aria-label="anchor" href="#arg-slope-max"></a></dt>
-<dd><p>Maximum line slope (rad).</p></dd>
+<dd><p>Maximum line slope, uphill yarding (rad).</p></dd>
+
+
+<dt id="arg-slope-min-aval">slope_min_aval<a class="anchor" aria-label="anchor" href="#arg-slope-min-aval"></a></dt>
+<dd><p>Minimum line slope, downhill yarding (rad).</p></dd>
+
+
+<dt id="arg-slope-max-aval">slope_max_aval<a class="anchor" aria-label="anchor" href="#arg-slope-max-aval"></a></dt>
+<dd><p>Maximum line slope, downhill yarding (rad).</p></dd>
 
 
 <dt id="arg-f-o">f_o<a class="anchor" aria-label="anchor" href="#arg-f-o"></a></dt>
@@ -176,12 +199,64 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 <dt id="arg-lmin">lmin<a class="anchor" aria-label="anchor" href="#arg-lmin"></a></dt>
 <dd><p>Minimum line length (m).</p></dd>
 
+
+<dt id="arg-hintsup">hintsup<a class="anchor" aria-label="anchor" href="#arg-hintsup"></a></dt>
+<dd><p>Attachment height on an intermediate support (m).</p></dd>
+
+
+<dt id="arg-sup-max">sup_max<a class="anchor" aria-label="anchor" href="#arg-sup-max"></a></dt>
+<dd><p>Maximum number of intermediate supports.</p></dd>
+
+
+<dt id="arg-lmin-span">lmin_span<a class="anchor" aria-label="anchor" href="#arg-lmin-span"></a></dt>
+<dd><p>Minimum distance between two supports (m).</p></dd>
+
+
+<dt id="arg-nbconfig">nbconfig<a class="anchor" aria-label="anchor" href="#arg-nbconfig"></a></dt>
+<dd><p>Beam width of the support-placement search.</p></dd>
+
+
+<dt id="arg-pas-azimut">pas_azimut<a class="anchor" aria-label="anchor" href="#arg-pas-azimut"></a></dt>
+<dd><p>Azimuth step of the sweep (degrees).</p></dd>
+
+
+<dt id="arg-pas-depart">pas_depart<a class="anchor" aria-label="anchor" href="#arg-pas-depart"></a></dt>
+<dd><p>Sample every <code>pas_depart</code>-th departure cell.</p></dd>
+
+
+<dt id="arg-aspect">aspect<a class="anchor" aria-label="anchor" href="#arg-aspect"></a></dt>
+<dd><p>Terrain aspect (degrees, NaN on flats), row-major.</p></dd>
+
+
+<dt id="arg-pente">pente<a class="anchor" aria-label="anchor" href="#arg-pente"></a></dt>
+<dd><p>Terrain slope (percent), row-major.</p></dd>
+
+
+<dt id="arg-lsans-foret">lsans_foret<a class="anchor" aria-label="anchor" href="#arg-lsans-foret"></a></dt>
+<dd><p>Longest stretch a line may cross outside the forest (m).</p></dd>
+
+
+<dt id="arg-angle-transv">angle_transv<a class="anchor" aria-label="anchor" href="#arg-angle-transv"></a></dt>
+<dd><p>Minimum angle to the contour line (degrees).</p></dd>
+
+
+<dt id="arg-slope-trans">slope_trans<a class="anchor" aria-label="anchor" href="#arg-slope-trans"></a></dt>
+<dd><p>Terrain slope above which a cross-slope stretch counts (percent).</p></dd>
+
+
+<dt id="arg-l-slope">l_slope<a class="anchor" aria-label="anchor" href="#arg-l-slope"></a></dt>
+<dd><p>Maximum cumulated length on a steep cross-slope (m).</p></dd>
+
+
+<dt id="arg-prop-slope">prop_slope<a class="anchor" aria-label="anchor" href="#arg-prop-slope"></a></dt>
+<dd><p>Maximum share of the line on a steep cross-slope.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list: <code>couvert</code>, <code>longueur</code>, <code>azimut</code> (per cell) and the candidate
 line vectors <code>li_dep</code>, <code>li_az</code>, <code>li_lg</code>, <code>li_surf</code>, <code>li_sens</code>, <code>li_vol</code>,
-<code>li_ipc</code>.</p>
+<code>li_ipc</code>, <code>li_nsup</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

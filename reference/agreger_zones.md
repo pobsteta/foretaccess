@@ -92,11 +92,11 @@ agreger_zones(sk$accessibilite, zones)
 #> Bounding box:  xmin: 0 ymin: 0 xmax: 250 ymax: 250
 #> Projected CRS: RGF93 v1 / Lambert-93
 #>                         geometry zone_id surface_parcourable_ha
-#> 1 POLYGON ((0 0, 0 250, 125 2...       1                   2.02
-#> 2 POLYGON ((125 0, 125 250, 2...       2                   2.04
+#> 1 POLYGON ((0 0, 0 250, 125 2...       1                   2.03
+#> 2 POLYGON ((125 0, 125 250, 2...       2                   2.05
 #>   surface_accessible_ha surface_non_accessible_ha surface_hors_foret_ha
-#> 1                     0                         0                  0.86
-#> 2                     0                         0                  0.84
+#> 1                     0                         0                  0.85
+#> 2                     0                         0                  0.83
 #>   surface_indetermine_ha surface_totale_ha
 #> 1                  0.245             3.125
 #> 2                  0.245             3.125

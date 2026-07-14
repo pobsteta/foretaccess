@@ -24,6 +24,8 @@ cable_scan(
   hline_max,
   slope_min,
   slope_max,
+  slope_min_aval,
+  slope_max_aval,
   f_o,
   tmax,
   q1,
@@ -32,7 +34,20 @@ cable_scan(
   eao,
   angle_intsup,
   lmax,
-  lmin
+  lmin,
+  hintsup,
+  sup_max,
+  lmin_span,
+  nbconfig,
+  pas_azimut,
+  pas_depart,
+  aspect,
+  pente,
+  lsans_foret,
+  angle_transv,
+  slope_trans,
+  l_slope,
+  prop_slope
 )
 ```
 
@@ -88,11 +103,19 @@ cable_scan(
 
 - slope_min:
 
-  Minimum line slope (rad).
+  Minimum line slope, uphill yarding (rad).
 
 - slope_max:
 
-  Maximum line slope (rad).
+  Maximum line slope, uphill yarding (rad).
+
+- slope_min_aval:
+
+  Minimum line slope, downhill yarding (rad).
+
+- slope_max_aval:
+
+  Maximum line slope, downhill yarding (rad).
 
 - f_o:
 
@@ -130,8 +153,60 @@ cable_scan(
 
   Minimum line length (m).
 
+- hintsup:
+
+  Attachment height on an intermediate support (m).
+
+- sup_max:
+
+  Maximum number of intermediate supports.
+
+- lmin_span:
+
+  Minimum distance between two supports (m).
+
+- nbconfig:
+
+  Beam width of the support-placement search.
+
+- pas_azimut:
+
+  Azimuth step of the sweep (degrees).
+
+- pas_depart:
+
+  Sample every `pas_depart`-th departure cell.
+
+- aspect:
+
+  Terrain aspect (degrees, NaN on flats), row-major.
+
+- pente:
+
+  Terrain slope (percent), row-major.
+
+- lsans_foret:
+
+  Longest stretch a line may cross outside the forest (m).
+
+- angle_transv:
+
+  Minimum angle to the contour line (degrees).
+
+- slope_trans:
+
+  Terrain slope above which a cross-slope stretch counts (percent).
+
+- l_slope:
+
+  Maximum cumulated length on a steep cross-slope (m).
+
+- prop_slope:
+
+  Maximum share of the line on a steep cross-slope.
+
 ## Value
 
 A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
-`li_ipc`.
+`li_ipc`, `li_nsup`.

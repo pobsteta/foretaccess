@@ -11,7 +11,7 @@ après validation stricte. Aucune règle de moteur n'est appliquée ici."></head
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,7 +75,10 @@ résolution et le CRS de référence.</p></dd>
 
 <dt id="arg-desserte">desserte<a class="anchor" aria-label="anchor" href="#arg-desserte"></a></dt>
 <dd><p>Desserte : chemin de vecteur ou <code>sf</code> de lignes, avec un champ
-<code>classe</code> dans <code>route</code>, <code>piste</code>, <code>dfci</code>.</p></dd>
+<code>classe</code> dans <code>route</code>, <code>piste</code>, <code>dfci</code>, <code>reseau_public</code>. <code>reseau_public</code> est
+la route ouverte à la circulation : point de chargement du camion, mais
+<strong>barrière</strong> pour les engins de débardage — on n'y dépose pas de bois et on
+ne la traverse pas.</p></dd>
 
 
 <dt id="arg-foret">foret<a class="anchor" aria-label="anchor" href="#arg-foret"></a></dt>
@@ -119,6 +122,11 @@ treuillage du skidder raisonne sur les altitudes (Lot 2).</p></dd>
 <dt><code>slope_pct</code></dt>
 <dd><p>pente en pourcentage.</p></dd>
 
+<dt><code>slope_max_local</code></dt>
+<dd><p>maximum de la pente sur la fenêtre 3 × 3. C'est lui,
+et non <code>slope_pct</code>, que le seuil d'abattage manuel interroge : la zone
+d'exclusion est <em>dilatée</em> d'une cellule (<code>slopes_skid()</code> de Sylvaccess).</p></dd>
+
 <dt><code>aspect_deg</code></dt>
 <dd><p>exposition en degrés depuis le nord (plat = <code>NA</code>).</p></dd>
 
@@ -134,8 +142,14 @@ treuillage du skidder raisonne sur les altitudes (Lot 2).</p></dd>
 <dt><code>obstacles_complets_mask</code>, <code>obstacles_partiels_mask</code></dt>
 <dd><p>1 où obstacle, 0 sinon.</p></dd>
 
+<dt><code>reseau_public_mask</code></dt>
+<dd><p>1 sur le réseau public. Ce n'est pas une desserte
+forestière mais une <strong>barrière</strong> : ni source de débardage, ni terrain
+traversable par les engins.</p></dd>
+
 <dt><code>exclusion_mask</code></dt>
-<dd><p>1 là où la pente dépasse le seuil d'abattage manuel.</p></dd>
+<dd><p>1 là où le maximum local de pente dépasse le seuil
+d'abattage manuel.</p></dd>
 
 <dt><code>volume</code></dt>
 <dd><p>raster de volume aligné, ou <code>NULL</code>.</p></dd>
