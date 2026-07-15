@@ -197,13 +197,27 @@ traiter_par_tuiles <- function(pre,
   if (!is.null(pre$distance_piste)) {
     return(pre)
   }
-  cout <- surface_cout_skidder(pre, config)
-  d <- .distance_sur_piste(pre, cout)$distance
+  # MEME cout que le mono-bloc (`skidder()`) : la pente seule, sans surcout
+  # d'obstacle. Le reseau n'est pas un obstacle a la circulation sur lui-meme
+  # (cf. `skidder.R`, `Pond_pente` vs `Pond_pente2`). Utiliser `surface_cout_skidder`
+  # ici ajoutait le surcout d'obstacle sur le reseau : invisible sur le jouet (aucun
+  # obstacle sur ses pistes), mais divergent des le premier obstacle reel.
+  piste <- .distance_sur_piste(pre, ponderation_pente(pre$slope_pct))
 
   r <- terra::rast(pre$mnt)
-  terra::values(r) <- d
+  terra::values(r) <- piste$distance
   names(r) <- "distance_piste"
   pre$distance_piste <- r
+
+  # `injoignable` (piste orpheline, ne rejoignant aucune route) est un fait GLOBAL :
+  # calcule ici sur l'emprise entiere, puis decoupe par tuile. Le moteur s'en sert
+  # pour ecarter ces pistes des semences ET marquer inaccessibles les cellules
+  # qu'elles desservent. Sans le porter, le tuilage les gardait (toutes reputees
+  # joignables) et divergeait du mono-bloc.
+  ri <- terra::rast(pre$mnt)
+  terra::values(ri) <- as.numeric(piste$injoignable)
+  names(ri) <- "piste_injoignable"
+  pre$piste_injoignable <- ri
   pre
 }
 

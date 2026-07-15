@@ -118,24 +118,16 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
   ))
 }
 
-# Dijkstra a tas binaire, 8-connexite, cout porte par la cellule d'arrivee.
-# Travaille sur des vecteurs en ordre "row-major" (celui de terra::values()).
+# Tas binaire minimal (file de priorite). Mecanisme pur, sans regle metier : il sert
+# au Dijkstra ci-dessous et a la propagation de trainage du skidder, qui a besoin du
+# meme tas mais d'une regle de relaxation differente (`.propager_trainage()`).
 #
 # Le tas vit dans des vecteurs *locaux*, mutes en place via `<<-`. Le passer en
 # liste d'une fonction a l'autre ferait recopier le vecteur a chaque operation
 # (semantique de copie de R), ce qui rendrait le Dijkstra quadratique : mesure a
-# 357x plus lent sur 200 000 insertions. Le portage Rust reste direct.
-.dijkstra <- function(cout, franchissable, ids, depart, nr, nc, pas, cout_max) {
-  n <- nr * nc
-  diag <- pas * sqrt(2)
-
-  dist <- rep(Inf, n)
-  alloc <- rep(NA_real_, n)
-  pred <- rep(NA_real_, n)
-  fige <- logical(n)
-
-  # --- Tas binaire minimal, en vecteurs locaux. ------------------------------
-  capacite <- max(64L, length(depart) * 2L)
+# 357x plus lent sur 200 000 insertions. Les closures rendues ci-dessous partagent
+# cet environnement : elles mutent, elles ne recopient pas.
+.tas_binaire <- function(capacite = 64L) {
   h_cle <- integer(capacite)
   h_prio <- numeric(capacite)
   h_n <- 0L
@@ -189,18 +181,43 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
     cle
   }
 
-  # Decalages des 8 voisins : (dligne, dcolonne, longueur du pas).
-  dl <- c(-1L, -1L, -1L, 0L, 0L, 1L, 1L, 1L)
-  dc <- c(-1L, 0L, 1L, -1L, 1L, -1L, 0L, 1L)
-  pas_v <- c(diag, pas, diag, pas, pas, diag, pas, diag)
+  list(ajouter = ajouter, retirer = retirer, vide = function() h_n == 0L)
+}
+
+# Decalages des 8 voisins : (dligne, dcolonne, longueur du pas).
+.voisins_8 <- function(pas) {
+  diag <- pas * sqrt(2)
+  list(
+    dl = c(-1L, -1L, -1L, 0L, 0L, 1L, 1L, 1L),
+    dc = c(-1L, 0L, 1L, -1L, 1L, -1L, 0L, 1L),
+    pas = c(diag, pas, diag, pas, pas, diag, pas, diag)
+  )
+}
+
+# Dijkstra a tas binaire, 8-connexite, cout porte par la cellule d'arrivee.
+# Travaille sur des vecteurs en ordre "row-major" (celui de terra::values()).
+# C'est le candidat naturel a un portage Rust si la performance l'exige (ADR-001).
+.dijkstra <- function(cout, franchissable, ids, depart, nr, nc, pas, cout_max) {
+  n <- nr * nc
+
+  dist <- rep(Inf, n)
+  alloc <- rep(NA_real_, n)
+  pred <- rep(NA_real_, n)
+  fige <- logical(n)
+
+  tas <- .tas_binaire(max(64L, length(depart) * 2L))
+  vo <- .voisins_8(pas)
+  dl <- vo$dl
+  dc <- vo$dc
+  pas_v <- vo$pas
 
   # Les sources sont a cout nul et s'allouent a elles-memes.
   dist[depart] <- 0
   alloc[depart] <- ids[depart]
-  for (s in depart) ajouter(s, 0)
+  for (s in depart) tas$ajouter(s, 0)
 
-  while (h_n > 0L) {
-    u <- retirer()
+  while (!tas$vide()) {
+    u <- tas$retirer()
     if (fige[u]) next
     fige[u] <- TRUE
 
@@ -223,7 +240,7 @@ propager_cout <- function(surface_cout, sources, zone = NULL, cout_max = Inf) {
       dist[v] <- dv
       alloc[v] <- alloc[u]
       pred[v] <- u
-      ajouter(v, dv)
+      tas$ajouter(v, dv)
     }
   }
 

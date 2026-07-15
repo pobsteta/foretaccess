@@ -69,7 +69,20 @@ certifier_propagation <- function(surface_cout,
                                   cout_max = Inf) {
   surface_cout <- .as_raster(surface_cout, "surface_cout")
   prop <- propager_cout(surface_cout, sources, zone = zone, cout_max = cout_max)
+  .certifier_depuis(surface_cout, prop, zone_majorante, bord, cout_max)
+}
 
+# Certifie une propagation DEJA CALCULEE, en la confrontant a ce qu'un chemin venu du
+# dehors pourrait atteindre. Separee de `certifier_propagation()` pour que le skidder
+# puisse certifier sa propagation a veto (`.propager_trainage()`), qui n'est pas un
+# Dijkstra et ne passe donc pas par `propager_cout()`.
+#
+# Le certificat reste correct pour elle : sa distance est SUPERIEURE OU EGALE au
+# minimum forestier pur (le veto ne fait que bloquer des ameliorations), tandis que
+# `d_bord` reste ce minimum. Comparer les deux ne peut donc que certifier MOINS de
+# cellules qu'il n'est permis -- jamais plus. Le doute penche du bon cote.
+.certifier_depuis <- function(surface_cout, prop, zone_majorante, bord,
+                              cout_max = Inf, strict = FALSE) {
   entrees <- .entrees(surface_cout, bord, zone_majorante)
   d_r <- .cout_ou_infini(prop$cout_cumule)
 
@@ -81,7 +94,18 @@ certifier_propagation <- function(surface_cout,
     d_b <- .cout_ou_infini(prop_b$cout_cumule)
   }
 
-  certifie <- d_r <= d_b
+  # `strict` : ne certifier qu'en INEGALITE STRICTE. Le theoreme du halo certifie a
+  # l'egalite `d_R = d_b` -- la distance y reste exacte -- mais cela suppose une
+  # semantique de plus court chemin. La propagation a VETO (`.propager_trainage()`)
+  # n'en est pas une : a egalite, un chemin venu du dehors peut atteindre le meme cout
+  # forestier PUIS renverser le choix de semence du veto (payload `d_piste` different).
+  # L'inegalite stricte l'exclut -- aucun chemin externe n'egale meme le cout interne,
+  # donc le chemin gagnant est entierement dans la fenetre, semence et payload compris.
+  certifie <- if (strict) {
+    (d_r < d_b) | (is.infinite(d_r) & is.infinite(d_b))
+  } else {
+    d_r <= d_b
+  }
   # A egalite, un chemin exterieur peut atteindre le meme cout par une autre source :
   # la distance reste exacte, l'allocation non. Une cellule inaccessible des deux cotes
   # n'a pas d'allocation : la sienne, `NA`, est exacte.

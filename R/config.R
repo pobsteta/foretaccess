@@ -68,6 +68,17 @@ foretaccess_config <- function(skidder = list(),
       hauteur_attache_treuil_m     = 10,
       hauteur_degagement_max_m     = 30,
       surcout_obstacle_complet     = 1000,
+      # Ce que vaut un metre de piste, en metres de foret, dans les deux decisions
+      # du trainage. Sylvaccess les code en dur, avec DEUX valeurs distinctes :
+      #  * 0,5 pour CHOISIR ENTRE DEUX PISTES (`Dfwd_flat_forest_tracks`,
+      #    sylvaccess_cython3.pyx:3715 -- le test, normalise, minimise
+      #    `d_foret + 0,5 x d_piste`) ;
+      #  * 0,1 pour RENONCER A LA PISTE AU PROFIT DE LA ROUTE (`skid_fill_opt1`,
+      #    pyx:4283) -- soit un fort biais en faveur de la piste : il faut que la
+      #    route soit vraiment meilleure pour qu'on quitte la piste.
+      # Promus en parametres (ADR-003).
+      ponderation_piste_propagation = 0.5,
+      ponderation_piste_arbitrage   = 0.1,
       # 1 = privilegier le treuillage (limiter l'impact sur le sol, defaut v3.6) ;
       # 2 = privilegier le debusquage. Seule l'option 1 est implementee.
       option_modelisation          = 1L,
@@ -230,6 +241,10 @@ validate_config <- function(cfg) {
     ))
   }
   checkmate::assert_number(sk$surcout_obstacle_complet, lower = 0, finite = TRUE)
+  # Une ponderation negative rendrait le cout initial du Dijkstra negatif -- donc
+  # l'etiquette non monotone, et le plus court chemin faux (cf. `.cout_initial()`).
+  checkmate::assert_number(sk$ponderation_piste_propagation, lower = 0, finite = TRUE)
+  checkmate::assert_number(sk$ponderation_piste_arbitrage, lower = 0, finite = TRUE)
   checkmate::assert_choice(as.integer(sk$option_modelisation), c(1L, 2L))
   checkmate::assert_numeric(sk$classes_distance_m, lower = 0, min.len = 2,
                             any.missing = FALSE, sorted = TRUE, unique = TRUE)
