@@ -30,6 +30,8 @@ mnt <- terra::rast(file.path(IN, "mnt.tif"))
 
 desserte <- sf::st_read(file.path(IN, "forest_roadnetwork.gpkg"), quiet = TRUE)
 desserte$classe <- c("piste", "route", "reseau_public")[desserte$CL_SVAC]
+# Flag CL_DFCI (orthogonal aux classes) : sources du camion DFCI (Lot 12a.4).
+desserte$dfci <- desserte$CL_DFCI
 
 foret <- sf::st_read(file.path(IN, "forest_area.gpkg"), quiet = TRUE)
 
@@ -125,6 +127,9 @@ if (!identical(Sys.getenv("FA_CABLE"), "0")) {
 } else {
   message("  cable        SAUTE (FA_CABLE=0)")
 }
+
+# Camion DFCI : balayage radial depuis le flag CL_DFCI (Lot 12a.4).
+res_dfci <- tic("dfci", camion_dfci(pre, config = cfg, write_dir = file.path(OUT, "dfci")))
 
 saveRDS(chrono, file.path(OUT, "chrono.rds"))
 message("\nSorties ForetAccess : ", OUT)

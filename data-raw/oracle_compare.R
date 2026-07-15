@@ -194,4 +194,25 @@ if (!is.null(acc_cs) && !is.null(acc_cf)) {
   accord_binaire(acc_cf %in% codes, vrai_ou_faux(acc_cs), foret, "Zone accessible (cable)")
 }
 
+# --- DFCI -------------------------------------------------------------------
+# L'oracle DFCI n'est pas dans le lanceur standard (g_do_dfci defaut false) : le
+# bloc se saute si `DFCI_1/` est absent.
+d_dir <- file.path(SYLVA, "DFCI_1")
+acc_ds <- lire(d_dir, "Foret_accessible.tif")
+acc_df <- lire(FA, "dfci", "accessibilite.tif")
+if (!is.null(acc_ds) && !is.null(acc_df)) {
+  cat("\n\n#############  DFCI  #############\n")
+  cat("(balayage radial de la lance, sources CL_DFCI ; Lot 12a.4.)\n")
+  lev <- terra::levels(acc_df)[[1]]
+  codes <- lev$value[grepl("^defendable", lev[[2]])]
+  accord_binaire(acc_df %in% codes, vrai_ou_faux(acc_ds), foret, "Zone defendable (dfci)")
+
+  # Longueur de lance (m) : ecart sur les cellules defendables des deux cotes.
+  lance_s <- lire(d_dir, "Longueur_lance.tif")
+  lance_f <- lire(FA, "dfci", "longueur_lance.tif")
+  if (!is.null(lance_s) && !is.null(lance_f)) {
+    ecart_continu(lance_f, lance_s, foret, "Longueur de lance (dfci)")
+  }
+}
+
 cat("\n")

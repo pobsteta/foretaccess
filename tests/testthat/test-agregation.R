@@ -77,7 +77,11 @@ test_that("l'agregation fonctionne sur la sortie DFCI", {
   df <- camion_dfci(pre)
   zones <- zones_moities(pre$mnt)
   agg <- agreger_zones(df$accessibilite, zones, id = "nom")
-  expect_true("surface_defendable_ha" %in% names(agg))
+  # Taxonomie DFCI a 6 classes (Lot 12a.4) : la defendabilite est scindee en
+  # trois bandes de lance (defendable_c1/c2/c3).
+  expect_true("surface_defendable_c1_ha" %in% names(agg))
+  expect_true("surface_defendable_c2_ha" %in% names(agg))
+  expect_true("surface_defendable_c3_ha" %in% names(agg))
   expect_true("surface_hors_foret_ha" %in% names(agg))
 })
 

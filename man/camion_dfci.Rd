@@ -2,7 +2,7 @@
 % Please edit documentation in R/dfci.R
 \name{camion_dfci}
 \alias{camion_dfci}
-\title{Moteur camion DFCI — zone défendable (beta)}
+\title{Moteur camion DFCI — zone de défendabilité (balayage radial)}
 \usage{
 camion_dfci(pre, config = foretaccess_config(), write_dir = NULL, bord = NULL)
 }
@@ -13,51 +13,54 @@ camion_dfci(pre, config = foretaccess_config(), write_dir = NULL, bord = NULL)
 
 \item{write_dir}{Répertoire d'écriture des rasters en GeoTIFF/COG, ou \code{NULL}.}
 
-\item{bord}{Côtés ouverts de la fenêtre quand \code{pre} est une \strong{tuile} (voir
-\code{\link[=certifier_propagation]{certifier_propagation()}}). \code{NULL} (défaut) : \code{pre} couvre tout le territoire.}
+\item{bord}{Côtés ouverts de la fenêtre quand \code{pre} est une \strong{tuile}. \code{NULL}
+(défaut) : \code{pre} couvre tout le territoire.}
 }
 \value{
 Un objet de classe \code{foretaccess_dfci} :
 \describe{
-\item{\code{accessibilite}}{\code{SpatRaster} catégoriel : \code{defendable},
-\code{non_defendable}, \code{hors_foret}. \code{NA} = indéterminé.}
-\item{\code{distance_defense}}{distance de défense au terrain (m) depuis la
-desserte-source la plus proche ; 0 sur la desserte, \code{NA} hors portée.}
-\item{\code{allocation}}{cellule de desserte de rattachement.}
-\item{\code{certifie}}{\code{SpatRaster} logique, ou \code{NULL} si \code{bord} l'est.}
+\item{\code{accessibilite}}{\code{SpatRaster} catégoriel à 6 classes : \code{inaccessible},
+\code{non_defendable_pente}, \code{defendable_c1}/\code{c2}/\code{c3} (bandes de lance),
+\code{hors_foret}.}
+\item{\code{longueur_lance}}{longueur de lance (m) atteignant la cellule ; \code{NA}
+hors portée / hors forêt.}
+\item{\code{denivele}}{dénivelé cellule − desserte-source (m) ; \code{NA} idem.}
+\item{\code{lien_reseau}}{cellule de desserte DFCI de rattachement (index 1-based).}
+\item{\code{pente_ok}}{\code{SpatRaster} logique : pente ≤ seuil pompier.}
+\item{\code{certifie}}{\code{SpatRaster} logique (tuilage), ou \code{NULL}.}
 \item{\code{recap}}{\code{data.frame} des surfaces et volumes par classe.}
 \item{\code{grid}, \code{config}, \code{fichiers}}{comme au Lot 1.}
 }
 }
 \description{
-Cartographie la \strong{zone défendable} contre l'incendie depuis les dessertes
-DFCI (défense de la forêt contre les incendies), en réponse à EF-8. Sortie
-\strong{beta} au sens du brief (§4.5) : le modèle est volontairement simple et ses
-limites sont explicites (voir \emph{Section limites}).
+Cartographie la \strong{zone défendable} contre l'incendie depuis le réseau DFCI
+(défense de la forêt contre les incendies). Transcription du moteur
+\code{debusq_dfci} de Sylvaccess v3.6 : depuis chaque pixel du réseau DFCI, une
+\strong{lance} est déroulée en ligne droite dans les 360 azimuts (pas de 1°). La
+lance \strong{épouse le relief} (longueur 3D cumulée cellule à cellule), elle est
+plafonnée à \code{config$dfci$distance_defense_max_m} (\code{dfci_lmax}) et \strong{arrêtée}
+par une pente supérieure à \code{config$dfci$pente_defense_max_pct} (\code{dfci_slope_max}),
+par un obstacle, ou par le bord.
 }
 \details{
-Le camion stationne sur une desserte carrossable et défend le terrain
-avoisinant, dans une \strong{portée latérale} limitée. On modélise cette portée par
-un \strong{plus court chemin pondéré par la pente} (\code{\link[=propager_cout]{propager_cout()}},
-\code{\link[=surface_cout_skidder]{surface_cout_skidder()}}) depuis les cellules de desserte-source, plafonné à
-\code{config$dfci$distance_defense_max_m} et interdit au-delà de la pente
-d'intervention \code{config$dfci$pente_defense_max_pct}. C'est donc un \strong{tampon au
-terrain} : la distance de défense épouse le relief, et le terrain trop raide
-est réputé indéfendable.
+Ce n'est \strong{pas} un plus court chemin pondéré (le chemin \code{calc_dist_dfci} de
+Sylvaccess est désactivé) mais un \strong{lancer de rayons radial} : la charge est
+défendue en ligne droite depuis la desserte, tant que le terrain se laisse
+franchir. La longueur de lance minimale atteignant chaque cellule de forêt donne
+sa \strong{classe de défendabilité} (bandes \code{config$dfci$classes_distance_m}).
 
-Les dessertes-source sont les classes listées dans \code{config$dfci$classes_source}
-(défaut : \code{"dfci"} seul). Une cellule de forêt atteinte est \code{defendable} ; une
-cellule de forêt non atteinte, \code{non_defendable} ; le reste, \code{hors_foret}.
+Les sources sont les cellules portant le flag \strong{\code{CL_DFCI}} (attribut orthogonal
+aux classes route/piste/réseau public : une desserte peut être route classique
+\emph{et} réseau de défense). Elles sont portées par \code{\link[=preprocess]{preprocess()}} dans
+\code{pre$dfci_source_mask}.
 }
-\section{Section limites (beta)}{
+\section{Écart assumé avec Sylvaccess}{
 
-Le modèle \strong{ne représente pas} : le combustible (type de peuplement, charge),
-le vent, ni la physique de la lance (portée du jet, débit, pression). La portée
-de défense est un \strong{paramètre unique}, non dérivé des caractéristiques du
-matériel. Les dessertes sont prises telles quelles : leur carrossabilité réelle
-par un camion (projet QUALIROAD) n'est pas qualifiée. La coupure de pente est
-un proxy grossier d'atteignabilité. Ces sorties valent pour une \strong{première
-hiérarchisation}, pas pour du dimensionnement opérationnel.
+Le \strong{bug de masquage} du dénivelé (\code{sylvaccess_cython3.pyx:4807}, qui écrit aux
+coordonnées de la dernière source au lieu de la cellule courante) est \strong{corrigé} :
+\code{denivele} est bien remis à \code{NA} sur toute cellule non défendable. L'accord à
+l'oracle sur \code{Denivele_sur_piste} s'en trouve très légèrement dégradé, au profit
+de la justesse.
 }
 
 \examples{
@@ -68,5 +71,5 @@ df <- camion_dfci(pre)
 df$recap
 }
 \seealso{
-\code{\link[=skidder]{skidder()}}, \code{\link[=porteur]{porteur()}}, \code{\link[=propager_cout]{propager_cout()}}
+\code{\link[=skidder]{skidder()}}, \code{\link[=porteur]{porteur()}}, \code{\link[=potentiel_cable]{potentiel_cable()}}
 }

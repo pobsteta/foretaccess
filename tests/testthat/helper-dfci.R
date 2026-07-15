@@ -22,5 +22,12 @@ pre_plan_dfci <- function(pente = 0.05, n = 61, res = 5, classe = "dfci") {
   levels(d) <- data.frame(value = seq_along(classes), classe = classes)
   names(d) <- "desserte"
   pre$desserte <- d
+
+  # Le moteur radial lit les sources dans `pre$dfci_source_mask` (flag CL_DFCI),
+  # orthogonal aux classes. On derive le masque de la cellule DFCI posee ci-dessus.
+  src <- terra::rast(pre$mnt)
+  terra::values(src) <- as.numeric(!is.na(v) & v == match("dfci", classes))
+  names(src) <- "dfci_source_mask"
+  pre$dfci_source_mask <- src
   pre
 }

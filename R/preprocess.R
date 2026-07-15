@@ -112,6 +112,9 @@ preprocess <- function(mnt,
   # l'ajoute aux obstacles du porteur. Cf. `.classes_desserte()`.
   reseau_public_mask <- .masque_classe(desserte_rast, "reseau_public")
 
+  # 4ter. Sources du camion DFCI : flag CL_DFCI, orthogonal aux classes (Lot 12a.4).
+  dfci_source_mask <- .rasteriser_dfci_source(desserte, mnt)
+
   # 5. Masque d'exclusion : pente au-delà du seuil d'abattage manuel (ADR-003).
   #
   # Le critère porte sur le MAXIMUM LOCAL de la pente (fenêtre 3 × 3), pas sur la
@@ -148,6 +151,7 @@ preprocess <- function(mnt,
       obstacles_complets_mask = obstacles_complets_mask,
       obstacles_partiels_mask = obstacles_partiels_mask,
       reseau_public_mask      = reseau_public_mask,
+      dfci_source_mask        = dfci_source_mask,
       exclusion_mask          = exclusion_mask,
       volume                  = volume,
       parcellaire             = parcellaire,
@@ -247,6 +251,45 @@ preprocess <- function(mnt,
   r <- terra::rasterize(v, mnt, field = "code_classe", fun = "max", touches = TRUE)
   levels(r) <- data.frame(value = seq_along(classes), classe = classes)
   names(r) <- "desserte"
+  r
+}
+
+# Masque des sources DFCI : cellules touchees par une desserte portant le flag
+# `dfci` (attribut `CL_DFCI` chez Sylvaccess). C'est un flag ORTHOGONAL aux classes
+# route/piste/reseau_public : une meme desserte peut etre route classique ET reseau
+# de defense. Le reseau public, barriere pour les engins, redevient donc source
+# valide pour le camion-citerne s'il porte le flag. Sylvaccess : `respub =
+# allroads[allroads["CL_DFCI"]==1]` (create_arrays_from_roads_dfci). Absence de
+# colonne `dfci` -> masque nul (aucune source).
+.rasteriser_dfci_source <- function(desserte, mnt) {
+  m <- terra::rast(mnt)
+  vide <- function() {
+    terra::values(m) <- 0
+    names(m) <- "dfci_source_mask"
+    m
+  }
+  # Flag explicite CL_DFCI (voie principale, oracle) ; a defaut, la classe heritee
+  # `dfci` (pont de compatibilite pour les jeux qui ne portent pas le flag).
+  flag <- if (!is.null(desserte[["dfci"]])) {
+    !is.na(desserte$dfci) & desserte$dfci != 0
+  } else {
+    rep(FALSE, nrow(desserte))
+  }
+  classe_dfci <- if (!is.null(desserte[["classe"]])) {
+    cl <- as.character(desserte[["classe"]])
+    !is.na(cl) & cl == "dfci"
+  } else {
+    rep(FALSE, nrow(desserte))
+  }
+  src <- desserte[flag | classe_dfci, ]
+  if (nrow(src) == 0) {
+    return(vide())
+  }
+  # ALL_TOUCHED, comme la desserte : toute cellule effleuree par un troncon DFCI
+  # est un depart possible de lance.
+  r <- terra::rasterize(terra::vect(src), mnt, field = 1, background = 0, touches = TRUE)
+  r <- terra::ifel(is.na(r), 0, r)
+  names(r) <- "dfci_source_mask"
   r
 }
 

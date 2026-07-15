@@ -15,7 +15,8 @@
 - **Lot 12a (affinage de fidélité) livré en `v0.14.0`** : câble porté à **98,36 %** (pêchage
   latéral `c_l_hor`, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin,
   12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2).
-  **Reste 12a.4 (DFCI)** à traiter en session dédiée (oracle produit, moteur à refondre).
+  **12a.4 (DFCI) fait** : moteur radial `debusq_dfci` transcrit (noyau Rust `dfci_scan`), spec 006
+  réécrite, **accord oracle 99,87 %** (lance à 0 m d'écart médian). En cycle dev, non encore publié.
 - **Branche** : `main` (release `v0.14.0`)
 - **Version `DESCRIPTION`** : `0.14.0`
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
@@ -72,7 +73,7 @@
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
 | 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (3 supports) | `v0.6.0`, `v0.13.0` |
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
-| 6 | Camion DFCI (beta) | `specs/006-dfci.md` | ✅ terminé (beta) | `v0.8.0` |
+| 6 | Camion DFCI (radial) | `specs/006-dfci.md` | ✅ terminé (12a.4, oracle 99,87 %) | `v0.8.0`, 12a.4 |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
@@ -240,6 +241,38 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-15 — Lot 12a.4 : moteur DFCI radial (spec fausse corrigée, 99,87 %)
+
+**La spec 006 reposait sur une hypothèse fausse.** Elle affirmait « Sylvaccess n'a pas de module
+DFCI » et livrait une *conception propre* : un plus court chemin pondéré par la pente (Dijkstra).
+Faux — `Sylvaccess_5_dfci.py` (`debusq_dfci`) existe. Le moteur beta a donc été **jeté et
+réécrit** en transcription à la lettre.
+
+**Le vrai moteur est un lancer de rayons radial.** Depuis chaque pixel du réseau DFCI (flag
+`CL_DFCI`, orthogonal aux classes de desserte), une lance est tirée dans les 360 azimuts (pas 1°)
+et **épouse le relief** (`Lcum += sqrt(dh² + ddist²)`), plafonnée à `dfci_lmax = 440 m`, arrêtée
+par la pente (> `dfci_slope_max = 110 %`), un obstacle ou le bord. Le chemin Dijkstra
+(`calc_dist_dfci`) existe dans le `.pyx` mais y est **désactivé** — nous avions implémenté la
+mauvaise branche. Sortie : zone de défendabilité **5 classes** (inaccessible / non-défendable-pente
+/ 3 bandes de lance `0-120 / 120-280 / 280-440`), plus `Longueur_lance`, `Denivele_sur_piste`,
+`Lien_foret_reseau`, `Pente_OK_pompier`.
+
+**Architecture** : boucle chaude portée en **Rust** (`src/rust/src/dfci/`, `dfci_scan`), comme le
+câble. Modèle de données étendu : `preprocess()` rasterise `pre$dfci_source_mask` depuis le flag
+`CL_DFCI`. Arrondis fidèles (half-up cm, half-away dénivelé, pente seuil simple par cellule). Le
+**bug de masquage du dénivelé** (pyx:4807) est corrigé sciemment.
+
+**Le bug qui coûtait 20 points.** Première confrontation : 79 % seulement, 20,9 % trop conservateur,
+0 % trop optimiste — sous-couverture en blocs pleins à 45 m des sources. Diagnostic (carte ASCII) :
+un **décalage à un cran** dans le classement (`2L + bande` au lieu de `3L + bande`) codait la bande
+la plus proche (0-120 m, l'essentiel de la couverture) comme *non-défendable*. Corrigé.
+
+**Confrontation à l'oracle (ColduPre, 532 016 cellules)** : zone défendable **99,87 %** (0 % trop
+optimiste, 0,13 % trop conservateur), longueur de lance **écart médian 0,0 m**, dénivelé **0,0 m**.
+Le reliquat (0,13 %) est de la discrétisation de rayon en bordure. Banc étendu :
+`oracle_coldupre.R` + `oracle_compare.R` (bloc DFCI, sauté si l'oracle absent). Perf : ~76 s
+séquentiel (parallélisation `rayon` reportée au Lot 12c).
 
 ### 2026-07-15 — Lot 12a.3 : pêchage latéral du câble (96,58 % → 98,36 %)
 

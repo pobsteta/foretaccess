@@ -272,4 +272,23 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @export
 cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor)
 
+#' Balayage radial DFCI (`debusq_dfci`), porté en Rust.
+#'
+#' Depuis chaque pixel du réseau DFCI, déroule une lance 360 deg / 1 deg qui épouse
+#' le relief (`Lcum += sqrt(dh² + ddist²)`), plafonnée à `lmax`, arrêtée par la
+#' pente / un obstacle (`zone_ok == 0`) ou le bord. Balayage séquentiel dans l'ordre
+#' des sources (tie-break `>` strict : à longueur égale, la première source gagne).
+#'
+#' @param alt Elevation values (row-major, NA as NaN).
+#' @param nr Number of raster rows.
+#' @param nc Number of raster columns.
+#' @param res Cell size (m); square cells assumed.
+#' @param foret Forest mask (1 = forest, `Foret2`), row-major.
+#' @param sources DFCI network cell indices (1-based, row-major order).
+#' @param zone_ok Passable mask (1 = slope ok, no obstacle, non-nodata), row-major.
+#' @param lmax Maximum hose length (m).
+#' @return A list: `dist` (m), `deniv` (m), `lien` (1-based source cell), `acc`.
+#' @export
+dfci_scan <- function(alt, nr, nc, res, foret, sources, zone_ok, lmax) .Call(wrap__dfci_scan, alt, nr, nc, res, foret, sources, zone_ok, lmax)
+
 # nolint end
