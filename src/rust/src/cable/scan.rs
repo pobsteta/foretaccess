@@ -62,6 +62,62 @@ pub fn build_rays(res: f64, portee_m: f64) -> Vec<Ray> {
     rays
 }
 
+/// Bande de pechage lateral precalculee pour un azimut : cellules du tampon
+/// perpendiculaire, avec leur distance *le long* de la ligne (`dalong`, qui borne
+/// la couverture a la longueur faisable) et leur decalage ligne/colonne.
+pub struct LatRay {
+    pub dl: Vec<i32>,
+    pub dc: Vec<i32>,
+    pub dalong: Vec<f64>,
+}
+
+/// Bandes de pechage lateral pour les 360 azimuts. Reproduit `create_rast_couv`
+/// (Sylvaccess) : la couverture d'une ligne n'est pas le seul axe mais un
+/// **rectangle** de demi-largeur `l_hor` autour du segment desserte -> bout de
+/// ligne. On precalcule, par azimut, toutes les cellules du demi-plan a distance
+/// laterale <= `l_hor` et a distance le long de la ligne dans `[0, lmax]`, triees
+/// par `dalong` : au balayage, la ligne faisable de longueur L couvre celles dont
+/// `dalong <= L`. Aucune contrainte geometrique (denivele, pente, visibilite) --
+/// c'est un simple tampon, fidele a la lettre.
+pub fn build_lat_rays(res: f64, portee_m: f64, l_hor: f64) -> Vec<LatRay> {
+    let lmax = portee_m + 1.5 * res;
+    // Rayon de recherche en cellules : portee le long + tampon lateral.
+    let rmax = ((lmax + l_hor) / res).ceil() as i32 + 1;
+    let mut lats = Vec::with_capacity(360);
+    for az in 0..360 {
+        let rad = az as f64 * std::f64::consts::PI / 180.0;
+        let (sa, ca) = (rad.sin(), rad.cos());
+        let (mut dl, mut dc, mut da) = (Vec::new(), Vec::new(), Vec::new());
+        for ll in -rmax..=rmax {
+            for cc in -rmax..=rmax {
+                if ll == 0 && cc == 0 {
+                    continue; // depart exclu
+                }
+                // Deplacement metrique : est = cc*res, nord = -ll*res.
+                let e = cc as f64 * res;
+                let north = -(ll as f64) * res;
+                let dalong = e * sa + north * ca; // projection le long de l'azimut
+                let dlat = (e * ca - north * sa).abs(); // ecart perpendiculaire
+                if dalong >= 0.0 && dalong <= lmax && dlat <= l_hor {
+                    dl.push(ll);
+                    dc.push(cc);
+                    da.push(dalong);
+                }
+            }
+        }
+        // Tri par distance le long de la ligne : la coupe `dalong <= L` devient un
+        // simple prefixe.
+        let mut idx: Vec<usize> = (0..da.len()).collect();
+        idx.sort_by(|&i, &j| da[i].partial_cmp(&da[j]).unwrap());
+        lats.push(LatRay {
+            dl: idx.iter().map(|&i| dl[i]).collect(),
+            dc: idx.iter().map(|&i| dc[i]).collect(),
+            dalong: idx.iter().map(|&i| da[i]).collect(),
+        });
+    }
+    lats
+}
+
 /// Arrondi au plus proche, demi vers le pair (comme `round()` de R / IEC 60559),
 /// la ou `f64::round` arrondit demi loin de zero. Determine l'exactitude du
 /// balayage vis-a-vis de l'ancienne boucle R.
@@ -186,10 +242,12 @@ pub fn scan(
     slope_trans: f64,
     l_slope: f64,
     prop_slope: f64,
+    l_hor: f64,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
     let rays = build_rays(res, lmax);
+    let lat_rays = build_lat_rays(res, lmax, l_hor);
     let pas_az = pas_azimut.max(1);
     let pas_dep = pas_depart.max(1);
 
@@ -398,6 +456,25 @@ pub fn scan(
                 continue;
             }
 
+            // Pechage lateral (`create_rast_couv`) : la ligne faisable couvre aussi
+            // le rectangle de demi-largeur `l_hor` autour de son axe, jusqu'a sa
+            // longueur retenue. On ne l'ajoute qu'a la couverture (couvert/longueur/
+            // azimut) -- la surface/volume de la ligne, eux, restent sur l'axe.
+            if l_hor > 0.0 {
+                let lat = &lat_rays[az];
+                for i in 0..lat.dalong.len() {
+                    if lat.dalong[i] > longueur {
+                        break; // trie par dalong : au-dela, plus rien
+                    }
+                    let l = dl0 as i64 + lat.dl[i] as i64;
+                    let c = dc0 as i64 + lat.dc[i] as i64;
+                    if l >= 0 && (l as usize) < nr && c >= 0 && (c as usize) < nc {
+                        let cell = (l as usize) * nc + c as usize;
+                        covers.push(Cover { cell, lg: longueur, az: az as i32 });
+                    }
+                }
+            }
+
             // Cellules forestieres couvertes.
             let cf: Vec<usize> = couv.iter().cloned().filter(|&c| foret[c] == 1).collect();
             if cf.is_empty() {
@@ -468,6 +545,50 @@ mod tests {
             // hdist croissant.
             for i in 1..r.hdist.len() {
                 assert!(r.hdist[i] >= r.hdist[i - 1] - 1e-9);
+            }
+        }
+    }
+
+    #[test]
+    fn lat_rays_form_a_sorted_perpendicular_band() {
+        let res = 5.0;
+        let l_hor = 40.0;
+        let lats = build_lat_rays(res, 100.0, l_hor);
+        assert_eq!(lats.len(), 360);
+        // Marge d'un demi-diagonale de cellule sur l'ecart lateral mesure au centre.
+        let marge = res * std::f64::consts::SQRT_2 * 0.5;
+        for (az, lat) in lats.iter().enumerate() {
+            let rad = az as f64 * std::f64::consts::PI / 180.0;
+            let (sa, ca) = (rad.sin(), rad.cos());
+            // dalong trie et jamais negatif.
+            for i in 0..lat.dalong.len() {
+                assert!(lat.dalong[i] >= 0.0);
+                if i > 0 {
+                    assert!(lat.dalong[i] >= lat.dalong[i - 1] - 1e-9);
+                }
+                // Toute cellule retenue est dans la bande |dlat| <= l_hor.
+                let e = lat.dc[i] as f64 * res;
+                let north = -(lat.dl[i] as f64) * res;
+                let dlat = (e * ca - north * sa).abs();
+                assert!(dlat <= l_hor + marge);
+                assert!(!(lat.dl[i] == 0 && lat.dc[i] == 0));
+            }
+        }
+        // Le long de l'est (az 90), une cellule a l'est de meme rangee est dans la
+        // bande, une cellule loin au nord (perpendiculaire) au-dela de l_hor non.
+        let est = &lats[90];
+        assert!(est.dl.iter().zip(&est.dc).any(|(&l, &c)| l == 0 && c == 1));
+        assert!(!est.dl.iter().zip(&est.dc).any(|(&l, &c)| c == 1 && (l as f64 * res) > l_hor));
+    }
+
+    #[test]
+    fn lat_rays_empty_when_no_buffer() {
+        let lats = build_lat_rays(5.0, 100.0, 0.0);
+        assert_eq!(lats.len(), 360);
+        // Sans tampon, seule la cellule d'axe exact (dlat == 0) survit -- jamais (0,0).
+        for lat in &lats {
+            for i in 0..lat.dl.len() {
+                assert!(!(lat.dl[i] == 0 && lat.dc[i] == 0));
             }
         }
     }

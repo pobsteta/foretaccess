@@ -80,7 +80,9 @@ seulement raccourcie par le haut.
 L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h = 1})
 n'est pas implementee : on tient la variante \verb{_NoH}, qui est le defaut de v3.6.
 
-Le \strong{pechage lateral} (\code{distance_laterale_max_m}) reste une extension future.
+Le \strong{pechage lateral} (\code{distance_laterale_max_m}, \code{c_l_hor}) est pris en compte :
+la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
+demi-largeur \code{c_l_hor} autour du segment, comme \code{create_rast_couv} chez Sylvaccess.
 }
 
 \section{Places de depot}{

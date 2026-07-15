@@ -41,10 +41,13 @@ test_that("des cellules forestieres sont accessibles au cable, bornees par lmax"
   acc <- which(codes == 1L) # accessible_cable
   expect_gt(length(acc), 0)
 
-  # Toutes les cellules accessibles sont a moins de longueur_max_m du depart.
+  # Toutes les cellules accessibles restent dans l'enveloppe geometrique d'une
+  # ligne : au plus longueur_max_m le long de l'axe et distance_laterale_max_m
+  # perpendiculairement (pechage lateral), soit sqrt(lmax^2 + l_hor^2) du depart.
   xy <- terra::xyFromCell(ca$accessibilite, acc)
   dist <- sqrt((xy[, 1] - x_dep)^2 + (xy[, 2] - y_dep)^2)
-  expect_true(all(dist <= 60 + 5)) # + une cellule de tolerance
+  borne <- sqrt(60^2 + 40^2) + 5 # + une cellule de tolerance
+  expect_true(all(dist <= borne))
 })
 
 test_that("une cellule hors de portee n'est pas accessible", {

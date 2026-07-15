@@ -7,8 +7,8 @@
 ## 1. Pourquoi ce lot
 
 Le Lot 11 a mis ForêtAccess à **99,95 % / 99,72 % / 96,58 %** d'accord avec Sylvaccess
-(skidder / porteur / câble) sur le jeu officiel ColduPre. Ce qui reste n'est plus du gros
-œuvre, mais il reste :
+(skidder / porteur / câble) sur le jeu officiel ColduPre ; le Lot 12a a porté le câble à
+**98,36 %** (pêchage latéral, 12a.3). Ce qui reste n'est plus du gros œuvre, mais il reste :
 
 * **trois écarts de fidélité identifiés**, dont un qui *fausse une sortie utilisateur* sur un
   jeu autre que ColduPre (la pondération de la piste) ;
@@ -139,19 +139,41 @@ décomposition est corrigée) :
 | Distance dans forêt | −11,9 m | **+1,2 m** |
 | Distance totale | −38,4 m | **+0,5 m** |
 
-### 12a.3 — Reliquat du câble (2,79 % trop conservateurs)
+### 12a.3 — Reliquat du câble (2,79 % trop conservateurs) — IMPLÉMENTÉ
 
-L'accord câble est à 96,58 %, et l'écart est **asymétrique** : 2,79 % trop conservateurs contre
-0,63 % trop optimistes. Cette signature dit qu'il nous manque encore de la portée, pas qu'on est
-trop permissif. Deux candidats **connus et assumés** :
+L'accord câble est à 96,58 %, écart **asymétrique** : 2,79 % trop conservateurs contre 0,63 %
+trop optimistes. Caractérisation faite (11 468 cellules, en mémoire, sans rien écrire) :
 
-* l'**optimisation de la hauteur de fixation** (`c_option_h = 1`) — hors défaut v3.6, donc hors
-  périmètre tant qu'on ne cible que le défaut ;
-* le **pêchage latéral** — la charge n'est pas forcément sous la ligne.
+* **96,4 %** des cellules manquées sont à **≤ 40 m** (= `c_l_hor`) d'un couloir câble **traçable**
+  (les 1 912 lignes candidates de Sylvaccess), et 90,4 % à ≤ 40 m d'un point que **nous** déclarons
+  déjà accessible : ce sont des **franges accolées** à nos corridors (distance médiane 15 m), pas
+  des poches lointaines ;
+* elles sont sur des pentes **plus douces** (26,8° contre 33,1° pour la forêt) — l'**inverse** de la
+  signature d'un déficit de portée ou de garde au sol, qui frapperait le terrain raide ;
+* le vrai déficit de portée (hors de tout couloir, > 40 m) est **résiduel : 3,6 %** (~0,08 pt).
 
-*Travail* : d'abord **caractériser** les 2,79 % (sont-elles latérales à une ligne existante ? en
-bout de ligne ?) avant d'écrire une ligne de code. Le diagnostic décide lequel des deux porter —
-ou aucun.
+**Verdict : c'est le PÊCHAGE LATÉRAL** (`c_l_hor = 40 m`) — la charge décrochée à côté de la ligne,
+pas dessous. Ce n'est **pas** la hauteur de fixation (`c_option_h`, hors périmètre, et sans rapport
+avec ces cellules à pente douce).
+
+*Mécanique (lue à la lettre dans `Sylvaccess_0_functions.py`)* : `create_rast_couv` rasterise la
+`Zone_accessible` comme l'**union de rectangles** de demi-largeur `c_l_hor` autour du segment
+`(Xstart,Ystart)→(Xend,Yend)` de chaque ligne (`pt_emprise` + `ALL_TOUCHED`). C'est un **tampon
+perpendiculaire inconditionnel** : aucune contrainte de dénivelé, de pente latérale ni de visibilité
+— la charge est simplement décrochée à côté de l'axe. (La supposition « sous contrainte de dénivelé
+latéral » était fausse.)
+
+*Réalisation* : `build_lat_rays(res, lmax, l_hor)` précalcule, par azimut, les cellules du tampon
+avec leur distance *le long* de la ligne ; au balayage, une ligne faisable de longueur `L` couvre
+celles dont `dalong ≤ L`. Ajouté à la seule **couverture** (pas à la surface/volume de la ligne, qui
+restent sur l'axe). Noyau Rust (`src/rust/src/cable/scan.rs`), câblé via `cable_scan` → `ct$l_hor`
+(`distance_laterale_max_m`).
+
+*Résultat mesuré (ColduPre)* : accord câble **96,58 % → 98,36 %**. Le reliquat trop conservateur
+tombe de **2,79 % → 0,40 %** (~86 % de l'écart fermé). Contrepartie : trop optimiste **0,63 % →
+1,24 %** — on tamponne *toute* ligne candidate faisable, là où Sylvaccess ne tamponne que les lignes
+**retenues** (`Tab_result`) ; cette sur-couverture est le corollaire de l'absence de sélection de
+lignes (**Lot 5**), pas du tampon lui-même.
 
 ### 12a.4 — DFCI : moteur jamais confronté, spec fausse
 
@@ -161,12 +183,30 @@ ou aucun.
 lui-même n'a jamais été confronté à l'oracle** — il reste en statut *beta* sur une base
 hypothétique.
 
-*Travail* : lire `Sylvaccess_5_dfci.py`, réécrire `specs/006` **sur la source**, brancher le DFCI
-au banc oracle, corriger. C'est le dernier moteur non validé.
+**Ce n'est pas une retouche mais une réécriture** (analyse faite) : Sylvaccess v3.6 fait un
+**balayage radial rectiligne** (une lance qui s'arrête au premier obstacle, sans contourner), là où
+nous faisons un Dijkstra qui **contourne**. Pire, `CL_DFCI` est un **drapeau booléen orthogonal**
+aux classes de desserte : notre modèle de données (`classe` = enum exclusif) ne peut pas le
+représenter, et sur ColduPre notre moteur ne partirait de **rien**. Et Sylvaccess sort **7 classes**
+(dont « non défendable — pente », et les classes de distance) contre nos 3. Le coût-distance que
+nous avons réimplémenté (`calc_dist_dfci`) est en fait la version **abandonnée** en v3.6 (commentée
+dans la source).
 
-*Divergence assumée à re-arbitrer* : `dfci$classes_source` reste filtré sur les dessertes DFCI là
-où Sylvaccess part de tout le réseau. Justifiée en commentaire (un camion-citerne ne s'engage pas
-sur une piste de débardage) — à confirmer ou abandonner à la lumière de la source.
+*Prérequis levé* : **l'oracle DFCI est produit** (`data-raw/oracle/coldupre/foretaccess/` côté nous
+à venir ; côté Sylvaccess, 6 rasters — `Foret_accessible`, `Longueur_lance`, `Denivele_sur_piste`,
+`Lien_foret_reseau`, `Pente_OK_pompier`, `Foret_inaccessible` — 248 613 cellules accessibles).
+**L'upstream ne câble PAS son module DFCI à son lanceur** (`process_dfci` n'y est jamais importé) :
+il faut un lanceur maison qui importe `Sylvaccess_5_dfci` (fait, dans le scratch, sans toucher à
+l'upstream). À intégrer au banc (`data-raw/`) quand la réécriture démarrera.
+
+*Travail (session dédiée)* : (1) modèle de données — drapeau `dfci` orthogonal à `classe` ;
+(2) moteur en balayage radial (réutiliser la mécanique de `treuiller()`/`conduire()`) ; (3) 7
+classes de sortie, brancher `classes_distance_m` (aujourd'hui mort) ; (4) harnais + confrontation ;
+(5) réécrire `specs/006` sur la source. Ne pas reproduire le bug `pyx:4807` (`Deniv` mal indexé).
+
+*Divergence assumée à re-arbitrer* : Sylvaccess part de `CL_DFCI == 1` = routes forestières **+
+réseau public** (74 tronçons sur ColduPre), les pistes exclues — l'inverse de notre filtre actuel
+`classes_source = "dfci"` qui ne sélectionnerait rien. À trancher sur la source.
 
 ---
 
@@ -251,7 +291,7 @@ fixtures. Répliquer exactement `round()` (demi-au-pair) et `seq()`, comme pour 
 
 ## 6. Definition of Done
 
-* [ ] Accord ColduPre : skidder ≥ 99,95 %, porteur ≥ 99,72 %, câble ≥ 96,58 % — **aucun recul**.
+* [ ] Accord ColduPre : skidder ≥ 99,95 %, porteur ≥ 99,72 %, câble ≥ 98,36 % — **aucun recul**.
 * [ ] DFCI confronté à l'oracle, `specs/006` réécrite sur la source.
 * [ ] Distances du porteur comparées par le harnais (angle mort fermé).
 * [ ] Pondération de la piste implémentée, avec test sur un jeu où elle mord.

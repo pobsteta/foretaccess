@@ -265,10 +265,11 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param slope_trans Terrain slope above which a cross-slope stretch counts (percent).
 #' @param l_slope Maximum cumulated length on a steep cross-slope (m).
 #' @param prop_slope Maximum share of the line on a steep cross-slope.
+#' @param l_hor Lateral yarding half-width buffered around each line (m).
 #' @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 #'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 #'   `li_ipc`, `li_nsup`.
 #' @export
-cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope)
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor)
 
 # nolint end

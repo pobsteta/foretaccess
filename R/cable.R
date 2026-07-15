@@ -35,7 +35,9 @@
 #' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h = 1`)
 #' n'est pas implementee : on tient la variante `_NoH`, qui est le defaut de v3.6.
 #'
-#' Le **pechage lateral** (`distance_laterale_max_m`) reste une extension future.
+#' Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris en compte :
+#' la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
+#' demi-largeur `c_l_hor` autour du segment, comme `create_rast_couv` chez Sylvaccess.
 #'
 #' @section Places de depot:
 #' Une ligne de cable ne part pas de n'importe ou : installer un cable-mat exige
@@ -108,7 +110,8 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     aspect = as.numeric(terra::values(pre$aspect_deg)),
     pente = as.numeric(terra::values(pre$slope_pct)),
     lsans_foret = ct$lsans_foret, angle_transv = ct$angle_transv,
-    slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope
+    slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope,
+    l_hor = ct$l_hor
   )
 
   couvert <- sc$couvert == 1L
@@ -266,6 +269,7 @@ bornes_pente_cable <- function(ca) {
     slope_trans = ca$pente_transversale_max_pct,
     l_slope = ca$distance_transversale_max_m,
     prop_slope = ca$proportion_transversale_max,
+    l_hor = ca$distance_laterale_max_m,
     # `Lsans_foret = min(c_lmax * 0,1, c_lmin)` chez Sylvaccess, sauf surcharge.
     lsans_foret = if (is.na(ca$longueur_sans_foret_max_m)) {
       min(ca$longueur_max_m * 0.1, ca$longueur_min_m)
