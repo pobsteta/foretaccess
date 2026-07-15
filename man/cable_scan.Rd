@@ -42,7 +42,8 @@ cable_scan(
   angle_transv,
   slope_trans,
   l_slope,
-  prop_slope
+  prop_slope,
+  l_hor
 )
 }
 \arguments{
@@ -121,6 +122,8 @@ cable_scan(
 \item{l_slope}{Maximum cumulated length on a steep cross-slope (m).}
 
 \item{prop_slope}{Maximum share of the line on a steep cross-slope.}
+
+\item{l_hor}{Lateral yarding half-width buffered around each line (m).}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate
