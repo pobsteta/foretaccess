@@ -12,8 +12,12 @@
   atteint ». Accord cellule à cellule sur le jeu officiel ColduPre (411 309 cellules
   forestières) : **skidder 99,95 %**, **porteur 99,72 %**, **câble 96,58 %** — porté à **98,36 %**
   par le Lot 12a.3 (pêchage latéral, cycle dev, non encore publié).
-- **Branche** : `main` (release `v0.13.0`)
-- **Version `DESCRIPTION`** : `0.13.0`
+- **Lot 12a (affinage de fidélité) livré en `v0.14.0`** : câble porté à **98,36 %** (pêchage
+  latéral `c_l_hor`, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin,
+  12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2).
+  **Reste 12a.4 (DFCI)** à traiter en session dédiée (oracle produit, moteur à refondre).
+- **Branche** : `main` (release `v0.14.0`)
+- **Version `DESCRIPTION`** : `0.14.0`
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
