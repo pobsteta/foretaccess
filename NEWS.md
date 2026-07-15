@@ -1,3 +1,42 @@
+# foretaccess 1.0.0 (2026-07-15)
+
+Première version **majeure**. Le sens du bump est celui décidé au Lot 11 : `v1.0.0` signifie
+« **validée contre le vrai moteur Sylvaccess** », non « périmètre atteint ». Ce préalable est
+désormais tenu sur les **quatre moteurs**, confrontés cellule à cellule au jeu officiel ColduPre
+(sorties Sylvaccess v3.6 produites en propre, aucun oracle n'étant livré avec le dépôt amont) :
+
+| Moteur | Accord | Trop optimistes | Trop conservateurs |
+|---|---|---|---|
+| Skidder | **99,95 %** | 0,04 % | 0,01 % |
+| Porteur | **99,72 %** | 0,22 % | 0,06 % |
+| Câble | **98,36 %** | 1,24 % | 0,40 % |
+| Camion DFCI | **99,87 %** | 0,00 % | 0,13 % |
+
+Et **toutes les distances collent**, décomposition comprise (débusquage, traînage en forêt et sur
+piste, total) : écart médian à l'arrondi près, la pondération de la piste dans l'arbitrage
+(`d_foret + 0,5·d_piste` en propagation, `+ 0,1·d_piste` en arbitrage route/piste) comprise.
+
+## Camion DFCI — moteur radial transcrit de Sylvaccess (Lot 12a.4)
+
+La spec 006 reposait sur une hypothèse fausse (« Sylvaccess n'a pas de module DFCI ») : le moteur
+beta a été **jeté et réécrit** en transcription à la lettre de `debusq_dfci`. Ce n'est pas un plus
+court chemin (le Dijkstra `calc_dist_dfci` existe dans le `.pyx` mais y est désactivé) mais un
+**lancer de rayons radial** : depuis chaque pixel du réseau DFCI (flag `CL_DFCI`), une lance est
+tirée dans les 360 azimuts (pas 1°), épouse le relief (longueur 3D cumulée), plafonnée à
+`dfci_lmax = 440 m`, arrêtée par la pente (> `dfci_slope_max = 110 %`), un obstacle ou le bord.
+Boucle chaude portée en **Rust** (`dfci_scan`), comme le câble ; sortie à **6 classes** de
+défendabilité (`inaccessible` / `non_defendable_pente` / `defendable_c1/c2/c3` / `hors_foret`) plus
+longueur de lance, dénivelé, lien forêt↔réseau et pente pompier. Accord **99,87 %**, longueur de
+lance et dénivelé à 0,0 m d'écart médian.
+
+## Périmètre
+
+Les quatre moteurs terrestres et câble, la sélection de lignes câble, le passage à l'échelle
+(tuilage), la base spatiale et l'agrégation, l'acquisition depuis une AOI (IGN / OSM), la
+documentation et la publication (pkgdown). Dettes assumées, sans effet sur ColduPre et documentées
+dans `PLAN.md` : optimisation de la hauteur de fixation du câble (`c_option_h = 1`, hors défaut
+v3.6) et sélection des lignes câble tamponnées (corollaire du Lot 5).
+
 # foretaccess 0.14.0 (2026-07-15)
 
 ## Lot 12a — affinage de fidélité (câble, porteur, skidder)

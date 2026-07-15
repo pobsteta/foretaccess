@@ -15,10 +15,13 @@
 - **Lot 12a (affinage de fidélité) livré en `v0.14.0`** : câble porté à **98,36 %** (pêchage
   latéral `c_l_hor`, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin,
   12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2).
-  **12a.4 (DFCI) fait** : moteur radial `debusq_dfci` transcrit (noyau Rust `dfci_scan`), spec 006
-  réécrite, **accord oracle 99,87 %** (lance à 0 m d'écart médian). En cycle dev, non encore publié.
-- **Branche** : `main` (release `v0.14.0`)
-- **Version `DESCRIPTION`** : `0.14.0`
+- **`v1.0.0` posée** (2026-07-15) : première version **majeure**, sens du bump = « validée contre
+  le vrai moteur ». Préalable tenu sur les **quatre moteurs** (skidder 99,95 %, porteur 99,72 %,
+  câble 98,36 %, **DFCI 99,87 %**), distances collées décomposition comprise. Publie le **Lot 12a.4
+  (DFCI)** : moteur radial `debusq_dfci` transcrit (noyau Rust `dfci_scan`), spec 006 réécrite,
+  6 classes de défendabilité, lance à 0 m d'écart médian.
+- **Branche** : `main` (release `v1.0.0`)
+- **Version `DESCRIPTION`** : `1.0.0` (release ; retour en cycle dev `1.0.0.9000` juste après)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -57,12 +60,11 @@
   `preprocess()`. Appels réseau isolés en wrappers mockables : tests unitaires hors-ligne
   (57 tests), intégration réseau opt-in. `happign`/`osmdata` en Suggests. Vignette
   d'acquisition. `specs/010`.
-- **Prochain jalon possible** : **v1.0.0** (bump majeur, confirmation requise — l'utilisateur
-  a demandé de rester en `0.x` pour l'instant). **Tous les préalables qui la justifiaient sont
-  levés** : la validation contre le vrai moteur (Lot 11), la décomposition des distances (écart
-  médian 0 m, pondération de piste comprise — ci-dessus), et le **Lot 6 (DFCI)**, désormais
-  confronté à l'oracle (12a.4, 99,87 %). Il ne reste donc plus de blocage *technique* à `v1.0.0` ;
-  seule la décision de bump majeur est en attente. À défaut, prochaine release stable `v0.15.0`.
+- **`v1.0.0` posée** (2026-07-15, bump majeur confirmé par l'utilisateur). Tous les préalables qui
+  la justifiaient étaient levés : la validation contre le vrai moteur (Lot 11), la décomposition
+  des distances (écart médian 0 m, pondération de piste comprise), et le **Lot 6 (DFCI)** confronté
+  à l'oracle (12a.4, 99,87 %). Suite possible : dettes câble (hauteur de fixation, sélection de
+  lignes tamponnées) et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en `1.x`.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
   défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
 
@@ -76,7 +78,7 @@
 | 3 | Moteur Porteur | `specs/003-porteur.md` | ✅ terminé | `v0.5.0`, `v0.5.1` |
 | 4 | Noyau Câble (Rust) | `specs/004-cable.md` | ✅ terminé (3 supports) | `v0.6.0`, `v0.13.0` |
 | 5 | Sélection lignes câble | `specs/005-selection.md` | ✅ terminé | `v0.7.0` |
-| 6 | Camion DFCI (radial) | `specs/006-dfci.md` | ✅ terminé (12a.4, oracle 99,87 %) | `v0.8.0`, 12a.4 |
+| 6 | Camion DFCI (radial) | `specs/006-dfci.md` | ✅ terminé (12a.4, oracle 99,87 %) | `v0.8.0`, `v1.0.0` |
 | 7 | Passage à l'échelle | `specs/007-passage-echelle.md` | ✅ terminé | `v0.4.0` |
 | 8 | Base spatiale & agrégation | `specs/008-base-spatiale.md` | ✅ terminé | `v0.9.0` |
 | 9 | Doc & publication | `specs/009-publication.md` | ✅ terminé | `v0.10.0` |
@@ -244,6 +246,16 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-15 — `v1.0.0` : première version majeure (validée contre le vrai moteur)
+
+Bump majeur posé, confirmé par l'utilisateur. Le sens de la `1.0.0` est celui décidé au Lot 11 :
+**« validée contre le vrai moteur Sylvaccess »**, non « périmètre atteint ». Préalable tenu sur les
+**quatre moteurs** (skidder 99,95 %, porteur 99,72 %, câble 98,36 %, DFCI 99,87 % sur ColduPre),
+distances collées décomposition comprise (pondération de piste incluse). La release publie le
+**Lot 12a.4 (DFCI radial)**, resté en cycle dev depuis `v0.14.0`. `DESCRIPTION` / `NEWS.md` /
+`CITATION.cff` alignés sur `1.0.0` ; `release.yml` pose le tag `v1.0.0` et la release au merge sur
+`main`. Retour en cycle dev `1.0.0.9000` juste après.
 
 ### 2026-07-15 — Correction de l'« État courant » : la pondération de piste était déjà faite
 
