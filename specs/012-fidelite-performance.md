@@ -53,14 +53,30 @@ longue jouxte une route forestière plus lointaine**, les deux moteurs allouent 
 dessertes différentes — et c'est la **distance totale**, pas seulement sa ventilation, qui
 diverge. Un massif à réseau lâche (le cas normal en montagne) l'exposera.
 
-*Travail* : semer le Dijkstra avec un **coût initial non nul** sur les cellules de piste
-(`0,5 × d_piste`, la distance réseau étant précalculée — elle l'est déjà,
-`.distance_sur_piste()`), et porter l'arbitrage final sur `d_foret + 0,1 · d_piste`. Les deux
-coefficients deviennent des paramètres de config (ADR-003), défauts 0,5 et 0,1.
+*Travail* : deux propagations distinctes, comme Sylvaccess (`Sylvaccess_1_skidder.py:435` et
+`:442`) — depuis les pistes sur la zone privée des routes, depuis les routes sur la zone privée
+des pistes — puis arbitrage `d_foret_route ≤ d_foret_piste + 0,1 · d_piste`. Les deux
+coefficients (0,5 propagation, 0,1 arbitrage) deviennent des paramètres de config (ADR-003).
 
-*Critère d'acceptation* : accord skidder ≥ 99,95 % **maintenu** sur ColduPre (l'écart doit y
-être neutre — s'il ne l'est pas, c'est que j'ai mal lu la source), **et** un test sur un jeu
-synthétique « piste longue vs route lointaine » où l'allocation change et reproduit Sylvaccess.
+⚠️ **Piège de conception, découvert en mesurant.** La première rédaction de cette spec disait
+« semer le Dijkstra avec un coût initial `0,5 × d_piste` », c'est-à-dire minimiser *vraiment*
+`d_foret + 0,5 · d_piste`. **C'est faux.** Chez Sylvaccess, le test pondéré (`pyx:3715`) est
+**imbriqué dans** `if Out_distance > Dist` (`pyx:3712`) : la pondération est un **veto**, pas un
+moteur. Elle peut *bloquer* une amélioration du coût forêt, jamais faire accepter un chemin
+forestier plus long pour gagner de la piste. Conséquence, invisible sans l'oracle : chez
+Sylvaccess la distance en forêt reste **pilotée par le coût forestier**. L'argmin « propre »
+échange forêt contre piste et **allonge** le traînage — mesuré : médiane 138,3 m contre 124,0
+(Sylvaccess), là où le veto rend 120,2 m. **On transcrit la lettre, pas l'intention.**
+
+*Implémentation retenue* : `.propager_trainage()` dans `R/skidder.R` — un label-correcting sur
+tas binaire (le veto brise la monotonie de l'étiquette, donc pas de `fige`), avec `d_piste` en
+payload de la semence. La règle métier reste **hors** de `propager_cout()` (dont l'en-tête
+promet « aucune règle métier ») ; le tas binaire est factorisé (`.tas_binaire()`).
+
+*Critère d'acceptation* : ✅ accord skidder **99,95 % maintenu**, traînage en forêt **120,2 m**
+(eux 124,0 ; p95 de l'écart 13,7 m contre 52,1 pour l'argmin), et deux tests sur un jeu
+synthétique « piste longue vs route lointaine » où l'allocation bascule (plus une contre-épreuve
+à coefficient nul).
 
 ### 12a.2 — Décomposition des distances du porteur
 

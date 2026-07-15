@@ -91,27 +91,10 @@ skidder <- function(pre,
   # source, et c'est de la que venaient 98,9 % de nos cellules en trop.
   treuil <- treuiller(pre$mnt, .desserte_livraison(pre), zone_tr, config)
 
-  # --- Trainage en foret : plus court chemin depuis la desserte. --------------
-  # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.
-  sources <- .sources_desserte(pre, desserte_cel)
-  cout <- surface_cout_skidder(pre, config)
-  zone_rl <- zone_roulable_connectee(pre, config)
-
-  if (is.null(bord)) {
-    roulage <- propager_cout(cout, sources, zone = zone_rl)
-    cert_r <- NULL
-  } else {
-    # `zone_rl` est *monotone* : calculee sur une fenetre, elle ne peut que
-    # sous-estimer la zone globale. Certifier le trainage suffit donc a certifier
-    # aussi la zone -- a condition de minorer `d_bord` sur une sur-approximation.
-    cert_r <- certifier_propagation(
-      cout, sources,
-      zone = zone_rl, zone_majorante = .zone_majorante(pre, config), bord = bord
-    )
-    roulage <- cert_r$propagation
-  }
-
   # --- Trainage sur piste : distance le long des pistes jusqu'a une route. ----
+  # Elle se calcule AVANT le trainage en foret, dont elle est une entree : c'est
+  # elle qui penalise les pistes eloignees du reseau (voir plus bas).
+  #
   # Si le pretraitement la porte deja (tuilage), elle est globale, donc exacte : le
   # reseau est unidimensionnel et creux, on le propage une fois pour toute l'emprise
   # plutot que de faire grandir le halo jusqu'a sa plus longue piste (spec 007 §4.3.1).
@@ -128,13 +111,42 @@ skidder <- function(pre,
   piste <- if (is.null(pre$distance_piste)) {
     .distance_sur_piste(pre, cout_reseau, bord)
   } else {
+    # Distance ET injoignabilite precalculees globalement (`.precalculer_piste()`).
+    # `injoignable` est un fait global : le reprendre ici, sans quoi le tuilage
+    # gardait comme semences des pistes orphelines que le mono-bloc ecarte.
+    inj <- if (is.null(pre$piste_injoignable)) {
+      rep(FALSE, terra::ncell(pre$mnt))
+    } else {
+      as.logical(terra::values(pre$piste_injoignable))
+    }
     list(
       distance = as.numeric(terra::values(pre$distance_piste)),
-      injoignable = rep(FALSE, terra::ncell(pre$mnt)),
+      injoignable = inj,
       certifie = NULL
     )
   }
   d_piste <- piste$distance
+
+  # --- Trainage en foret : plus court chemin depuis la desserte. --------------
+  # La zone roulable inclut le saut de `distance_hors_desserte_max_m` hors foret.
+  #
+  # DEUX propagations, et non une, parce que Sylvaccess en fait deux : une depuis
+  # les PISTES sur la zone privee des routes forestieres
+  # (`Dfwd_flat_forest_tracks`, zone `Pente_ok_skidder * (Route_for == 0)`), une
+  # depuis les ROUTES sur la zone privee des pistes (`Dfwd_flat_forest_road`,
+  # zone `Pente_ok_skidder * (Piste == 0)`). Les deux resultats sont ensuite
+  # ARBITRES (voir `.arbitrer_desserte()`). Une propagation unique semant tout le
+  # reseau a cout nul -- ce que nous faisions -- allouait chaque cellule a la
+  # desserte la plus proche a vol de cout, fut-elle en bout d'une piste de 2 km.
+  cout <- surface_cout_skidder(pre, config)
+  zone_rl <- zone_roulable_connectee(pre, config)
+  jeux <- .jeux_desserte(
+    pre, desserte_cel, zone_rl, d_piste, piste$injoignable, config
+  )
+
+  rl <- .rouler(cout, jeux, zone_rl, d_piste, pre, config, bord)
+  roulage <- rl$roulage
+  cert_r <- rl$certificat
 
   # --- Combinaison (option 1 : le treuillage prime). --------------------------
   d_tr <- as.numeric(terra::values(treuil$distance))
@@ -375,6 +387,312 @@ skidder <- function(pre,
   v[desserte_cel] <- desserte_cel
   terra::values(s) <- v
   s
+}
+
+# Indices des cellules de desserte de classe `piste`, parmi les cellules de livraison.
+# Vecteur vide si la desserte n'est pas categorisee (fixtures, dessertes-points) : il
+# n'y a alors pas de piste a distinguer de la route, donc pas d'arbitrage a faire.
+.cellules_piste <- function(pre, desserte_cel) {
+  cl <- terra::levels(pre$desserte)[[1]]
+  if (!is.data.frame(cl) || ncol(cl) < 2L) {
+    return(integer(0))
+  }
+  code <- cl[[1]][as.character(cl[[2]]) == "piste"]
+  if (!length(code)) {
+    return(integer(0))
+  }
+  v <- as.numeric(terra::values(pre$desserte))
+  desserte_cel[v[desserte_cel] %in% code]
+}
+
+# Propagation du trainage DEPUIS LES PISTES (`Dfwd_flat_forest_tracks`,
+# sylvaccess_cython3.pyx:3667-3736). Ce n'est PAS un Dijkstra : la ponderation de la
+# piste y est un VETO, pas un moteur. Transcription du test (`pyx:3712-3721`) :
+#
+#     if Out_distance[y,x] > Dist:                     # (1) le cout FORET s'ameliore
+#         if Dpiste[y,x] < 0:                          #     cellule jamais atteinte
+#             relaxer
+#         elif Dpiste[y,x]*100 + 2*Out_distance[y,x]   # (2) ET le critere pondere
+#              > 2*Dist + Dpiste[y1,x1]*100:           #     s'ameliore aussi
+#             relaxer
+#
+# La condition (2), normalisee, compare `d_foret + c_prop x d_piste(semence)`. Mais
+# elle est IMBRIQUEE dans (1) : elle peut BLOQUER une amelioration du cout foret, elle
+# ne peut jamais faire accepter un chemin forestier plus long pour gagner de la piste.
+#
+# Cela a une consequence qu'on ne voit qu'en mesurant : la distance en foret reste
+# PILOTEE par le cout forestier -- le veto peut la laisser au-dessus du minimum (il
+# refuse un raccourci qui degraderait la semence), mais jamais l'allonger au profit
+# de la piste. Un vrai `argmin(d_foret + 0,5 x d_piste)` -- l'implementation
+# "propre", qu'on croit fidele a l'intention -- echange, lui, de la foret contre de
+# la piste : mesure sur ColduPre, mediane 138,3 m la ou Sylvaccess donne 124,0 ; le
+# veto rend 120,2 m. On transcrit donc la LETTRE, pas l'intention.
+#
+# Corollaire assume : comme dans la source, le resultat depend de l'ORDRE de
+# depilement quand plusieurs semences se valent. C'est une heuristique gloutonne,
+# pas un minimum global -- et c'est ce que fait Sylvaccess.
+#
+# `d_piste` est un PAYLOAD de la semence, transporte a l'identique le long du chemin
+# (`Dpiste[y,x] = Dpiste[y1,x1]`, pyx:3721) : il ne varie que si la cellule change de
+# semence allouee.
+#
+# Le veto brise la monotonie de l'etiquette : une cellule deja depilee peut encore
+# s'ameliorer. On ne fige donc AUCUNE cellule -- le tas sert de file de travail
+# (label-correcting, comme les balayages iteratifs du `.pyx`). La terminaison tient
+# a ce que `dist` decroit strictement a chaque relaxation acceptee.
+.propager_trainage <- function(cout, franchissable, depart, d_piste, nr, nc, pas, c_prop) {
+  n <- nr * nc
+  dist <- rep(Inf, n)
+  alloc <- rep(NA_real_, n)
+  pred <- rep(NA_real_, n)
+  dpis <- rep(NA_real_, n) # `Dpiste` : payload de la semence (NA = jamais atteinte)
+
+  tas <- .tas_binaire(max(64L, length(depart) * 2L))
+  vo <- .voisins_8(pas)
+  dl <- vo$dl
+  dc <- vo$dc
+  pas_v <- vo$pas
+
+  dist[depart] <- 0
+  alloc[depart] <- depart
+  dpis[depart] <- d_piste[depart]
+  for (s in depart) tas$ajouter(s, 0)
+
+  while (!tas$vide()) {
+    u <- tas$retirer()
+    du <- dist[u]
+    dpu <- dpis[u]
+    lu <- ((u - 1L) %/% nc) + 1L
+    cu <- ((u - 1L) %% nc) + 1L
+
+    for (k in seq_len(8L)) {
+      lv <- lu + dl[k]
+      cv <- cu + dc[k]
+      if (lv < 1L || lv > nr || cv < 1L || cv > nc) next
+
+      v <- (lv - 1L) * nc + cv
+      if (!franchissable[v]) next
+
+      dv <- du + cout[v] * pas_v[k]
+      # (1) Le cout foret doit s'ameliorer strictement -- garde de `pyx:3712`.
+      if (dv >= dist[v]) next
+      # (2) Et le critere pondere aussi, si la cellule a deja une semence.
+      if (!is.na(dpis[v]) &&
+        dist[v] + c_prop * dpis[v] <= dv + c_prop * dpu) {
+        next
+      }
+
+      dist[v] <- dv
+      alloc[v] <- alloc[u]
+      pred[v] <- u
+      dpis[v] <- dpu
+      tas$ajouter(v, dv)
+    }
+  }
+
+  dist[!is.finite(dist)] <- NA_real_
+  list(dist = dist, alloc = alloc, pred = pred)
+}
+
+# Les deux jeux de semences du trainage, calques sur les deux appels de Sylvaccess
+# (`Sylvaccess_1_skidder.py:435` et `:442`) :
+#
+#  * PISTE  : semences = cellules de piste ; zone privee des ROUTES FORESTIERES
+#             (`Pente_ok_skidder * (Route_for == 0)`) ; propagation a veto
+#             (`.propager_trainage()`).
+#  * ROUTE  : semences = routes et pistes DFCI ; zone privee des PISTES
+#             (`Pente_ok_skidder * (Piste == 0)`) ; Dijkstra ordinaire, aucune
+#             ponderation (`Dfwd_flat_forest_road`).
+#
+# Sans piste (ou sans route), il n'y a rien a arbitrer : un seul jeu, semences =
+# toute la desserte, comportement d'avant le Lot 12. C'est aussi le cas des
+# dessertes non categorisees.
+.jeux_desserte <- function(pre, desserte_cel, zone_rl, d_piste, injoignable, config) {
+  cel_piste <- .cellules_piste(pre, desserte_cel)
+  cel_route <- setdiff(desserte_cel, cel_piste)
+
+  # Une piste ORPHELINE (qui ne rejoint aucune route) n'est pas une semence : le
+  # bois y arriverait sans pouvoir en repartir. Sylvaccess la RETIRE de sa table
+  # (`Lien_Piste`, valeur sentinelle 100001 supprimee -- `Sylvaccess_1_skidder.py:204`).
+  # La garder semerait la penalite `c_prop x 0` (sa distance sur piste vaut 0, faute
+  # de route a rejoindre) : la piste orpheline serait donc la MOINS penalisee de
+  # toutes, et raflerait l'arbitrage contre les routes qui, elles, desservent
+  # vraiment. Mesure sur le jouet : 6 cellules de foret rendues inaccessibles alors
+  # qu'une route les servait.
+  cel_piste <- setdiff(cel_piste, which(injoignable))
+
+  if (!length(cel_piste) || !length(cel_route)) {
+    return(list(list(
+      cellules = desserte_cel, sources = .sources_desserte(pre, desserte_cel),
+      zone = zone_rl, veto = FALSE
+    )))
+  }
+
+  # La zone de chaque propagation exclut les cellules de l'AUTRE reseau.
+  masque <- function(cel) {
+    m <- terra::rast(pre$mnt)
+    v <- as.numeric(terra::values(zone_rl))
+    v[is.na(v)] <- 0
+    v[cel] <- 0
+    terra::values(m) <- v
+    m
+  }
+
+  list(
+    piste = list(
+      cellules = cel_piste, sources = .sources_desserte(pre, cel_piste),
+      zone = masque(cel_route), veto = TRUE
+    ),
+    route = list(
+      cellules = cel_route, sources = .sources_desserte(pre, cel_route),
+      zone = masque(cel_piste), veto = FALSE
+    )
+  )
+}
+
+# Lance les propagations de trainage, puis les arbitre. Rend un objet de meme forme
+# que `propager_cout()` -- `cout_cumule` y est la distance en FORET -- et le
+# certificat correspondant (conjonction des deux, en tuilage).
+.rouler <- function(cout, jeux, zone_rl, d_piste, pre, config, bord) {
+  lancer <- function(j) {
+    prop <- if (j$veto) {
+      .trainage_piste(cout, j, d_piste, pre, config)
+    } else {
+      propager_cout(cout, j$sources, zone = j$zone)
+    }
+    if (is.null(bord)) {
+      return(list(prop = prop, cert = NULL))
+    }
+    # `zone_rl` est *monotone* : calculee sur une fenetre, elle ne peut que
+    # sous-estimer la zone globale. Certifier le trainage suffit donc a certifier
+    # aussi la zone -- a condition de minorer `d_bord` sur une sur-approximation.
+    # La propagation a veto (`j$veto`) exige la certification STRICTE (voir
+    # `.certifier_depuis()`) : a egalite, le veto n'est pas stable.
+    cert <- .certifier_depuis(
+      cout, prop,
+      zone_majorante = .zone_majorante(pre, config), bord = bord, strict = j$veto
+    )
+    list(prop = prop, cert = cert)
+  }
+
+  res <- lapply(jeux, lancer)
+  if (length(res) == 1L) {
+    return(list(roulage = res[[1]]$prop, certificat = res[[1]]$cert))
+  }
+  .arbitrer_desserte(res$piste, res$route, d_piste, pre, config, bord)
+}
+
+# Habille `.propager_trainage()` en `foretaccess_propagation`, comme `propager_cout()`.
+.trainage_piste <- function(cout, jeu, d_piste, pre, config) {
+  nr <- terra::nrow(cout)
+  nc <- terra::ncol(cout)
+  cv <- as.numeric(terra::values(cout))
+  zv <- as.numeric(terra::values(jeu$zone))
+  franchissable <- !is.na(cv) & !is.na(zv) & zv != 0
+
+  s <- .propager_trainage(
+    cout = cv, franchissable = franchissable, depart = jeu$cellules,
+    d_piste = d_piste, nr = nr, nc = nc, pas = terra::res(cout)[1],
+    c_prop = config$skidder$ponderation_piste_propagation
+  )
+
+  faire <- function(v, nom) {
+    r <- terra::rast(cout)
+    terra::values(r) <- v
+    names(r) <- nom
+    r
+  }
+  structure(
+    list(
+      cout_cumule = faire(s$dist, "cout_cumule"),
+      allocation = faire(s$alloc, "allocation"),
+      predecesseur = faire(s$pred, "predecesseur")
+    ),
+    class = "foretaccess_propagation"
+  )
+}
+
+# Arbitrage route forestiere <-> piste, calque sur `skid_fill_opt1`
+# (`sylvaccess_cython3.pyx:4283`) :
+#
+#     if not (DTrain_foret + 0.1 * DTrain_piste) < D_foret_RF:  ->  on prend la ROUTE
+#
+# soit : la route l'emporte des que `d_foret_route <= d_foret_piste + c_arb x d_piste`.
+# Le mettre a l'egalite n'est pas un detail -- c'est la source qui prefere la route a
+# egalite. Et le coefficient d'arbitrage (0,1) n'est PAS celui de la propagation
+# (0,5) : ce sont deux decisions distinctes. Le premier dit ce que vaut un metre de
+# piste quand on choisit entre deux pistes ; le second, ce qu'il vaut quand on
+# renonce a la piste pour la route -- d'ou un fort biais en faveur de la piste.
+.arbitrer_desserte <- function(rp, rr, d_piste, pre, config, bord) {
+  n <- terra::ncell(pre$mnt)
+  vals <- function(r) as.numeric(terra::values(r))
+
+  c_arb <- config$skidder$ponderation_piste_arbitrage
+
+  # Les deux propagations rendent une distance en FORET (le veto de
+  # `.propager_trainage()` ne penalise pas la sortie : il ne fait que trancher entre
+  # semences). Elles sont donc directement comparables.
+  d_p <- vals(rp$prop$cout_cumule) # depuis les pistes
+  a_p <- vals(rp$prop$allocation)
+  p_p <- vals(rp$prop$predecesseur)
+  d_pi <- .piste_allouee(d_piste, a_p) # piste que la semence retenue laisse a remonter
+
+  d_r <- vals(rr$prop$cout_cumule) # depuis les routes
+  a_r <- vals(rr$prop$allocation)
+  p_r <- vals(rr$prop$predecesseur)
+
+  vu_p <- !is.na(d_p)
+  vu_r <- !is.na(d_r)
+  route <- vu_r & (!vu_p | (d_r <= d_p + c_arb * d_pi))
+
+  cout <- rep(NA_real_, n)
+  cout[vu_p] <- d_p[vu_p]
+  cout[route] <- d_r[route]
+
+  alloc <- rep(NA_real_, n)
+  alloc[vu_p] <- a_p[vu_p]
+  alloc[route] <- a_r[route]
+
+  pred <- rep(NA_real_, n)
+  pred[vu_p] <- p_p[vu_p]
+  pred[route] <- p_r[route]
+
+  faire <- function(v, nom) {
+    r <- terra::rast(pre$mnt)
+    terra::values(r) <- v
+    names(r) <- nom
+    r
+  }
+  roulage <- structure(
+    list(
+      cout_cumule = faire(cout, "cout_cumule"),
+      allocation = faire(alloc, "allocation"),
+      predecesseur = faire(pred, "predecesseur")
+    ),
+    class = "foretaccess_propagation"
+  )
+
+  # En tuilage, une cellule n'est certifiee que si les DEUX propagations le sont :
+  # l'arbitrage les compare, et un chemin venu du dehors peut renverser le choix.
+  cert <- NULL
+  if (!is.null(bord)) {
+    et <- function(a, b, nom) faire(as.numeric(vals(a) & vals(b)), nom)
+    ok <- et(rp$cert$certifie, rr$cert$certifie, "certifie")
+    cert <- structure(
+      list(
+        propagation = roulage,
+        certifie = ok,
+        certifie_allocation = et(
+          rp$cert$certifie_allocation, rr$cert$certifie_allocation,
+          "certifie_allocation"
+        ),
+        n_non_certifie = sum(vals(ok) == 0)
+      ),
+      class = "foretaccess_certificat"
+    )
+  }
+
+  list(roulage = roulage, certificat = cert)
 }
 
 # Distance, le long des pistes, jusqu'a la route la plus proche. Les cellules de
