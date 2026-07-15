@@ -13,7 +13,7 @@ moteurs. Les valeurs par défaut sont celles de Sylvaccess v3.6
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,10 +102,10 @@ abattage max 100 %.</p>
 <p>Défauts <strong>porteur</strong> (v3.6) : pente en travers max 15 %, pente montée max 30 %,
 pente descente max 25 %, portée de grue 8 m, distance en pente forte 300 m,
 distance hors desserte 200 m, pente abattage max 100 %.</p>
-<p>Défauts <strong>DFCI</strong> (beta) : portée de défense 100 m, pente d'intervention max
-40 %, dessertes-source <code>"dfci"</code>. Ce sont des hypothèses de travail, non des
-valeurs Sylvaccess : le module DFCI est une sortie <strong>beta</strong> (voir
-<code>specs/006-dfci.md</code>).</p>
+<p>Défauts <strong>DFCI</strong> (<code>Sylvaccess_5_dfci.py</code>) : longueur de lance max 440 m
+(<code>dfci_lmax</code>), pente pompier max 110 % (<code>dfci_slope_max</code>), classes de
+défendabilité <code>0;120;280;440</code> (<code>dfci_class</code>). Sources = flag <code>CL_DFCI</code>
+(orthogonal aux classes de desserte). Voir <code>specs/006-dfci.md</code>.</p>
     </div>
 
     <div class="section level2">

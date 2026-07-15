@@ -32,32 +32,51 @@ Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
 
 - [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
   : Moteur d'accessibilité skidder (débusqueur)
+
 - [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
   : Moteur d'accessibilité porteur (forwarder)
+
 - [`camion_dfci()`](https://pobsteta.github.io/foretaccess/reference/camion_dfci.md)
-  : Moteur camion DFCI — zone défendable (beta)
+  : Moteur camion DFCI — zone de défendabilité (balayage radial)
+
+- [`dfci_scan()`](https://pobsteta.github.io/foretaccess/reference/dfci_scan.md)
+  :
+
+  Balayage radial DFCI (`debusq_dfci`), porté en Rust.
+
 - [`conduire()`](https://pobsteta.github.io/foretaccess/reference/conduire.md)
   : Balayage radial de conduite du porteur
+
 - [`treuiller()`](https://pobsteta.github.io/foretaccess/reference/treuiller.md)
   : Distance de treuillage depuis la desserte (balayage radial)
+
 - [`surface_cout_skidder()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_skidder.md)
   : Surface de coût du skidder (pondération de pente)
+
 - [`ponderation_pente()`](https://pobsteta.github.io/foretaccess/reference/ponderation_pente.md)
   : Pondération de pente (facteur d'allongement 3D)
+
 - [`zone_roulage()`](https://pobsteta.github.io/foretaccess/reference/zone_roulage.md)
   : Zone de roulage du skidder
+
 - [`terrain_roulable()`](https://pobsteta.github.io/foretaccess/reference/terrain_roulable.md)
   : Terrain roulable, indépendamment de la forêt
+
 - [`zone_roulable_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_roulable_connectee.md)
   : Zone effectivement roulable, connectée à la desserte
+
 - [`zone_treuillable()`](https://pobsteta.github.io/foretaccess/reference/zone_treuillable.md)
   : Zone treuillable
+
 - [`terrain_plat()`](https://pobsteta.github.io/foretaccess/reference/terrain_plat.md)
   : Terrain plat au sens du porteur
+
 - [`zone_plate_connectee()`](https://pobsteta.github.io/foretaccess/reference/zone_plate_connectee.md)
   : Zone plate effectivement conduisible, connectée à la desserte
+
 - [`coefficients_bascule()`](https://pobsteta.github.io/foretaccess/reference/coefficients_bascule.md)
   : Coefficients de la loi de bascule
+
 - [`distance_treuillage_max()`](https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.md)
   : Distance maximale de treuillage admissible
 

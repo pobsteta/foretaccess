@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,39 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.0" id="foretaccess-100-2026-07-15">foretaccess 1.0.0 (2026-07-15)<a class="anchor" aria-label="anchor" href="#foretaccess-100-2026-07-15"></a></h2>
+<p>Première version <strong>majeure</strong>. Le sens du bump est celui décidé au Lot 11 : <code>v1.0.0</code> signifie « <strong>validée contre le vrai moteur Sylvaccess</strong> », non « périmètre atteint ». Ce préalable est désormais tenu sur les <strong>quatre moteurs</strong>, confrontés cellule à cellule au jeu officiel ColduPre (sorties Sylvaccess v3.6 produites en propre, aucun oracle n’étant livré avec le dépôt amont) :</p>
+<table class="table"><thead><tr><th>Moteur</th>
+<th>Accord</th>
+<th>Trop optimistes</th>
+<th>Trop conservateurs</th>
+</tr></thead><tbody><tr><td>Skidder</td>
+<td><strong>99,95 %</strong></td>
+<td>0,04 %</td>
+<td>0,01 %</td>
+</tr><tr><td>Porteur</td>
+<td><strong>99,72 %</strong></td>
+<td>0,22 %</td>
+<td>0,06 %</td>
+</tr><tr><td>Câble</td>
+<td><strong>98,36 %</strong></td>
+<td>1,24 %</td>
+<td>0,40 %</td>
+</tr><tr><td>Camion DFCI</td>
+<td><strong>99,87 %</strong></td>
+<td>0,00 %</td>
+<td>0,13 %</td>
+</tr></tbody></table><p>Et <strong>toutes les distances collent</strong>, décomposition comprise (débusquage, traînage en forêt et sur piste, total) : écart médian à l’arrondi près, la pondération de la piste dans l’arbitrage (<code>d_foret + 0,5·d_piste</code> en propagation, <code>+ 0,1·d_piste</code> en arbitrage route/piste) comprise.</p>
+<div class="section level3">
+<h3 id="camion-dfci--moteur-radial-transcrit-de-sylvaccess-lota4-1-0-0">Camion DFCI — moteur radial transcrit de Sylvaccess (Lot 12a.4)<a class="anchor" aria-label="anchor" href="#camion-dfci--moteur-radial-transcrit-de-sylvaccess-lota4-1-0-0"></a></h3>
+<p>La spec 006 reposait sur une hypothèse fausse (« Sylvaccess n’a pas de module DFCI ») : le moteur beta a été <strong>jeté et réécrit</strong> en transcription à la lettre de <code>debusq_dfci</code>. Ce n’est pas un plus court chemin (le Dijkstra <code>calc_dist_dfci</code> existe dans le <code>.pyx</code> mais y est désactivé) mais un <strong>lancer de rayons radial</strong> : depuis chaque pixel du réseau DFCI (flag <code>CL_DFCI</code>), une lance est tirée dans les 360 azimuts (pas 1°), épouse le relief (longueur 3D cumulée), plafonnée à <code>dfci_lmax = 440 m</code>, arrêtée par la pente (&gt; <code>dfci_slope_max = 110 %</code>), un obstacle ou le bord. Boucle chaude portée en <strong>Rust</strong> (<code>dfci_scan</code>), comme le câble ; sortie à <strong>6 classes</strong> de défendabilité (<code>inaccessible</code> / <code>non_defendable_pente</code> / <code>defendable_c1/c2/c3</code> / <code>hors_foret</code>) plus longueur de lance, dénivelé, lien forêt↔︎réseau et pente pompier. Accord <strong>99,87 %</strong>, longueur de lance et dénivelé à 0,0 m d’écart médian.</p>
+</div>
+<div class="section level3">
+<h3 id="périmètre-1-0-0">Périmètre<a class="anchor" aria-label="anchor" href="#p%C3%A9rim%C3%A8tre-1-0-0"></a></h3>
+<p>Les quatre moteurs terrestres et câble, la sélection de lignes câble, le passage à l’échelle (tuilage), la base spatiale et l’agrégation, l’acquisition depuis une AOI (IGN / OSM), la documentation et la publication (pkgdown). Dettes assumées, sans effet sur ColduPre et documentées dans <code>PLAN.md</code> : optimisation de la hauteur de fixation du câble (<code>c_option_h = 1</code>, hors défaut v3.6) et sélection des lignes câble tamponnées (corollaire du Lot 5).</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.14.0" id="foretaccess-0140-2026-07-15">foretaccess 0.14.0 (2026-07-15)<a class="anchor" aria-label="anchor" href="#foretaccess-0140-2026-07-15"></a></h2>
 <div class="section level3">

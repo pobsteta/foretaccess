@@ -104,11 +104,14 @@ pour les limites).
 
 df <- camion_dfci(pre)
 df$recap[, c("classe", "surface_ha")]
-#>           classe surface_ha
-#> 1     defendable       4.00
-#> 2 non_defendable       0.00
-#> 3     hors_foret       1.76
-#> 4    indetermine       0.49
+#>                 classe surface_ha
+#> 1         inaccessible       0.00
+#> 2 non_defendable_pente       0.00
+#> 3        defendable_c1       3.91
+#> 4        defendable_c2       0.09
+#> 5        defendable_c3       0.00
+#> 6           hors_foret       2.25
+#> 7          indetermine       0.00
 ```
 
 ## Volet câble

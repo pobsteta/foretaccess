@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,17 +48,19 @@
 <ul><li>
 <strong>Lot 11 (confrontation à l’oracle Sylvaccess réel) livré en <code>v0.13.0</code></strong>, et <strong>Lot 4 clos</strong> (supports intermédiaires du câble). Décidé le 2026-07-13 : <strong>l’oracle passe avant <code>v1.0.0</code></strong>, pour que la version majeure signifie « validée contre le vrai moteur » et non « périmètre atteint ». Accord cellule à cellule sur le jeu officiel ColduPre (411 309 cellules forestières) : <strong>skidder 99,95 %</strong>, <strong>porteur 99,72 %</strong>, <strong>câble 96,58 %</strong> — porté à <strong>98,36 %</strong> par le Lot 12a.3 (pêchage latéral, cycle dev, non encore publié).</li>
 <li>
-<strong>Lot 12a (affinage de fidélité) livré en <code>v0.14.0</code></strong> : câble porté à <strong>98,36 %</strong> (pêchage latéral <code>c_l_hor</code>, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin, 12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2). <strong>Reste 12a.4 (DFCI)</strong> à traiter en session dédiée (oracle produit, moteur à refondre).</li>
+<strong>Lot 12a (affinage de fidélité) livré en <code>v0.14.0</code></strong> : câble porté à <strong>98,36 %</strong> (pêchage latéral <code>c_l_hor</code>, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin, 12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2).</li>
 <li>
-<strong>Branche</strong> : <code>main</code> (release <code>v0.14.0</code>)</li>
+<strong><code>v1.0.0</code> posée</strong> (2026-07-15) : première version <strong>majeure</strong>, sens du bump = « validée contre le vrai moteur ». Préalable tenu sur les <strong>quatre moteurs</strong> (skidder 99,95 %, porteur 99,72 %, câble 98,36 %, <strong>DFCI 99,87 %</strong>), distances collées décomposition comprise. Publie le <strong>Lot 12a.4 (DFCI)</strong> : moteur radial <code>debusq_dfci</code> transcrit (noyau Rust <code>dfci_scan</code>), spec 006 réécrite, 6 classes de défendabilité, lance à 0 m d’écart médian.</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.14.0</code>
-</li>
+<strong>Branche</strong> : <code>main</code> (release <code>v1.0.0</code>)</li>
+<li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>1.0.0</code> (release ; retour en cycle dev <code>1.0.0.9000</code> juste après)</li>
 <li>
 <strong>Les distances collent, décomposition comprise</strong> (mesuré sur les sorties courantes) : débusquage <strong>0,0 m</strong> d’écart médian, traînage <strong>en forêt 0,2 m</strong> (120,2 contre 124,0), traînage sur piste <strong>0,4 m</strong>, distance totale <strong>0,2 m</strong>. Le reliquat est l’<strong>arrondi</strong> : Sylvaccess stocke ses distances en <code>int16</code> (<code>int(dist + 0.5)</code>), nous en flottant — l’écart est borné par la demi-cellule. <em>(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07 était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir l’entrée du 14/07 ci-dessous.)</em>
 </li>
 <li>
-<strong>Reste un écart assumé, sans effet sur ColduPre</strong> : la <strong>pondération de la piste dans l’arbitrage</strong>. Sylvaccess ne minimise pas la seule distance en forêt — il minimise <code>d_foret + 0,5 · d_piste</code> dans sa propagation (<code>pyx:3714</code>) et arbitre route/piste sur <code>d_foret + 0,1 · d_piste</code> (<code>pyx:4283</code>). Nous minimisons <code>d_foret</code> <strong>seul</strong>, puis ajoutons la distance réseau <em>a posteriori</em> (pondération 0). Nul sur ColduPre (réseau dense, écart piste 0,4 m), mais sur un massif où une piste longue jouxte une route forestière plus lointaine, les deux moteurs choisiront des dessertes différentes — et le <strong>total</strong> divergera. À traiter avant <code>v1.0.0</code>.</li>
+<strong>Pondération de la piste dans l’arbitrage — FAIT</strong> (<code>v0.14.0</code>, Lots 12a.1 skidder + 12a.2b porteur). Sylvaccess ne minimise pas la seule distance en forêt : il pèse la piste dans le choix de desserte, <code>d_foret + 0,5 · d_piste</code> dans la propagation (<code>pyx:3714</code>, transcrit comme un <strong>veto</strong> imbriqué, pas un moteur de coût — <code>R/skidder.R:.propager_trainage</code>) et <code>d_foret + 0,1 · d_piste</code> dans l’arbitrage route/piste (<code>pyx:4283</code>, <code>R/skidder.R:.arbitrer_desserte</code>, <code>R/porteur.R</code> pour le radial). Coefficients <code>ponderation_piste_propagation = 0,5</code> / <code>ponderation_piste_arbitrage = 0,1</code> (ADR-003). Sur un massif où une piste longue jouxte une route forestière plus lointaine, les deux moteurs choisissent désormais la route dès que la piste est longue à remonter — cas exercé par <code>tests/testthat/test-skidder-distances.R:199</code> (ColduPre ne peut pas l’exhiber, réseau trop dense). Accord skidder maintenu à 99,95 %. <em>(Le paragraphe « pondération 0, à traiter avant v1.0.0 » qui figurait ici était un reliquat du journal du 14/07, antérieur à 12a.1 : corrigé le 15/07.)</em>
+</li>
 <li>
 <strong>Fait (0.12.0)</strong> : <strong>portage Rust du balayage câble</strong> (<code>cable_scan</code> dans <code>cablehelp</code>). L’orchestration 360°/pixel de <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> — profil, plus longue travée faisable, couverture/lignes — vit dans le crate, parallélisée sur les départs via <code>rayon</code>. R prépare les entrées et réassemble les sorties SIG (frontière minimale et typée, ADR-001). <strong>Non-régression bit-pour-bit</strong> vis-à-vis de l’ancienne double boucle R (arrondi demi-au-pair et <code><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq()</a></code> reproduits). Gain <strong>~5×</strong> (60 × 60, 60 départs : 36 s → 6 s), passage à l’échelle par le parallélisme. Ancien helper R <code>.ligne_cable()</code> retiré. 18 tests cargo, 728 tests R verts.</li>
 <li>
@@ -68,7 +70,7 @@
 <li>
 <strong>Lot 10 (acquisition depuis AOI)</strong> : <code><a href="reference/acquire_inputs.html">acquire_inputs()</a></code> télécharge MNT/desserte/forêt/ obstacles/cadastre depuis une AOI (IGN Géoplateforme via <code>happign</code>, OSM via <code>osmdata</code>), config-driven (<code>inst/datasources/FR.json</code> + résolveur), sorties consommables par <code><a href="reference/preprocess.html">preprocess()</a></code>. Appels réseau isolés en wrappers mockables : tests unitaires hors-ligne (57 tests), intégration réseau opt-in. <code>happign</code>/<code>osmdata</code> en Suggests. Vignette d’acquisition. <code>specs/010</code>.</li>
 <li>
-<strong>Prochain jalon possible</strong> : <strong>v1.0.0</strong> (bump majeur, confirmation requise — l’utilisateur a demandé de rester en <code>0.x</code> pour l’instant). Le préalable qui la justifiait — la validation contre le vrai moteur — est <strong>fait</strong>. Restent avant de la poser : la décomposition des distances (ci-dessus), et le <strong>Lot 6 (DFCI)</strong>, construit sur l’hypothèse fausse que Sylvaccess n’avait pas de module DFCI (<code>Sylvaccess_5_dfci.py</code> existe ; <code>specs/006</code> est à reprendre — les défauts sont corrigés depuis <code>v0.13.0</code>, mais le moteur n’est pas confronté).</li>
+<strong><code>v1.0.0</code> posée</strong> (2026-07-15, bump majeur confirmé par l’utilisateur). Tous les préalables qui la justifiaient étaient levés : la validation contre le vrai moteur (Lot 11), la décomposition des distances (écart médian 0 m, pondération de piste comprise), et le <strong>Lot 6 (DFCI)</strong> confronté à l’oracle (12a.4, 99,87 %). Suite possible : dettes câble (hauteur de fixation, sélection de lignes tamponnées) et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en <code>1.x</code>.</li>
 <li>
 <strong>Dette assumée du câble</strong> : optimisation de la hauteur de fixation (<code>c_option_h = 1</code>, hors défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.</li>
 </ul></div>
@@ -116,10 +118,12 @@
 <td>✅ terminé</td>
 <td><code>v0.7.0</code></td>
 </tr><tr><td>6</td>
-<td>Camion DFCI (beta)</td>
+<td>Camion DFCI (radial)</td>
 <td><code>specs/006-dfci.md</code></td>
-<td>✅ terminé (beta)</td>
-<td><code>v0.8.0</code></td>
+<td>✅ terminé (12a.4, oracle 99,87 %)</td>
+<td>
+<code>v0.8.0</code>, <code>v1.0.0</code>
+</td>
 </tr><tr><td>7</td>
 <td>Passage à l’échelle</td>
 <td><code>specs/007-passage-echelle.md</code></td>
@@ -260,6 +264,22 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-15--v100--première-version-majeure-validée-contre-le-vrai-moteur">2026-07-15 — <code>v1.0.0</code> : première version majeure (validée contre le vrai moteur)<a class="anchor" aria-label="anchor" href="#id_2026-07-15--v100--premi%C3%A8re-version-majeure-valid%C3%A9e-contre-le-vrai-moteur"></a></h3>
+<p>Bump majeur posé, confirmé par l’utilisateur. Le sens de la <code>1.0.0</code> est celui décidé au Lot 11 : <strong>« validée contre le vrai moteur Sylvaccess »</strong>, non « périmètre atteint ». Préalable tenu sur les <strong>quatre moteurs</strong> (skidder 99,95 %, porteur 99,72 %, câble 98,36 %, DFCI 99,87 % sur ColduPre), distances collées décomposition comprise (pondération de piste incluse). La release publie le <strong>Lot 12a.4 (DFCI radial)</strong>, resté en cycle dev depuis <code>v0.14.0</code>. <code>DESCRIPTION</code> / <code>NEWS.md</code> / <code>CITATION.cff</code> alignés sur <code>1.0.0</code> ; <code>release.yml</code> pose le tag <code>v1.0.0</code> et la release au merge sur <code>main</code>. Retour en cycle dev <code>1.0.0.9000</code> juste après.</p>
+</div>
+<div class="section level3">
+<h3 id="id_2026-07-15--correction-de-l-état-courant---la-pondération-de-piste-était-déjà-faite">2026-07-15 — Correction de l’« État courant » : la pondération de piste était déjà faite<a class="anchor" aria-label="anchor" href="#id_2026-07-15--correction-de-l-%C3%A9tat-courant---la-pond%C3%A9ration-de-piste-%C3%A9tait-d%C3%A9j%C3%A0-faite"></a></h3>
+<p>En voulant « attaquer » la pondération de la piste dans l’arbitrage — que l’« État courant » listait comme un écart assumé à traiter avant <code>v1.0.0</code> — j’ai constaté qu’elle est <strong>déjà implémentée et livrée</strong> en <code>v0.14.0</code>. Le veto de propagation (<code>0,5</code>, <code>R/skidder.R:.propager_trainage</code>) et l’arbitrage route/piste (<code>0,1</code>, <code>.arbitrer_desserte</code> + <code>R/porteur.R</code>) datent des Lots <strong>12a.1</strong> (skidder, #38) et <strong>12a.2b</strong> (porteur), avec coefficients en config (<code>ponderation_piste_propagation</code> / <code>ponderation_piste_arbitrage</code>) et tests dédiés (<code>test-skidder-distances.R:199</code>, cas « piste longue vs route lointaine » que ColduPre ne peut pas exhiber). Le paragraphe « pondération 0 / à traiter avant v1.0.0 » de l’« État courant » était un <strong>reliquat du journal du 14/07</strong>, antérieur à 12a.1, jamais purgé. <code>État courant</code> et le bullet « prochain jalon v1.0.0 » corrigés : plus aucun blocage technique connu à <code>v1.0.0</code>. Leçon : rapprocher <code>NEWS.md</code> (qui, lui, documentait bien le veto) de <code>PLAN.md</code> avant d’ouvrir un chantier.</p>
+</div>
+<div class="section level3">
+<h3 id="id_2026-07-15--lot-12a4--moteur-dfci-radial-spec-fausse-corrigée-9987-">2026-07-15 — Lot 12a.4 : moteur DFCI radial (spec fausse corrigée, 99,87 %)<a class="anchor" aria-label="anchor" href="#id_2026-07-15--lot-12a4--moteur-dfci-radial-spec-fausse-corrig%C3%A9e-9987-"></a></h3>
+<p><strong>La spec 006 reposait sur une hypothèse fausse.</strong> Elle affirmait « Sylvaccess n’a pas de module DFCI » et livrait une <em>conception propre</em> : un plus court chemin pondéré par la pente (Dijkstra). Faux — <code>Sylvaccess_5_dfci.py</code> (<code>debusq_dfci</code>) existe. Le moteur beta a donc été <strong>jeté et réécrit</strong> en transcription à la lettre.</p>
+<p><strong>Le vrai moteur est un lancer de rayons radial.</strong> Depuis chaque pixel du réseau DFCI (flag <code>CL_DFCI</code>, orthogonal aux classes de desserte), une lance est tirée dans les 360 azimuts (pas 1°) et <strong>épouse le relief</strong> (<code>Lcum += sqrt(dh² + ddist²)</code>), plafonnée à <code>dfci_lmax = 440 m</code>, arrêtée par la pente (&gt; <code>dfci_slope_max = 110 %</code>), un obstacle ou le bord. Le chemin Dijkstra (<code>calc_dist_dfci</code>) existe dans le <code>.pyx</code> mais y est <strong>désactivé</strong> — nous avions implémenté la mauvaise branche. Sortie : zone de défendabilité <strong>5 classes</strong> (inaccessible / non-défendable-pente / 3 bandes de lance <code>0-120 / 120-280 / 280-440</code>), plus <code>Longueur_lance</code>, <code>Denivele_sur_piste</code>, <code>Lien_foret_reseau</code>, <code>Pente_OK_pompier</code>.</p>
+<p><strong>Architecture</strong> : boucle chaude portée en <strong>Rust</strong> (<code>src/rust/src/dfci/</code>, <code>dfci_scan</code>), comme le câble. Modèle de données étendu : <code><a href="reference/preprocess.html">preprocess()</a></code> rasterise <code>pre$dfci_source_mask</code> depuis le flag <code>CL_DFCI</code>. Arrondis fidèles (half-up cm, half-away dénivelé, pente seuil simple par cellule). Le <strong>bug de masquage du dénivelé</strong> (pyx:4807) est corrigé sciemment.</p>
+<p><strong>Le bug qui coûtait 20 points.</strong> Première confrontation : 79 % seulement, 20,9 % trop conservateur, 0 % trop optimiste — sous-couverture en blocs pleins à 45 m des sources. Diagnostic (carte ASCII) : un <strong>décalage à un cran</strong> dans le classement (<code>2L + bande</code> au lieu de <code>3L + bande</code>) codait la bande la plus proche (0-120 m, l’essentiel de la couverture) comme <em>non-défendable</em>. Corrigé.</p>
+<p><strong>Confrontation à l’oracle (ColduPre, 532 016 cellules)</strong> : zone défendable <strong>99,87 %</strong> (0 % trop optimiste, 0,13 % trop conservateur), longueur de lance <strong>écart médian 0,0 m</strong>, dénivelé <strong>0,0 m</strong>. Le reliquat (0,13 %) est de la discrétisation de rayon en bordure. Banc étendu : <code>oracle_coldupre.R</code> + <code>oracle_compare.R</code> (bloc DFCI, sauté si l’oracle absent). Perf : ~76 s séquentiel (parallélisation <code>rayon</code> reportée au Lot 12c).</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-15--lot-12a3--pêchage-latéral-du-câble-9658---9836-">2026-07-15 — Lot 12a.3 : pêchage latéral du câble (96,58 % → 98,36 %)<a class="anchor" aria-label="anchor" href="#id_2026-07-15--lot-12a3--p%C3%AAchage-lat%C3%A9ral-du-c%C3%A2ble-9658---9836-"></a></h3>
 <p><strong>Diagnostic (12a.3 amont).</strong> Le reliquat câble était <strong>asymétrique</strong> : 2,79 % de cellules trop conservatrices (Sylvaccess accessible, nous non) contre 0,63 % trop optimistes. Caractérisation en mémoire : 96,4 % des manquées à ≤ 40 m d’un couloir traçable, sur pentes <strong>plus douces</strong> que la forêt (26,8° contre 33,1°) — signature d’un <strong>pêchage latéral</strong> manquant, pas d’un déficit de portée (qui frapperait le raide) ni de la hauteur de fixation (<code>c_option_h</code>, hors périmètre).</p>

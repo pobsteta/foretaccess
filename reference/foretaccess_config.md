@@ -56,10 +56,10 @@ Défauts **porteur** (v3.6) : pente en travers max 15 %, pente montée max
 30 %, pente descente max 25 %, portée de grue 8 m, distance en pente
 forte 300 m, distance hors desserte 200 m, pente abattage max 100 %.
 
-Défauts **DFCI** (beta) : portée de défense 100 m, pente d'intervention
-max 40 %, dessertes-source `"dfci"`. Ce sont des hypothèses de travail,
-non des valeurs Sylvaccess : le module DFCI est une sortie **beta**
-(voir `specs/006-dfci.md`).
+Défauts **DFCI** (`Sylvaccess_5_dfci.py`) : longueur de lance max 440 m
+(`dfci_lmax`), pente pompier max 110 % (`dfci_slope_max`), classes de
+défendabilité `0;120;280;440` (`dfci_class`). Sources = flag `CL_DFCI`
+(orthogonal aux classes de desserte). Voir `specs/006-dfci.md`.
 
 ## Examples
 
