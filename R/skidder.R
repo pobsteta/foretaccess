@@ -711,7 +711,7 @@ skidder <- function(pre,
   # non categorise). On rend une distance nulle plutot que de planter.
   cl <- terra::levels(pre$desserte)[[1]]
   if (!is.data.frame(cl) || ncol(cl) < 2L) {
-    return(list(distance = rep(0, n), certifie = NULL))
+    return(list(distance = rep(0, n), injoignable = rep(FALSE, n), certifie = NULL))
   }
   code_piste <- cl[[1]][as.character(cl[[2]]) == "piste"]
   codes <- as.numeric(terra::values(pre$desserte))

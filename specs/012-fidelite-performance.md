@@ -78,18 +78,46 @@ promet « aucune règle métier ») ; le tas binaire est factorisé (`.tas_binai
 synthétique « piste longue vs route lointaine » où l'allocation bascule (plus une contre-épreuve
 à coefficient nul).
 
-### 12a.2 — Décomposition des distances du porteur
+### 12a.2 — Distances du porteur
 
-`R/porteur.R:97` replie le câble de la passe contour dans `distance_conduite`, là où Sylvaccess
-garde `Dforet` et `Dpiste` **séparés** (`pyx:4201`, `fwd_fill_Link_nolink`). Le **total** reste
-juste ; c'est la ventilation qui est fausse.
+**Angle mort du harnais fermé.** `data-raw/oracle_compare.R` ne comparait que l'**accessibilité**
+du porteur, jamais ses distances. Étendu aux trois composantes. Appariement : Sylvaccess n'expose
+que **deux** rasters (`Distance_sur_piste`, `Distance_dans_foret`) là où nous en avons trois
+(piste, conduite, grappin) — il **fond le grappin dans la forêt** (`fwd_fill_hoist`, `pyx:4668`).
+On compare donc `distance_conduite + distance_grappin` à `Distance_dans_foret`. *(La note du
+journal disant que `porteur.R:97` « replie » à tort le contour est **fausse** : le contour va bien
+dans la forêt des deux côtés, `pyx:4613`. Le seul regroupement qui diffère est le grappin.)*
 
-*Pourquoi ça n'a pas été vu* : `data-raw/oracle_compare.R:150-159` ne compare que
-l'**accessibilité** du porteur, jamais ses distances. **Angle mort du harnais.**
+**Ce que la mesure a révélé — le total du porteur n'a jamais été fidèle.** Le journal affirmait
+« le total reste juste » ; il ne l'était pas, faute d'avoir été mesuré. Sur ColduPre :
 
-*Travail* : (1) étendre `oracle_compare.R` aux rasters de distance du porteur — c'est le
-préalable, sans quoi on corrige à l'aveugle ; (2) séparer les composantes comme le skidder le
-fait déjà depuis la 3ᵉ passe.
+| Composante | Nous (méd.) | Eux | Écart moyen | p95 \|écart\| |
+|---|---|---|---|---|
+| Distance sur piste | 122,2 | 213,0 | **−50,9** | 367 |
+| Distance dans forêt | 15,8 | 32,0 | −11,9 | 110 |
+| **Distance totale** | 57,7 | 112,0 | **−38,4** | 358 |
+
+Nous sommes **systématiquement plus courts**, le poste dominant étant la **distance sur piste**
+(l'allocation diffère : notre porteur alloue à une desserte plus proche sur piste). L'accessibilité,
+elle, reste à **99,72 %** — c'est bien la décomposition/allocation qui diverge, pas la carte.
+
+**Hypothèse réfutée par la mesure** : appliquer la pondération de piste (12a.1) à la *propagation
+plate* du porteur ne bouge **rien** (piste toujours 122 vs 213). Sur ColduPre le porteur est
+couvert surtout par le **balayage radial** (`conduire()`) et le **grappin**, pas par la propagation
+plate — la pondération doit donc vivre dans l'arbitrage plat/radial (`fwd_fill_res1`, `pyx:4503`)
+et le balayage, pas seulement dans le plat. Changement non retenu (fidèle à la source mais sans
+effet mesurable — piège « la lettre pas l'intention »).
+
+**Deux causes candidates à instruire** (chantier réel, pas une retouche) :
+1. le **balayage radial** (`conduire()`) alloue sans pondérer la piste, et sans l'arbitrage
+   `Dforet + 0,1·Dpiste` de `fwd_fill_res1` ;
+2. le **grappin** (`.grappiller()`) propage un coût uniforme **sans hériter** la distance déjà
+   parcourue de la rampe, là où Sylvaccess hérite `Dforet_b`/`Dpiste_b` (`fwd_add_hoist`,
+   `pyx:4023`) — ce qui raccourcit notre total sur toute la couronne de grappin.
+
+*Fait en 12a.2* : harnais étendu (les distances porteur sont désormais surveillées), diagnostic
+ci-dessus, `.distance_sur_piste()` rendu cohérent (renvoie toujours `injoignable`). *Reste* : les
+deux causes ci-dessus, à mesurer une par une.
 
 ### 12a.3 — Reliquat du câble (2,79 % trop conservateurs)
 

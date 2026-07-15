@@ -156,6 +156,30 @@ if (!is.null(acc_ps) && !is.null(acc_pf)) {
   lev <- terra::levels(acc_pf)[[1]]
   codes <- lev$value[lev[[2]] %in% c("parcourable", "accessible")]
   accord_binaire(acc_pf %in% codes, vrai_ou_faux(acc_ps), foret, "Foret accessible (porteur)")
+
+  # Distances (angle mort ferme en 12a.2). Sylvaccess n'expose que DEUX composantes
+  # -- Dpiste et Dforet -- la ou nous en avons trois : piste, conduite, grappin.
+  # Sylvaccess fond le grappin dans la foret (`fwd_fill_hoist`, pyx:4668) : on
+  # apparie donc `Distance_dans_foret` a `distance_conduite + distance_grappin`.
+  d_pis_f <- lire(FA, "porteur", "distance_trainage_piste.tif")
+  d_pis_s <- lire(f_dir, "Distance_sur_piste.tif")
+  if (!is.null(d_pis_f) && !is.null(d_pis_s)) {
+    ecart_continu(d_pis_f, d_pis_s, foret, "Distance sur piste")
+  }
+
+  d_cond <- lire(FA, "porteur", "distance_conduite.tif")
+  d_grap <- lire(FA, "porteur", "distance_grappin.tif")
+  d_for_s <- lire(f_dir, "Distance_dans_foret.tif")
+  if (!is.null(d_cond) && !is.null(d_grap) && !is.null(d_for_s)) {
+    d_for_f <- d_cond + d_grap
+    ecart_continu(d_for_f, d_for_s, foret, "Distance dans foret (conduite + grappin)")
+  }
+
+  d_tot_f <- lire(FA, "porteur", "distance_debardage.tif")
+  d_tot_s <- lire(f_dir, "Distance_totale_foret_route_forestiere.tif")
+  if (!is.null(d_tot_f) && !is.null(d_tot_s)) {
+    ecart_continu(d_tot_f, d_tot_s, foret, "Distance totale")
+  }
 }
 
 # --- CABLE ------------------------------------------------------------------
