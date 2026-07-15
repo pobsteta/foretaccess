@@ -26,14 +26,17 @@
   borné par la demi-cellule. *(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07
   était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir
   l'entrée du 14/07 ci-dessous.)*
-- **Reste un écart assumé, sans effet sur ColduPre** : la **pondération de la piste dans
-  l'arbitrage**. Sylvaccess ne minimise pas la seule distance en forêt — il minimise
-  `d_foret + 0,5 · d_piste` dans sa propagation (`pyx:3714`) et arbitre route/piste sur
-  `d_foret + 0,1 · d_piste` (`pyx:4283`). Nous minimisons `d_foret` **seul**, puis ajoutons la
-  distance réseau *a posteriori* (pondération 0). Nul sur ColduPre (réseau dense, écart piste
-  0,4 m), mais sur un massif où une piste longue jouxte une route forestière plus lointaine, les
-  deux moteurs choisiront des dessertes différentes — et le **total** divergera. À traiter avant
-  `v1.0.0`.
+- **Pondération de la piste dans l'arbitrage — FAIT** (`v0.14.0`, Lots 12a.1 skidder + 12a.2b
+  porteur). Sylvaccess ne minimise pas la seule distance en forêt : il pèse la piste dans le choix
+  de desserte, `d_foret + 0,5 · d_piste` dans la propagation (`pyx:3714`, transcrit comme un **veto**
+  imbriqué, pas un moteur de coût — `R/skidder.R:.propager_trainage`) et `d_foret + 0,1 · d_piste`
+  dans l'arbitrage route/piste (`pyx:4283`, `R/skidder.R:.arbitrer_desserte`, `R/porteur.R` pour le
+  radial). Coefficients `ponderation_piste_propagation = 0,5` / `ponderation_piste_arbitrage = 0,1`
+  (ADR-003). Sur un massif où une piste longue jouxte une route forestière plus lointaine, les deux
+  moteurs choisissent désormais la route dès que la piste est longue à remonter — cas exercé par
+  `tests/testthat/test-skidder-distances.R:199` (ColduPre ne peut pas l'exhiber, réseau trop dense).
+  Accord skidder maintenu à 99,95 %. *(Le paragraphe « pondération 0, à traiter avant v1.0.0 » qui
+  figurait ici était un reliquat du journal du 14/07, antérieur à 12a.1 : corrigé le 15/07.)*
 - **Fait (0.12.0)** : **portage Rust du balayage câble** (`cable_scan` dans `cablehelp`).
   L'orchestration 360°/pixel de `potentiel_cable()` — profil, plus longue travée faisable,
   couverture/lignes — vit dans le crate, parallélisée sur les départs via `rayon`. R prépare
@@ -55,11 +58,11 @@
   (57 tests), intégration réseau opt-in. `happign`/`osmdata` en Suggests. Vignette
   d'acquisition. `specs/010`.
 - **Prochain jalon possible** : **v1.0.0** (bump majeur, confirmation requise — l'utilisateur
-  a demandé de rester en `0.x` pour l'instant). Le préalable qui la justifiait — la validation
-  contre le vrai moteur — est **fait**. Restent avant de la poser : la décomposition des
-  distances (ci-dessus), et le **Lot 6 (DFCI)**, construit sur l'hypothèse fausse que
-  Sylvaccess n'avait pas de module DFCI (`Sylvaccess_5_dfci.py` existe ; `specs/006` est à
-  reprendre — les défauts sont corrigés depuis `v0.13.0`, mais le moteur n'est pas confronté).
+  a demandé de rester en `0.x` pour l'instant). **Tous les préalables qui la justifiaient sont
+  levés** : la validation contre le vrai moteur (Lot 11), la décomposition des distances (écart
+  médian 0 m, pondération de piste comprise — ci-dessus), et le **Lot 6 (DFCI)**, désormais
+  confronté à l'oracle (12a.4, 99,87 %). Il ne reste donc plus de blocage *technique* à `v1.0.0` ;
+  seule la décision de bump majeur est en attente. À défaut, prochaine release stable `v0.15.0`.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
   défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
 
@@ -241,6 +244,20 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-15 — Correction de l'« État courant » : la pondération de piste était déjà faite
+
+En voulant « attaquer » la pondération de la piste dans l'arbitrage — que l'« État courant »
+listait comme un écart assumé à traiter avant `v1.0.0` — j'ai constaté qu'elle est **déjà
+implémentée et livrée** en `v0.14.0`. Le veto de propagation (`0,5`, `R/skidder.R:.propager_trainage`)
+et l'arbitrage route/piste (`0,1`, `.arbitrer_desserte` + `R/porteur.R`) datent des Lots **12a.1**
+(skidder, #38) et **12a.2b** (porteur), avec coefficients en config (`ponderation_piste_propagation`
+/ `ponderation_piste_arbitrage`) et tests dédiés (`test-skidder-distances.R:199`, cas « piste longue
+vs route lointaine » que ColduPre ne peut pas exhiber). Le paragraphe « pondération 0 / à traiter
+avant v1.0.0 » de l'« État courant » était un **reliquat du journal du 14/07**, antérieur à 12a.1,
+jamais purgé. `État courant` et le bullet « prochain jalon v1.0.0 » corrigés : plus aucun blocage
+technique connu à `v1.0.0`. Leçon : rapprocher `NEWS.md` (qui, lui, documentait bien le veto) de
+`PLAN.md` avant d'ouvrir un chantier.
 
 ### 2026-07-15 — Lot 12a.4 : moteur DFCI radial (spec fausse corrigée, 99,87 %)
 
