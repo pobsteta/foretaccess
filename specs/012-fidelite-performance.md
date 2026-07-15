@@ -108,16 +108,36 @@ plate — la pondération doit donc vivre dans l'arbitrage plat/radial (`fwd_fil
 et le balayage, pas seulement dans le plat. Changement non retenu (fidèle à la source mais sans
 effet mesurable — piège « la lettre pas l'intention »).
 
-**Deux causes candidates à instruire** (chantier réel, pas une retouche) :
-1. le **balayage radial** (`conduire()`) alloue sans pondérer la piste, et sans l'arbitrage
-   `Dforet + 0,1·Dpiste` de `fwd_fill_res1` ;
-2. le **grappin** (`.grappiller()`) propage un coût uniforme **sans hériter** la distance déjà
-   parcourue de la rampe, là où Sylvaccess hérite `Dforet_b`/`Dpiste_b` (`fwd_add_hoist`,
-   `pyx:4023`) — ce qui raccourcit notre total sur toute la couronne de grappin.
+*Fait en 12a.2* : harnais étendu (les distances porteur sont désormais surveillées), diagnostic,
+`.distance_sur_piste()` rendu cohérent (renvoie toujours `injoignable`).
 
-*Fait en 12a.2* : harnais étendu (les distances porteur sont désormais surveillées), diagnostic
-ci-dessus, `.distance_sur_piste()` rendu cohérent (renvoie toujours `injoignable`). *Reste* : les
-deux causes ci-dessus, à mesurer une par une.
+#### 12a.2b — Correction du porteur ✅
+
+Deux corrections, **chacune mesurée sur l'oracle avant d'être retenue** (leçon « la lettre pas
+l'intention ») :
+
+1. **Fusion plat / radial** (`fwd_fill_res1`, `pyx:4518`). Nous donnions au plat une priorité
+   **inconditionnelle** ; Sylvaccess laisse le radial **écraser** une cellule déjà atteinte à
+   plat s'il est strictement meilleur en forêt, l'incumbent plat étant pénalisé de sa piste :
+   `Dforet_radial < Dforet_plat + 0,1 · Dpiste_plat` (asymétrique — le challenger n'ajoute pas
+   sa propre piste ; strict, donc le plat gagne à égalité). Effet seul : « distance dans forêt »
+   identique-à-1 m 40 → 54 %.
+
+2. **Héritage de la rampe par le grappin** (`fwd_fill_hoist`, `pyx:4668`) — **le vrai levier**.
+   Le grappin repartait de zéro : sa forêt valait le seul bras `d_grap`, et sa **piste était
+   perdue** (allouée à une cellule de forêt hors réseau, donc nulle). Diagnostic ciblé : sur les
+   2 288 cellules où nous mettions piste = 0 pour un Sylvaccess > 0 (écart −229 m), **1 975
+   étaient du grappin**. Corrigé : la cellule grappillée hérite la distance de conduite **et** la
+   desserte allouée de sa rampe (`d_grap + d_conduite(rampe)` en forêt, piste de la rampe).
+
+Résultat sur ColduPre, accessibilité **99,72 % inchangée** (la carte n'a pas bougé, seule la
+décomposition est corrigée) :
+
+| Composante | Écart moyen avant | après |
+|---|---|---|
+| Distance sur piste | −50,9 m | **−3,0 m** |
+| Distance dans forêt | −11,9 m | **+1,2 m** |
+| Distance totale | −38,4 m | **+0,5 m** |
 
 ### 12a.3 — Reliquat du câble (2,79 % trop conservateurs)
 
