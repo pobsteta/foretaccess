@@ -51,6 +51,17 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   est_desserte <- rep(FALSE, n)
   est_desserte[desserte_cel] <- TRUE
 
+  # --- Distance sur piste : precalculee globalement, ou locale. ---------------
+  # Calculee AVANT la fusion plat/radial, dont elle est une entree (elle penalise
+  # les cellules atteintes par une desserte eloignee sur piste). Comme pour le
+  # skidder, la propagation LE LONG du reseau se fait sur la pente seule : une
+  # desserte n'est pas un obstacle a la circulation sur elle-meme.
+  piste <- if (is.null(pre$distance_piste)) {
+    .distance_sur_piste(pre, ponderation_pente(pre$slope_pct), bord)
+  } else {
+    list(distance = as.numeric(terra::values(pre$distance_piste)), certifie = NULL)
+  }
+
   # --- Roulage sur terrain plat : plus court chemin depuis la desserte. -------
   # C'est la passe principale de Sylvaccess (`Dfwd_flat_forest_tracks` /
   # `Dfwd_flat_forest_road`), et elle seule sait CONTOURNER : le balayage radial
@@ -62,7 +73,6 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   )
   d_plat <- as.numeric(terra::values(plat$cout_cumule))
   a_plat <- as.numeric(terra::values(plat$allocation))
-  roule <- !is.na(d_plat) & !est_desserte
 
   # --- Conduite : balayage radial depuis le reseau, sur la foret roulable. ----
   # Il ETEND la zone plate vers les pentes que l'engin prend encore, selon le sens
@@ -71,18 +81,29 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   cond <- conduire(pre, config, zone_cond)
   d_cond <- as.numeric(terra::values(cond$distance))
   a_cond <- as.numeric(terra::values(cond$allocation))
-  balaye <- !is.na(d_cond) & !est_desserte & !roule
+
+  # --- Fusion plat / radial (`fwd_fill_res1`, sylvaccess_cython3.pyx:4518). ----
+  # Le radial n'est PAS un simple bouche-trou du plat : Sylvaccess laisse le radial
+  # ECRASER une cellule deja atteinte a plat s'il est strictement meilleur en foret,
+  # l'incumbent plat etant penalise de sa distance sur piste :
+  #
+  #     Dforet_radial  <  Dforet_plat + 0,1 x Dpiste_plat
+  #
+  # Asymetrie fidele a la source : le challenger radial est compare SANS ajouter sa
+  # propre piste (seul l'incumbent la porte), et le test est STRICT -- a egalite le
+  # plat tient. Notre ancienne priorite inconditionnelle du plat allouait chaque
+  # cellule a la desserte la plus proche (piste courte) : d'ou une distance sur piste
+  # tres sous-estimee (mediane 122 m contre 213). `c_arb` est le meme coefficient
+  # d'arbitrage de piste que pour le skidder (0,1).
+  c_arb <- config$skidder$ponderation_piste_arbitrage
+  piste_plat <- .piste_allouee(piste$distance, a_plat)
+  vu_plat <- !is.na(d_plat) & !est_desserte
+  vu_cond <- !is.na(d_cond) & !est_desserte
+  radial_gagne <- vu_cond & (!vu_plat | (d_cond < d_plat + c_arb * piste_plat))
+  roule <- vu_plat & !radial_gagne
+  balaye <- radial_gagne
 
   conduit <- roule | balaye
-
-  # --- Distance sur piste : precalculee globalement, ou locale. ---------------
-  # Comme pour le skidder, la propagation LE LONG du reseau se fait sur la pente
-  # seule : une desserte n'est pas un obstacle a la circulation sur elle-meme.
-  piste <- if (is.null(pre$distance_piste)) {
-    .distance_sur_piste(pre, ponderation_pente(pre$slope_pct), bord)
-  } else {
-    list(distance = as.numeric(terra::values(pre$distance_piste)), certifie = NULL)
-  }
 
   # --- Balayage depuis le CONTOUR de la zone conduite (`fwd_azimuts_contour`). -
   # Meme mecanique que la troisieme passe du skidder : l'engin repart du bord de ce
@@ -113,11 +134,27 @@ porteur <- function(pre, config = foretaccess_config(), write_dir = NULL, bord =
   grappe <- !is.na(d_grap) & !conduit & !est_desserte
 
   # --- Combinaison. -----------------------------------------------------------
-  allocation <- ifelse(roule, a_plat, ifelse(balaye, a_cond, ifelse(grappe, a_grap, NA_real_)))
-  allocation[est_desserte] <- desserte_cel
+  # Allocation (a la desserte) et distance de conduite de chaque cellule conduite.
+  a_conduit <- ifelse(roule, a_plat, ifelse(balaye, a_cond, NA_real_))
+  d_conduit <- ifelse(roule, d_plat, ifelse(balaye, d_cond, 0))
 
-  dist_cond <- ifelse(roule, d_plat, ifelse(balaye, d_cond, 0))
-  dist_grap <- ifelse(grappe, d_grap, 0)
+  allocation <- a_conduit
+  dist_cond <- d_conduit
+  dist_grap <- rep(0, n)
+
+  # Grappin : la cellule grappillee HERITE de sa rampe (`fwd_fill_hoist`,
+  # sylvaccess_cython3.pyx:4668) -- distance de conduite ET desserte allouee de la
+  # cellule conduite d'ou le bras s'etend. Sa foret finale vaut donc
+  # `d_bras + d_conduite(rampe)` et sa piste celle de la rampe. Sans cet heritage,
+  # elle repartait de zero : foret sous-comptee, et surtout PISTE PERDUE -- allouee
+  # a une cellule de foret (hors reseau), donc nulle. Mesure sur ColduPre : 1975
+  # cellules de grappin a -229 m sur la distance sur piste, l'essentiel de l'ecart.
+  rampe <- a_grap[grappe]
+  allocation[grappe] <- a_conduit[rampe]
+  dist_cond[grappe] <- d_conduit[rampe]
+  dist_grap[grappe] <- d_grap[grappe]
+
+  allocation[est_desserte] <- desserte_cel
   dist_piste <- .piste_allouee(piste$distance, allocation)
 
   accessible <- conduit | grappe | est_desserte
