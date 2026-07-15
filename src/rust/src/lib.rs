@@ -7,6 +7,7 @@
 use extendr_api::prelude::*;
 
 mod cable;
+mod dfci;
 use cable::catenaire;
 use cable::faisabilite;
 use cable::newton;
@@ -567,6 +568,41 @@ fn cable_scan(
     )
 }
 
+/// Balayage radial DFCI (`debusq_dfci`), porté en Rust.
+///
+/// Depuis chaque pixel du réseau DFCI, déroule une lance 360 deg / 1 deg qui épouse
+/// le relief (`Lcum += sqrt(dh² + ddist²)`), plafonnée à `lmax`, arrêtée par la
+/// pente / un obstacle (`zone_ok == 0`) ou le bord. Balayage séquentiel dans l'ordre
+/// des sources (tie-break `>` strict : à longueur égale, la première source gagne).
+///
+/// @param alt Elevation values (row-major, NA as NaN).
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param res Cell size (m); square cells assumed.
+/// @param foret Forest mask (1 = forest, `Foret2`), row-major.
+/// @param sources DFCI network cell indices (1-based, row-major order).
+/// @param zone_ok Passable mask (1 = slope ok, no obstacle, non-nodata), row-major.
+/// @param lmax Maximum hose length (m).
+/// @return A list: `dist` (m), `deniv` (m), `lien` (1-based source cell), `acc`.
+/// @export
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn dfci_scan(
+    alt: Vec<f64>,
+    nr: i32,
+    nc: i32,
+    res: f64,
+    foret: Vec<i32>,
+    sources: Vec<i32>,
+    zone_ok: Vec<i32>,
+    lmax: f64,
+) -> List {
+    let out = dfci::scan::scan(
+        &alt, nr as usize, nc as usize, res, &foret, &sources, &zone_ok, lmax,
+    );
+    list!(dist = out.dist, deniv = out.deniv, lien = out.lien, acc = out.acc)
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -584,6 +620,7 @@ extendr_module! {
     fn cable_find_lomin;
     fn cable_test_span;
     fn cable_scan;
+    fn dfci_scan;
 }
 
 #[cfg(test)]

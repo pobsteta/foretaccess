@@ -38,6 +38,7 @@ reference:
   - skidder
   - porteur
   - camion_dfci
+  - dfci_scan
   - conduire
   - treuiller
   - surface_cout_skidder

@@ -23,10 +23,10 @@
 #' pente descente max 25 %, portée de grue 8 m, distance en pente forte 300 m,
 #' distance hors desserte 200 m, pente abattage max 100 %.
 #'
-#' Défauts **DFCI** (beta) : portée de défense 100 m, pente d'intervention max
-#' 40 %, dessertes-source `"dfci"`. Ce sont des hypothèses de travail, non des
-#' valeurs Sylvaccess : le module DFCI est une sortie **beta** (voir
-#' `specs/006-dfci.md`).
+#' Défauts **DFCI** (`Sylvaccess_5_dfci.py`) : longueur de lance max 440 m
+#' (`dfci_lmax`), pente pompier max 110 % (`dfci_slope_max`), classes de
+#' défendabilité `0;120;280;440` (`dfci_class`). Sources = flag `CL_DFCI`
+#' (orthogonal aux classes de desserte). Voir `specs/006-dfci.md`.
 #'
 #' @return Un objet de classe `foretaccess_config` (liste structurée), validé.
 #' @export
@@ -171,28 +171,21 @@ foretaccess_config <- function(skidder = list(),
         contribution_min = 0.6
       )
     ),
-    # Camion DFCI (Lot 6, EF-8). Modele volontairement simple : zone defendable =
-    # tampon au terrain (plus court chemin pondere par la pente, comme le skidder)
-    # depuis les dessertes DFCI, plafonne a la portee de defense et coupe au-dela
-    # d'une pente d'intervention. Limites documentees dans specs/006 : ni modele de
-    # combustible, ni vent, ni physique de lance -- c'est notre modele, pas celui de
-    # `Sylvaccess_5_dfci.py`. Les SEUILS, eux, sont ceux de Sylvaccess.
+    # Camion DFCI (Lot 12a.4, EF-8). Transcription de `Sylvaccess_5_dfci.py` :
+    # balayage RADIAL de la lance (`debusq_dfci`), pas un plus court chemin pondere.
+    # Les sources sont le flag `CL_DFCI` (orthogonal aux classes route/piste/public),
+    # porte par `preprocess()` dans `pre$dfci_source_mask`. Les seuils sont ceux de
+    # Sylvaccess (dic_AllParam.json).
     dfci = list(
-      # Portee laterale de defense depuis une desserte carrossable (m). La spec 006
-      # avait pose 100 m, en croyant Sylvaccess depourvu de module DFCI : il en a un,
-      # et il porte a 440 m. Facteur 4.
+      # Longueur maximale de lance (m). La spec 006 initiale posait 100 m en croyant
+      # Sylvaccess depourvu de module DFCI : il en a un, et il porte a 440 m.
       distance_defense_max_m = 440,  # dfci_lmax
-      # Pente au-dela de laquelle le terrain est repute non defendable (%). Idem :
-      # la spec 006 avait pose 40 %, Sylvaccess admet 110 %.
+      # Pente au-dela de laquelle le terrain est infranchissable par les pompiers (%).
+      # La spec 006 posait 40 %, Sylvaccess admet 110 %.
       pente_defense_max_pct  = 110,  # dfci_slope_max
-      # Classes de distance des sorties (m), comme `dfci_class`.
-      classes_distance_m     = c(0, 120, 280, 440),  # dfci_class
-      # Classes de desserte servant de base au camion (sous-ensemble de
-      # route / piste / dfci). Defaut : les seules dessertes DFCI. Sylvaccess ne
-      # distingue pas : il part de tout le reseau. On garde le filtre, PLUS PERTINENT
-      # ici -- un camion-citerne ne s'engage pas sur une piste de debardage --, et le
-      # rendre permissif ne demande qu'un `classes_source = c("route", "piste")`.
-      classes_source         = "dfci"
+      # Bornes des classes de defendabilite (m) : bandes [0,120[, [120,280[,
+      # [280,440] de longueur de lance (derniere borne inclusive).
+      classes_distance_m     = c(0, 120, 280, 440)  # dfci_class
     ),
     general = list(
       resolution_m  = 5,
@@ -302,7 +295,8 @@ validate_config <- function(cfg) {
   df <- cfg$dfci
   checkmate::assert_number(df$distance_defense_max_m, lower = 0, finite = TRUE)
   checkmate::assert_number(df$pente_defense_max_pct, lower = 0)
-  checkmate::assert_subset(df$classes_source, .classes_desserte(), empty.ok = FALSE)
+  checkmate::assert_numeric(df$classes_distance_m, lower = 0, min.len = 2,
+    any.missing = FALSE, sorted = TRUE)
 
   ge <- cfg$general
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)

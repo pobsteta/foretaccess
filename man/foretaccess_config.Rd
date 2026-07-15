@@ -44,10 +44,10 @@ Défauts \strong{porteur} (v3.6) : pente en travers max 15 \%, pente montée max
 pente descente max 25 \%, portée de grue 8 m, distance en pente forte 300 m,
 distance hors desserte 200 m, pente abattage max 100 \%.
 
-Défauts \strong{DFCI} (beta) : portée de défense 100 m, pente d'intervention max
-40 \%, dessertes-source \code{"dfci"}. Ce sont des hypothèses de travail, non des
-valeurs Sylvaccess : le module DFCI est une sortie \strong{beta} (voir
-\code{specs/006-dfci.md}).
+Défauts \strong{DFCI} (\code{Sylvaccess_5_dfci.py}) : longueur de lance max 440 m
+(\code{dfci_lmax}), pente pompier max 110 \% (\code{dfci_slope_max}), classes de
+défendabilité \verb{0;120;280;440} (\code{dfci_class}). Sources = flag \code{CL_DFCI}
+(orthogonal aux classes de desserte). Voir \code{specs/006-dfci.md}.
 }
 \examples{
 cfg <- foretaccess_config()

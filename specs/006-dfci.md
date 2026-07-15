@@ -1,187 +1,164 @@
-# specs/006 — Lot 6 : Camion DFCI (beta) — zone défendable
+# specs/006 — Camion DFCI : zone de défendabilité (balayage radial)
 
-> **Statut** : **validé** (décisions §10 du 2026-07-12). Sortie **beta** au sens du
-> brief §4.5 : modèle volontairement simple, limites explicites (§9).
-> **Lot** : 6 (roadmap [`docs/ROADMAP.md`](../docs/ROADMAP.md)). **Epic** : 6 (backlog
-> [`docs/BACKLOG.md`](../docs/BACKLOG.md)). **Exigence** : EF-8 ([`docs/PRD.md`](../docs/PRD.md)).
-> **Dépend de** : Lot 1 (`preprocess()` : MNT, pente, forêt, desserte classée),
-> Lot 2 (service partagé `propager_cout()` et `surface_cout_skidder()`), Lot 7
-> (`traiter_par_tuiles()`, `certifier_propagation()`).
-> **Prépare** : Lot 8 (base spatiale — la zone défendable y est persistée/requêtable).
-> **Post-MVP** : ce lot n'est pas sur le chemin critique produit (décision PRD §9.2).
+> **Statut** : **réécrit au Lot 12a.4** (2026-07-15). La version initiale (Lot 6)
+> reposait sur une **hypothèse fausse** — « Sylvaccess n'a pas de module DFCI ». Il
+> en a un (`Sylvaccess_5_dfci.py`, `debusq_dfci`), désormais transcrit à la lettre
+> et **confronté à l'oracle** ColduPre.
+> **Exigence** : EF-8 ([`docs/PRD.md`](../docs/PRD.md)).
+> **Dépend de** : Lot 1 (`preprocess()` : MNT, pente %, forêt, desserte + flag
+> `CL_DFCI`), noyau Rust (`dfci_scan`), Lot 7 (`traiter_par_tuiles()`).
 
 ---
 
 ## 1. Contexte
 
-Le camion DFCI (défense de la forêt contre les incendies) stationne sur une desserte
-carrossable et **défend** le terrain avoisinant contre le feu, dans une **portée
-latérale** limitée. Le Lot 6 cartographie la **zone défendable** — la forêt qu'un
-camion peut atteindre et défendre depuis les dessertes DFCI.
+Le camion DFCI (défense de la forêt contre les incendies) stationne sur le réseau
+de défense et **défend** le terrain avoisinant en déroulant une **lance** (tuyau).
+Le Lot cartographie la **zone de défendabilité** : jusqu'où, depuis le réseau DFCI,
+une lance peut atteindre la forêt en épousant le relief.
 
-C'est une sortie **beta** : elle vise une première **hiérarchisation** du territoire
-(où la défense est possible depuis le réseau existant), pas un dimensionnement
-opérationnel. Le raffinement du modèle dépend du projet **QUALIROAD** (qualification
-fine de la carrossabilité des dessertes) — hors périmètre ici.
-
----
-
-## 2. Périmètre
-
-### Dans le périmètre
-
-- La **zone défendable** : raster catégoriel `defendable` / `non_defendable` /
-  `hors_foret`, sur la grille du prétraitement.
-- La **distance de défense** au terrain (m) depuis la desserte-source la plus proche.
-- L'**allocation** : la cellule de desserte de rattachement.
-- Le **récapitulatif** surfaces/volumes par classe.
-- La compatibilité **tuilage** (Lot 7) : sortie `certifie`, résultat identique au
-  mono-bloc sur les cellules certifiées.
-
-### Hors périmètre (voir §9)
-
-- Tout modèle de **combustible**, de **vent**, ou de **physique de lance** (portée du
-  jet, débit, pression).
-- La **qualification** de la carrossabilité réelle des dessertes (QUALIROAD).
-- L'agrégation zonale (massif/parcelle/commune) → Lot 8.
+Contrairement à la version beta initiale (plus court chemin pondéré par la pente),
+c'est le **vrai moteur de Sylvaccess** qui est transcrit : un **lancer de rayons
+radial**. Le chemin Dijkstra pondéré (`calc_dist_dfci`) existe dans les sources de
+Sylvaccess mais y est **désactivé**.
 
 ---
 
-## 3. API
+## 2. Modèle — `debusq_dfci` transcrit
 
-```r
-camion_dfci(pre, config = foretaccess_config(), write_dir = NULL, bord = NULL)
+Depuis chaque **pixel-source** du réseau DFCI, un rayon est tiré dans les **360
+azimuts** (pas de 1°). Le long d'un rayon, la lance progresse cellule par cellule
+et sa longueur **suit le terrain** :
+
+```
+Lcum += sqrt(dh² + ddist²)
 ```
 
-Signature **identique** à [`skidder()`] et [`porteur()`] (mêmes `pre`, `config`,
-`write_dir`, `bord`), donc directement branchable sur `traiter_par_tuiles()`.
+où `ddist` est le pas planimétrique entre deux cellules consécutives et `dh` leur
+dénivelé. Le rayon **s'arrête** dès que :
 
-Retour : objet `foretaccess_dfci` — `accessibilite`, `distance_defense`,
-`allocation`, `certifie`, `recap`, `grid`, `config`, `fichiers`.
+1. il sort de la grille ;
+2. il entre dans une cellule **non franchissable** (`zone_ok = 0` : pente
+   > `dfci_slope_max`, obstacle, ou trou de MNT) ;
+3. `Lcum` dépasse `dfci_lmax` (longueur de lance disponible).
+
+Une cellule de forêt atteinte reçoit la **longueur de lance minimale** sur tous les
+rayons de toutes les sources (comparaison `>` stricte : à égalité, la première
+source balayée — ordre row-major — l'emporte). Sa **classe de défendabilité** est
+la bande de `classes_distance_m` où tombe cette longueur.
+
+### 2.1 Sources : le flag `CL_DFCI`
+
+Les sources sont les cellules portant le flag **`CL_DFCI`** (Sylvaccess :
+`respub = allroads[CL_DFCI == 1]`). Ce flag est **orthogonal** aux classes de
+desserte (`CL_SVAC`) : une même route peut être route classique *et* réseau de
+défense, et un tronçon de réseau public — barrière pour les engins de débardage —
+redevient source valide pour le camion-citerne s'il porte le flag. `preprocess()`
+le rasterise (ALL_TOUCHED) dans `pre$dfci_source_mask`, indépendamment du raster de
+classes.
+
+### 2.2 Arrondis et fidélité
+
+- Longueur cumulée en centimètres, `int(Lcum·100 + 0.5)` (**half-up**), puis
+  cm → m `int(Dist/100 + 0.5)`. Ce n'est **pas** l'arrondi demi-au-pair du câble.
+- Dénivelé `int(difH ± 0.5)` (**half-away-from-zero**).
+- Pente pompier : seuil **simple par cellule** `pente ≤ dfci_slope_max`
+  (Sylvaccess jette la version max-local 3×3 via le *swap* de `slopes_skid`).
+
+### 2.3 Écart assumé avec Sylvaccess
+
+Le **bug de masquage** du dénivelé (`sylvaccess_cython3.pyx:4807`, qui écrit aux
+coordonnées de la dernière source au lieu de la cellule courante) est **corrigé** :
+`denivele` est remis à `NA` sur toute cellule non défendable. L'accord oracle sur
+`Denivele_sur_piste` s'en trouve très légèrement dégradé, au profit de la justesse.
 
 ---
 
-## 4. Modèle
+## 3. Configuration (`config$dfci`)
 
-La portée de défense est modélisée par un **tampon au terrain** : un plus court chemin
-pondéré par la pente ([`propager_cout()`] + [`surface_cout_skidder()`], la même
-pondération 3D `sqrt(1 + (p/100)^2)` que le skidder), depuis les cellules de
-desserte-source, **plafonné** à `distance_defense_max_m` et **interdit** au-delà de la
-pente d'intervention `pente_defense_max_pct`.
+| Clé | Défaut | Sylvaccess | Sens |
+|---|---|---|---|
+| `distance_defense_max_m` | `440` | `dfci_lmax` | Longueur de lance max (m). |
+| `pente_defense_max_pct` | `110` | `dfci_slope_max` | Pente pompier max (%). |
+| `classes_distance_m` | `0;120;280;440` | `dfci_class` | Bornes des bandes de défendabilité. |
 
-1. **Sources** : cellules de desserte dont la classe ∈ `config$dfci$classes_source`
-   (défaut `"dfci"` seul). Codes du raster desserte : route=1, piste=2, dfci=3.
-2. **Terrain défendable** (`zone`) : pente ≤ `pente_defense_max_pct` et hors obstacle
-   complet ; la pente `NA` est infranchissable.
-3. **Propagation** : `propager_cout(cout, sources, zone, cout_max = distance_defense_max_m)`.
-4. **Classement** : cellule de forêt atteinte → `defendable` ; cellule de forêt non
-   atteinte → `non_defendable` ; hors forêt → `hors_foret` ; pente `NA` → indéterminé.
+Défauts alignés sur `dic_AllParam.json` (ADR : ne diverger qu'avec justification).
+
+---
+
+## 4. Sorties
+
+Objet `foretaccess_dfci` :
+
+- `accessibilite` : raster catégoriel **6 classes** : `inaccessible`,
+  `non_defendable_pente`, `defendable_c1` / `c2` / `c3` (bandes de lance
+  `[0,120[`, `[120,280[`, `[280,440]`), `hors_foret`. La pente trop élevée écrase
+  (une cellule raide est `non_defendable_pente`, jamais défendable).
+- `longueur_lance` : longueur de lance (m) atteignant la cellule ; `NA` sinon.
+  ↔ `Longueur_lance.tif`.
+- `denivele` : dénivelé cellule − source (m). ↔ `Denivele_sur_piste.tif`.
+- `lien_reseau` : cellule de desserte DFCI de rattachement. ↔ `Lien_foret_reseau.tif`.
+- `pente_ok` : logique, pente ≤ seuil pompier. ↔ `Pente_OK_pompier.tif`.
+- `certifie` : logique (tuilage), ou `NULL`.
+- `recap`, `grid`, `config`, `fichiers`.
 
 ### 4.1 Tuilage
 
-Tous les mécanismes ont une **portée bornée** par `distance_defense_max_m`. Sous
-tuilage, la sortie porte un `certifie` issu de [`certifier_propagation()`] (avec le même
-`cout_max`) : une cellule est certifiée quand le coût depuis les sources de la fenêtre
-est prouvé global. Un halo ≥ `distance_defense_max_m` (+ marge) certifie l'intérieur.
-
-Le **réseau DFCI est clairsemé** (souvent une poignée de pistes) : une tuile peut ne
-contenir **aucune** source DFCI dans sa fenêtre, tout en ayant d'autres dessertes.
-`.tuile_calculable()` (Lot 7) ne teste que la présence d'une desserte quelconque : le
-moteur DFCI ne peut donc pas s'y fier. Décision : `camion_dfci()` **tolère** l'absence
-de source **sous tuilage** (`bord` non `NULL`) en renvoyant une tuile **indéterminée**
-(rien de certifié, le halo grandit) ; au **niveau top-level** (`bord = NULL`), l'absence
-de source DFCI reste une **erreur ciblée**.
-
-Conséquence assumée : la garantie « identique au mono-bloc » porte sur les cellules
-**certifiées**. Une tuile dont le halo n'atteint jamais la ligne DFCI reste indéterminée
-(comme une tuile sans desserte pour le skidder, spec 007 §4.3).
+La portée est bornée par `dfci_lmax` : une cellule à plus de `dfci_lmax` de tout
+bord **ouvert** de la fenêtre ne peut être atteinte par aucune source extérieure,
+son résultat est donc identique au mono-bloc (`.certifier_dfci()`). Le réseau DFCI
+étant clairsemé, une tuile sans source dans sa fenêtre reste **indéterminée** (le
+halo grandit) ; au top-level, l'absence de source est une **erreur ciblée**.
 
 ---
 
-## 5. Configuration (`config$dfci`)
+## 5. Architecture
 
-| Clé | Défaut | Sens |
-|---|---|---|
-| `distance_defense_max_m` | `100` | Portée latérale de défense depuis une desserte (m). |
-| `pente_defense_max_pct` | `40` | Pente au-delà de laquelle le terrain est réputé non défendable (%). |
-| `classes_source` | `"dfci"` | Classes de desserte servant de base (sous-ensemble de route/piste/dfci). |
-
-Ce sont des **hypothèses de travail**, pas des valeurs Sylvaccess v3.6 : le module DFCI
-de Sylvaccess n'est pas dans les sources de référence (RdV Experts 2026). Elles sont
-documentées comme telles (ADR-003 : défauts explicites et surchargables).
+Boucle chaude (balayage radial 360°/pixel) portée en **Rust** (`src/rust/src/dfci/`,
+`dfci_scan`), comme le câble : R rasterise sources / pente / obstacles, le crate
+balaie, R assemble les 6 classes et les rasters SIG. Frontière minimale et typée
+(ADR-001).
 
 ---
 
-## 6. Sorties
+## 6. Confrontation à l'oracle (ColduPre, 532 016 cellules forestières)
 
-- `accessibilite` : raster catégoriel (`defendable`, `non_defendable`, `hors_foret`).
-- `distance_defense` : distance de défense au terrain (m) ; 0 sur la desserte, `NA` hors
-  portée / indéterminé.
-- `allocation` : cellule de desserte de rattachement.
-- `certifie` : logique (tuilage), ou `NULL`.
-- `recap` : `data.frame` surfaces (ha) et volumes (m³) par classe, ligne `indetermine`
-  comprise (la somme des surfaces égale le raster entier).
-- Écriture COG optionnelle (`write_dir`) des trois rasters `accessibilite`,
-  `distance_defense`, `allocation`.
+| Sortie | Accord / écart |
+|---|---|
+| Zone défendable | **99,87 %** (0 % trop optimiste, 0,13 % trop conservateur) |
+| Longueur de lance | écart **médian 0,0 m** (moyen 0,57 m) sur 247 897 cellules |
+| Dénivelé | écart **médian 0,0 m** |
+
+Le reliquat (0,13 %, 716 cellules) est de la discrétisation de rayon en bordure
+(4-connexité vs `ALL_TOUCHED` de GDAL), négligeable.
+
+Banc : `data-raw/oracle_coldupre.R` (génération) + `data-raw/oracle_compare.R`
+(bloc DFCI). L'oracle Sylvaccess DFCI n'est pas dans le lanceur standard
+(`g_do_dfci` défaut `false`) : le bloc de comparaison se saute si `DFCI_1/` est
+absent.
 
 ---
 
 ## 7. Tests (`tests/testthat/test-dfci.R`)
 
-- **Tampon borné** : zone défendable non vide, distance ≤ portée (CA1).
-- **Monotonie de portée** : une portée plus grande étend la zone défendable.
-- **Coupure de pente** : un plan raide (> seuil) effondre la zone défendable.
-- **`classes_source`** : une piste seule est ignorée par défaut, utilisée si ajoutée.
-- **Récap** conserve la surface totale ; classes attendues présentes.
-- **Erreur ciblée** sans source DFCI (top-level).
-- **Écriture COG** relisible.
-- **`print`** résume le moteur.
-- **Tuilage** : égalité au mono-bloc sur les cellules certifiées ; halo trop court →
-  indéterminé.
+Disque radial borné ; bandes de défendabilité croissantes ; portée monotone ;
+coupure de pente ; sources via le flag `CL_DFCI` (orthogonalité aux classes) ;
+récap conservant la surface ; erreur ciblée sans source ; écriture COG relisible ;
+`print` ; tuilage (égalité mono-bloc sur cellules certifiées, halo court →
+indéterminé).
 
 ---
 
-## 8. Critère d'acceptation (backlog US-6.1)
+## 8. Limites
 
-**CA1** : sortie beta documentée (limites explicites, §9) et testée sur une zone
-échantillon (jeu jouet + plans synthétiques). ✅
-
----
-
-## 9. Limites (beta) — assumées et documentées
-
-Le modèle **ne représente pas** :
-
-1. le **combustible** (type de peuplement, charge, continuité horizontale/verticale) ;
-2. le **vent** (direction, force) ni la dynamique du feu ;
-3. la **physique de la lance** : la portée est un **paramètre unique**
-   (`distance_defense_max_m`), non dérivée du débit / de la pression / du type de
-   matériel ;
-4. la **carrossabilité réelle** des dessertes par un camion (QUALIROAD) : elles sont
-   prises telles quelles depuis la classe `dfci`.
-
-La coupure `pente_defense_max_pct` est un **proxy grossier** d'atteignabilité. Ces
-sorties valent pour une **première hiérarchisation** du territoire, pas pour du
-dimensionnement opérationnel.
+Le modèle ne représente ni le **combustible**, ni le **vent**, ni la **physique de
+la lance** au-delà de sa longueur maximale, ni la **carrossabilité réelle** des
+dessertes (projet QUALIROAD). La coupure de pente pompier est un proxy
+d'atteignabilité. Ces sorties valent pour une **hiérarchisation** du territoire.
 
 ---
 
-## 10. Décisions figées (2026-07-12)
+## 9. Attribution
 
-1. **Modèle** : tampon au terrain (plus court chemin pondéré par la pente, plafonné),
-   réutilisant le service partagé `propager_cout()` — pas de nouveau noyau.
-2. **Sources** : classes de desserte configurables, défaut `"dfci"` seul.
-3. **Défauts** : portée 100 m, pente d'intervention 40 % — hypothèses de travail
-   explicites, non Sylvaccess.
-4. **Tuilage** : tolérance de l'absence de source sous tuilage (tuile indéterminée) ;
-   erreur au top-level. Garantie mono-bloc sur cellules certifiées.
-5. **Beta** : limites §9 documentées dans la roxygen (`@section Section limites`) et
-   ici. Raffinement (combustible, QUALIROAD) reporté.
-
----
-
-## 11. Attribution
-
-ForêtAccess dérive de Sylvaccess (INRAE, S. Dupire — GPL v3). Le module DFCI de
-Sylvaccess n'étant pas dans les sources de référence, ce lot est une **conception
-propre** cohérente avec l'architecture des moteurs terrestres, distribuée sous GPL v3.
+ForêtAccess dérive de Sylvaccess (INRAE, S. Dupire — GPL v3). Le module DFCI
+(`debusq_dfci`, `create_buffer_skidder`) est transcrit sous GPL v3.
