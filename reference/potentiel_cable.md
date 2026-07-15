@@ -97,8 +97,10 @@ L'optimisation de la **hauteur de fixation** sur chaque support
 (`c_option_h = 1`) n'est pas implementee : on tient la variante `_NoH`,
 qui est le defaut de v3.6.
 
-Le **pechage lateral** (`distance_laterale_max_m`) reste une extension
-future.
+Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris
+en compte : la couverture d'une ligne faisable n'est pas son seul axe
+mais le rectangle de demi-largeur `c_l_hor` autour du segment, comme
+`create_rast_couv` chez Sylvaccess.
 
 ## Places de depot
 

@@ -47,7 +47,8 @@ cable_scan(
   angle_transv,
   slope_trans,
   l_slope,
-  prop_slope
+  prop_slope,
+  l_hor
 )
 ```
 
@@ -204,6 +205,10 @@ cable_scan(
 - prop_slope:
 
   Maximum share of the line on a steep cross-slope.
+
+- l_hor:
+
+  Lateral yarding half-width buffered around each line (m).
 
 ## Value
 

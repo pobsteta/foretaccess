@@ -12,7 +12,8 @@
   version majeure signifie « validée contre le vrai moteur » et non «
   périmètre atteint ». Accord cellule à cellule sur le jeu officiel
   ColduPre (411 309 cellules forestières) : **skidder 99,95 %**,
-  **porteur 99,72 %**, **câble 96,58 %**.
+  **porteur 99,72 %**, **câble 96,58 %** — porté à **98,36 %** par le
+  Lot 12a.3 (pêchage latéral, cycle dev, non encore publié).
 - **Branche** : `main` (release `v0.13.0`)
 - **Version `DESCRIPTION`** : `0.13.0`
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -289,6 +290,39 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-15 — Lot 12a.3 : pêchage latéral du câble (96,58 % → 98,36 %)
+
+**Diagnostic (12a.3 amont).** Le reliquat câble était **asymétrique** :
+2,79 % de cellules trop conservatrices (Sylvaccess accessible, nous non)
+contre 0,63 % trop optimistes. Caractérisation en mémoire : 96,4 % des
+manquées à ≤ 40 m d’un couloir traçable, sur pentes **plus douces** que
+la forêt (26,8° contre 33,1°) — signature d’un **pêchage latéral**
+manquant, pas d’un déficit de portée (qui frapperait le raide) ni de la
+hauteur de fixation (`c_option_h`, hors périmètre).
+
+**Mécanique lue à la lettre.** `create_rast_couv` (Sylvaccess) rasterise
+la `Zone_accessible` comme l’**union de rectangles** de demi-largeur
+`c_l_hor = 40 m` autour du segment de chaque ligne (`pt_emprise` +
+`ALL_TOUCHED`). C’est un **tampon perpendiculaire inconditionnel** :
+aucune contrainte de dénivelé, de pente latérale ni de visibilité. La
+supposition initiale « sous contrainte de dénivelé latéral » (spec)
+était **fausse** — corrigée.
+
+**Réalisation.** `build_lat_rays(res, lmax, l_hor)` (Rust,
+`cable/scan.rs`) précalcule par azimut les cellules du tampon avec leur
+distance *le long* de la ligne ; au balayage, une ligne faisable de
+longueur `L` couvre celles dont `dalong ≤ L`. Ajouté à la seule
+**couverture**, pas à la surface/volume de la ligne (qui restent sur
+l’axe, pour ne pas perturber la future sélection). Câblé `cable_scan` →
+`ct$l_hor` (`distance_laterale_max_m`). Tests `cargo` + R verts.
+
+**Résultat (ColduPre).** Accord câble **96,58 % → 98,36 %**. Trop
+conservateur **2,79 % → 0,40 %** (~86 % de l’écart fermé). Contrepartie
+**0,63 % → 1,24 %** de trop optimiste : on tamponne *toute* ligne
+candidate faisable, là où Sylvaccess ne tamponne que les lignes
+**retenues** (`Tab_result`). Cette sur-couverture est le corollaire de
+l’**absence de sélection de lignes** (Lot 5), pas du tampon.
 
 ### 2026-07-13 — Lot 11 : confrontation à l’oracle Sylvaccess réel
 

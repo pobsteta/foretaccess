@@ -149,7 +149,9 @@ seulement raccourcie par le haut.</p>
 
 <p>L'optimisation de la <strong>hauteur de fixation</strong> sur chaque support (<code>c_option_h = 1</code>)
 n'est pas implementee : on tient la variante <code>_NoH</code>, qui est le defaut de v3.6.</p>
-<p>Le <strong>pechage lateral</strong> (<code>distance_laterale_max_m</code>) reste une extension future.</p>
+<p>Le <strong>pechage lateral</strong> (<code>distance_laterale_max_m</code>, <code>c_l_hor</code>) est pris en compte :
+la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
+demi-largeur <code>c_l_hor</code> autour du segment, comme <code>create_rast_couv</code> chez Sylvaccess.</p>
     </div>
     <div class="section level2">
     <h2 id="places-de-depot">Places de depot<a class="anchor" aria-label="anchor" href="#places-de-depot"></a></h2>
