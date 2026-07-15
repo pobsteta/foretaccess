@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,46 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.14.0" id="foretaccess-0140-2026-07-15">foretaccess 0.14.0 (2026-07-15)<a class="anchor" aria-label="anchor" href="#foretaccess-0140-2026-07-15"></a></h2>
+<div class="section level3">
+<h3 id="lota--affinage-de-fidélité-câble-porteur-skidder-0-14-0">Lot 12a — affinage de fidélité (câble, porteur, skidder)<a class="anchor" aria-label="anchor" href="#lota--affinage-de-fid%C3%A9lit%C3%A9-c%C3%A2ble-porteur-skidder-0-14-0"></a></h3>
+<p>Sur le socle de confrontation à l’oracle du Lot 11, quatre écarts résiduels traités, mesure à l’appui sur le jeu officiel ColduPre (411 309 cellules forestières). Principe directeur : <strong>fidélité avant optimisation</strong> — chaque changement est mesuré sur l’oracle avant d’être retenu.</p>
+<p>Accord cellule à cellule après le lot :</p>
+<table class="table"><thead><tr><th>Moteur</th>
+<th>Accord</th>
+<th>Trop optimistes</th>
+<th>Trop conservateurs</th>
+</tr></thead><tbody><tr><td>Skidder</td>
+<td><strong>99,95 %</strong></td>
+<td>0,04 %</td>
+<td>0,01 %</td>
+</tr><tr><td>Porteur</td>
+<td><strong>99,72 %</strong></td>
+<td>0,22 %</td>
+<td>0,06 %</td>
+</tr><tr><td>Câble</td>
+<td><strong>98,36 %</strong></td>
+<td>1,24 %</td>
+<td>0,40 %</td>
+</tr></tbody></table><div class="section level4">
+<h4 id="câble--pêchage-latéral-c_l_hor-----0-14-0">Câble — pêchage latéral (<code>c_l_hor</code>) — 96,58 % → 98,36 %<a class="anchor" aria-label="anchor" href="#c%C3%A2ble--p%C3%AAchage-lat%C3%A9ral-c_l_hor-----0-14-0"></a></h4>
+<p>La couverture d’une ligne faisable n’est plus son seul axe mais le <strong>rectangle</strong> de demi-largeur <code>c_l_hor</code> (40 m) autour du segment desserte → bout de ligne, comme <code>create_rast_couv</code> chez Sylvaccess : un <strong>tampon perpendiculaire inconditionnel</strong> (la charge décrochée à côté de la ligne, pas dessous). <code>build_lat_rays()</code> dans le noyau Rust ; ajouté à la seule couverture, pas à la surface/volume de la ligne. Ferme ~86 % du reliquat trop conservateur (2,79 % → 0,40 %). La contrepartie (trop optimiste 0,63 % → 1,24 %) tient à ce qu’on tamponne <em>toute</em> ligne candidate, là où Sylvaccess ne retient qu’une sélection (<code>Tab_result</code>) — corollaire du Lot 5, pas du tampon.</p>
+</div>
+<div class="section level4">
+<h4 id="porteur--fusion-platradial-et-héritage-du-grappin-0-14-0">Porteur — fusion plat/radial et héritage du grappin<a class="anchor" aria-label="anchor" href="#porteur--fusion-platradial-et-h%C3%A9ritage-du-grappin-0-14-0"></a></h4>
+<p>Le porteur arbitre désormais entre propagation <strong>sur terrain plat</strong> et desserte <strong>radiale</strong> comme Sylvaccess (radial l’emporte si <code>Dforet_radial &lt; Dforet_plat + 0,1·Dpiste_plat</code>, asymétrique et strict), puis fait <strong>hériter le grappin</strong> de la rampe conduite (<code>Dforet = Dbras + Dforet_rampe</code>). Les distances collent alors, décomposition comprise : traînage sur piste −3,0 m, forêt +1,2 m, total +0,5 m d’écart médian.</p>
+</div>
+<div class="section level4">
+<h4 id="skidder--pondération-de-la-piste-dans-larbitrage-veto-0-14-0">Skidder — pondération de la piste dans l’arbitrage (veto)<a class="anchor" aria-label="anchor" href="#skidder--pond%C3%A9ration-de-la-piste-dans-larbitrage-veto-0-14-0"></a></h4>
+<p>Transcription <strong>à la lettre</strong> du mécanisme de Sylvaccess : ce n’est pas un moteur de coût mais un <strong>veto</strong> imbriqué (<code>pyx:3712</code>), avec deux coefficients — <code>0,5</code> dans la propagation entre pistes, <code>0,1</code> dans l’arbitrage piste/route. Propagation par <strong>correction d’étiquettes</strong> (le veto brise la monotonie d’un Dijkstra). Accord skidder maintenu à 99,95 %.</p>
+</div>
+<div class="section level4">
+<h4 id="banc--angle-mort-des-distances-porteur-fermé-0-14-0">Banc — angle mort des distances porteur fermé<a class="anchor" aria-label="anchor" href="#banc--angle-mort-des-distances-porteur-ferm%C3%A9-0-14-0"></a></h4>
+<p><code>oracle_compare.R</code> compare désormais aussi les <strong>distances</strong> du porteur (traînage piste, forêt, total), pas seulement la carte binaire d’accessibilité : une carte peut coïncider alors que les distances divergent. C’est ce banc élargi qui a révélé puis validé le correctif 12a.2b.</p>
+</div>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.13.0" id="foretaccess-0130-2026-07-14">foretaccess 0.13.0 (2026-07-14)<a class="anchor" aria-label="anchor" href="#foretaccess-0130-2026-07-14"></a></h2>
 <div class="section level3">

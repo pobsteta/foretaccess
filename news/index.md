@@ -1,5 +1,63 @@
 # Changelog
 
+## foretaccess 0.14.0 (2026-07-15)
+
+### Lot 12a — affinage de fidélité (câble, porteur, skidder)
+
+Sur le socle de confrontation à l’oracle du Lot 11, quatre écarts
+résiduels traités, mesure à l’appui sur le jeu officiel ColduPre (411
+309 cellules forestières). Principe directeur : **fidélité avant
+optimisation** — chaque changement est mesuré sur l’oracle avant d’être
+retenu.
+
+Accord cellule à cellule après le lot :
+
+| Moteur  | Accord      | Trop optimistes | Trop conservateurs |
+|---------|-------------|-----------------|--------------------|
+| Skidder | **99,95 %** | 0,04 %          | 0,01 %             |
+| Porteur | **99,72 %** | 0,22 %          | 0,06 %             |
+| Câble   | **98,36 %** | 1,24 %          | 0,40 %             |
+
+#### Câble — pêchage latéral (`c_l_hor`) — 96,58 % → 98,36 %
+
+La couverture d’une ligne faisable n’est plus son seul axe mais le
+**rectangle** de demi-largeur `c_l_hor` (40 m) autour du segment
+desserte → bout de ligne, comme `create_rast_couv` chez Sylvaccess : un
+**tampon perpendiculaire inconditionnel** (la charge décrochée à côté de
+la ligne, pas dessous). `build_lat_rays()` dans le noyau Rust ; ajouté à
+la seule couverture, pas à la surface/volume de la ligne. Ferme ~86 % du
+reliquat trop conservateur (2,79 % → 0,40 %). La contrepartie (trop
+optimiste 0,63 % → 1,24 %) tient à ce qu’on tamponne *toute* ligne
+candidate, là où Sylvaccess ne retient qu’une sélection (`Tab_result`) —
+corollaire du Lot 5, pas du tampon.
+
+#### Porteur — fusion plat/radial et héritage du grappin
+
+Le porteur arbitre désormais entre propagation **sur terrain plat** et
+desserte **radiale** comme Sylvaccess (radial l’emporte si
+`Dforet_radial < Dforet_plat + 0,1·Dpiste_plat`, asymétrique et strict),
+puis fait **hériter le grappin** de la rampe conduite
+(`Dforet = Dbras + Dforet_rampe`). Les distances collent alors,
+décomposition comprise : traînage sur piste −3,0 m, forêt +1,2 m, total
++0,5 m d’écart médian.
+
+#### Skidder — pondération de la piste dans l’arbitrage (veto)
+
+Transcription **à la lettre** du mécanisme de Sylvaccess : ce n’est pas
+un moteur de coût mais un **veto** imbriqué (`pyx:3712`), avec deux
+coefficients — `0,5` dans la propagation entre pistes, `0,1` dans
+l’arbitrage piste/route. Propagation par **correction d’étiquettes** (le
+veto brise la monotonie d’un Dijkstra). Accord skidder maintenu à 99,95
+%.
+
+#### Banc — angle mort des distances porteur fermé
+
+`oracle_compare.R` compare désormais aussi les **distances** du porteur
+(traînage piste, forêt, total), pas seulement la carte binaire
+d’accessibilité : une carte peut coïncider alors que les distances
+divergent. C’est ce banc élargi qui a révélé puis validé le correctif
+12a.2b.
+
 ## foretaccess 0.13.0 (2026-07-14)
 
 ### Lot 11 — confrontation à l’oracle Sylvaccess réel

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,9 +48,11 @@
 <ul><li>
 <strong>Lot 11 (confrontation à l’oracle Sylvaccess réel) livré en <code>v0.13.0</code></strong>, et <strong>Lot 4 clos</strong> (supports intermédiaires du câble). Décidé le 2026-07-13 : <strong>l’oracle passe avant <code>v1.0.0</code></strong>, pour que la version majeure signifie « validée contre le vrai moteur » et non « périmètre atteint ». Accord cellule à cellule sur le jeu officiel ColduPre (411 309 cellules forestières) : <strong>skidder 99,95 %</strong>, <strong>porteur 99,72 %</strong>, <strong>câble 96,58 %</strong> — porté à <strong>98,36 %</strong> par le Lot 12a.3 (pêchage latéral, cycle dev, non encore publié).</li>
 <li>
-<strong>Branche</strong> : <code>main</code> (release <code>v0.13.0</code>)</li>
+<strong>Lot 12a (affinage de fidélité) livré en <code>v0.14.0</code></strong> : câble porté à <strong>98,36 %</strong> (pêchage latéral <code>c_l_hor</code>, 12a.3), distances porteur fidèles (fusion plat/radial + héritage grappin, 12a.2b), veto de pondération piste du skidder (12a.1), banc élargi aux distances porteur (12a.2). <strong>Reste 12a.4 (DFCI)</strong> à traiter en session dédiée (oracle produit, moteur à refondre).</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>0.13.0</code>
+<strong>Branche</strong> : <code>main</code> (release <code>v0.14.0</code>)</li>
+<li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>0.14.0</code>
 </li>
 <li>
 <strong>Les distances collent, décomposition comprise</strong> (mesuré sur les sorties courantes) : débusquage <strong>0,0 m</strong> d’écart médian, traînage <strong>en forêt 0,2 m</strong> (120,2 contre 124,0), traînage sur piste <strong>0,4 m</strong>, distance totale <strong>0,2 m</strong>. Le reliquat est l’<strong>arrondi</strong> : Sylvaccess stocke ses distances en <code>int16</code> (<code>int(dist + 0.5)</code>), nous en flottant — l’écart est borné par la demi-cellule. <em>(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07 était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir l’entrée du 14/07 ci-dessous.)</em>
