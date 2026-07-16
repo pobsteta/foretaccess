@@ -249,6 +249,9 @@ défaut `FALSE`). Le `_NoH` (défaut v3.6) reste la seule voie recommandée, bit
 - **Pourquoi en attente** : le port `optim_h=true` *réduit* la couverture (net −999) au lieu de
   l'augmenter (oracle +470) — bug de fidélité restant, vraisemblablement dans `optpyl_up2` ; et perf
   ~20× (46 min / 2 départs). À reprendre si le besoin le justifie. Détails : `PLAN.md` (journal 16/07).
+- **Voie de reprise retenue** : plutôt que déboguer `optpyl_up2`, transcrire l'algorithme
+  **SEILAPLAN** (Bont & Heinimann 2012, graphe + plus court chemin), plus sain et validé — cf.
+  `specs/013-seilaplan-hauteur.md` et `docs/comparaison-cable-seilaplan.md`.
 6. **Défauts matériels v3.6** dans `config$cable`, complétés depuis `Tab_Param_cable.csv`
    (masse linéaire 1,85 kg/m, diamètre 18 mm, rupture 35000 kgF, sécurité 2, mât 10,5 m,
    `lmax` 750 m, `lmin` 150 m, garde `[3,5 ; 50]` m, `nb_supports_max` 3).
