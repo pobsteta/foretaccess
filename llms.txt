@@ -351,12 +351,17 @@ Conception d’un réseau de desserte : surface de coût de construction
   : Build the construction-cost surface of a new forest road
 - [`tracer_desserte()`](https://pobsteta.github.io/foretaccess/reference/tracer_desserte.md)
   : Design the optimal route of a new forest road
+- [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+  : Design a forest-road network serving several parcels
 - [`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
   : Inverse cost-distance from a target cell (road-design A\\ heuristic,
   Lot 15a).
 - [`desserte_trace()`](https://pobsteta.github.io/foretaccess/reference/desserte_trace.md)
   : Trace a forest road through mandatory waypoints (road-design A\\
   solver, Lot 15b).
+- [`desserte_reseau()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau.md)
+  : Build a forest-road network serving ordered parcel cells (greedy
+  MTAP, Lot 16a).
 
 ## Non-régression
 

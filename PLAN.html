@@ -64,9 +64,11 @@
 <strong>Lot 15b (solveur A* complet) en cycle dev</strong> : <code>src/rust/src/desserte/</code> complété par <code>geom.rs</code> (<code>connect2</code> DDA, <code>get_intersect</code>, <code>check_profile</code>) et <code>solver.rs</code> (portage de <code>Astar_force_wp</code> / <code>calc_init</code> / <code>basic_calc</code> : coût de transition géométrique + pénalités paraboliques direction/pente, épingles avec rayon de braquage et angle limite, anti-croisement, file secondaire de finition, enchaînement des points de passage). Binding <code>desserte_trace</code> exposé. 19 tests cargo + 10 tests R (CA-15.1/15.4/15.6/15.9). <strong>15b mergé (#60).</strong>
 </li>
 <li>
-<strong>Lot 15c (orchestration R) en cycle dev</strong> : <code>tracer_desserte(pre, cout, waypoints, config)</code> (<code>R/desserte_trace.R</code>) rend un objet <code>foretaccess_trace</code> (une <code>sf</code> LINESTRING de la route, coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (<code>obs2</code>) et fraction locale de fort dévers (<code>local_slope</code> par focale disque), convertit les waypoints (sf/cellules) en indices, appelle <code>desserte_trace</code>, reconstruit la polyligne (centres de cellules). Config <code>desserte$trace</code> ajoutée (paramètres SylvaRoad) + validation. 18 tests. <strong>Lot 15 clos</strong> (15a→15c) ; oracle <code>meisenthal2</code> non publié → validé par invariants. Suite : <strong>Lot 16</strong> (réseau MTAP).</li>
+<strong>Lot 15c (orchestration R) en cycle dev</strong> : <code>tracer_desserte(pre, cout, waypoints, config)</code> (<code>R/desserte_trace.R</code>) rend un objet <code>foretaccess_trace</code> (une <code>sf</code> LINESTRING de la route, coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (<code>obs2</code>) et fraction locale de fort dévers (<code>local_slope</code> par focale disque), convertit les waypoints (sf/cellules) en indices, appelle <code>desserte_trace</code>, reconstruit la polyligne (centres de cellules). Config <code>desserte$trace</code> ajoutée (paramètres SylvaRoad) + validation. 18 tests. <strong>Lot 15 clos</strong> (15a→15c, #59/#60/#61) ; oracle <code>meisenthal2</code> non publié → validé par invariants.</li>
 <li>
-<strong>Branche</strong> : <code>feat/lot15c-orchestration</code> (cycle dev)</li>
+<strong>Lot 16a (réseau glouton MTAP) en cycle dev</strong> : <code>reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, skidding_m, ...)</code> (<code>R/desserte_reseau.R</code>) rend un objet <code>foretaccess_reseau</code> (<code>sf</code> LINESTRING des routes créées + <code>SpatRaster</code> du réseau + coût total). Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au <strong>réseau courant</strong> par le solveur Lot 15 (variante <strong>multi-cible</strong> : A* qui s’arrête sur toute cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage par distance de débardage. Trois heuristiques d’ordre (plus proche, plus gros volume, aléatoire reproductible). Nouveau Rust : <code>heuristic::dist_to_end_multi</code>, <code>solver::solve_network</code> + <code>build_network</code>, binding <code>desserte_reseau</code>. 24 tests cargo + 12 tests R. Reste <strong>16b</strong> (Steiner) et <strong>16c</strong> (raccordement/connexité, sortie affinée).</li>
+<li>
+<strong>Branche</strong> : <code>feat/lot16a-reseau-glouton</code> (cycle dev)</li>
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0.9000</code> (cycle dev après release <code>v1.1.0</code>)</li>
 <li>
@@ -188,8 +190,8 @@
 </tr><tr><td>16</td>
 <td>Réseau MTAP</td>
 <td><code>specs/016-reseau-mtap.md</code></td>
-<td>📋 proposé</td>
-<td>—</td>
+<td>🔨 en cours (16a glouton livré)</td>
+<td><em>(cycle dev)</em></td>
 </tr><tr><td>17</td>
 <td>Flux &amp; typage</td>
 <td><code>specs/017-flux-typage.md</code></td>
