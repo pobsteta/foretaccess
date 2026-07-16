@@ -244,7 +244,6 @@ pub fn scan(
     l_slope: f64,
     prop_slope: f64,
     l_hor: f64,
-    optim_h: bool,
     methode_seilaplan: bool,
     hm_min: f64,
     hm_max: f64,
@@ -384,7 +383,6 @@ pub fn scan(
                 lmin_span,
                 nbconfig,
                 heriter_tension: true,
-                optim_h,
             };
 
             // Portee retenue, en index du profil aller, et nombre de supports poses.

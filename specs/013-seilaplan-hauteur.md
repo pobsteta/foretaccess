@@ -220,7 +220,7 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   (port de `peakdetect`). 6 tests `cargo` : CA-13.1 (support quand le direct échoue),
   pas de support inutile, hauteur fixe = optimisation de position (CA-13.2, esprit),
   coupe native, coût `KostStue`, `peakdetect`. Non câblé à `cable_scan` (→ 13c).
-- **13c — intégration** 🔶 *(câblage fait 2026-07-16 ; confrontation ColduPre en cours)* :
+- **13c — intégration** ✅ *(2026-07-16)* :
   câblage `cable_scan` / config (`methode_supports = "sylvaccess" | "seilaplan"`,
   + `hauteur_support_{min,max}_m`, `pas_hauteur_support_m`, `distance_min_support_m`,
   `nb_pas_pretension`). La branche `seilaplan` de `scan()` appelle `optimize_supports`
@@ -241,22 +241,33 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   résultat inchangé. **Confrontation finale** (config `4/8/12 m`, supports 40 m, `n_sk=12`) :
   **+3619 cellules vs `_NoH`** (perd 324), **perf ×2,8** → **CA-13.3 et CA-13.4 tenus**. Réserve :
   +3619 dépasse le gain oracle (+470) → excès d'optimisme possible, à trancher en 13d (CA-13.5).
-- **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
-  retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
+- **13d — validation & nettoyage** ✅ *(2026-07-16)* : confrontation **cellule à cellule** à
+  l'oracle Sylvaccess `c_option_h=true` (`sylvaccess_hopt`) sur sa fenêtre câble (28336 cellules) —
+  seilaplan **colle à l'oracle** : accord **93,15 % → 94,73 %**, faux-négatifs **1915 → 1465**
+  (récupère du trop-conservateur), faux-positifs quasi nuls **25 → 29** (pas d'excès d'optimisme) ;
+  en fenêtre **+454 ≈ le +470** de l'oracle → **réserve de 13c.2 levée**, CA-13.5 tenu. Le +3619 de
+  tête est du **hors-fenêtre** (écart de fenêtrage FA/Sylvaccess, déjà présent sur le `_NoH`, → Lot 5).
+  **Nettoyage** : `OptPyl_Up2` / `essai_depart_bas` et le flag `optimiser_hauteur_fixation` (+ param
+  `optim_h` du binding) **retirés** ; le `_NoH` reste bit-pour-bit (51 tests cargo verts).
 
 ---
 
 ## 8. Definition of Done
 
-- [ ] Graphe B&H implémenté en Rust, réutilisant la caténaire existante.
-- [ ] Non-régression : à hauteur fixe, mêmes lignes que le `_NoH` (CA-13.2).
-- [ ] Sur ColduPre, l'optimisation de hauteur **augmente** la couverture (CA-13.3) et
-      la perf reste raisonnable (CA-13.4).
-- [ ] `docs/comparaison-cable-seilaplan.md` et `specs/004` (§ Statut c_option_h) mis à
-      jour (renvoi vers ce spec, retrait de la dette).
-- [ ] Le code `OptPyl_Up2` shelvé et son flag sont retirés (ou explicitement conservés
-      en annexe si utile).
-- [ ] `PLAN.md` à jour (dette câble → résolue par la voie SEILAPLAN).
+- [x] Graphe B&H implémenté en Rust, réutilisant la caténaire existante (13b).
+- [x] Non-régression : le défaut `sylvaccess` (`_NoH`) reste bit-pour-bit ; à un seul niveau
+      de hauteur le graphe optimise la position seule (CA-13.2, esprit, tests `cargo`).
+- [x] Sur ColduPre, l'optimisation de hauteur **augmente** la couverture et est **fidèle à
+      l'oracle** `c_option_h=true` (CA-13.3 : accord 93,2 → 94,7 %, +454 ≈ +470 en fenêtre) ;
+      perf **×2,8** (CA-13.4 : < 5×).
+- [x] `docs/comparaison-cable-seilaplan.md` et `specs/004` (§ Statut c_option_h) mis à jour.
+- [x] Le code `OptPyl_Up2` shelvé et le flag `optimiser_hauteur_fixation` sont **retirés**.
+- [x] `PLAN.md` à jour (dette câble → résolue par la voie SEILAPLAN).
+
+**Reste ouvert (hors 013)** : l'écart de **fenêtrage** FA/Sylvaccess (couverture hors buffer des
+places de départ) — commun au `_NoH` — relève de la **sélection de lignes (Lot 5)**, pas de
+l'optimisation de hauteur. Comparaison ligne-à-ligne au plugin SEILAPLAN (`STANDALONE.py`) : optionnelle,
+non bloquante (l'oracle `sylvaccess_hopt` fait déjà référence cellule à cellule).
 
 ---
 

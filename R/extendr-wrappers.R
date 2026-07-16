@@ -266,7 +266,6 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #' @param l_slope Maximum cumulated length on a steep cross-slope (m).
 #' @param prop_slope Maximum share of the line on a steep cross-slope.
 #' @param l_hor Lateral yarding half-width buffered around each line (m).
-#' @param optim_h Optimise the attachment height on each support (`c_option_h`).
 #' @param methode_seilaplan Place supports with the SEILAPLAN graph (Bont &
 #'   Heinimann 2012) instead of Sylvaccess `OptPyl_NoH` (spec 013). Optimises
 #'   both support position and height.
@@ -279,7 +278,7 @@ cable_test_span <- function(line_x, line_z, pg, posi, hg, hd, hline_min, hline_m
 #'   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 #'   `li_ipc`, `li_nsup`.
 #' @export
-cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor, optim_h, methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor, optim_h, methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk)
+cable_scan <- function(alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor, methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk) .Call(wrap__cable_scan, alt, nr, nc, res, foret, routes, vol, has_vol, htower, h_end, hline_min, hline_max, slope_min, slope_max, slope_min_aval, slope_max_aval, f_o, tmax, q1, q2, q3, eao, angle_intsup, lmax, lmin, hintsup, sup_max, lmin_span, nbconfig, pas_azimut, pas_depart, aspect, pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor, methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk)
 
 #' Balayage radial DFCI (`debusq_dfci`), porté en Rust.
 #'

@@ -97,12 +97,6 @@ pub struct OptParams<'a> {
     // `OptPyl_Up_NoH` : oui. `OptPyl_Down_init_NoH` : non -- chaque travee repart de
     // `tmax`. Ce n'est pas une symetrie : c'est ce que fait la source.
     pub heriter_tension: bool,
-    // Optimise-t-on la hauteur de fixation (`c_option_h = 1`) ? Faux = variante `_NoH`
-    // (hauteur fixe `hintsup`/`h_fin`), le defaut v3.6. Vrai = variantes `OptPyl_Up` /
-    // `OptPyl_Down_init` : la hauteur terminale est ABAISSEE tant que la travee tient,
-    // et chaque support intermediaire balaye `ceil(hline_min)..hintsup` (premiere
-    // faisable). Le mat (`h_debut`) reste fixe.
-    pub optim_h: bool,
 }
 
 impl OptParams<'_> {
@@ -142,10 +136,8 @@ impl OptParams<'_> {
         )
     }
 
-    // Hauteur terminale ABAISSEE : part de `hmax` et descend d'un metre tant que la
-    // travee tient (`while Hd>1` de Sylvaccess), garde la plus basse faisable de la
-    // plage contigue depuis le haut. `None` si `hmax` lui-meme est infaisable.
-    // En `_NoH` : un seul essai a `hmax` (equivalent au comportement fixe).
+    // Travee a hauteur terminale fixe `hmax` (variante `_NoH`, le defaut v3.6) :
+    // un seul essai. `None` si infaisable. Rend aussi la hauteur retenue (`hmax`).
     #[allow(clippy::too_many_arguments)]
     fn essai_bas(
         &self,
@@ -157,52 +149,8 @@ impl OptParams<'_> {
         dsupdep: f64,
         slope_prev: f64,
     ) -> Option<(SpanResult, f64)> {
-        if !self.optim_h {
-            let r = self.essai(pg, posi, hg, hmax, tmax, dsupdep, slope_prev);
-            return if r.test { Some((r, hmax)) } else { None };
-        }
-        let mut hd = hmax;
-        let mut best = None;
-        while hd > 1.0 {
-            let r = self.essai(pg, posi, hg, hd, tmax, dsupdep, slope_prev);
-            if r.test {
-                best = Some((r, hd));
-            } else {
-                break;
-            }
-            hd -= 1.0;
-        }
-        best
-    }
-
-    // Hauteur MONTANTE : de `hmin` (arrondi au superieur) vers `hmax`, rend la
-    // PREMIERE (plus basse) faisable. `None` si aucune ne tient.
-    // En `_NoH` : un seul essai a `hmax`.
-    #[allow(clippy::too_many_arguments)]
-    fn essai_haut(
-        &self,
-        pg: usize,
-        posi: usize,
-        hg: f64,
-        hmin: f64,
-        hmax: f64,
-        tmax: f64,
-        dsupdep: f64,
-        slope_prev: f64,
-    ) -> Option<(SpanResult, f64)> {
-        if !self.optim_h {
-            let r = self.essai(pg, posi, hg, hmax, tmax, dsupdep, slope_prev);
-            return if r.test { Some((r, hmax)) } else { None };
-        }
-        let mut hd = hmin.ceil();
-        while hd <= hmax {
-            let r = self.essai(pg, posi, hg, hd, tmax, dsupdep, slope_prev);
-            if r.test {
-                return Some((r, hd));
-            }
-            hd += 1.0;
-        }
-        None
+        let r = self.essai(pg, posi, hg, hmax, tmax, dsupdep, slope_prev);
+        if r.test { Some((r, hmax)) } else { None }
     }
 }
 
@@ -289,7 +237,7 @@ pub fn optpyl(p: &OptParams) -> Vec<SpanRow> {
     let seuil = p.csize.max(p.lmin_span);
 
     // --- 1. Sans support intermediaire : la portee directe suffit-elle ? -----
-    // Hauteur terminale abaissee (`essai_bas`) si `optim_h`, sinon fixe a `h_fin`.
+    // Hauteur terminale fixe a `h_fin` (`essai_bas`, variante `_NoH`).
     if let Some((r, hd)) = p.essai_bas(0, indmax, p.h_debut, p.h_fin, p.tmax, 0.0, -9999.0) {
         return vec![span_row(&r, hd, indmax, p.q1)];
     }
@@ -340,16 +288,10 @@ pub fn optpyl(p: &OptParams) -> Vec<SpanRow> {
                 }
             };
 
-            // Bornes du balayage de hauteur du support intermediaire. En `_NoH` :
-            // hauteur fixe `hintsup` (un seul essai). En `optim_h` : de `ceil(hline_min)`
-            // a `hintsup` (= `Line[posi,7]`, uniforme a `test_hfor=0`), premiere faisable
-            // -- mais chaque hauteur faisable AJOUTE une configuration au faisceau (une
-            // meme position peut ainsi generer plusieurs candidats de hauteurs distinctes).
-            let (hmin_near, hmax_near) = if p.optim_h {
-                (p.hline_min.ceil(), p.hintsup)
-            } else {
-                (p.hintsup, p.hintsup)
-            };
+            // Support intermediaire a hauteur fixe `hintsup` (variante `_NoH`, le
+            // defaut v3.6) : un seul essai (la boucle `while hd <= hmax_near` ne
+            // s'execute qu'une fois).
+            let (hmin_near, hmax_near) = (p.hintsup, p.hintsup);
 
             for posi in ((indmin + 1)..=indmaxmulti).rev() {
                 let mut hd = hmin_near;
@@ -365,13 +307,12 @@ pub fn optpyl(p: &OptParams) -> Vec<SpanRow> {
                         niveau.push(cfg.clone());
 
                         // La derniere travee rejoint-elle le terminus ? Sa hauteur amont
-                        // est `hd` (celle du support), sa hauteur aval balaie `1..h_fin`.
+                        // est `hd` (celle du support), sa hauteur aval fixe a `h_fin`.
                         let t2 = if p.heriter_tension { tdown } else { p.tmax };
-                        if let Some((r2, hd2)) = p.essai_haut(
+                        if let Some((r2, hd2)) = p.essai_bas(
                             posi,
                             indmax,
                             hd,
-                            1.0,
                             p.h_fin,
                             t2,
                             r1.diag + dsupdep,
@@ -411,10 +352,9 @@ pub fn optpyl(p: &OptParams) -> Vec<SpanRow> {
             None => continue,
         };
         for posi in (indmin..indmax).rev() {
-            // Le terminus devient `posi` : il porte la hauteur terminale, balayee
-            // `1..h_fin` (premiere faisable) en `optim_h`, fixe a `h_fin` sinon.
+            // Le terminus devient `posi` : il porte la hauteur terminale fixe `h_fin`.
             if let Some((r, hd)) =
-                p.essai_haut(pg, posi, hg, 1.0, p.h_fin, tmax_c, dsupdep, slope_prev)
+                p.essai_bas(pg, posi, hg, p.h_fin, tmax_c, dsupdep, slope_prev)
             {
                 let mut cfg = prefixe.clone();
                 cfg.push(span_row(&r, hd, posi, p.q1));
@@ -464,8 +404,7 @@ pub fn optpyl_down_noh(p: &OptParams) -> Option<(Vec<SpanRow>, usize)> {
             line_z: &p.line_z[rogne..],
             ..*p
         };
-        // Hauteur optimisee -> `OptPyl_Up2` (balaye l'ancrage) ; sinon `OptPyl_Up_NoH`.
-        let spans = if p.optim_h { optpyl_up2(&q) } else { optpyl(&q) };
+        let spans = optpyl(&q);
         if let Some(last) = spans.last() {
             if last.posi() == q.line_x.len() - 1 {
                 return Some((spans, rogne));
@@ -473,180 +412,6 @@ pub fn optpyl_down_noh(p: &OptParams) -> Option<(Vec<SpanRow>, usize)> {
         }
     }
     None
-}
-
-/// **EXPERIMENTAL / non fidele.** Confronte a l'oracle (ColduPre, `c_option_h=true`),
-/// ce chemin *reduit* la couverture (net -999 cellules) la ou Sylvaccess l'*augmente*
-/// (+470) : un defaut subsiste ici (lignes trop courtes). N'est atteint que via le flag
-/// `optim_h` (defaut faux). Conserve pour reprise ; cf. `PLAN.md`.
-///
-/// Optimise une ligne « machine en bas » AVEC optimisation de la hauteur de fixation
-/// (`OptPyl_Up2`). Comme `optpyl`, mais la hauteur BALAYEE est celle du **depart**
-/// (l'ancrage, index 0) ; le terminus (le mat) reste fixe a `h_fin`. Le balayage du
-/// depart n'a lieu qu'au premier support (au-dela, la hauteur amont = hauteur aval du
-/// support precedent). `get_Tabis2` a exactement la meme selection que `get_tabis`
-/// (elle ne discrimine que sur `posi` puis une hauteur du dernier support) : on la
-/// reutilise. La hauteur d'ancrage n'a pas besoin d'etre stockee -- elle ne sert qu'a
-/// la faisabilite, le scan ne lit que l'index terminal.
-pub fn optpyl_up2(p: &OptParams) -> Vec<SpanRow> {
-    let indmax = p.line_x.len() - 1;
-    if indmax == 0 {
-        return Vec::new();
-    }
-    let seuil = p.csize.max(p.lmin_span);
-
-    // --- 1. Sans support : hauteur d'ancrage ABAISSEE, terminus (mat) fixe. ----
-    if let Some(r) = essai_depart_bas(p, 0, indmax, p.h_debut, p.h_fin, p.tmax, 0.0, -9999.0) {
-        return vec![span_row(&r, p.h_fin, indmax, p.q1)];
-    }
-
-    // --- 2. Aucun support : couper, ancrage abaisse par position. -------------
-    if p.sup_max == 0 {
-        let indmin = match premier_index_valide(p.line_x, 0, seuil) {
-            Some(i) => i,
-            None => return Vec::new(),
-        };
-        for posi in (indmin..indmax).rev() {
-            if let Some(r) = essai_depart_bas(p, 0, posi, p.h_debut, p.h_fin, p.tmax, 0.0, -9999.0) {
-                return vec![span_row(&r, p.h_fin, posi, p.q1)];
-            }
-        }
-        return Vec::new();
-    }
-
-    // --- 3. Recherche en faisceau. --------------------------------------------
-    let mut indmaxmulti = indmax;
-    let mut diff = 0.0;
-    while diff < seuil && indmaxmulti > 0 {
-        indmaxmulti -= 1;
-        diff = p.line_x[indmax] - p.line_x[indmaxmulti];
-    }
-    if indmaxmulti == 0 {
-        return Vec::new();
-    }
-
-    let mut faisceau: Vec<Vec<SpanRow>> = vec![Vec::new()];
-    let mut intsup = 1usize;
-    let hmin_near = p.hline_min.ceil();
-    let hmax_near = p.hintsup;
-
-    while intsup <= p.sup_max {
-        let mut niveau: Vec<Vec<SpanRow>> = Vec::new();
-
-        for prefixe in &faisceau {
-            let (pg, tmax_c, dsupdep, slope_prev, indmin, hg_iter) = match prefixe.last() {
-                // Niveau 1 : la hauteur d'ancrage (amont du 1er support) est BALAYEE
-                // 1..h_debut. C'est la dimension d'optimisation propre a `OptPyl_Up2`.
-                None => {
-                    let mut hgs = Vec::new();
-                    let mut h = 1.0;
-                    while h <= p.h_debut {
-                        hgs.push(h);
-                        h += 1.0;
-                    }
-                    (0usize, p.tmax, 0.0, -9999.0, 0usize, hgs)
-                }
-                Some(last) => {
-                    let pg = last.posi();
-                    let dsup: f64 = prefixe.iter().map(|s| s.diag()).sum();
-                    let t = if p.heriter_tension { last.tcalc() } else { p.tmax };
-                    (pg, t, dsup, last.slope(), pg, vec![last.hd()])
-                }
-            };
-
-            for &hg in &hg_iter {
-                for posi in ((indmin + 1)..=indmaxmulti).rev() {
-                    let mut hd = hmin_near;
-                    while hd <= hmax_near {
-                        let r1 = p.essai(pg, posi, hg, hd, tmax_c, dsupdep, slope_prev);
-                        if r1.test {
-                            let tdown = (r1.th * r1.th + (r1.tv - p.q1 * G * r1.lo).powi(2)).sqrt();
-                            let mut cfg = prefixe.clone();
-                            cfg.push(span_row(&r1, hd, posi, p.q1));
-                            niveau.push(cfg.clone());
-                            // Travee lointaine : le terminus (mat) est fixe a `h_fin`.
-                            let t2 = if p.heriter_tension { tdown } else { p.tmax };
-                            let r2 =
-                                p.essai(posi, indmax, hd, p.h_fin, t2, r1.diag + dsupdep, r1.slope);
-                            if r2.test {
-                                cfg.push(span_row(&r2, p.h_fin, indmax, p.q1));
-                                return cfg;
-                            }
-                        }
-                        hd += 1.0;
-                    }
-                }
-            }
-        }
-
-        if niveau.is_empty() {
-            return faisceau.into_iter().next().unwrap_or_default();
-        }
-        faisceau = dedupe(get_tabis(&niveau, p.nbconfig, indmax));
-        intsup += 1;
-    }
-
-    // --- 4. Couper au plus loin (terminus fixe). ------------------------------
-    let mut candidats: Vec<Vec<SpanRow>> = Vec::new();
-    for prefixe in &faisceau {
-        let last = match prefixe.last() {
-            Some(l) => l,
-            None => continue,
-        };
-        let pg = last.posi();
-        let hg = last.hd();
-        let tmax_c = if p.heriter_tension { last.tcalc() } else { p.tmax };
-        let dsupdep: f64 = prefixe.iter().map(|s| s.diag()).sum();
-        let slope_prev = last.slope();
-        let indmin = match premier_index_valide(p.line_x, pg, seuil) {
-            Some(i) => i,
-            None => continue,
-        };
-        for posi in (indmin..indmax).rev() {
-            let r = p.essai(pg, posi, hg, p.h_fin, tmax_c, dsupdep, slope_prev);
-            if r.test {
-                let mut cfg = prefixe.clone();
-                cfg.push(span_row(&r, p.h_fin, posi, p.q1));
-                candidats.push(cfg);
-                break;
-            }
-        }
-    }
-    if candidats.is_empty() {
-        return faisceau.into_iter().next().unwrap_or_default();
-    }
-    get_tabis(&candidats, 1, indmax)
-        .into_iter()
-        .next()
-        .unwrap_or_default()
-}
-
-// Balaye la hauteur de DEPART (ancrage, index `pg`) vers le bas depuis `hgmax`, terminus
-// fixe a `hd`. Garde la plus basse faisable de la plage contigue depuis le haut.
-// `None` si `hgmax` deja infaisable. (`OptPyl_Up2` sans support / coupe.)
-#[allow(clippy::too_many_arguments)]
-fn essai_depart_bas(
-    p: &OptParams,
-    pg: usize,
-    posi: usize,
-    hgmax: f64,
-    hd: f64,
-    tmax: f64,
-    dsupdep: f64,
-    slope_prev: f64,
-) -> Option<SpanResult> {
-    let mut hg = hgmax;
-    let mut best = None;
-    while hg > 1.0 {
-        let r = p.essai(pg, posi, hg, hd, tmax, dsupdep, slope_prev);
-        if r.test {
-            best = Some(r);
-        } else {
-            break;
-        }
-        hg -= 1.0;
-    }
-    best
 }
 
 #[cfg(test)]
@@ -742,7 +507,6 @@ mod tests {
             lmin_span: 50.0,
             nbconfig: 1,
             heriter_tension: true,
-            optim_h: false,
         }
     }
 
@@ -764,36 +528,6 @@ mod tests {
     // s'il n'y arrive pas, il rogne l'**ancrage**. Ici une butte de 11 m barre les 40
     // premiers metres -- le cable y passerait sous le sol -- donc la ligne recule son
     // ancrage jusqu'a franchir l'obstacle, sans jamais deplacer le mat.
-    // Avec `optim_h`, la portee directe sans support choisit la hauteur terminale la
-    // plus BASSE qui tient encore (abaissement contigu depuis `h_fin`). Sur un profil
-    // ou la portee passe deja, `optim_h` doit rendre une hauteur terminale <= `h_fin`.
-    #[test]
-    fn optim_h_abaisse_la_hauteur_terminale() {
-        let n = 31;
-        let x: Vec<f64> = (0..n).map(|i| i as f64 * 5.0).collect();
-        let z: Vec<f64> = (0..n).map(|i| 180.0 - i as f64).collect();
-        let alts: Vec<f64> = (0..400).map(|k| 180.0 - 0.1 * k as f64).collect();
-
-        let noh = params_down(&x, &z, &alts); // optim_h = false
-        let s_noh = optpyl(&noh);
-        assert!(!s_noh.is_empty(), "ligne NoH faisable attendue");
-        // h_fin vaut 9.0 dans params_down : sans optimisation, la hauteur terminale
-        // reste 9.0.
-        assert!((s_noh.last().unwrap().hd() - 9.0).abs() < 1e-9);
-
-        let hopt = OptParams {
-            optim_h: true,
-            ..params_down(&x, &z, &alts)
-        };
-        let s_hopt = optpyl(&hopt);
-        assert!(!s_hopt.is_empty(), "ligne h_opt faisable attendue");
-        // La hauteur terminale retenue ne peut qu'etre <= celle du NoH (on abaisse).
-        assert!(
-            s_hopt.last().unwrap().hd() <= s_noh.last().unwrap().hd() + 1e-9,
-            "optim_h ne doit pas relever la hauteur terminale"
-        );
-    }
-
     #[test]
     fn optpyl_down_rogne_par_lancrage_quand_le_depart_ne_passe_pas() {
         let n = 31;

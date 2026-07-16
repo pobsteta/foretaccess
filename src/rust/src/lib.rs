@@ -488,7 +488,6 @@ fn cable_test_span(
 /// @param l_slope Maximum cumulated length on a steep cross-slope (m).
 /// @param prop_slope Maximum share of the line on a steep cross-slope.
 /// @param l_hor Lateral yarding half-width buffered around each line (m).
-/// @param optim_h Optimise the attachment height on each support (`c_option_h`).
 /// @param methode_seilaplan Place supports with the SEILAPLAN graph (Bont &
 ///   Heinimann 2012) instead of Sylvaccess `OptPyl_NoH` (spec 013). Optimises
 ///   both support position and height.
@@ -543,7 +542,6 @@ fn cable_scan(
     l_slope: f64,
     prop_slope: f64,
     l_hor: f64,
-    optim_h: bool,
     methode_seilaplan: bool,
     hm_min: f64,
     hm_max: f64,
@@ -559,7 +557,6 @@ fn cable_scan(
         hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
         pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
         &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor,
-        optim_h,
         methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk.max(1) as usize,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
