@@ -106,6 +106,7 @@ reference:
     solveur de tracé A* (Lot 15, noyau Rust).
   contents:
   - surface_cout_construction
+  - tracer_desserte
   - desserte_dist_to_end
   - desserte_trace
 - title: Non-régression
