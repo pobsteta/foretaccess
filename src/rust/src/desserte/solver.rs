@@ -2,11 +2,11 @@
 //! `basic_calc`, `reconstruct_path` de SylvaRoad).
 //!
 //! A* sur le graphe a voisinage disque (`neighborhood`), heuristique = distance
-//! inverse depuis la cible (`heuristic`). Le cout de transition est **geometrique
-//! + penalites** (direction, pente, devers), fidele a SylvaRoad : la route
-//! minimise sa longueur sous contraintes de constructibilite. Gestion des epingles
-//! (rayon de braquage `radius`, angle limite), controle du profil (`check_profile`)
-//! et anti-croisement du trace.
+//! inverse depuis la cible (`heuristic`). Le cout de transition combine la distance
+//! geometrique et des penalites (direction, pente, devers), fidele a SylvaRoad : la
+//! route minimise sa longueur sous contraintes de constructibilite. Gestion des
+//! epingles (rayon de braquage `radius`, angle limite), controle du profil
+//! (`check_profile`) et anti-croisement du trace.
 //!
 //! Etat par noeud (`NodeState`), indexe par id-pixel, calque sur la matrice `Best`
 //! a 11 colonnes de SylvaRoad :
