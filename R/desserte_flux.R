@@ -300,3 +300,103 @@ calculer_flux <- function(graphe, parcelles, volume_champ = "volume",
   }
   list(parent_e = parent_e, parent_n = parent_n, dist = dist)
 }
+
+# --- Lot 17c : typage des routes & conversion temporaire ---------------------
+
+#' Type a road network by wood flux
+#'
+#' Ports ForestRoadNetwork's "Road Type Determination": each tronçon is placed in
+#' a road class by flux thresholds (high flux -> primary, ... , low -> tertiary).
+#' Optionally, a share of a class's length is converted to temporary/winter roads,
+#' preferentially inside dedicated zones.
+#'
+#' @param graphe A `foretaccess_reseau_graphe` carrying a `flux` column on its
+#'   `troncons` (run [calculer_flux()] first).
+#' @param seuils_flux A named, ascending numeric vector of class lower bounds,
+#'   e.g. `c(tertiaire = 0, secondaire = 100, primaire = 500)`. Each tronçon is
+#'   assigned the highest class whose bound it reaches.
+#' @param conversion_temporaire Optional list to convert part of a class into
+#'   temporary roads: `type` (source class), `proportion` (0..1 of that class's
+#'   length), `cible` (target label, default `"temporaire"`) and optional `zones`
+#'   (an `sf` of preferential areas).
+#' @return A `foretaccess_desserte_typee` object: `troncons` (`sf` with a `type`
+#'   column), `noeuds`, `sources` (if any), `recap` (length per type) and the
+#'   recall of `seuils_flux`.
+#' @export
+typer_desserte <- function(graphe, seuils_flux, conversion_temporaire = NULL) {
+  checkmate::assert_class(graphe, "foretaccess_reseau_graphe")
+  if (is.null(graphe$troncons$flux)) {
+    cli::cli_abort("Le graphe n'a pas de flux : appeler {.fn calculer_flux} d'abord.")
+  }
+  checkmate::assert_numeric(seuils_flux, min.len = 1, names = "named")
+  if (is.unsorted(seuils_flux)) {
+    cli::cli_abort("{.arg seuils_flux} doit etre trie par bornes croissantes.")
+  }
+
+  troncons <- graphe$troncons
+  # Classe = borne la plus haute atteinte (les flux sous la 1re borne -> 1re classe).
+  idx <- pmax(1L, findInterval(troncons$flux, seuils_flux))
+  troncons$type <- names(seuils_flux)[idx]
+
+  # Conversion optionnelle d'une part d'un type en routes temporaires.
+  if (!is.null(conversion_temporaire)) {
+    troncons <- .typage_conversion(troncons, conversion_temporaire)
+  }
+
+  recap <- stats::aggregate(
+    longueur ~ type, data = sf::st_drop_geometry(troncons), FUN = sum
+  )
+
+  structure(
+    list(
+      troncons = troncons,
+      noeuds = graphe$noeuds,
+      sources = graphe$sources,
+      recap = recap,
+      seuils_flux = seuils_flux
+    ),
+    class = "foretaccess_desserte_typee"
+  )
+}
+
+# Convertit, en priorite dans les zones dediees, une proportion de la longueur
+# d'un type donne en routes temporaires (glouton par longueur decroissante).
+.typage_conversion <- function(troncons, conv) {
+  checkmate::assert_choice(conv$type, unique(troncons$type))
+  checkmate::assert_number(conv$proportion, lower = 0, upper = 1)
+  cible <- if (is.null(conv$cible)) "temporaire" else conv$cible
+
+  idx <- which(troncons$type == conv$type)
+  if (length(idx) == 0L) {
+    return(troncons)
+  }
+  budget <- conv$proportion * sum(troncons$longueur[idx])
+
+  # Preference : troncons intersectant les zones dediees d'abord, puis les plus
+  # longs (convertir peu de troncons pour atteindre la part visee).
+  pref <- rep(FALSE, length(idx))
+  if (!is.null(conv$zones)) {
+    pref <- lengths(sf::st_intersects(troncons[idx, ], conv$zones)) > 0
+  }
+  ord <- order(!pref, -troncons$longueur[idx])
+
+  cum <- 0
+  converti <- integer(0)
+  for (k in ord) {
+    if (cum >= budget) break
+    converti <- c(converti, idx[k])
+    cum <- cum + troncons$longueur[idx[k]]
+  }
+  troncons$type[converti] <- cible
+  troncons
+}
+
+#' @export
+print.foretaccess_desserte_typee <- function(x, ...) {
+  cli::cli_h1("Reseau de desserte type")
+  cli::cli_text("Troncons : {nrow(x$troncons)}")
+  for (i in seq_len(nrow(x$recap))) {
+    cli::cli_text("  {x$recap$type[i]} : {round(x$recap$longueur[i], 1)} m")
+  }
+  invisible(x)
+}

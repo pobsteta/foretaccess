@@ -156,3 +156,80 @@ test_that("colonne volume absente -> erreur", {
   g <- vectoriser_reseau(s$reseau)
   expect_error(calculer_flux(g, s$parcelles, "inexistant"), "inexistant|choice|element")
 })
+
+# --- Lot 17c : typage & conversion temporaire --------------------------------
+
+# Graphe avec flux calcule, pret pour le typage.
+flux_graphe <- function() {
+  s <- flux_setup()
+  calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume")
+}
+
+test_that("CA-17.5 : le typage respecte les seuils de flux", {
+  g <- flux_graphe()
+  seuils <- c(tertiaire = 0, secondaire = 300, primaire = 700)
+  ty <- typer_desserte(g, seuils)
+  expect_s3_class(ty, "foretaccess_desserte_typee")
+  # Chaque troncon est classe selon la borne la plus haute atteinte.
+  attendu <- names(seuils)[pmax(1L, findInterval(ty$troncons$flux, seuils))]
+  expect_equal(ty$troncons$type, attendu)
+  # Le recap couvre toute la longueur, une ligne par type present.
+  expect_equal(sum(ty$recap$longueur), sum(ty$troncons$longueur))
+  expect_setequal(ty$recap$type, unique(ty$troncons$type))
+})
+
+test_that("CA-17.6 : la conversion temporaire respecte la part de longueur", {
+  g <- flux_graphe()
+  # Deux troncons de flux faible dans la meme classe "basse".
+  seuils <- c(basse = 0, haute = 700)
+  ty <- typer_desserte(g, seuils, conversion_temporaire = list(
+    type = "basse", proportion = 0.5
+  ))
+  long_basse_ini <- sum(sf::st_drop_geometry(
+    typer_desserte(g, seuils)$troncons
+  )$longueur[typer_desserte(g, seuils)$troncons$type == "basse"])
+  long_convertie <- sum(ty$troncons$longueur[ty$troncons$type == "temporaire"])
+  # Part convertie >= cible et depassement borne par le plus long troncon converti.
+  expect_gte(long_convertie, 0.5 * long_basse_ini - 1e-6)
+  expect_lte(long_convertie, long_basse_ini)
+  expect_true("temporaire" %in% ty$troncons$type)
+})
+
+test_that("conversion : les zones dediees sont prioritaires", {
+  g <- flux_graphe()
+  seuils <- c(basse = 0, haute = 700)
+  # Zone couvrant l'un des troncons de faible flux.
+  bb <- sf::st_bbox(g$troncons[g$troncons$flux < 700, ][1, ])
+  zone <- sf::st_as_sfc(bb)
+  zone <- sf::st_sf(geometry = sf::st_sfc(zone, crs = sf::st_crs(g$troncons)))
+  ty <- typer_desserte(g, seuils, conversion_temporaire = list(
+    type = "basse", proportion = 0.4, zones = zone
+  ))
+  expect_true("temporaire" %in% ty$troncons$type)
+})
+
+test_that("CA-17.3+ : persistance du reseau type en GeoPackage (Lot 8)", {
+  g <- flux_graphe()
+  ty <- typer_desserte(g, c(tertiaire = 0, secondaire = 300, primaire = 700))
+  tf <- withr::local_tempfile(fileext = ".gpkg")
+  st <- storage_gpkg(tf)
+  sb_write_layer(st, "desserte_typee", ty$troncons)
+  expect_true("desserte_typee" %in% sb_list_layers(st))
+  relu <- sb_read_layer(st, "desserte_typee")
+  expect_s3_class(relu, "sf")
+  expect_equal(nrow(relu), nrow(ty$troncons))
+  expect_true("type" %in% names(relu))
+})
+
+test_that("typer sans flux -> erreur", {
+  s <- flux_setup()
+  g <- vectoriser_reseau(s$reseau) # pas de flux
+  expect_error(typer_desserte(g, c(a = 0)), "flux|calculer_flux")
+})
+
+test_that("la methode print du reseau type resume sans erreur", {
+  g <- flux_graphe()
+  ty <- typer_desserte(g, c(tertiaire = 0, secondaire = 300, primaire = 700))
+  expect_no_error(print(ty))
+  expect_invisible(print(ty))
+})
