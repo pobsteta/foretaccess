@@ -10,6 +10,8 @@
 #' @param cable Liste des paramètres câble. Le **schéma** est posé dès le Lot 0 ;
 #'   les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).
 #' @param dfci Liste des paramètres du camion DFCI (beta, Lot 6 ; voir *Détails*).
+#' @param desserte Liste des paramètres de conception de desserte (épic Lots
+#'   14-18) ; `desserte$cout` porte le barème de coût de construction (Lot 14).
 #' @param general Liste des paramètres généraux (résolution, CRS, méthode de
 #'   calcul de la pente).
 #'
