@@ -130,7 +130,7 @@ pub fn build_neib_table(
             let z1 = dtm[y1 * nc + x1];
             let sl = (z1 - z) / o.dist * 100.0;
             let abssl = sl.abs();
-            if abssl >= min_slope && abssl <= max_slope {
+            if (min_slope..=max_slope).contains(&abssl) {
                 let sign = if sl < 0.0 { -1 } else { 1 };
                 let slope_x100 = (abssl * 100.0 + 0.5) as i32 * sign;
                 list.push(Neighbor {
@@ -184,7 +184,7 @@ mod tests {
         let mut dtm = vec![0.0; nr * nc];
         for y in 0..nr {
             for x in 0..nc {
-                dtm[y * nc + x] = x as f64 * 1.0; // +1 m / 10 m = 10 %
+                dtm[y * nc + x] = x as f64; // +1 m / 10 m = 10 %
             }
         }
         let obs = vec![0i32; nr * nc];
@@ -192,13 +192,13 @@ mod tests {
         let t = build_neib_table(&dtm, &obs, nr, nc, 15.0, 10.0, 5.0, 12.0);
         // Cellule centrale (1,2) : ses voisins est/ouest ont pente 10 % (retenus),
         // nord/sud pente 0 % (ecartes car < 5 %).
-        let idc = t.id_pix[1 * nc + 2] as usize;
+        let idc = t.id_pix[nc + 2] as usize;
         let slopes: Vec<i32> = t.neighbors[idc].iter().map(|n| n.slope_x100).collect();
         assert!(!slopes.is_empty());
         // Toutes les pentes retenues sont dans [5 %, 12 %] en valeur absolue.
         assert!(slopes.iter().all(|&s| {
             let a = (s.abs() as f64) / 100.0;
-            a >= 5.0 && a <= 12.0
+            (5.0..=12.0).contains(&a)
         }));
         // La pente plein est vaut ~10 % (1000 en centiemes de %).
         assert!(slopes.iter().any(|&s| (s.abs() - 1000).abs() <= 1));
@@ -219,7 +219,7 @@ mod tests {
         let t = build_neib_table(&dtm, &obs, nr, nc, 15.0, 10.0, 5.0, 12.0);
         // Le pixel (1,2) n'a pas d'id, et aucun voisin ne pointe vers lui.
         assert_eq!(t.id_pix[5], -1);
-        let idc = t.id_pix[1 * nc + 1] as usize; // (1,1)
+        let idc = t.id_pix[nc + 1] as usize; // (1,1)
         assert!(t.neighbors[idc].iter().all(|nb| {
             let (ry, rx) = t.corresp[nb.id as usize];
             !(ry == 1 && rx == 2)
