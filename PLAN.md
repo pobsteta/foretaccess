@@ -57,10 +57,20 @@
   SylvaRoad/FRD clonées et transcrites (la lettre) ; **l’oracle
   `meisenthal2` n’est pas publié** (scripts seuls) → validation par
   invariants (CA-15.1-15.6, 15.8, 15.9), sans l’accord géométrique
-  CA-15.7 tant que l’oracle manque. Suite : **15b** (A\* complet :
-  transition, épingles, rayon de courbure, profil, waypoints) puis
-  **15c** (orchestration R, sortie `foretaccess_trace` en `sf`).
-- **Branche** : `feat/lot15a-voisinage` (cycle dev)
+  CA-15.7 tant que l’oracle manque. Suite : **15b** (A\* complet) puis
+  **15c** (orchestration R, sortie `foretaccess_trace` en `sf`). **15a
+  mergé (#59).**
+- **Lot 15b (solveur A\* complet) en cycle dev** :
+  `src/rust/src/desserte/` complété par `geom.rs` (`connect2` DDA,
+  `get_intersect`, `check_profile`) et `solver.rs` (portage de
+  `Astar_force_wp` / `calc_init` / `basic_calc` : coût de transition
+  géométrique + pénalités paraboliques direction/pente, épingles avec
+  rayon de braquage et angle limite, anti-croisement, file secondaire de
+  finition, enchaînement des points de passage). Binding
+  `desserte_trace` exposé. 19 tests cargo + 10 tests R
+  (CA-15.1/15.4/15.6/15.9). Reste **15c** (orchestration R,
+  `foretaccess_trace` en `sf`).
+- **Branche** : `feat/lot15b-solveur` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
