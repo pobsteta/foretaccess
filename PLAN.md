@@ -26,8 +26,16 @@
   accord **93,2 → 94,7 %**, fidèle à l'oracle (+454 ≈ +470 en fenêtre), perf **×2,8**. Défaut
   `"sylvaccess"` (`_NoH`) inchangé, bit-pour-bit. `OptPyl_Up2` shelvé et le flag
   `optimiser_hauteur_fixation` retirés. **Dette câble (optimisation de hauteur) : résolue.**
-- **Branche** : `main` (release `v1.1.0`)
-- **Version `DESCRIPTION`** : `1.1.0` (release ; retour en cycle dev `1.1.0.9000` juste après)
+- **Épic « conception de desserte » (Lots 14-18) ouvert** (2026-07-16, `docs/ROADMAP-desserte.md`).
+  Objectif : concevoir un **réseau de desserte forestière** (et non plus seulement carter
+  l'accessibilité d'un réseau existant). Chemin critique 14 → 15 → 16 → 17, optimisation en 18.
+  **Lot 14 (surface de coût de construction) livré en cycle dev** : `surface_cout_construction()`
+  (R pur) rend un coût €/m additif (base + pente par barème + sol + pont/buse + surcoût libre) et
+  une couche de franchissabilité, aligné sur la grille du MNT. Config `desserte$cout` + validation
+  (CA-14.6). 32 tests (CA-14.1 à 14.6). Prochaine étape : **Lot 15** (solveur de tracé A*, déclenche
+  un portage Rust selon ADR-001).
+- **Branche** : `feat/lot14-cout-construction` (cycle dev)
+- **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -96,6 +104,11 @@
 | 11 | Oracle Sylvaccess réel | *(journal 2026-07-13/14)* | ✅ terminé | `v0.13.0` |
 | 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
+| 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
+| 15 | Solveur de tracé (A*) | `specs/015-solveur-trace.md` | 📋 proposé | — |
+| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 📋 proposé | — |
+| 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
+| 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -257,6 +270,27 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Épic « conception de desserte » ouvert ; Lot 14 (coût de construction) livré
+
+Nouvel épic (Lots 14-18, `docs/ROADMAP-desserte.md`, ADR-008) : passer de la **cartographie**
+d'accessibilité à la **conception** d'un réseau de desserte forestière. Sources GPL v3
+transposées : ForestRoadNetwork (Klemet), SylvaRoad (Dupire/ONF), Forest Road Designer
+(PANOimagen). Specs 014-018 déposées, chemin critique 14 → 15 → 16 → 17, optimisation en 18.
+
+**Lot 14 — surface de coût de construction** (`specs/014`, R pur, sur le chemin critique) :
+`surface_cout_construction(pre, config, plan_eau, cours_eau, sol, interdit, surcout)` rend un objet
+`foretaccess_cout_construction` (deux `SpatRaster` alignés MNT : `cout` €/m, `franchissable`).
+Coût **additif** inspiré du « Cost Raster Creator » de ForestRoadNetwork : base + surcoût de pente
+par barème `[min,max) → surcout` + surcoût de sol (table classe → €/m) + franchissements ponctuel
+(pont sur plan d'eau) et linéaire (buse ∝ densité de cours d'eau) + surcoût libre. Un surcoût de
+pente `Inf` (non constructible), un obstacle complet ou une zone interdite ferment la cellule
+(`franchissable = FALSE`, `cout = NA`). Couches optionnelles acceptées en `SpatRaster` **ou** `sf`,
+réalignées sur la grille ; absentes, elles n'ajoutent rien (jamais d'erreur — CA-14.1).
+Config `desserte$cout` ajoutée à `foretaccess_config()` avec fusion imbriquée et validation
+(barème contigu/couvrant, coûts finis ≥ 0 — CA-14.6). 32 tests (`test-desserte-cout.R`, CA-14.1
+à 14.6), fixture légère pour piloter la pente cellule à cellule. **Prochaine étape : Lot 15**
+(solveur de tracé A* sur ce coût — déclenche un portage Rust, ADR-001).
 
 ### 2026-07-16 — `v1.1.0` : optimisation de la hauteur des supports câble (SEILAPLAN)
 

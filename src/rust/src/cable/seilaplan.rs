@@ -846,9 +846,7 @@ mod tests {
         // la fin non.
         let n = 401;
         let mut zi = vec![0.0; n];
-        for k in 300..320 {
-            zi[k] = 80.0; // mur infranchissable a ~150-160 m
-        }
+        zi[300..320].fill(80.0); // mur infranchissable a ~150-160 m
         let di = di_demimetre(n);
         let m = mat();
         let p = GraphParams {

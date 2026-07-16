@@ -100,6 +100,11 @@ reference:
   - get_layer_service
   - get_national_crs
   - list_countries
+- title: Conception de desserte (Lots 14-18)
+  desc: >
+    Conception d'un réseau de desserte : surface de coût de construction (Lot 14).
+  contents:
+  - surface_cout_construction
 - title: Non-régression
   contents:
   - compare_to_oracle

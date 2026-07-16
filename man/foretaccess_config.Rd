@@ -9,6 +9,7 @@ foretaccess_config(
   porteur = list(),
   cable = list(),
   dfci = list(),
+  desserte = list(),
   general = list()
 )
 }
@@ -21,6 +22,9 @@ foretaccess_config(
 les tableaux matériels sont complétés au Lot 4 (dépendance ADR-006).}
 
 \item{dfci}{Liste des paramètres du camion DFCI (beta, Lot 6 ; voir \emph{Détails}).}
+
+\item{desserte}{Liste des paramètres de conception de desserte (épic Lots
+14-18) ; \code{desserte$cout} porte le barème de coût de construction (Lot 14).}
 
 \item{general}{Liste des paramètres généraux (résolution, CRS, méthode de
 calcul de la pente).}
