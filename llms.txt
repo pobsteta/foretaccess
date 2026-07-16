@@ -345,10 +345,13 @@ OpenStreetMap).
 ## Conception de desserte (Lots 14-18)
 
 Conception d’un réseau de desserte : surface de coût de construction
-(Lot 14).
+(Lot 14), solveur de tracé A\* (Lot 15, noyau Rust).
 
 - [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
   : Build the construction-cost surface of a new forest road
+- [`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
+  : Inverse cost-distance from a target cell (road-design A\\ heuristic,
+  Lot 15a).
 
 ## Non-régression
 
