@@ -177,5 +177,126 @@ print.foretaccess_reseau_graphe <- function(x, ...) {
   cli::cli_text("Noeuds : {nrow(x$noeuds)} (dont {length(x$exutoires)} exutoire{?s})")
   cli::cli_text("Troncons : {nrow(x$troncons)}")
   cli::cli_text("Longueur totale : {round(sum(x$troncons$longueur), 1)} m")
+  if (!is.null(x$troncons$flux)) {
+    cli::cli_text("Flux max : {round(max(x$troncons$flux), 1)}")
+  }
   invisible(x)
+}
+
+# --- Lot 17b : sources & accumulation de flux (Wood Flux Determination) -------
+
+#' Accumulate wood flux over a road-network graph
+#'
+#' Ports ForestRoadNetwork's "Wood Flux Determination": source points are seeded
+#' in each harvested parcel (at least one per parcel, whatever the density), each
+#' injects its share of the parcel volume, and the volume flows down the network
+#' along the least-cost path to the nearest outlet, accumulating on every tronçon
+#' it crosses. As the network is a tree rooted on the existing roads, that path
+#' is unique and the accumulation is a subtree sum.
+#'
+#' @param graphe A `foretaccess_reseau_graphe` (Lot 17a).
+#' @param parcelles An `sf` POLYGON of the harvested parcels, carrying a volume.
+#' @param volume_champ Name of the parcel volume column (default `"volume"`).
+#' @param densite_sources Source points per hectare (default 5); at least one
+#'   point is seeded per parcel regardless.
+#' @return The `graphe` with a `flux` column added to `troncons` (accumulated
+#'   volume) and a `sources` `sf` POINT (seeded points with their `volume`).
+#' @export
+calculer_flux <- function(graphe, parcelles, volume_champ = "volume",
+                          densite_sources = 5) {
+  checkmate::assert_class(graphe, "foretaccess_reseau_graphe")
+  checkmate::assert_choice(volume_champ, names(parcelles))
+  checkmate::assert_number(densite_sources, lower = 0)
+
+  # Sources semees dans chaque parcelle (>= 1 par parcelle, CA-17.2).
+  sources <- .flux_sources(parcelles, volume_champ, densite_sources)
+
+  # Chaque source entre dans le reseau au noeud le plus proche (l'acces de sa
+  # parcelle en pratique). Volume agrege par noeud d'entree.
+  entree <- graphe$noeuds$id[sf::st_nearest_feature(sources, graphe$noeuds)]
+  vol_par_noeud <- tapply(sources$volume, entree, sum)
+
+  # Routage arborescent : plus court chemin de chaque noeud vers l'exutoire le
+  # plus proche (Dijkstra multi-source depuis les exutoires).
+  rt <- .flux_router(graphe$noeuds$id, graphe$troncons, graphe$exutoires)
+
+  # Accumulation : le volume de chaque noeud d'entree descend jusqu'a l'exutoire.
+  flux <- numeric(nrow(graphe$troncons))
+  for (nd in names(vol_par_noeud)) {
+    v <- vol_par_noeud[[nd]]
+    cur <- nd
+    while (!is.na(rt$parent_e[cur])) {
+      eid <- rt$parent_e[cur]
+      flux[eid] <- flux[eid] + v
+      cur <- as.character(rt$parent_n[cur])
+    }
+  }
+
+  graphe$troncons$flux <- flux
+  graphe$sources <- sources
+  graphe
+}
+
+# Points sources par parcelle (echantillonnage regulier, >= 1 par parcelle).
+# Chaque source porte une part egale du volume de sa parcelle.
+.flux_sources <- function(parcelles, volume_champ, densite_sources) {
+  geoms <- sf::st_geometry(parcelles)
+  vols <- parcelles[[volume_champ]]
+  aire_ha <- as.numeric(sf::st_area(parcelles)) / 1e4
+  pts <- list()
+  v <- numeric(0)
+  pid <- integer(0)
+  for (i in seq_len(nrow(parcelles))) {
+    n <- max(1L, as.integer(round(aire_ha[i] * densite_sources)))
+    p <- sf::st_sample(geoms[i], size = n, type = "regular")
+    if (length(p) == 0) {
+      p <- sf::st_centroid(geoms[i]) # garantit >= 1 point (CA-17.2)
+    }
+    np <- length(p)
+    pts[[length(pts) + 1L]] <- p
+    v <- c(v, rep(vols[i] / np, np))
+    pid <- c(pid, rep(i, np))
+  }
+  sf::st_sf(
+    parcelle = pid, volume = v,
+    geometry = do.call(c, pts)
+  )
+}
+
+# Dijkstra multi-source depuis les exutoires sur le graphe contracte. Renvoie,
+# par noeud, l'arete (`parent_e`) et le noeud (`parent_n`) du premier saut vers
+# l'exutoire le plus proche.
+.flux_router <- function(noeuds_ids, troncons, exutoires) {
+  ids <- as.character(noeuds_ids)
+  nb <- lapply(noeuds_ids, function(i) {
+    e1 <- which(troncons$de == i)
+    e2 <- which(troncons$vers == i)
+    data.frame(
+      node = c(troncons$vers[e1], troncons$de[e2]),
+      eid = c(e1, e2),
+      w = c(troncons$longueur[e1], troncons$longueur[e2])
+    )
+  })
+  names(nb) <- ids
+  dist <- stats::setNames(rep(Inf, length(ids)), ids)
+  parent_e <- stats::setNames(rep(NA_integer_, length(ids)), ids)
+  parent_n <- stats::setNames(rep(NA_integer_, length(ids)), ids)
+  dist[as.character(exutoires)] <- 0
+  unvis <- stats::setNames(rep(TRUE, length(ids)), ids)
+  repeat {
+    cand <- ids[unvis & is.finite(dist)]
+    if (length(cand) == 0L) break
+    u <- cand[which.min(dist[cand])]
+    unvis[u] <- FALSE
+    for (r in seq_len(nrow(nb[[u]]))) {
+      vch <- as.character(nb[[u]]$node[r])
+      nd <- dist[[u]] + nb[[u]]$w[r]
+      if (nd < dist[[vch]]) {
+        dist[[vch]] <- nd
+        parent_e[[vch]] <- nb[[u]]$eid[r]
+        parent_n[[vch]] <- as.integer(u)
+      }
+    }
+  }
+  list(parent_e = parent_e, parent_n = parent_n, dist = dist)
 }

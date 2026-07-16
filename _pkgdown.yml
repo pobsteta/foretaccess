@@ -110,6 +110,7 @@ reference:
   - tracer_desserte
   - reseau_desserte
   - vectoriser_reseau
+  - calculer_flux
   - desserte_dist_to_end
   - desserte_trace
   - desserte_reseau
