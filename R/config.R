@@ -43,11 +43,14 @@ foretaccess_config <- function(skidder = list(),
                                general = list()) {
   defaults <- .foretaccess_defaults()
 
-  # `desserte$cout` est une sous-liste : `modifyList` a plat ecraserait tout le
-  # bloc `cout` des qu'on surcharge un seul champ. On fusionne `cout` a part.
+  # `desserte$cout` et `desserte$trace` sont des sous-listes : `modifyList` a plat
+  # ecraserait tout le bloc des qu'on surcharge un seul champ. On les fusionne a part.
   desserte_m <- utils::modifyList(defaults$desserte, desserte)
   if (!is.null(desserte$cout)) {
     desserte_m$cout <- utils::modifyList(defaults$desserte$cout, desserte$cout)
+  }
+  if (!is.null(desserte$trace)) {
+    desserte_m$trace <- utils::modifyList(defaults$desserte$trace, desserte$trace)
   }
 
   cfg <- list(
@@ -240,6 +243,27 @@ foretaccess_config <- function(skidder = list(),
         # Surcoût de sol : table nommée `classe (chr) -> surcout (EUR/m)`. `NULL`
         # = aucun (couche de sol ignorée).
         bareme_sol = NULL
+      ),
+      # Paramètres du solveur de tracé A* (Lot 15, portage SylvaRoad ;
+      # défauts de `SylvaRoaD_0_param.py`). Le tracé minimise sa longueur sous
+      # contraintes de géométrie routière.
+      trace = list(
+        pente_long_min = 2,        # min_slope (%) : pente en long minimale de la route
+        pente_long_max = 12,       # max_slope (%) : pente en long maximale
+        penalty_xy = 150,          # pénalité de virage (m / 180°)
+        penalty_z = 80,            # pénalité de changement de pente (« vague »)
+        d_neighborhood_m = 42,     # rayon du voisinage disque (m)
+        max_diff_z_m = 3,          # écart altitude route/terrain maximal (m)
+        angle_epingle = 110,       # angle_hairpin (°) : seuil de détection d'épingle
+        trans_slope_all = 90,      # dévers maximal hors épingle (%)
+        trans_slope_hairpin = 55,  # dévers maximal à l'épingle (%)
+        lmax_devers_m = 40,        # Lmax_ab_sl (m) : longueur max en dévers excessif
+        rayon_braquage_m = 8,      # Radius (m) : rayon de braquage des camions
+        prop_devers_max = 0.25,    # prop_sl_max : fraction locale de fort dévers à l'épingle
+        max_slope_hairpin = 10,    # réglage de l'angle limite d'épingle
+        tal = 1.5,                 # réglage de l'angle limite d'épingle
+        modhair = 1.5,             # réglage de l'espacement minimal entre épingles
+        buffer_arrivee_m = 0       # bufgoal (m) : tolérance de finition à la cible
       )
     ),
     general = list(
@@ -402,6 +426,28 @@ validate_config <- function(cfg) {
   if (!is.null(co$bareme_sol)) {
     checkmate::assert_numeric(unlist(co$bareme_sol), lower = 0, any.missing = FALSE)
   }
+
+  # --- Desserte : solveur de tracé (Lot 15) -----------------------------------
+  tr <- cfg$desserte$trace
+  checkmate::assert_number(tr$pente_long_min, lower = 0, finite = TRUE)
+  checkmate::assert_number(tr$pente_long_max, lower = 0, finite = TRUE)
+  if (tr$pente_long_max < tr$pente_long_min) {
+    cli::cli_abort(c(
+      "Pente en long de desserte incoherente.",
+      "x" = "{.field pente_long_max} ({tr$pente_long_max}) doit etre >= \\
+             {.field pente_long_min} ({tr$pente_long_min})."
+    ))
+  }
+  for (champ in c("penalty_xy", "penalty_z", "max_diff_z_m", "lmax_devers_m",
+                  "buffer_arrivee_m", "prop_devers_max", "modhair", "tal")) {
+    checkmate::assert_number(tr[[champ]], lower = 0, finite = TRUE, .var.name = champ)
+  }
+  checkmate::assert_number(tr$d_neighborhood_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(tr$rayon_braquage_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(tr$angle_epingle, lower = 0, upper = 180)
+  checkmate::assert_number(tr$trans_slope_all, lower = 0, finite = TRUE)
+  checkmate::assert_number(tr$trans_slope_hairpin, lower = 0, finite = TRUE)
+  checkmate::assert_number(tr$max_slope_hairpin, lower = 0, finite = TRUE)
 
   invisible(cfg)
 }
