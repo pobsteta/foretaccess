@@ -119,6 +119,7 @@ reference:
   - desserte_reseau
   - desserte_reseau_multistart
   - desserte_reseau_recuit
+  - desserte_reseau_riprute
 - title: Non-régression
   contents:
   - compare_to_oracle

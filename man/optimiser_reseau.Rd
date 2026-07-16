@@ -15,6 +15,7 @@ optimiser_reseau(
   n_iter = 200,
   temp0 = 0,
   refroidissement = 0.95,
+  max_passes = 6,
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
@@ -30,8 +31,9 @@ optimiser_reseau(
 
 \item{desserte_existante}{An \code{sf} LINESTRING of the network to connect to.}
 
-\item{strategie}{Optimisation strategy: \code{"multistart"} (default) or \code{"recuit"}
-(simulated annealing on the insertion order).}
+\item{strategie}{Optimisation strategy: \code{"multistart"} (default), \code{"recuit"}
+(simulated annealing on the insertion order) or \code{"riprute"} (rip-up & reroute
+local search).}
 
 \item{heuristique}{Base ordering of parcels (trial 0), see \code{\link[=reseau_desserte]{reseau_desserte()}}.}
 
@@ -43,6 +45,8 @@ optimiser_reseau(
 the base network cost.}
 
 \item{refroidissement}{Geometric cooling factor in \verb{(0, 1)} (\code{"recuit"}).}
+
+\item{max_passes}{Maximum improvement passes (\code{"riprute"}).}
 
 \item{graine}{Integer seed for the reproducible order permutations / moves.}
 

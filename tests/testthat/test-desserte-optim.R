@@ -88,12 +88,33 @@ test_that("CA-18.5 : le reseau optimise reste valide (desservi, connexe)", {
   expect_equal(opt$strategie, "multistart")
 })
 
-test_that("riprute pas encore disponible -> erreur informative", {
+# --- Lot 18c : rip-up & reroute ----------------------------------------------
+
+test_that("CA-18.1 : le rip-up & reroute n'est jamais pire que le glouton", {
   s <- optim_setup()
-  expect_error(
-    optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute"),
-    "disponible"
-  )
+  glou <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  opt <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute",
+                          max_passes = 6)
+  expect_s3_class(opt, "foretaccess_reseau")
+  expect_lte(opt$cout, glou$cout + 1e-6)
+  expect_equal(opt$strategie, "riprute")
+})
+
+test_that("CA-18.4 : le journal du rip-up est monotone decroissant", {
+  s <- optim_setup()
+  opt <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute",
+                          max_passes = 6)
+  expect_gte(length(opt$journal), 1)
+  expect_true(all(diff(opt$journal) <= 1e-9))
+})
+
+test_that("CA-18.2/18.5 : rip-up deterministe et reseau valide", {
+  s <- optim_setup()
+  a <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute", max_passes = 6)
+  b <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute", max_passes = 6)
+  expect_equal(sf::st_coordinates(a$lignes), sf::st_coordinates(b$lignes))
+  expect_true(all(a$desservies))
+  expect_true(a$connexe)
 })
 
 # --- Lot 18b : recuit simule -------------------------------------------------

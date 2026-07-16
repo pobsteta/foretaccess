@@ -17,14 +17,16 @@
 #' @param cout A `foretaccess_cout_construction` object (Lot 14).
 #' @param parcelles An `sf` POLYGON of the areas to serve.
 #' @param desserte_existante An `sf` LINESTRING of the network to connect to.
-#' @param strategie Optimisation strategy: `"multistart"` (default) or `"recuit"`
-#'   (simulated annealing on the insertion order).
+#' @param strategie Optimisation strategy: `"multistart"` (default), `"recuit"`
+#'   (simulated annealing on the insertion order) or `"riprute"` (rip-up & reroute
+#'   local search).
 #' @param heuristique Base ordering of parcels (trial 0), see [reseau_desserte()].
 #' @param n_start Number of insertion orders to try (`"multistart"`).
 #' @param n_iter Number of annealing iterations (`"recuit"`).
 #' @param temp0 Initial annealing temperature (`"recuit"`); `<= 0` derives it from
 #'   the base network cost.
 #' @param refroidissement Geometric cooling factor in `(0, 1)` (`"recuit"`).
+#' @param max_passes Maximum improvement passes (`"riprute"`).
 #' @param graine Integer seed for the reproducible order permutations / moves.
 #' @param skidding_m Skidding distance (m): a parcel cell within it of a road is
 #'   served without building a road.
@@ -39,13 +41,15 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
                              strategie = c("multistart", "recuit", "riprute"),
                              heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
                              n_start = 16, n_iter = 200, temp0 = 0,
-                             refroidissement = 0.95, graine = 1, skidding_m = 0,
-                             volume_champ = NULL, config = foretaccess_config()) {
+                             refroidissement = 0.95, max_passes = 6, graine = 1,
+                             skidding_m = 0, volume_champ = NULL,
+                             config = foretaccess_config()) {
   strategie <- match.arg(strategie)
   heuristique <- match.arg(heuristique)
   checkmate::assert_count(n_start, positive = TRUE)
   checkmate::assert_count(n_iter, positive = TRUE)
   checkmate::assert_number(refroidissement, lower = 0, upper = 1)
+  checkmate::assert_count(max_passes, positive = TRUE)
   checkmate::assert_count(graine)
   validate_config(config)
 
@@ -63,10 +67,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
     multistart = .optim_multistart(ctx, sources0, skidding_m, n_start, graine),
     recuit = .optim_recuit(ctx, sources0, skidding_m, n_iter, temp0,
                            refroidissement, graine),
-    cli::cli_abort(c(
-      "La strategie {.val {strategie}} n'est pas encore disponible.",
-      i = "Prevue au Lot 18c ; utiliser {.val multistart} ou {.val recuit}."
-    ))
+    riprute = .optim_riprute(ctx, sources0, skidding_m, max_passes)
   )
 
   net <- .reseau_assembler(res$paths, res$costs, ctx, desserte_existante,
@@ -97,6 +98,19 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
          nr = ctx$nr, nc = ctx$nc, sources = sources0,
          network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m,
          n_iter = as.integer(n_iter), t0 = temp0, cooling = cooling, seed = graine),
+    .desserte_solver_params(ctx$tr, ctx$csize)
+  ))
+  list(paths = r$paths, costs = r$costs, journal = r$journal, best = 1L)
+}
+
+# Rip-up & reroute (amelioration locale) : delegue au noyau Rust.
+.optim_riprute <- function(ctx, sources0, skidding_m, max_passes) {
+  r <- do.call(desserte_reseau_riprute, c(
+    list(alt = ctx$g$alt, obs = ctx$g$obs, obs2 = ctx$g$obs2,
+         local_slope = ctx$g$local_slope, zone = ctx$g$zone,
+         nr = ctx$nr, nc = ctx$nc, sources = sources0,
+         network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m,
+         max_pass = as.integer(max_passes)),
     .desserte_solver_params(ctx$tr, ctx$csize)
   ))
   list(paths = r$paths, costs = r$costs, journal = r$journal, best = 1L)
