@@ -315,6 +315,40 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)
+
+Deuxième incrément de `specs/013`. Le cœur de l’algorithme de **Bont &
+Heinimann 2012**, transcrit de `core/main_opti.py::optimization`, en
+Rust dans `cable::seilaplan` — **sans** dépendance scipy.
+
+- **`optimize_supports(di, zi, candidats, GraphParams, CableMat)`** :
+  optimise **position et hauteur** des supports. Nœuds = (position
+  candidate × niveau de hauteur `δh`), extrémités à hauteur fixe
+  (mât/ancrage). Arêtes forward soumises à `Min_Dist_Mast` (exceptions
+  départ/arrivée) ; chaque arête = **une travée**, sa faisabilité étant
+  la plage `[MinSTA, MaxSTA]` de `calc_sta` (13a) — c’est là que le
+  graphe réutilise notre mécanique. Coût `KostStue` (`kost_stue`) : ≥
+  10000/support (minimise le nombre), croissant en `(h+100)²` (minimise
+  la hauteur), ×5 au-delà de l’arbre naturel.
+- **Balayage de pré-tension + Dijkstra maison** (`BinaryHeap`) : pour
+  chaque `sk` (n_sk pas), on active les arêtes où
+  `MinSTA < sk < MaxSTA`, plus court chemin, on retient la pré-tension
+  qui **maximise la portée** puis **minimise le coût**. **Coupe native**
+  : si l’arrivée n’est jamais atteinte, on garde la ligne partielle la
+  plus longue.
+- **`peak_positions`** : port de `peakdetect` (crêtes du profil =
+  positions candidates).
+- **Tests** : 6 tests `cargo` (52 au total) — CA-13.1 (support posé
+  quand le span direct échoue, corde sous la crête), pas de support
+  inutile quand le direct passe, hauteur fixe = optimisation de position
+  seule + déterminisme (CA-13.2, esprit), coupe à la portée max, coût
+  `KostStue`, `peakdetect`.
+
+**Reste** : 13c (câblage `cable_scan` / config `methode_supports`,
+extrémités mât/ancrage, confrontation ColduPre — CA-13.3 couverture ↑,
+CA-13.4 perf), 13d (validation ligne à ligne vs SEILAPLAN, retrait de
+`OptPyl_Up2` et du flag `optimiser_hauteur_fixation`).
+
 ### 2026-07-16 — SEILAPLAN 13a : brique mécanique à tension imposée (`calc_cable` + `calc_sta`)
 
 Premier incrément de `specs/013` (optimisation de la hauteur des

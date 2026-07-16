@@ -265,6 +265,19 @@
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
 <div class="section level3">
+<h3 id="id_2026-07-16--seilaplan-13b--graphe--dijkstra-optimisation-position--hauteur">2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--seilaplan-13b--graphe--dijkstra-optimisation-position--hauteur"></a></h3>
+<p>Deuxième incrément de <code>specs/013</code>. Le cœur de l’algorithme de <strong>Bont &amp; Heinimann 2012</strong>, transcrit de <code>core/main_opti.py::optimization</code>, en Rust dans <code>cable::seilaplan</code> — <strong>sans</strong> dépendance scipy.</p>
+<ul><li>
+<strong><code>optimize_supports(di, zi, candidats, GraphParams, CableMat)</code></strong> : optimise <strong>position et hauteur</strong> des supports. Nœuds = (position candidate × niveau de hauteur <code>δh</code>), extrémités à hauteur fixe (mât/ancrage). Arêtes forward soumises à <code>Min_Dist_Mast</code> (exceptions départ/arrivée) ; chaque arête = <strong>une travée</strong>, sa faisabilité étant la plage <code>[MinSTA, MaxSTA]</code> de <code>calc_sta</code> (13a) — c’est là que le graphe réutilise notre mécanique. Coût <code>KostStue</code> (<code>kost_stue</code>) : ≥ 10000/support (minimise le nombre), croissant en <code>(h+100)²</code> (minimise la hauteur), ×5 au-delà de l’arbre naturel.</li>
+<li>
+<strong>Balayage de pré-tension + Dijkstra maison</strong> (<code>BinaryHeap</code>) : pour chaque <code>sk</code> (n_sk pas), on active les arêtes où <code>MinSTA &lt; sk &lt; MaxSTA</code>, plus court chemin, on retient la pré-tension qui <strong>maximise la portée</strong> puis <strong>minimise le coût</strong>. <strong>Coupe native</strong> : si l’arrivée n’est jamais atteinte, on garde la ligne partielle la plus longue.</li>
+<li>
+<strong><code>peak_positions</code></strong> : port de <code>peakdetect</code> (crêtes du profil = positions candidates).</li>
+<li>
+<strong>Tests</strong> : 6 tests <code>cargo</code> (52 au total) — CA-13.1 (support posé quand le span direct échoue, corde sous la crête), pas de support inutile quand le direct passe, hauteur fixe = optimisation de position seule + déterminisme (CA-13.2, esprit), coupe à la portée max, coût <code>KostStue</code>, <code>peakdetect</code>.</li>
+</ul><p><strong>Reste</strong> : 13c (câblage <code>cable_scan</code> / config <code>methode_supports</code>, extrémités mât/ancrage, confrontation ColduPre — CA-13.3 couverture ↑, CA-13.4 perf), 13d (validation ligne à ligne vs SEILAPLAN, retrait de <code>OptPyl_Up2</code> et du flag <code>optimiser_hauteur_fixation</code>).</p>
+</div>
+<div class="section level3">
 <h3 id="id_2026-07-16--seilaplan-13a--brique-mécanique-à-tension-imposée-calc_cable--calc_sta">2026-07-16 — SEILAPLAN 13a : brique mécanique à tension imposée (<code>calc_cable</code> + <code>calc_sta</code>)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--seilaplan-13a--brique-m%C3%A9canique-%C3%A0-tension-impos%C3%A9e-calc_cable--calc_sta"></a></h3>
 <p>Premier incrément de <code>specs/013</code> (optimisation de la hauteur des supports à la Bont &amp; Heinimann, en remplacement du <code>c_option_h</code>/<code>OptPyl_Up2</code> shelvé). Objectif : la <strong>brique mécanique</strong> dont le graphe (13b) aura besoin, <strong>sans</strong> encore de graphe ni de câblage <code>cable_scan</code>.</p>
 <ul><li>
