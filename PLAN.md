@@ -79,8 +79,8 @@
   cellules). Config `desserte$trace` ajoutée (paramètres SylvaRoad) +
   validation. 18 tests. **Lot 15 clos** (15a→15c, \#59/#60/#61) ; oracle
   `meisenthal2` non publié → validé par invariants.
-- **Lot 16a (réseau glouton MTAP) en cycle dev** :
-  `reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, skidding_m, ...)`
+- **Lot 16a/16b (réseau MTAP glouton + Steiner) en cycle dev** :
+  `reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, mode, skidding_m, ...)`
   (`R/desserte_reseau.R`) rend un objet `foretaccess_reseau` (`sf`
   LINESTRING des routes créées + `SpatRaster` du réseau + coût total).
   Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque
@@ -91,9 +91,17 @@
   heuristiques d’ordre (plus proche, plus gros volume, aléatoire
   reproductible). Nouveau Rust : `heuristic::dist_to_end_multi`,
   `solver::solve_network` + `build_network`, binding `desserte_reseau`.
-  24 tests cargo + 12 tests R. Reste **16b** (Steiner) et **16c**
-  (raccordement/connexité, sortie affinée).
-- **Branche** : `feat/lot16a-reseau-glouton` (cycle dev)
+  **16b (`mode = "steiner"`, Chung & Sessions)** : graphe complet des
+  terminaux (réseau + un nœud d’accès par parcelle, cellule la plus
+  proche du réseau), arêtes = coûts du solveur Lot 15 (`desserte_reseau`
+  réseau↔︎parcelle, `desserte_trace` parcelle↔︎parcelle, N² tracés), **MST
+  Prim**, puis **matérialisation avec réutilisation** (chaque parcelle,
+  dans l’ordre racine→feuilles de l’arbre, se greffe sur le réseau
+  courant → fusion des cellules partagées, élagage des doublons). Tout
+  en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4
+  (Steiner ≤ glouton) vérifié. 24 tests cargo + 16 tests R. Reste
+  **16c** (raccordement/connexité, sortie affinée).
+- **Branche** : `feat/lot16b-steiner` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -189,7 +197,7 @@
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
-| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 🔨 en cours (16a glouton livré) | *(cycle dev)* |
+| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 🔨 en cours (16a glouton + 16b Steiner livrés) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
@@ -387,6 +395,41 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-16 — Lot 16b : mode Steiner (MST des terminaux + matérialisation avec réutilisation)
+
+`reseau_desserte` gagne un argument `mode = c("glouton", "steiner")`. Le
+mode **Steiner** (Chung & Sessions, « qualité ») est implémenté
+**entièrement en R** au-dessus des bindings du Lot 15/16a — aucun
+nouveau code Rust :
+
+1.  **Terminaux** : le réseau existant (racine) + un nœud d’accès par
+    parcelle (la cellule de la parcelle géométriquement la plus proche
+    du réseau,
+    [`terra::distance`](https://rspatial.github.io/terra/reference/distance.html)).
+2.  **Graphe complet** : poids d’arête = coût du plus court chemin
+    contraint du Lot 15 — réseau↔︎parcelle via `desserte_reseau` (source
+    unique, arrêt sur réseau), parcelle↔︎parcelle via `desserte_trace`
+    (waypoint à waypoint). N² tracés.
+3.  **MST Prim** enraciné sur le réseau (`.steiner_prim`) : Prim ajoute
+    chaque terminal après son parent, donc l’ordre des arêtes est déjà
+    un parcours racine→feuilles valide.
+4.  **Matérialisation avec réutilisation** : chaque parcelle, dans cet
+    ordre, se **re-raccorde au réseau courant** (existant + tronçons
+    déjà posés) via `desserte_reseau`. C’est ce re-solve qui **fusionne
+    les cellules partagées** (coût abaissé à ~0, comme le glouton) et
+    **élague** les doublons — une greffe mi-parcours plutôt qu’un chemin
+    parallèle.
+
+Le point subtil : un MST « brut » qui somme les coûts d’arêtes
+indépendants **surestime** (pas de fusion) et peut dépasser le glouton ;
+c’est la matérialisation avec réutilisation qui garantit CA-16.4
+(Steiner ≤ glouton). Sur le plan incliné du banc, les liaisons purement
+latérales sont infaisables (pente longitudinale nulle \<
+`pente_long_min`), donc Steiner reproduit la réutilisation du glouton et
+égale son coût. `print.foretaccess_reseau` affiche le `mode`. **16 tests
+R** (4 ajoutés : desserte + connexité + CA-16.4 + mode invalide). Reste
+**16c** (connexité formelle, sortie affinée).
 
 ### 2026-07-16 — Épic « conception de desserte » ouvert ; Lot 14 (coût de construction) livré
 

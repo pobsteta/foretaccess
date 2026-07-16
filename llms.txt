@@ -345,7 +345,8 @@ OpenStreetMap).
 ## Conception de desserte (Lots 14-18)
 
 Conception d’un réseau de desserte : surface de coût de construction
-(Lot 14), solveur de tracé A\* (Lot 15, noyau Rust).
+(Lot 14), solveur de tracé A\* (Lot 15, noyau Rust), réseau multi-cibles
+glouton/Steiner (Lot 16).
 
 - [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
   : Build the construction-cost surface of a new forest road

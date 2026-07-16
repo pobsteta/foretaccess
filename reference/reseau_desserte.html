@@ -63,6 +63,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 <span>  <span class="va">parcelles</span>,</span>
 <span>  <span class="va">desserte_existante</span>,</span>
 <span>  heuristique <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plus_proche"</span>, <span class="st">"plus_gros_volume"</span>, <span class="st">"aleatoire"</span><span class="op">)</span>,</span>
+<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"glouton"</span>, <span class="st">"steiner"</span><span class="op">)</span>,</span>
 <span>  skidding_m <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  volume_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -95,6 +96,12 @@ constrained solver, the new road growing the network for later parcels (reuse
 <code>"plus_gros_volume"</code> (largest volume first) or <code>"aleatoire"</code> (random).</p></dd>
 
 
+<dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
+<dd><p>Construction mode: <code>"glouton"</code> (greedy MTAP-&gt;STAP, default) or
+<code>"steiner"</code> (minimum-spanning-tree approximation over the terminals, a
+quality alternative at the cost of N^2 traces).</p></dd>
+
+
 <dt id="arg-skidding-m">skidding_m<a class="anchor" aria-label="anchor" href="#arg-skidding-m"></a></dt>
 <dd><p>Skidding distance (m): a parcel cell within it of a road is
 served without building a road.</p></dd>
@@ -119,7 +126,7 @@ served without building a road.</p></dd>
     <p>A <code>foretaccess_reseau</code> object: <code>lignes</code> (an <code>sf</code> LINESTRING of the
 created roads, one feature per road, with creation order and cost), <code>reseau</code>
 (a <code>SpatRaster</code> of the whole network, for Lot 17), <code>cout</code> (total) and the
-recall of the heuristic.</p>
+recall of the <code>mode</code> and <code>heuristique</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

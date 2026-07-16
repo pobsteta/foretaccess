@@ -66,9 +66,9 @@
 <li>
 <strong>Lot 15c (orchestration R) en cycle dev</strong> : <code>tracer_desserte(pre, cout, waypoints, config)</code> (<code>R/desserte_trace.R</code>) rend un objet <code>foretaccess_trace</code> (une <code>sf</code> LINESTRING de la route, coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (<code>obs2</code>) et fraction locale de fort dévers (<code>local_slope</code> par focale disque), convertit les waypoints (sf/cellules) en indices, appelle <code>desserte_trace</code>, reconstruit la polyligne (centres de cellules). Config <code>desserte$trace</code> ajoutée (paramètres SylvaRoad) + validation. 18 tests. <strong>Lot 15 clos</strong> (15a→15c, #59/#60/#61) ; oracle <code>meisenthal2</code> non publié → validé par invariants.</li>
 <li>
-<strong>Lot 16a (réseau glouton MTAP) en cycle dev</strong> : <code>reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, skidding_m, ...)</code> (<code>R/desserte_reseau.R</code>) rend un objet <code>foretaccess_reseau</code> (<code>sf</code> LINESTRING des routes créées + <code>SpatRaster</code> du réseau + coût total). Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au <strong>réseau courant</strong> par le solveur Lot 15 (variante <strong>multi-cible</strong> : A* qui s’arrête sur toute cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage par distance de débardage. Trois heuristiques d’ordre (plus proche, plus gros volume, aléatoire reproductible). Nouveau Rust : <code>heuristic::dist_to_end_multi</code>, <code>solver::solve_network</code> + <code>build_network</code>, binding <code>desserte_reseau</code>. 24 tests cargo + 12 tests R. Reste <strong>16b</strong> (Steiner) et <strong>16c</strong> (raccordement/connexité, sortie affinée).</li>
+<strong>Lot 16a/16b (réseau MTAP glouton + Steiner) en cycle dev</strong> : <code>reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, mode, skidding_m, ...)</code> (<code>R/desserte_reseau.R</code>) rend un objet <code>foretaccess_reseau</code> (<code>sf</code> LINESTRING des routes créées + <code>SpatRaster</code> du réseau + coût total). Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au <strong>réseau courant</strong> par le solveur Lot 15 (variante <strong>multi-cible</strong> : A* qui s’arrête sur toute cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage par distance de débardage. Trois heuristiques d’ordre (plus proche, plus gros volume, aléatoire reproductible). Nouveau Rust : <code>heuristic::dist_to_end_multi</code>, <code>solver::solve_network</code> + <code>build_network</code>, binding <code>desserte_reseau</code>. <strong>16b (<code>mode = "steiner"</code>, Chung &amp; Sessions)</strong> : graphe complet des terminaux (réseau + un nœud d’accès par parcelle, cellule la plus proche du réseau), arêtes = coûts du solveur Lot 15 (<code>desserte_reseau</code> réseau↔︎parcelle, <code>desserte_trace</code> parcelle↔︎parcelle, N² tracés), <strong>MST Prim</strong>, puis <strong>matérialisation avec réutilisation</strong> (chaque parcelle, dans l’ordre racine→feuilles de l’arbre, se greffe sur le réseau courant → fusion des cellules partagées, élagage des doublons). Tout en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4 (Steiner ≤ glouton) vérifié. 24 tests cargo + 16 tests R. Reste <strong>16c</strong> (raccordement/connexité, sortie affinée).</li>
 <li>
-<strong>Branche</strong> : <code>feat/lot16a-reseau-glouton</code> (cycle dev)</li>
+<strong>Branche</strong> : <code>feat/lot16b-steiner</code> (cycle dev)</li>
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0.9000</code> (cycle dev après release <code>v1.1.0</code>)</li>
 <li>
@@ -190,7 +190,7 @@
 </tr><tr><td>16</td>
 <td>Réseau MTAP</td>
 <td><code>specs/016-reseau-mtap.md</code></td>
-<td>🔨 en cours (16a glouton livré)</td>
+<td>🔨 en cours (16a glouton + 16b Steiner livrés)</td>
 <td><em>(cycle dev)</em></td>
 </tr><tr><td>17</td>
 <td>Flux &amp; typage</td>
@@ -310,6 +310,19 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-16--lot-16b--mode-steiner-mst-des-terminaux--matérialisation-avec-réutilisation">2026-07-16 — Lot 16b : mode Steiner (MST des terminaux + matérialisation avec réutilisation)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--lot-16b--mode-steiner-mst-des-terminaux--mat%C3%A9rialisation-avec-r%C3%A9utilisation"></a></h3>
+<p><code>reseau_desserte</code> gagne un argument <code>mode = c("glouton", "steiner")</code>. Le mode <strong>Steiner</strong> (Chung &amp; Sessions, « qualité ») est implémenté <strong>entièrement en R</strong> au-dessus des bindings du Lot 15/16a — aucun nouveau code Rust :</p>
+<ol style="list-style-type: decimal"><li>
+<strong>Terminaux</strong> : le réseau existant (racine) + un nœud d’accès par parcelle (la cellule de la parcelle géométriquement la plus proche du réseau, <code><a href="https://rspatial.github.io/terra/reference/distance.html" class="external-link">terra::distance</a></code>).</li>
+<li>
+<strong>Graphe complet</strong> : poids d’arête = coût du plus court chemin contraint du Lot 15 — réseau↔︎parcelle via <code>desserte_reseau</code> (source unique, arrêt sur réseau), parcelle↔︎parcelle via <code>desserte_trace</code> (waypoint à waypoint). N² tracés.</li>
+<li>
+<strong>MST Prim</strong> enraciné sur le réseau (<code>.steiner_prim</code>) : Prim ajoute chaque terminal après son parent, donc l’ordre des arêtes est déjà un parcours racine→feuilles valide.</li>
+<li>
+<strong>Matérialisation avec réutilisation</strong> : chaque parcelle, dans cet ordre, se <strong>re-raccorde au réseau courant</strong> (existant + tronçons déjà posés) via <code>desserte_reseau</code>. C’est ce re-solve qui <strong>fusionne les cellules partagées</strong> (coût abaissé à ~0, comme le glouton) et <strong>élague</strong> les doublons — une greffe mi-parcours plutôt qu’un chemin parallèle.</li>
+</ol><p>Le point subtil : un MST « brut » qui somme les coûts d’arêtes indépendants <strong>surestime</strong> (pas de fusion) et peut dépasser le glouton ; c’est la matérialisation avec réutilisation qui garantit CA-16.4 (Steiner ≤ glouton). Sur le plan incliné du banc, les liaisons purement latérales sont infaisables (pente longitudinale nulle &lt; <code>pente_long_min</code>), donc Steiner reproduit la réutilisation du glouton et égale son coût. <code>print.foretaccess_reseau</code> affiche le <code>mode</code>. <strong>16 tests R</strong> (4 ajoutés : desserte + connexité + CA-16.4 + mode invalide). Reste <strong>16c</strong> (connexité formelle, sortie affinée).</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-16--épic--conception-de-desserte--ouvert--lot-14-coût-de-construction-livré">2026-07-16 — Épic « conception de desserte » ouvert ; Lot 14 (coût de construction) livré<a class="anchor" aria-label="anchor" href="#id_2026-07-16--%C3%A9pic--conception-de-desserte--ouvert--lot-14-co%C3%BBt-de-construction-livr%C3%A9"></a></h3>
 <p>Nouvel épic (Lots 14-18, <code>docs/ROADMAP-desserte.md</code>, ADR-008) : passer de la <strong>cartographie</strong> d’accessibilité à la <strong>conception</strong> d’un réseau de desserte forestière. Sources GPL v3 transposées : ForestRoadNetwork (Klemet), SylvaRoad (Dupire/ONF), Forest Road Designer (PANOimagen). Specs 014-018 déposées, chemin critique 14 → 15 → 16 → 17, optimisation en 18.</p>

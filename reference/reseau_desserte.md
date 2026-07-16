@@ -16,6 +16,7 @@ reseau_desserte(
   parcelles,
   desserte_existante,
   heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
+  mode = c("glouton", "steiner"),
   skidding_m = 0,
   volume_champ = NULL,
   config = foretaccess_config(),
@@ -46,6 +47,12 @@ reseau_desserte(
   Ordering of parcels: `"plus_proche"` (closest first),
   `"plus_gros_volume"` (largest volume first) or `"aleatoire"` (random).
 
+- mode:
+
+  Construction mode: `"glouton"` (greedy MTAP-\>STAP, default) or
+  `"steiner"` (minimum-spanning-tree approximation over the terminals, a
+  quality alternative at the cost of N^2 traces).
+
 - skidding_m:
 
   Skidding distance (m): a parcel cell within it of a road is served
@@ -70,4 +77,4 @@ reseau_desserte(
 A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
 created roads, one feature per road, with creation order and cost),
 `reseau` (a `SpatRaster` of the whole network, for Lot 17), `cout`
-(total) and the recall of the heuristic.
+(total) and the recall of the `mode` and `heuristique`.
