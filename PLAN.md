@@ -96,7 +96,7 @@
   Refactor R : `.reseau_preparer`/`.reseau_assembler` partagés. 3 tests cargo + 15 tests R.
   **Lot 18 clos → épic desserte (14→18) complet.** Prochaine étape : couper une **release stable**.
 - **Branche** : `feat/lot18c-riprute` (cycle dev)
-- **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
+- **Version `DESCRIPTION`** : `1.2.0` (release de l'épic desserte ; retour en `1.2.0.9000` juste après merge)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -331,6 +331,16 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Release v1.2.0 : épic « conception de desserte » (Lots 14→18)
+
+Coupe d'une **release stable `v1.2.0`** regroupant tout l'épic desserte accumulé en cycle dev
+depuis `v1.1.0` (13 PRs, #58→#70). `DESCRIPTION` = `NEWS.md` (tête) = `CITATION.cff` = `1.2.0`
+(gate CI `version-consistency`). `NEWS.md` documente la chaîne complète : `surface_cout_construction`
+(14) → `tracer_desserte` (15) → `reseau_desserte` (16) → `vectoriser_reseau`/`calculer_flux`/
+`typer_desserte` (17) → `optimiser_reseau` (18). Bump **mineur** (fonctionnalités rétrocompatibles).
+Après merge : `release.yml` pose le tag `v1.2.0` + la release GitHub, puis retour en cycle dev
+`1.2.0.9000`.
 
 ### 2026-07-16 — Lot 18c : rip-up & reroute + clôture du Lot 18 et de l'épic desserte
 

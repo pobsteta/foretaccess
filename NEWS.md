@@ -1,3 +1,40 @@
+# foretaccess 1.2.0 (2026-07-16)
+
+## Conception de desserte forestière (épic Lots 14 → 18)
+
+Nouvelle chaîne complète pour **concevoir** un réseau de desserte forestière (et
+plus seulement cartographier l'accessibilité), portage propre de **SylvaRoad**
+(Dupire/ONF), **Forest Road Designer** (PANOimagen) et **ForestRoadNetwork**
+(Klemet), tous GPL v3. De la surface de coût au réseau typé et optimisé :
+
+- **Coût de construction (Lot 14)** — `surface_cout_construction()` produit un
+  `foretaccess_cout_construction` (deux `SpatRaster` : `cout` €/m additif et
+  `franchissable`), paramétré par `config$desserte$cout`.
+- **Solveur de tracé A\* (Lot 15, noyau Rust)** — `tracer_desserte()` trace une
+  route de moindre coût sous contraintes de constructibilité (pente longitudinale,
+  dévers, épingles, rayon de braquage, contrôle de profil), à voisinage disque,
+  via le crate `cablehelp` ; sortie `foretaccess_trace` (`sf` LINESTRING).
+  Paramètres dans `config$desserte$trace`.
+- **Réseau multi-cibles (Lot 16)** — `reseau_desserte(..., mode =)` connecte N
+  parcelles au réseau existant au moindre coût cumulé, en réutilisant les troncs
+  (arborescence). Deux modes : `"glouton"` (MTAP→STAP séquentiel) et `"steiner"`
+  (arbre couvrant de poids minimal). Sortie `foretaccess_reseau` (`sf` + raster),
+  vérifiée connexe et desservant toutes les parcelles.
+- **Flux de bois & typage (Lot 17)** — `vectoriser_reseau()` transforme le réseau
+  en graphe topologique (`foretaccess_reseau_graphe`) ; `calculer_flux()` sème des
+  sources et accumule le volume vers les exutoires ; `typer_desserte()` classe les
+  tronçons par seuils de flux (primaire/secondaire/tertiaire) avec conversion
+  temporaire optionnelle. Sortie `foretaccess_desserte_typee`, persistable via le
+  socle spatial (GeoPackage/PostGIS).
+- **Optimisation du réseau (Lot 18, noyau Rust)** — `optimiser_reseau(...,
+  strategie =)` explore l'espace des ordres d'insertion pour améliorer le glouton,
+  sans jamais faire pire : `"multistart"` (K ordres perturbés en parallèle,
+  `rayon`), `"recuit"` (recuit simulé, Akay 2004) et `"riprute"` (rip-up & reroute,
+  avec garde-fou de connexité). Sortie `foretaccess_reseau` enrichie d'un journal
+  de convergence.
+
+Travail dérivé de Sylvaccess et des outils cités ci-dessus, distribué sous GPL v3.
+
 # foretaccess 1.1.0 (2026-07-16)
 
 ## Optimisation de la hauteur des supports câble façon SEILAPLAN (spec 013)
