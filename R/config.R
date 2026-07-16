@@ -109,6 +109,11 @@ foretaccess_config <- function(skidder = list(),
       nb_supports_max            = 3,     # c_sup
       hauteur_support_inter_m    = 12,    # c_h_sup
       longueur_min_travee_m      = 50,    # c_l_span
+      # Optimisation de la hauteur de fixation sur chaque support (`c_option_h`).
+      # Defaut v3.6 : FALSE (variantes `_NoH`, hauteur fixe). TRUE = balayage de
+      # hauteur (`OptPyl_Up`/`Up2`), plus permissif mais nettement plus lent.
+      optimiser_hauteur_fixation = FALSE, # c_option_h
+
       # Validite geometrique de la ligne (`check_line`) : elle doit finir en foret, ne
       # pas traverser trop de non-foret d'affilee, et ne pas courir en travers d'un
       # versant raide. Sans ces bornes, les lignes filent jusqu'a `longueur_max_m` a

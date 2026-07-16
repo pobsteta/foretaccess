@@ -32,8 +32,14 @@
 #' seulement raccourcie par le haut.
 #'
 #' @section Ecarts assumes avec Sylvaccess v3.6:
-#' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h = 1`)
-#' n'est pas implementee : on tient la variante `_NoH`, qui est le defaut de v3.6.
+#' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h`,
+#' `cable$optimiser_hauteur_fixation`) est **experimentale** et desactivee par defaut
+#' (variante `_NoH`, le defaut de v3.6). Le portage des variantes a hauteur balayee
+#' (`OptPyl_Up` / `OptPyl_Up2`) existe mais **ne reproduit pas encore l'oracle** : sur
+#' ColduPre il *reduit* la couverture (net -999 cellules) la ou Sylvaccess l'*augmente*
+#' (net +470), signe d'un defaut restant dans la passe machine-en-bas ; et il est
+#' **~20x plus lent** (46 min pour 2 departs). A n'activer que pour experimenter. Cf.
+#' `PLAN.md` (dette assumee du cable) et `specs/004-cable.md`.
 #'
 #' Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris en compte :
 #' la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
@@ -78,6 +84,13 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
   validate_config(config)
 
   ct <- .constantes_cable(config$cable)
+  if (isTRUE(ct$optim_h)) {
+    cli::cli_warn(c(
+      "Optimisation de hauteur de fixation ({.code optimiser_hauteur_fixation}) EXPERIMENTALE.",
+      "!" = "Elle ne reproduit pas l'oracle Sylvaccess (reduit la couverture) et est ~20x plus lente.",
+      "i" = "Defaut recommande : {.code FALSE}. Voir {.file PLAN.md} (dette cable)."
+    ))
+  }
   res <- terra::res(pre$mnt)[1]
   nr <- terra::nrow(pre$mnt)
   nc <- terra::ncol(pre$mnt)
@@ -111,7 +124,8 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     pente = as.numeric(terra::values(pre$slope_pct)),
     lsans_foret = ct$lsans_foret, angle_transv = ct$angle_transv,
     slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope,
-    l_hor = ct$l_hor
+    l_hor = ct$l_hor,
+    optim_h = ct$optim_h
   )
 
   couvert <- sc$couvert == 1L
@@ -270,6 +284,7 @@ bornes_pente_cable <- function(ca) {
     l_slope = ca$distance_transversale_max_m,
     prop_slope = ca$proportion_transversale_max,
     l_hor = ca$distance_laterale_max_m,
+    optim_h = isTRUE(ca$optimiser_hauteur_fixation), # c_option_h
     # `Lsans_foret = min(c_lmax * 0,1, c_lmin)` chez Sylvaccess, sauf surcharge.
     lsans_foret = if (is.na(ca$longueur_sans_foret_max_m)) {
       min(ca$longueur_max_m * 0.1, ca$longueur_min_m)

@@ -43,7 +43,8 @@ cable_scan(
   slope_trans,
   l_slope,
   prop_slope,
-  l_hor
+  l_hor,
+  optim_h
 )
 }
 \arguments{
@@ -124,6 +125,8 @@ cable_scan(
 \item{prop_slope}{Maximum share of the line on a steep cross-slope.}
 
 \item{l_hor}{Lateral yarding half-width buffered around each line (m).}
+
+\item{optim_h}{Optimise the attachment height on each support (\code{c_option_h}).}
 }
 \value{
 A list: \code{couvert}, \code{longueur}, \code{azimut} (per cell) and the candidate

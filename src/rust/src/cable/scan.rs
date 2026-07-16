@@ -243,6 +243,7 @@ pub fn scan(
     l_slope: f64,
     prop_slope: f64,
     l_hor: f64,
+    optim_h: bool,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
@@ -376,6 +377,7 @@ pub fn scan(
                 lmin_span,
                 nbconfig,
                 heriter_tension: true,
+                optim_h,
             };
 
             // Portee retenue, en index du profil aller, et nombre de supports poses.

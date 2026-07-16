@@ -66,7 +66,10 @@
   à l'oracle (12a.4, 99,87 %). Suite possible : dettes câble (hauteur de fixation, sélection de
   lignes tamponnées) et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en `1.x`.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
-  défaut v3.6) et pêchage latéral. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
+  défaut v3.6) — **portage tenté puis mis en attente le 16/07** (flag `optimiser_hauteur_fixation`,
+  défaut `FALSE`) : le code existe (`OptPyl_Up`/`Up2` transcrits) mais ne reproduit pas l'oracle
+  (voir journal 16/07) et est ~20× plus lent. Le `_NoH` (défaut) est intact. Phase 2 acquisition :
+  MNH LiDAR → volume, BD Forêt v3.
 
 ## Avancement par lot
 
@@ -246,6 +249,36 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Câble `c_option_h` : portage tenté, mis en attente (bug + perf)
+
+Chantier « optimisation de la hauteur de fixation » (`c_option_h`), dette assumée du Lot 4.
+**Décisions prises en cours** : régénérer un oracle (ColduPre est à `c_option_h=false`),
+périmètre `test_hfor=0` (plafond uniforme).
+
+**Infrastructure produite (saine, conservée)** :
+- **Régénération d'oracle Sylvaccess** : env conda `sylvaccess` recréé, `.so` recompilé (ABI numpy),
+  params redirigés hors du repo frère (`data-raw/oracle/coldupre/params_cable_hopt.json`). Procédure
+  en mémoire (`regenerer-oracle-sylvaccess.md`).
+- **Bug trouvé dans Sylvaccess** : son propre chemin `c_option_h=true` **plante** sur ColduPre
+  (`OptPyl_Up2`, `IndexError` — tampon `Tab` sous-dimensionné `100·nbconfig` face au double balayage
+  `Hg×Hd`). Ce chemin n'a jamais été exercé sur un vrai jeu, d'où le défaut v3.6 `false`. Corrigé
+  dans la copie scratchpad (`×100`→`×2000`) : purement du dimensionnement, résultats identiques.
+- **Gain mesuré de la fonctionnalité** : sur ColduPre, l'oracle `c_option_h=true` couvre **+517/−47**
+  cellules vs `false` (~1,7 %), en fermant du trop-conservateur.
+
+**Portage Rust (derrière le flag `optimiser_hauteur_fixation`, défaut `FALSE`)** :
+`optpyl()` généralisé (`optim_h` : hauteur terminale abaissée + supports intermédiaires balayés) et
+nouvelle `optpyl_up2()` (machine en bas : ancrage balayé). Le **`_NoH` (défaut) est bit-pour-bit
+inchangé** — 38 tests cargo d'origine verts, +1 nouveau.
+
+**Pourquoi mis en attente** : confronté au nouvel oracle, le chemin `optim_h=true` **part dans le
+mauvais sens** — il *réduit* la couverture (net **−999** cellules) là où Sylvaccess l'*augmente*
+(net **+470**) ; sur les +517 cellules gagnées par l'oracle, on n'en couvre que 207. Bug de fidélité
+restant, probablement dans `optpyl_up2` (lignes trop courtes). S'ajoute une **perf prohibitive**
+(**46 min pour 2 départs**, ~20× le `_NoH`) et une **boucle de validation à 46 min/itération**.
+Coût/bénéfice défavorable (gain ~1,7 %, opt-in) : chantier **shelvé**, code conservé derrière le flag
+pour reprise, avec avertissement `cli` à l'activation et doc explicite.
 
 ### 2026-07-15 — `v1.0.0` : première version majeure (validée contre le vrai moteur)
 
