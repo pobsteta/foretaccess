@@ -88,16 +88,53 @@ test_that("CA-18.5 : le reseau optimise reste valide (desservi, connexe)", {
   expect_equal(opt$strategie, "multistart")
 })
 
-test_that("strategies non encore disponibles -> erreur informative", {
+test_that("riprute pas encore disponible -> erreur informative", {
   s <- optim_setup()
-  expect_error(
-    optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit"),
-    "disponible"
-  )
   expect_error(
     optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "riprute"),
     "disponible"
   )
+})
+
+# --- Lot 18b : recuit simule -------------------------------------------------
+
+test_that("CA-18.1 : le recuit n'est jamais pire que le glouton simple", {
+  s <- optim_setup()
+  glou <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  opt <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit",
+                          n_iter = 40, graine = 7)
+  expect_s3_class(opt, "foretaccess_reseau")
+  expect_lte(opt$cout, glou$cout + 1e-6)
+  expect_equal(opt$strategie, "recuit")
+})
+
+test_that("CA-18.4 : la courbe de convergence du recuit est monotone decroissante", {
+  s <- optim_setup()
+  opt <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit",
+                          n_iter = 50, graine = 3)
+  expect_length(opt$journal, 50)
+  # Le meilleur cout rencontre ne remonte jamais.
+  expect_true(all(diff(opt$journal) <= 1e-9))
+  # Le cout final egale le minimum du journal.
+  expect_equal(opt$cout, min(opt$journal))
+})
+
+test_that("CA-18.2 : recuit reproductible a graine fixee", {
+  s <- optim_setup()
+  a <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit",
+                        n_iter = 30, graine = 5)
+  b <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit",
+                        n_iter = 30, graine = 5)
+  expect_equal(a$journal, b$journal)
+  expect_equal(sf::st_coordinates(a$lignes), sf::st_coordinates(b$lignes))
+})
+
+test_that("CA-18.5 : le reseau du recuit reste valide (desservi, connexe)", {
+  s <- optim_setup()
+  opt <- optimiser_reseau(s$pre, s$cout, s$parcelles, s$route, "recuit",
+                          n_iter = 30, graine = 1)
+  expect_true(all(opt$desservies))
+  expect_true(opt$connexe)
 })
 
 test_that("la methode print affiche la strategie", {

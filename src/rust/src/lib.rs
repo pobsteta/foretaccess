@@ -942,6 +942,109 @@ fn desserte_reseau_multistart(
     )
 }
 
+/// Optimise a road network by simulated annealing on the insertion order (Lot 18b).
+///
+/// Energy is the total network cost; a neighbour swaps two positions in the order;
+/// acceptance is Metropolis (`exp(-delta/T)`) with geometric cooling. Starts from
+/// the base order and returns the best network met, so never worse than the plain
+/// greedy (CA-18.1); reproducible for a fixed `seed` (CA-18.2). The `journal` is the
+/// best-so-far cost per iteration (monotone decreasing, CA-18.4).
+///
+/// @param alt Elevation values (row-major, m).
+/// @param obs Obstacle mask (1 = blocked), row-major.
+/// @param obs2 Excess cross-slope mask, row-major.
+/// @param local_slope Fraction (0..1) of the neighbourhood with steep cross-slope.
+/// @param zone Passable mask (1 = passable), row-major.
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param sources Parcel cells to serve, 0-based flattened, in the base order.
+/// @param network0 Existing-road cells, 0-based flattened.
+/// @param skidding Skidding distance (m): a source within it of a road is skipped.
+/// @param n_iter Number of annealing iterations.
+/// @param t0 Initial temperature; if `<= 0`, derived from the base energy.
+/// @param cooling Geometric cooling factor (0..1).
+/// @param seed Seed for the reproducible neighbour moves and acceptance draws.
+/// @param csize Cell size (m).
+/// @param min_slope Minimum road grade (percent).
+/// @param max_slope Maximum road grade (percent).
+/// @param penalty_xy Turn penalty.
+/// @param penalty_z Slope-change penalty.
+/// @param max_diff_z Max elevation gap road/terrain (m).
+/// @param d_neighborhood Neighbourhood radius (m).
+/// @param angle_hairpin Hairpin angle threshold (deg).
+/// @param lmax_ab_sl Max road length with excess cross-slope (m).
+/// @param radius Turning radius (m).
+/// @param prop_sl_max Max local steep-cross-slope fraction at a hairpin.
+/// @param max_slope_hairpin Hairpin limit-angle parameter.
+/// @param tal Hairpin limit-angle parameter.
+/// @param modhair Hairpin spacing parameter.
+/// @return A list: `paths` (1-based cell-index vectors of the best network),
+///   `costs` (per-road costs of the best network) and `journal` (best-so-far cost
+///   per iteration).
+/// @export
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn desserte_reseau_recuit(
+    alt: Vec<f64>,
+    obs: Vec<i32>,
+    obs2: Vec<i32>,
+    local_slope: Vec<f64>,
+    zone: Vec<i32>,
+    nr: i32,
+    nc: i32,
+    sources: Vec<i32>,
+    network0: Vec<i32>,
+    skidding: f64,
+    n_iter: i32,
+    t0: f64,
+    cooling: f64,
+    seed: f64,
+    csize: f64,
+    min_slope: f64,
+    max_slope: f64,
+    penalty_xy: f64,
+    penalty_z: f64,
+    max_diff_z: f64,
+    d_neighborhood: f64,
+    angle_hairpin: f64,
+    lmax_ab_sl: f64,
+    radius: f64,
+    prop_sl_max: f64,
+    max_slope_hairpin: f64,
+    tal: f64,
+    modhair: f64,
+) -> List {
+    let (nr, nc) = (nr as usize, nc as usize);
+    let p = desserte::solver::SolverParams {
+        csize,
+        min_slope,
+        max_slope,
+        penalty_xy,
+        penalty_z,
+        max_diff_z,
+        d_neighborhood,
+        angle_hairpin,
+        lmax_ab_sl,
+        radius,
+        prop_sl_max,
+        max_slope_hairpin,
+        tal,
+        modhair,
+    };
+    let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
+    let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let res = desserte::solver::build_network_recuit(
+        &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding,
+        n_iter.max(0) as usize, t0, cooling, seed as u64, &p,
+    );
+    let paths = List::from_values(
+        res.paths
+            .iter()
+            .map(|pth| pth.iter().map(|&i| i as i32 + 1).collect::<Vec<i32>>()),
+    );
+    list!(paths = paths, costs = res.costs, journal = res.journal)
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -964,6 +1067,7 @@ extendr_module! {
     fn desserte_trace;
     fn desserte_reseau;
     fn desserte_reseau_multistart;
+    fn desserte_reseau_recuit;
 }
 
 #[cfg(test)]

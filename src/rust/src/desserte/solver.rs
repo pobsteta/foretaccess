@@ -518,21 +518,23 @@ pub struct MultistartResult {
     pub journal: Vec<f64>,
 }
 
+/// PRNG SplitMix64 deterministe (sans dependance externe) : fait avancer `state`
+/// et renvoie le prochain tirage 64 bits.
+fn splitmix_next(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 /// Melange de Fisher-Yates deterministe : permutation reproductible de `base`
-/// pilotee par une graine (PRNG SplitMix64, sans dependance externe).
+/// pilotee par une graine.
 fn shuffle_seeded(base: &[usize], seed: u64) -> Vec<usize> {
     let mut v = base.to_vec();
     let mut state = seed;
-    let mut next = || {
-        // SplitMix64.
-        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut z = state;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        z ^ (z >> 31)
-    };
     for i in (1..v.len()).rev() {
-        let j = (next() % (i as u64 + 1)) as usize;
+        let j = (splitmix_next(&mut state) % (i as u64 + 1)) as usize;
         v.swap(i, j);
     }
     v
@@ -589,6 +591,94 @@ pub fn build_network_multistart(
         paths: results[best].paths.clone(),
         costs: results[best].costs.clone(),
         best,
+        journal,
+    }
+}
+
+/// Resultat d'un recuit simule : le meilleur reseau rencontre et le journal du
+/// meilleur cout par iteration (courbe de convergence, monotone decroissante).
+pub struct AnnealResult {
+    pub paths: Vec<Vec<usize>>,
+    pub costs: Vec<f64>,
+    pub journal: Vec<f64>,
+}
+
+/// Recuit simule sur l'ordre d'insertion (Lot 18b, Akay 2004). Energie = cout
+/// total du reseau ; voisin = echange de deux positions dans l'ordre ; acceptation
+/// de Metropolis (`exp(-delta/T)`) ; refroidissement geometrique (`cooling`). Part
+/// de l'ordre de base et renvoie le meilleur reseau rencontre -> jamais pire que le
+/// glouton (CA-18.1). Deterministe a graine fixee (CA-18.2). La table est batie une
+/// fois. Si `t0 <= 0`, une temperature initiale est deduite de l'energie de base.
+#[allow(clippy::too_many_arguments)]
+pub fn build_network_recuit(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    sources_base: &[usize],
+    network0: &[usize],
+    skidding: f64,
+    n_iter: usize,
+    t0: f64,
+    cooling: f64,
+    seed: u64,
+    p: &SolverParams,
+) -> AnnealResult {
+    let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
+    let eval = |order: &[usize]| {
+        let net = build_network_with_table(
+            dtm, obs, obs2, local_slope, zone, nr, nc, order, network0, skidding, &table, p,
+        );
+        let e: f64 = net.costs.iter().sum();
+        (e, net)
+    };
+
+    let mut current = sources_base.to_vec();
+    let (mut cur_e, base_net) = eval(&current);
+    let mut best_e = cur_e;
+    let mut best_net = base_net;
+    // Temperature initiale automatique (fraction de l'energie de base) si t0 <= 0.
+    let mut temp = if t0 > 0.0 {
+        t0
+    } else if cur_e > 0.0 {
+        cur_e * 0.2
+    } else {
+        1.0
+    };
+
+    let mut state = seed;
+    let len = current.len();
+    let mut journal = Vec::with_capacity(n_iter);
+    for _ in 0..n_iter {
+        let mut cand = current.clone();
+        if len >= 2 {
+            let a = (splitmix_next(&mut state) % len as u64) as usize;
+            let b = (splitmix_next(&mut state) % len as u64) as usize;
+            cand.swap(a, b);
+        }
+        let (cand_e, cand_net) = eval(&cand);
+        let delta = cand_e - cur_e;
+        // Tirage uniforme [0,1) pour le critere de Metropolis.
+        let u = splitmix_next(&mut state) as f64 / (u64::MAX as f64 + 1.0);
+        let accept = delta <= 0.0 || (temp > 0.0 && u < (-delta / temp).exp());
+        if accept {
+            current = cand;
+            cur_e = cand_e;
+            if cur_e < best_e {
+                best_e = cur_e;
+                best_net = cand_net;
+            }
+        }
+        journal.push(best_e);
+        temp *= cooling;
+    }
+
+    AnnealResult {
+        paths: best_net.paths,
+        costs: best_net.costs,
         journal,
     }
 }
@@ -1053,6 +1143,38 @@ mod tests {
         );
         assert_eq!(ms.journal, ms2.journal);
         assert_eq!(ms.best, ms2.best);
+    }
+
+    #[test]
+    fn recuit_best_le_base_monotone_and_reproducible() {
+        let p = params();
+        let (nr, nc) = (5usize, 11usize);
+        let g = setup(nr, nc, 8.0, &p);
+        let network0: Vec<usize> = (0..nr).map(|y| y * nc).collect();
+        let sources = [nc + (nc - 1), 3 * nc + (nc - 1), 2 * nc + (nc - 2)];
+        let base = build_network(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, &p,
+        );
+        let base_cost: f64 = base.costs.iter().sum();
+        let an = build_network_recuit(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &p,
+        );
+        let best_cost: f64 = an.costs.iter().sum();
+        // Le meilleur rencontre n'est jamais pire que l'ordre de base (CA-18.1).
+        assert!(best_cost <= base_cost + 1e-9);
+        // Le journal du meilleur cout est monotone decroissant (CA-18.4).
+        assert_eq!(an.journal.len(), 30);
+        for w in an.journal.windows(2) {
+            assert!(w[1] <= w[0] + 1e-9);
+        }
+        // Reproductibilite a graine fixee (CA-18.2).
+        let an2 = build_network_recuit(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &p,
+        );
+        assert_eq!(an.journal, an2.journal);
     }
 
     #[test]
