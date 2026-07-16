@@ -57,3 +57,72 @@ test_that("le resultat est deterministe", {
   b <- desserte_dist_to_end(zone, 4L, 4L, 5, 2L, 2L, 1e9)
   expect_identical(a, b)
 })
+
+# --- Lot 15b : solveur A* complet (`desserte_trace`) -------------------------
+
+# Grille inclinee `slope_pct` % vers l'est (dz = slope/100 * csize par cellule).
+# Sur ce plan, une route peut monter le long de x en respectant [min, max] %.
+plan_incline <- function(nr, nc, slope_pct, csize = 10) {
+  m <- matrix(0, nr, nc)
+  for (x in seq_len(nc)) m[, x] <- (x - 1) * slope_pct / 100 * csize
+  as.vector(t(m)) # ligne par ligne
+}
+
+# Paramètres SylvaRoad (défauts `SylvaRoaD_0_param.py`).
+trace_args <- function(alt, nr, nc, waypoints, obs = NULL, bufgoal = 0,
+                       d_neighborhood = 30, csize = 10) {
+  n <- nr * nc
+  if (is.null(obs)) obs <- rep(0L, n)
+  list(
+    alt = alt, obs = as.integer(obs), obs2 = rep(0L, n),
+    local_slope = rep(0, n), zone = rep(1L, n),
+    nr = as.integer(nr), nc = as.integer(nc),
+    waypoints = as.integer(waypoints), bufgoal = bufgoal, csize = csize,
+    min_slope = 2, max_slope = 12, penalty_xy = 150, penalty_z = 80,
+    max_diff_z = 3, d_neighborhood = d_neighborhood, angle_hairpin = 110,
+    lmax_ab_sl = 40, radius = 8, prop_sl_max = 0.25, max_slope_hairpin = 10,
+    tal = 1.5, modhair = 1.5
+  )
+}
+
+test_that("CA-15.1 : un tracé faisable relie départ et arrivée", {
+  nr <- 5L; nc <- 9L
+  alt <- plan_incline(nr, nc, 8)
+  start0 <- 2 * nc + 0            # (ligne 2, col 0), 0-based aplati
+  end0 <- 2 * nc + 8
+  r <- do.call(desserte_trace, trace_args(alt, nr, nc, c(start0, end0)))
+  expect_true(r$feasible)
+  expect_equal(r$path[1], start0 + 1)              # 1-based en sortie
+  expect_equal(r$path[length(r$path)], end0 + 1)
+  expect_gt(r$cost, 0)
+})
+
+test_that("CA-15.6 : les points de passage obligatoires sont tous traversés", {
+  nr <- 5L; nc <- 9L
+  alt <- plan_incline(nr, nc, 8)
+  a <- 2 * nc + 0; b <- 2 * nc + 4; c <- 2 * nc + 8
+  r <- do.call(desserte_trace, trace_args(alt, nr, nc, c(a, b, c)))
+  expect_true(r$feasible)
+  expect_true((b + 1) %in% r$path)                 # passage intermédiaire
+  expect_equal(r$path[1], a + 1)
+  expect_equal(r$path[length(r$path)], c + 1)
+})
+
+test_that("CA-15.4 : un obstacle infranchissable n'est jamais traversé", {
+  nr <- 5L; nc <- 9L
+  alt <- plan_incline(nr, nc, 8)
+  obs <- rep(0L, nr * nc)
+  obs[2 * nc + 4 + 1] <- 1L                        # bloque (2,4) au milieu
+  r <- do.call(desserte_trace, trace_args(alt, nr, nc, c(2 * nc + 0, 2 * nc + 8), obs = obs))
+  # La cellule obstacle (1-based) n'apparaît pas dans le tracé.
+  expect_false((2 * nc + 4 + 1) %in% r$path)
+})
+
+test_that("CA-15.9 : le tracé est déterministe", {
+  nr <- 5L; nc <- 9L
+  alt <- plan_incline(nr, nc, 8)
+  args <- trace_args(alt, nr, nc, c(2 * nc + 0, 2 * nc + 8))
+  r1 <- do.call(desserte_trace, args)
+  r2 <- do.call(desserte_trace, args)
+  expect_identical(r1$path, r2$path)
+})

@@ -319,4 +319,42 @@ dfci_scan <- function(alt, nr, nc, res, foret, sources, zone_ok, lmax) .Call(wra
 #' @export
 desserte_dist_to_end <- function(zone, nr, nc, csize, y_end, x_end, max_distance) .Call(wrap__desserte_dist_to_end, zone, nr, nc, csize, y_end, x_end, max_distance)
 
+#' Trace a forest road through mandatory waypoints (road-design A\* solver, Lot 15b).
+#'
+#' Ports SylvaRoad's `Astar_force_wp`: A\* on the disc-neighbourhood graph, with
+#' geometric transition cost plus parabolic direction/slope penalties, hairpin
+#' handling (turning `radius`, limit angle), longitudinal-profile control
+#' (`check_profile`) and self-intersection avoidance (spec 015 Sec. 4). The
+#' neighbourhood table is (re)built internally from the DEM and obstacle mask.
+#'
+#' All grids are row-major and flattened; `waypoints` are 0-based flattened cell
+#' indices (>= 2), the first the origin and the last the final goal.
+#'
+#' @param alt Elevation values (row-major, m).
+#' @param obs Obstacle mask (1 = blocked / non-crossable), row-major.
+#' @param obs2 Excess cross-slope mask (1 = terrain slope over `trans_slope_all`).
+#' @param local_slope Fraction (0..1) of the neighbourhood with steep cross-slope.
+#' @param zone Passable mask (1 = passable) for the inverse-distance heuristic.
+#' @param nr Number of raster rows.
+#' @param nc Number of raster columns.
+#' @param waypoints 0-based flattened cell indices to visit, in order.
+#' @param bufgoal Finish tolerance around the final goal (m).
+#' @param csize Cell size (m).
+#' @param min_slope Minimum road grade (percent).
+#' @param max_slope Maximum road grade (percent).
+#' @param penalty_xy Turn (direction-change) penalty (m per 180 deg).
+#' @param penalty_z Slope-change ("wave") penalty.
+#' @param max_diff_z Max elevation gap between road and terrain (m).
+#' @param d_neighborhood Neighbourhood radius (m).
+#' @param angle_hairpin Angle above which a turn is a hairpin (deg).
+#' @param lmax_ab_sl Max road length with excess cross-slope (m).
+#' @param radius Turning radius for trucks (m).
+#' @param prop_sl_max Max local steep-cross-slope fraction at a hairpin.
+#' @param max_slope_hairpin Slope tolerance parameter for the hairpin limit angle.
+#' @param tal Hairpin limit-angle tuning parameter.
+#' @param modhair Minimum-spacing-between-hairpins parameter.
+#' @return A list: `path` (1-based flattened cell indices), `cost`, `feasible`.
+#' @export
+desserte_trace <- function(alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_trace, alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+
 # nolint end

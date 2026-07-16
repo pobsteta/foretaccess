@@ -15,8 +15,10 @@
 // solveur A* (15b) et les tests : on tolere le code mort d'ici la.
 #![allow(dead_code)]
 
+pub mod geom;
 pub mod heuristic;
 pub mod neighborhood;
+pub mod solver;
 
 /// Azimut compas (deg, [0, 360)) du vecteur `(x1, y1) -> (x2, y2)`, `y` oriente
 /// vers le haut. Portage de `calculate_azimut` de SylvaRoad : `acos(DY / Deuc)`,
