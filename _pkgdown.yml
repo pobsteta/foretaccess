@@ -102,9 +102,11 @@ reference:
   - list_countries
 - title: Conception de desserte (Lots 14-18)
   desc: >
-    Conception d'un réseau de desserte : surface de coût de construction (Lot 14).
+    Conception d'un réseau de desserte : surface de coût de construction (Lot 14),
+    solveur de tracé A* (Lot 15, noyau Rust).
   contents:
   - surface_cout_construction
+  - desserte_dist_to_end
 - title: Non-régression
   contents:
   - compare_to_oracle

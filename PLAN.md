@@ -32,9 +32,18 @@
   **Lot 14 (surface de coût de construction) livré en cycle dev** : `surface_cout_construction()`
   (R pur) rend un coût €/m additif (base + pente par barème + sol + pont/buse + surcoût libre) et
   une couche de franchissabilité, aligné sur la grille du MNT. Config `desserte$cout` + validation
-  (CA-14.6). 32 tests (CA-14.1 à 14.6). Prochaine étape : **Lot 15** (solveur de tracé A*, déclenche
-  un portage Rust selon ADR-001).
-- **Branche** : `feat/lot14-cout-construction` (cycle dev)
+  (CA-14.6). 32 tests (CA-14.1 à 14.6). **Lot 14 mergé (#58).**
+- **Lot 15a (voisinage étendu + heuristique inverse) en cycle dev** : premier incrément du **portage
+  Rust** du solveur de tracé (ADR-001 déclenché). Module `src/rust/src/desserte/` : `neighborhood.rs`
+  (table de voisinage disque filtrée par la pente en long, portage de `build_NeibTable` /
+  `build_Tab_neibs` de SylvaRoad) et `heuristic.rs` (distance-de-cout inverse depuis la cible =
+  heuristique `h` admissible, portage de `calcul_distance_de_cout`). Binding `desserte_dist_to_end`
+  exposé. 11 tests cargo + 9 tests R. Sources SylvaRoad/FRD clonées et transcrites (la lettre) ;
+  **l'oracle `meisenthal2` n'est pas publié** (scripts seuls) → validation par invariants
+  (CA-15.1-15.6, 15.8, 15.9), sans l'accord géométrique CA-15.7 tant que l'oracle manque. Suite :
+  **15b** (A* complet : transition, épingles, rayon de courbure, profil, waypoints) puis **15c**
+  (orchestration R, sortie `foretaccess_trace` en `sf`).
+- **Branche** : `feat/lot15a-voisinage` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
@@ -105,7 +114,7 @@
 | 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
-| 15 | Solveur de tracé (A*) | `specs/015-solveur-trace.md` | 📋 proposé | — |
+| 15 | Solveur de tracé (A*) | `specs/015-solveur-trace-astar.md` | 🔨 en cours (15a livré : voisinage + heuristique) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 📋 proposé | — |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
