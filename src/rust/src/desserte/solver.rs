@@ -15,7 +15,7 @@
 
 use rayon::prelude::*;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet};
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
 use super::geom::{check_profile, connect2, distplan, get_intersect};
 use super::heuristic::{dist_to_end, dist_to_end_multi};
@@ -683,6 +683,103 @@ pub fn build_network_recuit(
     }
 }
 
+/// Verifie que chaque source (1re cellule de chaque chemin) reste reliee au reseau
+/// existant `network0` a travers les chemins courants (BFS sur les segments). Sert
+/// de garde-fou au rip-up : ripper un chemin ne doit pas deconnecter un dependant.
+fn all_sources_connected(paths: &[Vec<usize>], network0: &[usize]) -> bool {
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    for pth in paths {
+        for w in pth.windows(2) {
+            adj.entry(w[0]).or_default().push(w[1]);
+            adj.entry(w[1]).or_default().push(w[0]);
+        }
+    }
+    let mut seen: HashSet<usize> = network0.iter().copied().collect();
+    let mut q: VecDeque<usize> = seen.iter().copied().collect();
+    while let Some(c) = q.pop_front() {
+        if let Some(ns) = adj.get(&c) {
+            for &n in ns {
+                if seen.insert(n) {
+                    q.push_back(n);
+                }
+            }
+        }
+    }
+    paths.iter().all(|p| p.is_empty() || seen.contains(&p[0]))
+}
+
+/// Resultat d'un rip-up & reroute : le reseau ameliore et le journal du cout total
+/// apres chaque passe (monotone decroissant).
+pub struct RipruteResult {
+    pub paths: Vec<Vec<usize>>,
+    pub costs: Vec<f64>,
+    pub journal: Vec<f64>,
+}
+
+/// Amelioration locale « rip-up & reroute » (Lot 18c). Part du reseau glouton, puis
+/// retire tour a tour chaque chemin et re-route sa source vers le reste du reseau
+/// (reutilisation) ; un deplacement est retenu s'il **baisse** le cout total **et**
+/// laisse toutes les sources connectees (garde-fou `all_sources_connected`). Repete
+/// jusqu'a stabilite ou `max_pass`. Deterministe ; cout total non croissant (CA-18.1,
+/// CA-18.4) ; le reseau reste valide (CA-18.5).
+#[allow(clippy::too_many_arguments)]
+pub fn build_network_riprute(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    sources_base: &[usize],
+    network0: &[usize],
+    skidding: f64,
+    max_pass: usize,
+    p: &SolverParams,
+) -> RipruteResult {
+    let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
+    let init = build_network_with_table(
+        dtm, obs, obs2, local_slope, zone, nr, nc, sources_base, network0, skidding, &table, p,
+    );
+    let mut paths = init.paths;
+    let mut costs = init.costs;
+    let mut journal = Vec::new();
+
+    for _ in 0..max_pass {
+        let mut improved = false;
+        for i in 0..paths.len() {
+            let src = paths[i][0];
+            // Cible = reseau existant + tous les autres chemins (le chemin i retire).
+            let mut others: HashSet<usize> = network0.iter().copied().collect();
+            for (j, pth) in paths.iter().enumerate() {
+                if j != i {
+                    for &c in pth {
+                        others.insert(c);
+                    }
+                }
+            }
+            let targets: Vec<usize> = others.iter().copied().collect();
+            let res = solve_network(dtm, obs, obs2, local_slope, zone, &table, nr, nc, src, &targets, p);
+            if res.feasible && !res.path.is_empty() && res.cost + 1e-9 < costs[i] {
+                // N'accepter que si le reseau reste entierement connecte.
+                let mut trial = paths.clone();
+                trial[i] = res.path.clone();
+                if all_sources_connected(&trial, network0) {
+                    paths[i] = res.path;
+                    costs[i] = res.cost;
+                    improved = true;
+                }
+            }
+        }
+        journal.push(costs.iter().sum());
+        if !improved {
+            break;
+        }
+    }
+
+    RipruteResult { paths, costs, journal }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn calc_init(
     idcur: usize,
@@ -1175,6 +1272,33 @@ mod tests {
             &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &p,
         );
         assert_eq!(an.journal, an2.journal);
+    }
+
+    #[test]
+    fn riprute_improves_and_stays_connected() {
+        let p = params();
+        let (nr, nc) = (5usize, 11usize);
+        let g = setup(nr, nc, 8.0, &p);
+        let network0: Vec<usize> = (0..nr).map(|y| y * nc).collect();
+        let sources = [nc + (nc - 1), 3 * nc + (nc - 1), 2 * nc + (nc - 2)];
+        let base = build_network(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, &p,
+        );
+        let base_cost: f64 = base.costs.iter().sum();
+        let rr = build_network_riprute(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, 6, &p,
+        );
+        let rr_cost: f64 = rr.costs.iter().sum();
+        // Jamais pire que le glouton de depart (CA-18.1).
+        assert!(rr_cost <= base_cost + 1e-9);
+        // Journal du cout total monotone decroissant (CA-18.4).
+        for w in rr.journal.windows(2) {
+            assert!(w[1] <= w[0] + 1e-9);
+        }
+        // Le reseau final reste connecte (CA-18.5).
+        assert!(all_sources_connected(&rr.paths, &network0));
     }
 
     #[test]

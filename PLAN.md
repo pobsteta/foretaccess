@@ -90,9 +90,12 @@
   (SplitMix64, CA-18.2). **18b** : `strategie = "recuit"` (recuit simulé, Akay 2004) — énergie = coût
   total, voisin = échange dans l'ordre, acceptation de Metropolis, refroidissement géométrique ;
   `journal` = meilleur coût par itération (monotone, CA-18.4). Noyau Rust `desserte_reseau_recuit`.
-  Sortie `foretaccess_reseau` + `strategie`/`journal`. Refactor R : `.reseau_preparer`/`.reseau_assembler`
-  partagés. 2 tests cargo + 12 tests R. Reste **18c** (rip-up & reroute).
-- **Branche** : `feat/lot18b-recuit` (cycle dev)
+  **18c** : `strategie = "riprute"` (rip-up & reroute) — retire tour à tour chaque chemin, re-route
+  sa source vers le reste du réseau, garde le déplacement s'il baisse le coût *et* laisse toutes les
+  sources connectées (garde-fou BFS `all_sources_connected`, CA-18.5). Noyau Rust `desserte_reseau_riprute`.
+  Refactor R : `.reseau_preparer`/`.reseau_assembler` partagés. 3 tests cargo + 15 tests R.
+  **Lot 18 clos → épic desserte (14→18) complet.** Prochaine étape : couper une **release stable**.
+- **Branche** : `feat/lot18c-riprute` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
@@ -166,7 +169,7 @@
 | 15 | Solveur de tracé (A*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | ✅ livré (17a vectorisation, 17b flux, 17c typage) | *(cycle dev)* |
-| 18 | Optimisation du réseau | `specs/018-optimisation-multistart.md` | 🔨 en cours (18a multi-start + 18b recuit livrés) | *(cycle dev)* |
+| 18 | Optimisation du réseau | `specs/018-optimisation-multistart.md` | ✅ livré (18a multi-start, 18b recuit, 18c rip-up) | *(cycle dev)* |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -328,6 +331,25 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Lot 18c : rip-up & reroute + clôture du Lot 18 et de l'épic desserte
+
+`optimiser_reseau(..., strategie = "riprute", max_passes)` ajoute l'**amélioration locale
+« rip-up & reroute »** et clôt le Lot 18. Noyau Rust `desserte_reseau_riprute` : part du réseau
+glouton, puis retire tour à tour chaque chemin et **re-route sa source vers le reste du réseau**
+(réutilisation) ; un déplacement est retenu s'il **baisse le coût total** *et* laisse **toutes les
+sources connectées**. Répète jusqu'à stabilité ou `max_passes`.
+
+**Garde-fou de connexité** : sur un arbre, ripper un chemin peut déconnecter un dépendant (une
+parcelle greffée en aval). Avant d'accepter un déplacement, `all_sources_connected` fait un BFS
+depuis le réseau existant sur les segments des chemins et vérifie que chaque source reste atteinte —
+sinon le déplacement est rejeté (CA-18.5 garantie). Déterministe (pas de RNG) ; coût total non
+croissant → journal monotone (CA-18.1, CA-18.4).
+
+**Lot 18 clos** (18a multi-start, 18b recuit, 18c rip-up) → **épic desserte (Lots 14→18) complet**.
+Trois stratégies d'optimisation exposées par `optimiser_reseau`. 3 tests cargo + 15 tests R (module
+optim). Prochaine étape : **couper une release stable** de tout l'épic (accumulé en cycle dev depuis
+`v1.1.0`) — à cadrer avec Pascal (version + NEWS + CITATION).
 
 ### 2026-07-16 — Lot 18b : recuit simulé sur l'ordre d'insertion (Akay 2004)
 
