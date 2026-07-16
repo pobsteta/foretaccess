@@ -200,10 +200,15 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
 
 ## 7. Découpage
 
-- **13a — brique mécanique** : `calc_cable(travée, pré-tension) → (garde_ok, effort_ok,
-  sag)` en Rust, via notre caténaire Newton/Irvine à **tension imposée** (décision
-  4.1a), + `calc_sta` (bissection → `[MinSTA, MaxSTA]`) transcrit de `opti_sta.py`.
-  Tests `cargo` contre quelques travées de référence.
+- **13a — brique mécanique** ✅ *(2026-07-16)* : `calc_cable(travée, pré-tension) →
+  (garde_ok, effort_ok, sag)` en Rust (`cable::supports::calc_cable`), via notre
+  caténaire Newton/Irvine à **tension imposée** (décision 4.1a) — on marche `Lo`
+  jusqu'à la tension imposée au lieu de `Tmax`, réutilisant `seed_grid` +
+  `newton_centre` + `check_hlinemin` (mécanique inchangée, oracle-validée). +
+  `calc_sta` (bissection → `[MinSTA, MaxSTA]`, `cable::seilaplan::calc_sta`)
+  transcrit de `opti_sta.py`. 7 tests `cargo` (flèche croissante quand la tension
+  baisse, garde violée si sol trop haut, effort refusé au-delà de `tmax`, plage
+  `[MinSTA, MaxSTA]` bornée / infaisable). Non câblé à `cable_scan` (→ 13b/13c).
 - **13b — graphe + Dijkstra** en Rust (`cablehelp`) : positions candidates
   (`peakdetect`), niveaux de hauteur `δh`, coût `KostStue`, balayage `sk` + Dijkstra
   maison, coupe native. Tests `cargo` (CA-13.1, CA-13.2 : à hauteur fixe = `_NoH`).

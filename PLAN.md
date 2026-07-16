@@ -251,6 +251,30 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-16 — SEILAPLAN 13a : brique mécanique à tension imposée (`calc_cable` + `calc_sta`)
+
+Premier incrément de `specs/013` (optimisation de la hauteur des supports à la Bont & Heinimann,
+en remplacement du `c_option_h`/`OptPyl_Up2` shelvé). Objectif : la **brique mécanique** dont le
+graphe (13b) aura besoin, **sans** encore de graphe ni de câblage `cable_scan`.
+
+- **`cable::supports::calc_cable(SpanGeom, t_impose) → (converged, garde_ok, effort_ok, sag, lo)`** :
+  évalue une travée à une **tension imposée**. On garde **notre** mécanique (Newton/Irvine,
+  oracle-validée) — décision spec 013 §4.1a, pas la mécanique de Zweifel de SEILAPLAN. Adaptation de
+  `find_lomin` : on marche `Lo` jusqu'à ce que la tension (charge centrée) atteigne `t_impose` au
+  lieu de `Tmax`, en réutilisant `seed_grid`, `newton_centre` et `check_hlinemin` inchangés. Garde au
+  sol et effort admissible sont rendus **séparément** (comme `calcCable`/`checkCable` de SEILAPLAN).
+- **`cable::seilaplan::calc_sta(SpanGeom, t_min, t_max, detail) → [MinSTA, MaxSTA]`** : transcription
+  fidèle de `core/opti_sta.py::calcSTA` (deux bissections max/min partageant un cache `Speicher`).
+  C'est le **modèle de pré-tension globale** de SEILAPLAN : chaque travée fournit une plage de
+  pré-tension, pas une tension propagée.
+- **Tests** : 7 tests `cargo` (46 au total, les 39 d'avant inchangés) — flèche croissante quand la
+  tension baisse, garde violée si sol trop haut, effort refusé au-delà de `tmax`, plage `[MinSTA,
+  MaxSTA]` bornée ou infaisable. `_NoH` (défaut ColduPre) intact.
+
+**Reste** : 13b (graphe + Dijkstra maison, positions `peakdetect`, coût `KostStue`), 13c
+(intégration `cable_scan` / `methode_supports`, confrontation ColduPre), 13d (validation ligne à
+ligne vs SEILAPLAN, retrait de `OptPyl_Up2` et du flag `optimiser_hauteur_fixation`).
+
 ### 2026-07-16 — Câble `c_option_h` : portage tenté, mis en attente (bug + perf)
 
 Chantier « optimisation de la hauteur de fixation » (`c_option_h`), dette assumée du Lot 4.

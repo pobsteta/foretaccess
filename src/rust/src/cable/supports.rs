@@ -344,6 +344,150 @@ pub fn test_span(
     res
 }
 
+/// Geometrie d'une travee pour l'evaluation a **tension imposee** (brique
+/// mecanique SEILAPLAN, spec 013 §4.1a). Regroupe les memes entrees que
+/// `find_lomin` — profil, materiel, gardes — pour un appel repete par `calc_sta`
+/// sans dupliquer 18 arguments. `alts` est le profil d'altitudes sous la ligne,
+/// echantillonne au demi-metre ; `(xup, zup)` le support haut, `fact` le sens.
+///
+/// Brique 13a (spec 013) : cablee a `cable_scan` en 13b/13c, exercee par les
+/// tests d'ici la — d'ou l'`allow(dead_code)`.
+#[allow(dead_code)]
+pub struct SpanGeom<'a> {
+    pub d: f64,
+    pub h: f64,
+    pub xup: f64,
+    pub zup: f64,
+    pub fact: f64,
+    pub alts: &'a [f64],
+    pub f_o: f64,
+    pub tmax: f64,
+    pub q1: f64,
+    pub q2: f64,
+    pub q3: f64,
+    pub eao: f64,
+    pub hline_min: f64,
+    pub hline_max: f64,
+    pub csize: f64,
+    pub dsupdep: f64,
+    pub dsupend: f64,
+}
+
+/// Resultat de `calc_cable` : faisabilite d'une travee a une tension imposee.
+///
+/// Trois sorties dont le graphe de Bont & Heinimann a besoin (via `calc_sta`),
+/// dans l'esprit de `calcCable`/`checkCable` de SEILAPLAN (garde au sol et
+/// effort admissible fournis **separement**).
+#[allow(dead_code)]
+pub struct CalcCable {
+    /// La marche sur `Lo` a atteint la tension imposee (catenaire resoluble).
+    pub converged: bool,
+    /// Garde au sol respectee sur toute la travee (`hline_min..hline_max`).
+    pub garde_ok: bool,
+    /// Effort admissible : tension imposee `<= tmax` (l'analogue de `zul_SK`).
+    pub effort_ok: bool,
+    /// Fleche (m) sous la charge centree : chute du cable sous la corde.
+    pub sag: f64,
+    /// Longueur a vide obtenue pour cette tension.
+    pub lo: f64,
+}
+
+/// Evalue une travee a une **pre-tension imposee** `t_impose` (brique SEILAPLAN,
+/// decision spec 013 §4.1a). Contrairement a `find_lomin` — qui cherche la `Lo`
+/// amenant la tension (charge centree) a `tmax` — on cherche ici la `Lo` amenant
+/// cette tension a `t_impose`, puis on renvoie **separement** la garde au sol,
+/// l'effort et la fleche.
+///
+/// La mecanique reste la notre (Newton/Irvine, oracle-validee) : c'est
+/// l'*optimisation* (a la B&H) qu'on adopte de SEILAPLAN, pas sa mecanique de
+/// Zweifel (cf. `docs/comparaison-cable-seilaplan.md`). L'amorçage et la marche
+/// sur `Lo` sont identiques a `find_lomin` (grille grossiere puis Newton chaud).
+#[allow(dead_code)] // cablee a `cable_scan` en 13b/13c ; exercee par les tests.
+pub fn calc_cable(g: &SpanGeom, t_impose: f64) -> CalcCable {
+    let err = 1.0;
+    let error = 50.0; // tolerance sur |Tcalc - t_impose|
+    let diag = (g.d * g.d + g.h * g.h).sqrt();
+    let mut lo = diag + 2.0;
+    let mut w = g.q1 * G * lo;
+    let mut s1 = 0.5 * lo;
+    let mut f = f_charge(lo, g.f_o, g.q2, g.q3, s1, g.dsupdep, g.dsupend);
+
+    // Amorçage par grille grossiere (substitut a Tabmesh), puis Newton chaud.
+    let (sth, stv) = seed_grid(lo, g.eao, w, f, s1, g.d, g.h, g.tmax);
+    let (mut th, mut tv, ok0) = newton_centre(sth, stv, lo, g.eao, w, f, s1, g.d, g.h, err);
+    let mut converged = ok0;
+    let mut tcalc = (th * th + tv * tv).sqrt();
+
+    if converged {
+        // Ajuste Lo pour que Tcalc atteigne t_impose (pas variable : 1 m, puis
+        // raffine par 0,1 a chaque depassement). Chaque solve est rechauffe.
+        let mut incr = 1.0;
+        let mut signe = (tcalc - t_impose) / (tcalc - t_impose).abs();
+        while (tcalc - t_impose).abs() > error && converged {
+            lo += signe * incr;
+            w = g.q1 * G * lo;
+            s1 = lo * 0.5;
+            f = f_charge(lo, g.f_o, g.q2, g.q3, s1, g.dsupdep, g.dsupend);
+            let (nth, ntv, ok) = newton_centre(th, tv, lo, g.eao, w, f, s1, g.d, g.h, err);
+            th = nth;
+            tv = ntv;
+            if !ok {
+                converged = false;
+                break;
+            }
+            tcalc = (th * th + tv * tv).sqrt();
+            if signe * (tcalc - t_impose) < 0.0 {
+                incr *= 0.1;
+                signe *= -1.0;
+            }
+            if (lo - diag).abs() > 100.0 {
+                converged = false;
+                break;
+            }
+        }
+    }
+
+    // Effort : la tension imposee (= tension charge centree) sous l'admissible.
+    let effort_ok = converged && t_impose <= g.tmax;
+
+    let mut garde_ok = false;
+    let mut sag = 0.0;
+    if converged {
+        f = f_charge(lo, g.f_o, g.q2, g.q3, lo * 0.5, g.dsupdep, g.dsupend);
+        let xcoord = g.xup + g.fact * calcul_xs(th, tv, lo, g.eao, w, f, lo * 0.5, lo * 0.5);
+        let zcoord = g.zup - calcul_zs(th, tv, lo, g.eao, w, f, lo * 0.5, lo * 0.5);
+        let ind = (xcoord * 2.0 + 0.5).floor();
+        if ind >= 0.0 && (ind as usize) < g.alts.len() {
+            let hmin0 = zcoord - (g.alts[ind as usize] + g.hline_min);
+            if hmin0 >= 0.0 {
+                let hmin = check_hlinemin(
+                    g.alts, g.h, g.d, lo, g.fact, th, tv, g.xup, g.zup, g.f_o, g.tmax, g.hline_min,
+                    g.hline_max, g.q1, g.q2, g.q3, g.csize, g.eao, g.dsupdep, g.dsupend,
+                );
+                garde_ok = hmin >= 0.0;
+            }
+        }
+        // Fleche sous la charge centree : chute du cable sous la corde reliant
+        // les deux supports, a l'abscisse horizontale du point centre.
+        let xlow = g.xup + g.fact * g.d;
+        let zlow = g.zup - g.h;
+        let chord = if (xlow - g.xup).abs() > 1e-9 {
+            g.zup + (zlow - g.zup) * (xcoord - g.xup) / (xlow - g.xup)
+        } else {
+            g.zup
+        };
+        sag = chord - zcoord;
+    }
+
+    CalcCable {
+        converged,
+        garde_ok,
+        effort_ok,
+        sag,
+        lo,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -447,5 +591,78 @@ mod tests {
             q1, q, q, eao, 5.0, 0.3, 0.0, 0.5,
         );
         assert!(!r.test, "l'angle au support aurait du refuser la travee");
+    }
+
+    // --- Brique mecanique SEILAPLAN (calc_cable, spec 013 §4.1a) --------------
+
+    // Travee genereuse : support a 45 m, sol plat a 0, tmax materiel.
+    fn span_genereux(alts: &[f64]) -> SpanGeom<'_> {
+        let (q1, f_o, eao, _t, q) = params();
+        SpanGeom {
+            d: 150.0,
+            h: 20.0,
+            xup: 0.0,
+            zup: 45.0,
+            fact: 1.0,
+            alts,
+            f_o,
+            tmax: TMAX_TEST,
+            q1,
+            q2: q,
+            q3: q,
+            eao,
+            hline_min: 3.5,
+            hline_max: 50.0,
+            csize: 5.0,
+            dsupdep: 0.0,
+            dsupend: 0.0,
+        }
+    }
+
+    // A la tension max (= tmax), calc_cable doit reproduire la faisabilite que
+    // find_lomin trouve a tmax : catenaire resolue, garde et effort tenus.
+    #[test]
+    fn calc_cable_faisable_a_tension_max() {
+        let alts = vec![0.0; 1000];
+        let g = span_genereux(&alts);
+        let r = calc_cable(&g, TMAX_TEST);
+        assert!(r.converged, "attendu convergent, Lo = {}", r.lo);
+        assert!(r.garde_ok, "garde au sol attendue tenue");
+        assert!(r.effort_ok, "effort attendu admissible a t = tmax");
+    }
+
+    // Monotonie mecanique : abaisser la tension imposee AUGMENTE la fleche
+    // (cable plus mou). C'est le levier meme du graphe B&H.
+    #[test]
+    fn calc_cable_fleche_croit_quand_la_tension_baisse() {
+        let alts = vec![0.0; 1000];
+        let g = span_genereux(&alts);
+        let haut = calc_cable(&g, TMAX_TEST);
+        let bas = calc_cable(&g, 0.7 * TMAX_TEST);
+        assert!(haut.converged && bas.converged, "les deux tensions doivent converger");
+        assert!(
+            bas.sag > haut.sag,
+            "fleche a 0,7 tmax ({}) attendue > fleche a tmax ({})",
+            bas.sag,
+            haut.sag
+        );
+    }
+
+    // Effort refuse au-dela de l'admissible : imposer t > tmax => effort_ok faux.
+    #[test]
+    fn calc_cable_effort_refuse_au_dessus_de_tmax() {
+        let alts = vec![0.0; 1000];
+        let g = span_genereux(&alts);
+        let r = calc_cable(&g, 1.05 * TMAX_TEST);
+        assert!(!r.effort_ok, "t > tmax doit violer l'effort");
+    }
+
+    // Sol trop haut : meme a tension max, la garde au sol est violee.
+    #[test]
+    fn calc_cable_garde_violee_si_sol_trop_haut() {
+        let alts = vec![44.0; 1000]; // sol a 44 m, supports a 45 m
+        let g = span_genereux(&alts);
+        let r = calc_cable(&g, TMAX_TEST);
+        assert!(!r.garde_ok, "garde attendue violee (sol a 44 m sous supports 45 m)");
     }
 }
