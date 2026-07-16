@@ -17,8 +17,8 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 
 use super::geom::{check_profile, connect2, distplan, get_intersect};
-use super::heuristic::dist_to_end;
-use super::neighborhood::NeibTable;
+use super::heuristic::{dist_to_end, dist_to_end_multi};
+use super::neighborhood::{build_neib_table, NeibTable};
 
 const UNVISITED: i32 = -1;
 const INF_COST: f64 = 1.0e7;
@@ -279,6 +279,211 @@ pub fn solve(
 
 fn round1(x: f64) -> f64 {
     (x * 10.0).round() / 10.0
+}
+
+/// Trace le chemin de moindre cout d'une `source` vers le RESEAU (ensemble de
+/// cellules `targets`) : l'A* s'arrete des qu'il atteint une cellule du reseau.
+/// Reproduit le Dijkstra multi-cible de ForestRoadNetwork (raccordement d'une
+/// parcelle au reseau existant, Lot 16) mais avec la mecanique de trace du Lot 15
+/// (penalites, epingles, profil). L'heuristique vise le reseau entier
+/// (multi-source, `h = 0` sur le reseau). Indices de cellules aplatis.
+#[allow(clippy::too_many_arguments)]
+pub fn solve_network(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    table: &NeibTable,
+    nr: usize,
+    nc: usize,
+    source: usize,
+    targets: &[usize],
+    p: &SolverParams,
+) -> TraceResult {
+    let echec = || TraceResult {
+        path: vec![],
+        cost: 0.0,
+        feasible: false,
+    };
+    let id_source = table.id_pix[source];
+    if id_source < 0 {
+        return echec();
+    }
+    let id_source = id_source as usize;
+
+    // Ids-pixels cibles (cellules de reseau franchissables).
+    let target_ids: HashSet<usize> = targets
+        .iter()
+        .filter_map(|&t| {
+            let id = table.id_pix[t];
+            (id >= 0).then_some(id as usize)
+        })
+        .collect();
+    if target_ids.is_empty() {
+        return echec();
+    }
+    // Source deja sur le reseau : raccordement trivial.
+    if target_ids.contains(&id_source) {
+        return TraceResult {
+            path: vec![source],
+            cost: 0.0,
+            feasible: true,
+        };
+    }
+
+    // Heuristique = distance inverse multi-source depuis tout le reseau.
+    let d2e = dist_to_end_multi(zone, nr, nc, p.csize, targets, 1.0e9);
+    let seed = nan_inf(d2e[source]);
+
+    let n_pix = table.n_pix();
+    let mut best = vec![NodeState::empty(); n_pix];
+    best[id_source] = NodeState {
+        id: id_source as i32,
+        cost: 0.0,
+        dplan: 0.0,
+        slope_from: 0.0,
+        az_from: -1.0,
+        came_from: -1,
+        dist_hairpin: 0.0,
+        lsl: 0.0,
+        nbptbef: 0,
+        dtocp: seed,
+        is_hairpin: 0,
+    };
+
+    let mut heap = BinaryHeap::new();
+    let mut key_frontier: HashSet<(i32, i64, i64)> = HashSet::new();
+    heap.push(QEntry {
+        theo_d: seed,
+        dtocp: seed,
+        id: id_source as i32,
+    });
+
+    let mut reached: Option<usize> = None;
+    while let Some(QEntry { id: idcur, .. }) = heap.pop() {
+        let idcur = idcur as usize;
+        if target_ids.contains(&idcur) {
+            reached = Some(idcur);
+            break;
+        }
+        // take_dtoend = true : l'heuristique est la distance-reseau pre-calculee
+        // (ye/xe inutilises dans ce mode).
+        let add = if best[idcur].nbptbef == 0 {
+            calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, true, 0, 0, p)
+        } else {
+            basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, true, 0, 0, p)
+        };
+        for &idv in &add {
+            let theo = round1(best[idv].cost + best[idv].dtocp);
+            let dto = round1(best[idv].dtocp);
+            let key = (idv as i32, deci(theo), deci(dto));
+            if key_frontier.insert(key) {
+                heap.push(QEntry {
+                    theo_d: theo,
+                    dtocp: dto,
+                    id: idv as i32,
+                });
+            }
+        }
+    }
+
+    match reached {
+        Some(gid) => TraceResult {
+            path: reconstruct(gid, id_source, &best, table, nc),
+            cost: best[gid].cost,
+            feasible: true,
+        },
+        None => echec(),
+    }
+}
+
+/// Reseau construit : un chemin (indices aplatis) et son cout par tronçon cree.
+pub struct NetworkResult {
+    pub paths: Vec<Vec<usize>>,
+    pub costs: Vec<f64>,
+}
+
+/// Decalages du disque de rayon `skidding` (m) autour d'une cellule : sert au
+/// pre-elagage « une route est-elle deja a distance de debardage ? » (portage de
+/// `createRelativeCircleNeighborhood` de ForestRoadNetwork).
+fn skidding_circle(skidding: f64, csize: f64) -> Vec<(i32, i32)> {
+    let nb = (skidding / csize) as i32 + 1;
+    let mut out = Vec::new();
+    for dr in -nb..=nb {
+        for dc in -nb..=nb {
+            if ((dr * dr + dc * dc) as f64).sqrt() * csize <= skidding {
+                out.push((dr, dc));
+            }
+        }
+    }
+    out
+}
+
+/// Vrai si une cellule de `roadset` est dans le disque de debardage de `src`
+/// (portage de `checkRelativeCircleNeighborhoodForRoads`).
+fn road_within_skidding(
+    src: usize,
+    nr: usize,
+    nc: usize,
+    circle: &[(i32, i32)],
+    roadset: &HashSet<usize>,
+) -> bool {
+    let (sy, sx) = ((src / nc) as i32, (src % nc) as i32);
+    circle.iter().any(|&(dr, dc)| {
+        let (y, x) = (sy + dr, sx + dc);
+        if y < 0 || y >= nr as i32 || x < 0 || x >= nc as i32 {
+            return false;
+        }
+        roadset.contains(&((y as usize) * nc + x as usize))
+    })
+}
+
+/// Construit un reseau de desserte desservant `sources_ordered` (cellules des
+/// parcelles, dans l'ordre heuristique) a partir de `network0` (reseau existant),
+/// glouton avec reutilisation (portage MTAP->STAP de ForestRoadNetwork). La table
+/// de voisinage est batie une seule fois. Une source deja a distance de debardage
+/// d'une route est ignoree ; sinon on la raccorde au reseau courant (`solve_network`),
+/// puis le chemin cree grossit le reseau (cibles des sources suivantes).
+#[allow(clippy::too_many_arguments)]
+pub fn build_network(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    sources_ordered: &[usize],
+    network0: &[usize],
+    skidding: f64,
+    p: &SolverParams,
+) -> NetworkResult {
+    let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
+    let mut roadset: HashSet<usize> = network0.iter().copied().collect();
+    let circle = skidding_circle(skidding, p.csize);
+    let mut paths = Vec::new();
+    let mut costs = Vec::new();
+
+    for &src in sources_ordered {
+        if src >= nr * nc || table.id_pix[src] < 0 {
+            continue; // hors grille ou obstacle
+        }
+        if road_within_skidding(src, nr, nc, &circle, &roadset) {
+            continue; // deja desservie par debardage
+        }
+        let targets: Vec<usize> = roadset.iter().copied().collect();
+        let res = solve_network(dtm, obs, obs2, local_slope, zone, &table, nr, nc, src, &targets, p);
+        if res.feasible && !res.path.is_empty() {
+            for &c in &res.path {
+                roadset.insert(c);
+            }
+            paths.push(res.path);
+            costs.push(res.cost);
+        }
+    }
+
+    NetworkResult { paths, costs }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -566,7 +771,6 @@ fn nan_inf(v: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::desserte::neighborhood::build_neib_table;
 
     // Grille de test : rasters annexes + table de voisinage.
     struct Grid {
@@ -647,6 +851,70 @@ mod tests {
         assert!(r.path.contains(&b)); // point de passage intermediaire traverse
         assert_eq!(*r.path.first().unwrap(), a);
         assert_eq!(*r.path.last().unwrap(), c);
+    }
+
+    #[test]
+    fn solve_network_connects_source_to_nearest_network_cell() {
+        let p = params();
+        let (nr, nc) = (5usize, 9usize);
+        let g = setup(nr, nc, 8.0, &p);
+        // Reseau = colonne de droite entiere ; source a gauche (2,0).
+        let source = 2 * nc;
+        let targets: Vec<usize> = (0..nr).map(|y| y * nc + (nc - 1)).collect();
+        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &p);
+        assert!(r.feasible);
+        assert_eq!(*r.path.first().unwrap(), source);
+        // L'arrivee est une cellule du reseau.
+        assert!(targets.contains(r.path.last().unwrap()));
+    }
+
+    #[test]
+    fn solve_network_source_on_network_is_trivial() {
+        let p = params();
+        let (nr, nc) = (5usize, 9usize);
+        let g = setup(nr, nc, 8.0, &p);
+        let source = 2 * nc + 4;
+        let targets = vec![source, 2 * nc + 5];
+        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &p);
+        assert!(r.feasible);
+        assert_eq!(r.path, vec![source]);
+        assert_eq!(r.cost, 0.0);
+    }
+
+    #[test]
+    fn build_network_reuses_and_is_arborescent() {
+        let p = params();
+        let (nr, nc) = (5usize, 11usize);
+        let g = setup(nr, nc, 8.0, &p);
+        // Reseau existant = colonne de gauche. Deux parcelles a droite (memes lignes
+        // voisines) : la 2e doit se greffer sur la route de la 1re (reutilisation),
+        // donc cout total < somme des deux raccordements isoles au reseau initial.
+        let network0: Vec<usize> = (0..nr).map(|y| y * nc).collect();
+        let s1 = nc + (nc - 1);
+        let s2 = 3 * nc + (nc - 1);
+        let net = build_network(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &[s1, s2], &network0, 0.0, &p,
+        );
+        assert_eq!(net.paths.len(), 2);
+        // Chaque parcelle est raccordee.
+        assert!(net.costs.iter().all(|&c| c > 0.0));
+    }
+
+    #[test]
+    fn build_network_skidding_prunes_near_road() {
+        let p = params();
+        let (nr, nc) = (5usize, 11usize);
+        let g = setup(nr, nc, 8.0, &p);
+        let network0: Vec<usize> = (0..nr).map(|y| y * nc).collect();
+        // Source immediatement a droite du reseau, avec un rayon de debardage large :
+        // deja desservie -> aucune route creee.
+        let s = 2 * nc + 1;
+        let net = build_network(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &[s], &network0, 100.0, &p,
+        );
+        assert_eq!(net.paths.len(), 0);
     }
 
     #[test]

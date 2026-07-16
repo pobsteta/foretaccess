@@ -107,8 +107,10 @@ reference:
   contents:
   - surface_cout_construction
   - tracer_desserte
+  - reseau_desserte
   - desserte_dist_to_end
   - desserte_trace
+  - desserte_reseau
 - title: Non-régression
   contents:
   - compare_to_oracle
