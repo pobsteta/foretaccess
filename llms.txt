@@ -357,6 +357,8 @@ glouton/Steiner (Lot 16), vectorisation en graphe pour flux et typage
   : Design a forest-road network serving several parcels
 - [`vectoriser_reseau()`](https://pobsteta.github.io/foretaccess/reference/vectoriser_reseau.md)
   : Vectorise a forest-road network into a topological graph
+- [`calculer_flux()`](https://pobsteta.github.io/foretaccess/reference/calculer_flux.md)
+  : Accumulate wood flux over a road-network graph
 - [`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
   : Inverse cost-distance from a target cell (road-design A\\ heuristic,
   Lot 15a).

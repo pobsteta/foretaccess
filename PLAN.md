@@ -111,10 +111,14 @@
   du Lot 16 en graphe topologique `foretaccess_reseau_graphe`
   (`noeuds` + `troncons` en `sf`). Graphe **base R** (indices de cellule
   = nœuds, contraction des chaînes de degré 2), pas
-  `igraph`/`sfnetworks`. CA-17.1 couvert. 15 tests R. Reste **17b**
-  (flux) et **17c** (typage + persistance). Ensuite Lot 18
-  (multi-start).
-- **Branche** : `feat/lot17a-vectorisation` (cycle dev)
+  `igraph`/`sfnetworks`. **17b** :
+  [`calculer_flux()`](https://pobsteta.github.io/foretaccess/reference/calculer_flux.md)
+  sème des sources (≥ 1/parcelle) et accumule le volume vers l’exutoire
+  le plus proche (Dijkstra multi-source sur l’arbre) → colonne `flux`
+  sur les `troncons`. CA-17.1/17.2/17.3/17.4 couverts. 26 tests R. Reste
+  **17c** (typage + conversion temporaire + persistance Lot 8). Ensuite
+  Lot 18 (multi-start).
+- **Branche** : `feat/lot17b-flux` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -211,7 +215,7 @@
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
-| 17 | Flux & typage | `specs/017-flux-typage.md` | 🔨 en cours (17a vectorisation livrée) | *(cycle dev)* |
+| 17 | Flux & typage | `specs/017-flux-typage.md` | 🔨 en cours (17a vectorisation + 17b flux livrés) | *(cycle dev)* |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
@@ -408,6 +412,26 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-16 — Lot 17b : sources & accumulation de flux (Wood Flux Determination)
+
+`calculer_flux(graphe, parcelles, volume_champ, densite_sources)`
+(`R/desserte_flux.R`) porte le « Wood Flux Determination » de
+ForestRoadNetwork. Des **points sources** sont semés dans chaque
+parcelle (échantillonnage régulier, **≥ 1 par parcelle** quelle que soit
+la densité — CA-17.2), chacun injectant sa part du volume ; le volume
+**descend** le réseau vers l’**exutoire le plus proche** en s’accumulant
+sur chaque tronçon.
+
+Le réseau étant **arborescent**, le routage est un **Dijkstra
+multi-source depuis les exutoires** (`.flux_router`) donnant, par nœud,
+le premier saut vers l’exutoire ; l’accumulation remonte les pointeurs
+parent (sous-arbre). Sortie : colonne `flux` ajoutée aux `troncons`,
+`sf` `sources` stocké. **CA-17.3** (conservation : volume semé = volume
+aux exutoires) et **CA-17.4** (le flux croît de l’amont vers l’aval, max
+au tronçon-exutoire = volume total) vérifiés. 26 tests R (11 ajoutés).
+Reste **17c** (typage par seuils + conversion temporaire + persistance
+Lot 8).
 
 ### 2026-07-16 — Lot 17a : vectorisation topologique du réseau en graphe (base R)
 
