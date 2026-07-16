@@ -588,7 +588,7 @@
       </dl></div><div class="section level2">
       <h2 id="conception-de-desserte-lots-">Conception de desserte (Lots 14-18)<a class="anchor" aria-label="anchor" href="#conception-de-desserte-lots-"></a></h2>
 
-      <div class="section-desc"><p>Conception d’un réseau de desserte : surface de coût de construction (Lot 14), solveur de tracé A* (Lot 15, noyau Rust), réseau multi-cibles glouton/Steiner (Lot 16), vectorisation en graphe, flux de bois et typage des routes (Lot 17).</p></div>
+      <div class="section-desc"><p>Conception d’un réseau de desserte : surface de coût de construction (Lot 14), solveur de tracé A* (Lot 15, noyau Rust), réseau multi-cibles glouton/Steiner (Lot 16), vectorisation en graphe, flux de bois et typage des routes (Lot 17), optimisation multi-start (Lot 18).</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -639,6 +639,13 @@
 
         <dt>
 
+          <code><a href="optimiser_reseau.html">optimiser_reseau()</a></code>
+
+        </dt>
+        <dd>Optimise a forest-road network over insertion orders</dd>
+
+        <dt>
+
           <code><a href="desserte_dist_to_end.html">desserte_dist_to_end()</a></code>
 
         </dt>
@@ -657,6 +664,13 @@
 
         </dt>
         <dd>Build a forest-road network serving ordered parcel cells (greedy MTAP, Lot 16a).</dd>
+
+        <dt>
+
+          <code><a href="desserte_reseau_multistart.html">desserte_reseau_multistart()</a></code>
+
+        </dt>
+        <dd>Optimise a road network by multi-start over insertion orders (Lot 18a).</dd>
       </dl></div><div class="section level2">
       <h2 id="non-r-gression">Non-régression<a class="anchor" aria-label="anchor" href="#non-r-gression"></a></h2>
 

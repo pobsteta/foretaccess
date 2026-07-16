@@ -260,7 +260,7 @@ OpenStreetMap).
 Conception d’un réseau de desserte : surface de coût de construction
 (Lot 14), solveur de tracé A\* (Lot 15, noyau Rust), réseau multi-cibles
 glouton/Steiner (Lot 16), vectorisation en graphe, flux de bois et
-typage des routes (Lot 17).
+typage des routes (Lot 17), optimisation multi-start (Lot 18).
 
 - [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
   : Build the construction-cost surface of a new forest road
@@ -274,6 +274,8 @@ typage des routes (Lot 17).
   : Accumulate wood flux over a road-network graph
 - [`typer_desserte()`](https://pobsteta.github.io/foretaccess/reference/typer_desserte.md)
   : Type a road network by wood flux
+- [`optimiser_reseau()`](https://pobsteta.github.io/foretaccess/reference/optimiser_reseau.md)
+  : Optimise a forest-road network over insertion orders
 - [`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
   : Inverse cost-distance from a target cell (road-design A\\ heuristic,
   Lot 15a).
@@ -283,6 +285,9 @@ typage des routes (Lot 17).
 - [`desserte_reseau()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau.md)
   : Build a forest-road network serving ordered parcel cells (greedy
   MTAP, Lot 16a).
+- [`desserte_reseau_multistart()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_multistart.md)
+  : Optimise a road network by multi-start over insertion orders (Lot
+  18a).
 
 ## Non-régression
 
