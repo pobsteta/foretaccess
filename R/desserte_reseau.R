@@ -41,21 +41,28 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
                             mode = c("glouton", "steiner"),
                             skidding_m = 0, volume_champ = NULL,
                             config = foretaccess_config(), graine = NULL) {
-  checkmate::assert_class(pre, "foretaccess_preprocessing")
-  checkmate::assert_class(cout, "foretaccess_cout_construction")
   heuristique <- match.arg(heuristique)
   mode <- match.arg(mode)
   validate_config(config)
+
+  ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config)
+  res <- if (mode == "steiner") {
+    .reseau_steiner(ctx, parcelles)
+  } else {
+    .reseau_glouton(ctx, parcelles, heuristique, skidding_m, volume_champ, graine)
+  }
+
+  .reseau_assembler(res$paths, res$costs, ctx, desserte_existante, parcelles,
+                    skidding_m, heuristique, mode, config)
+}
+
+# Preparation commune (Lots 16 et 18) : grilles aplaties, reseau existant
+# rasterise, dimensions. Renvoie le contexte partage par les modes/strategies.
+.reseau_preparer <- function(pre, cout, parcelles, desserte_existante, config) {
+  checkmate::assert_class(pre, "foretaccess_preprocessing")
+  checkmate::assert_class(cout, "foretaccess_cout_construction")
   tr <- config$desserte$trace
-
   grille <- pre$mnt
-  nr <- terra::nrow(grille)
-  nc <- terra::ncol(grille)
-  csize <- terra::res(grille)[1]
-
-  g <- .desserte_grilles(pre, cout, tr)
-
-  # Reseau existant rasterise -> cellules (1-based).
   road_r <- terra::rasterize(terra::vect(desserte_existante), grille, field = 1, background = NA)
   net_cells1 <- which(!is.na(terra::values(road_r)))
   if (length(net_cells1) == 0) {
@@ -64,27 +71,28 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
   if (nrow(parcelles) == 0) {
     cli::cli_abort("{.arg parcelles} est vide.")
   }
+  list(
+    g = .desserte_grilles(pre, cout, tr), grille = grille,
+    nr = terra::nrow(grille), nc = terra::ncol(grille), csize = terra::res(grille)[1],
+    tr = tr, road_r = road_r, net_cells1 = net_cells1
+  )
+}
 
-  ctx <- list(g = g, grille = grille, nr = nr, nc = nc, csize = csize, tr = tr,
-              road_r = road_r, net_cells1 = net_cells1)
-  res <- if (mode == "steiner") {
-    .reseau_steiner(ctx, parcelles)
-  } else {
-    .reseau_glouton(ctx, parcelles, heuristique, skidding_m, volume_champ, graine)
-  }
-
-  # Polylignes des routes creees (une feature par tronçon), longueur planimetrique.
+# Assemblage de l'objet `foretaccess_reseau` a partir des chemins/couts retenus
+# (partage par le glouton, le Steiner et l'optimiseur du Lot 18).
+.reseau_assembler <- function(paths, costs, ctx, desserte_existante, parcelles,
+                              skidding_m, heuristique, mode, config) {
+  grille <- ctx$grille
   crs_grille <- sf::st_crs(terra::crs(grille))
-  lignes <- .desserte_paths_en_sf(res$paths, res$costs, grille, crs_grille)
+  lignes <- .desserte_paths_en_sf(paths, costs, grille, crs_grille)
 
   # Raster du reseau complet (existant + routes creees), pour le Lot 17. Le
   # voisinage disque du solveur avance par sauts : on rasterise les *geometries*
-  # (routes creees + reseau existant, `touches`) pour un reseau continu, sans
-  # trous entre points de passage.
+  # (routes creees + reseau existant, `touches`) pour un reseau continu, sans trous.
   reseau_r <- terra::rast(grille)
   terra::values(reseau_r) <- 0
   names(reseau_r) <- "reseau"
-  reseau_r[net_cells1] <- 1
+  reseau_r[ctx$net_cells1] <- 1
   geoms_reseau <- if (nrow(lignes) > 0) {
     c(sf::st_geometry(lignes), sf::st_geometry(desserte_existante))
   } else {
@@ -94,21 +102,17 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
                               background = NA, touches = TRUE)
   reseau_r[which(!is.na(terra::values(trace_r)))] <- 1
 
-  # Raccordement / connexite (Lot 16c) : le reseau doit former une seule
-  # composante connexe (CA-16.5) et chaque parcelle etre desservie (CA-16.1).
-  connexe <- .reseau_connexe(reseau_r)
-  desservies <- .reseau_desservies(parcelles, reseau_r, grille, skidding_m)
-
+  # Connexite (CA-16.5) et desserte de chaque parcelle (CA-16.1).
   structure(
     list(
       lignes = lignes,
       reseau = reseau_r,
       desserte = sf::st_sf(geometry = sf::st_geometry(desserte_existante)),
-      cout = sum(res$costs),
+      cout = sum(costs),
       heuristique = heuristique,
       mode = mode,
-      connexe = connexe,
-      desservies = desservies,
+      connexe = .reseau_connexe(reseau_r),
+      desservies = .reseau_desservies(parcelles, reseau_r, grille, skidding_m),
       config = config
     ),
     class = "foretaccess_reseau"
@@ -381,6 +385,9 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
 #' @export
 print.foretaccess_reseau <- function(x, ...) {
   cli::cli_h1("Reseau de desserte")
+  if (!is.null(x$strategie)) {
+    cli::cli_text("Strategie : {.val {x$strategie}} ({length(x$journal)} essai{?s})")
+  }
   cli::cli_text("Mode : {.val {x$mode}}")
   cli::cli_text("Heuristique : {.val {x$heuristique}}")
   cli::cli_text("Routes creees : {nrow(x$lignes)}")
