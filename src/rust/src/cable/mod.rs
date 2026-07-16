@@ -12,3 +12,4 @@ pub mod supports;
 pub mod optpyl;
 pub mod ligne;
 pub mod scan;
+pub mod seilaplan;
