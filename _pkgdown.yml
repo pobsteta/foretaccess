@@ -104,11 +104,12 @@ reference:
   desc: >
     Conception d'un réseau de desserte : surface de coût de construction (Lot 14),
     solveur de tracé A* (Lot 15, noyau Rust), réseau multi-cibles glouton/Steiner
-    (Lot 16).
+    (Lot 16), vectorisation en graphe pour flux et typage (Lot 17).
   contents:
   - surface_cout_construction
   - tracer_desserte
   - reseau_desserte
+  - vectoriser_reseau
   - desserte_dist_to_end
   - desserte_trace
   - desserte_reseau

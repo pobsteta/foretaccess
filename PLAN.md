@@ -73,8 +73,13 @@
   Tout en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4 (Steiner ≤ glouton)
   vérifié. **16c** : raster réseau continu (rasterisation des géométries `touches=TRUE`), `connexe`
   (`terra::patches`, CA-16.5), `desservies` par parcelle (CA-16.1), `longueur` par tronçon.
-  24 tests cargo + 20 tests R. **Lot 16 clos** ; reste Lots 17 (flux/typage) et 18 (multi-start).
-- **Branche** : `feat/lot16c-connexite` (cycle dev)
+  24 tests cargo + 20 tests R. **Lot 16 clos**.
+- **Lot 17a (vectorisation en graphe) en cycle dev** : `vectoriser_reseau(reseau)`
+  (`R/desserte_flux.R`) transforme le réseau du Lot 16 en graphe topologique `foretaccess_reseau_graphe`
+  (`noeuds` + `troncons` en `sf`). Graphe **base R** (indices de cellule = nœuds, contraction des
+  chaînes de degré 2), pas `igraph`/`sfnetworks`. CA-17.1 couvert. 15 tests R. Reste **17b** (flux)
+  et **17c** (typage + persistance). Ensuite Lot 18 (multi-start).
+- **Branche** : `feat/lot17a-vectorisation` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
@@ -147,7 +152,7 @@
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
-| 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
+| 17 | Flux & typage | `specs/017-flux-typage.md` | 🔨 en cours (17a vectorisation livrée) | *(cycle dev)* |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
@@ -310,6 +315,29 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Lot 17a : vectorisation topologique du réseau en graphe (base R)
+
+Ouverture du Lot 17 (flux de bois & typage, portage de ForestRoadNetwork — Klemet, GPL v3).
+`vectoriser_reseau(reseau)` (`R/desserte_flux.R`) transforme le réseau raster/polylignes du Lot 16
+en un **graphe topologique propre** : objet `foretaccess_reseau_graphe` avec `noeuds` (`sf` POINT :
+`id`, `cell`, `degre`, `type` ∈ exutoire/jonction/feuille) et `troncons` (`sf` LINESTRING : `id`,
+`de`, `vers`, `longueur`).
+
+**Choix d'archi — graphe base R, pas `igraph`/`sfnetworks`** (cf. mémoire `lot17-graphe-base-r`) :
+`igraph` ne s'installe pas en local (binaire noble incompatible) et ajouterait une dépendance
+compilée lourde + risque CI. Or le réseau est **arborescent** (rooted sur la desserte existante),
+donc le flux (17b) sera une simple **accumulation en sous-arbre**, sans Dijkstra externe. Astuce
+clé : les **indices de cellule raster** (`terra::cellFromXY`) servent d'**identifiants de nœud
+exacts** — les cellules partagées (tronçons réutilisés) deviennent le même nœud sans collage
+flottant. La vectorisation **contracte les chaînes de degré 2** en tronçons entre nœuds
+remarquables (exutoire, jonction deg ≥ 3, feuille deg 1).
+
+`reseau_desserte` (Lot 16) stocke désormais `desserte` (le réseau existant) dans sa sortie, pour
+que `vectoriser_reseau(reseau)` soit auto-suffisant (identification des exutoires). Helpers R
+`.graphe_aretes_fines`, `.graphe_contracter`. **CA-17.1** (jonctions deg ≥ 3, exutoire sur le
+réseau, pas d'arête pendante) couvert. 15 tests R. Reste **17b** (sources + accumulation de flux)
+et **17c** (typage + conversion temporaire + persistance Lot 8).
 
 ### 2026-07-16 — Lot 16c : raccordement / connexité + sortie affinée (Lot 16 clos)
 

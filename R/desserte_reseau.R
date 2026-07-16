@@ -27,9 +27,10 @@
 #' @return A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
 #'   created roads, one feature per road, with creation `ordre`, `cout` and
 #'   planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
-#'   network, for Lot 17), `cout` (total), `connexe` (a single connected
-#'   component, CA-16.5), `desservies` (a logical, one per parcel, CA-16.1) and
-#'   the recall of the `mode` and `heuristique`.
+#'   network, for Lot 17), `desserte` (the existing network, kept for the Lot 17
+#'   graph), `cout` (total), `connexe` (a single connected component, CA-16.5),
+#'   `desservies` (a logical, one per parcel, CA-16.1) and the recall of the
+#'   `mode` and `heuristique`.
 #' @param mode Construction mode: `"glouton"` (greedy MTAP->STAP, default) or
 #'   `"steiner"` (minimum-spanning-tree approximation over the terminals, a
 #'   quality alternative at the cost of N^2 traces).
@@ -102,6 +103,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
     list(
       lignes = lignes,
       reseau = reseau_r,
+      desserte = sf::st_sf(geometry = sf::st_geometry(desserte_existante)),
       cout = sum(res$costs),
       heuristique = heuristique,
       mode = mode,
