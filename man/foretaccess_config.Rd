@@ -9,6 +9,7 @@ foretaccess_config(
   porteur = list(),
   cable = list(),
   dfci = list(),
+  desserte = list(),
   general = list()
 )
 }

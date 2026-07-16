@@ -37,15 +37,24 @@ foretaccess_config <- function(skidder = list(),
                                porteur = list(),
                                cable = list(),
                                dfci = list(),
+                               desserte = list(),
                                general = list()) {
   defaults <- .foretaccess_defaults()
 
+  # `desserte$cout` est une sous-liste : `modifyList` a plat ecraserait tout le
+  # bloc `cout` des qu'on surcharge un seul champ. On fusionne `cout` a part.
+  desserte_m <- utils::modifyList(defaults$desserte, desserte)
+  if (!is.null(desserte$cout)) {
+    desserte_m$cout <- utils::modifyList(defaults$desserte$cout, desserte$cout)
+  }
+
   cfg <- list(
-    skidder = utils::modifyList(defaults$skidder, skidder),
-    porteur = utils::modifyList(defaults$porteur, porteur),
-    cable   = utils::modifyList(defaults$cable, cable),
-    dfci    = utils::modifyList(defaults$dfci, dfci),
-    general = utils::modifyList(defaults$general, general)
+    skidder  = utils::modifyList(defaults$skidder, skidder),
+    porteur  = utils::modifyList(defaults$porteur, porteur),
+    cable    = utils::modifyList(defaults$cable, cable),
+    dfci     = utils::modifyList(defaults$dfci, dfci),
+    desserte = desserte_m,
+    general  = utils::modifyList(defaults$general, general)
   )
   class(cfg) <- "foretaccess_config"
   validate_config(cfg)
@@ -205,6 +214,32 @@ foretaccess_config <- function(skidder = list(),
       # [280,440] de longueur de lance (derniere borne inclusive).
       classes_distance_m     = c(0, 120, 280, 440)  # dfci_class
     ),
+    # --- Conception de desserte (epic Lots 14-18, spec 014) ------------------
+    # Barème de coût de CONSTRUCTION d'une nouvelle desserte (structure additive,
+    # inspirée du « Cost Raster Creator » de ForestRoadNetwork, GPL v3). Unité
+    # monétaire (EUR/m projeté). Le solveur de tracé (Lot 15) propage ce coût.
+    desserte = list(
+      cout = list(
+        # Coût de base (EUR/m) : plus petite catégorie de desserte, terrain plat,
+        # meilleur sol. **Seul paramètre obligatoire** ; sans les couches
+        # optionnelles, le coût vaut cette base partout.
+        cout_base_m = 20,
+        # Surcoût de pente (EUR/m) par classe de pente du terrain (%). `[min, max)`
+        # -> `surcout`. `Inf` en surcoût = pente non constructible (cellule NA dans
+        # `franchissable`). Bornes croissantes, surcoûts >= 0 et croissants.
+        bareme_pente = data.frame(
+          min     = c(0, 15, 35, 60),
+          max     = c(15, 35, 60, Inf),
+          surcout = c(0, 25, 90, Inf)
+        ),
+        # Franchissements ponctuels, ramenés au mètre de traversée de la cellule.
+        cout_pont_m = 400, # surcoût sur une cellule de plan d'eau (ouvrage d'art)
+        cout_buse_m = 120, # surcoût maximal par densité de cours d'eau (cellule pleine)
+        # Surcoût de sol : table nommée `classe (chr) -> surcout (EUR/m)`. `NULL`
+        # = aucun (couche de sol ignorée).
+        bareme_sol = NULL
+      )
+    ),
     general = list(
       resolution_m  = 5,
       crs_epsg      = NA_integer_,
@@ -338,6 +373,33 @@ validate_config <- function(cfg) {
     ))
   }
   checkmate::assert_int(ge$workers, lower = 1)
+
+  # --- Desserte : barème de coût de construction (Lot 14, CA-14.6) ------------
+  co <- cfg$desserte$cout
+  checkmate::assert_number(co$cout_base_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(co$cout_pont_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(co$cout_buse_m, lower = 0, finite = TRUE)
+  checkmate::assert_data_frame(co$bareme_pente, min.rows = 1)
+  checkmate::assert_names(names(co$bareme_pente), must.include = c("min", "max", "surcout"))
+  checkmate::assert_numeric(co$bareme_pente$min, lower = 0, any.missing = FALSE, sorted = TRUE)
+  checkmate::assert_numeric(co$bareme_pente$max, any.missing = FALSE, sorted = TRUE)
+  # `surcout` peut valoir `Inf` (pente non constructible) mais jamais negatif ;
+  # croissant, pour que le barème reste monotone (CA-14.4).
+  checkmate::assert_numeric(co$bareme_pente$surcout, lower = 0, any.missing = FALSE, sorted = TRUE)
+  # Classes contiguës et couvrantes : chaque `max` est le `min` suivant, la
+  # première borne est 0, la dernière `Inf`.
+  bp <- co$bareme_pente
+  if (bp$min[1] != 0 || !is.infinite(bp$max[nrow(bp)]) ||
+        !isTRUE(all.equal(bp$max[-nrow(bp)], bp$min[-1]))) {
+    cli::cli_abort(c(
+      "Bareme de pente de desserte incoherent.",
+      "x" = "Les classes doivent etre contigues et couvrantes : \\
+             {.field min}[1] = 0, {.field max} final = Inf, {.field max}[i] = {.field min}[i+1]."
+    ))
+  }
+  if (!is.null(co$bareme_sol)) {
+    checkmate::assert_numeric(unlist(co$bareme_sol), lower = 0, any.missing = FALSE)
+  }
 
   invisible(cfg)
 }
