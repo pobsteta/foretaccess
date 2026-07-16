@@ -100,3 +100,59 @@ test_that("la methode print resume le graphe sans erreur", {
   expect_no_error(print(g))
   expect_invisible(print(g))
 })
+
+# --- Lot 17b : sources & accumulation de flux --------------------------------
+
+test_that("CA-17.2 : chaque parcelle recoit au moins un point source", {
+  s <- flux_setup()
+  g <- calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume",
+                     densite_sources = 5)
+  expect_gte(nrow(g$sources), nrow(s$parcelles))
+  # Toute parcelle est representee par au moins une source.
+  expect_setequal(unique(g$sources$parcelle), seq_len(nrow(s$parcelles)))
+})
+
+test_that("CA-17.3 : conservation du volume (sources et exutoires)", {
+  s <- flux_setup()
+  total <- sum(s$parcelles$volume)
+  g <- calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume")
+  # Le volume seme egale le volume recolte.
+  expect_equal(sum(g$sources$volume), total)
+  # Tout le volume ressort aux exutoires (aucune parcelle sur un exutoire ici).
+  inc <- g$troncons[g$troncons$de %in% g$exutoires | g$troncons$vers %in% g$exutoires, ]
+  expect_equal(sum(inc$flux), total)
+})
+
+test_that("CA-17.4 : le flux croit de l'amont vers l'aval (exutoire = max)", {
+  s <- flux_setup()
+  total <- sum(s$parcelles$volume)
+  g <- calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume")
+  expect_true(all(g$troncons$flux >= 0))
+  # Le troncon aboutissant a l'exutoire porte le flux maximal = volume total.
+  inc <- g$troncons[g$troncons$de %in% g$exutoires | g$troncons$vers %in% g$exutoires, ]
+  expect_equal(max(g$troncons$flux), total)
+  expect_true(all(inc$flux >= g$troncons$flux[!g$troncons$id %in% inc$id] |
+                    length(inc$flux) == 0))
+})
+
+test_that("la densite change le nombre de sources mais pas le volume total", {
+  s <- flux_setup()
+  g1 <- calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume",
+                      densite_sources = 5)
+  g2 <- calculer_flux(vectoriser_reseau(s$reseau), s$parcelles, "volume",
+                      densite_sources = 50)
+  expect_gte(nrow(g2$sources), nrow(g1$sources))
+  expect_equal(sum(g1$sources$volume), sum(g2$sources$volume))
+  # Le flux total aux exutoires est invariant a la densite.
+  exu_flux <- function(g) {
+    inc <- g$troncons[g$troncons$de %in% g$exutoires | g$troncons$vers %in% g$exutoires, ]
+    sum(inc$flux)
+  }
+  expect_equal(exu_flux(g1), exu_flux(g2))
+})
+
+test_that("colonne volume absente -> erreur", {
+  s <- flux_setup()
+  g <- vectoriser_reseau(s$reseau)
+  expect_error(calculer_flux(g, s$parcelles, "inexistant"), "inexistant|choice|element")
+})
