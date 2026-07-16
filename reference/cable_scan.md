@@ -49,7 +49,13 @@ cable_scan(
   l_slope,
   prop_slope,
   l_hor,
-  optim_h
+  optim_h,
+  methode_seilaplan,
+  hm_min,
+  hm_max,
+  hm_delta,
+  min_dist_mast,
+  n_sk
 )
 ```
 
@@ -214,6 +220,32 @@ cable_scan(
 - optim_h:
 
   Optimise the attachment height on each support (`c_option_h`).
+
+- methode_seilaplan:
+
+  Place supports with the SEILAPLAN graph (Bont & Heinimann 2012)
+  instead of Sylvaccess `OptPyl_NoH` (spec 013). Optimises both support
+  position and height.
+
+- hm_min:
+
+  Lowest intermediate-support height level (m), SEILAPLAN only.
+
+- hm_max:
+
+  Highest intermediate-support height level (m), SEILAPLAN only.
+
+- hm_delta:
+
+  Height step between levels (m), SEILAPLAN only.
+
+- min_dist_mast:
+
+  Minimum horizontal spacing between supports (m), SEILAPLAN only.
+
+- n_sk:
+
+  Number of pre-tension steps swept by the graph, SEILAPLAN only.
 
 ## Value
 

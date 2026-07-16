@@ -315,6 +315,87 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-16 — SEILAPLAN 13c (câblage) : `methode_supports = "seilaplan"` de bout en bout
+
+Troisième incrément de `specs/013` — l’intégration du graphe (13b) dans
+le balayage `cable_scan`.
+
+- **Config** (`R/config.R`) : `cable$methode_supports = "sylvaccess"`
+  (défaut) `| "seilaplan"`, plus les réglages du graphe
+  (`hauteur_support_{min,max}_m`, `pas_hauteur_support_m`,
+  `distance_min_support_m`, `nb_pas_pretension`), avec validateurs.
+- **Rust** (`scan.rs`, `lib.rs`) : la branche `seilaplan` de
+  [`scan()`](https://rdrr.io/r/base/scan.html) appelle
+  `optimize_supports` sur le profil au demi-mètre (`zs`). Positions
+  candidates = crêtes (`peak_positions`) **∪ grille régulière** au pas
+  `Min_Dist_Mast` — les crêtes seules ne suffisent pas sur terrain lisse
+  (il faut des points où couper la ligne / poser un support,
+  l’équivalent de la coupe d’`OptPyl`). Le graphe étant **symétrique**,
+  un seul passage : plus de gymnastique machine-en-haut/bas ni de profil
+  retourné. Portée du graphe → dernier index couvert du profil aller.
+- **Bindings** regénérés (`rextendr::document()`), doc `potentiel_cable`
+  §Écarts complétée.
+- **Tests** : R bout-en-bout (`methode_supports = "seilaplan"` tourne,
+  couvre des cellules forestières dans l’enveloppe, longueur dans
+  `[lmin, lmax]`) ; méthode inconnue refusée à la validation. 52 tests
+  cargo intacts. Défaut `"sylvaccess"` : non-régression garantie.
+
+**Confrontation ColduPre (16/07)** — deux optimisations perso d’abord
+(commit `bc5ed3d`, sans changer les résultats) : **pré-filtre
+`check_droite`** avant `calc_sta` (écarte les travées dont la corde
+passe sous la garde, sans Newton) et **suppression de la bissection
+`maxSTA`** (dans notre mécanique `MaxSTA = tmax` toujours, l’effort ne
+borne qu’à `tmax`). Résultats confrontés au `_NoH` :
+
+- **Perf (CA-13.4)** : config **fine** (6 niveaux de hauteur, supports à
+  30 m) **~9× le `_NoH`** et croissant — **échoue** la cible (\< 5×).
+  L’explosion vient du produit position² × hauteur² d’appels `calc_sta`
+  (chacun marchant `Lo` par Newton). Config **légère** (2 niveaux 6/12
+  m, supports à 60 m) : **×1,3** seulement — donc le coût est bien dans
+  la densité de nœuds.
+- **Couverture (CA-13.3)** : config légère → seilaplan **25170**
+  cellules vs `_NoH` **31275**, soit **−6105** (gagne 1995, **perd
+  8100**). **Mauvaise direction** (la cible est ↑, +470 vers l’oracle) —
+  même symptôme que le port `OptPyl_Up2` shelvé. La config fine (trop
+  lente à mesurer) ferait sans doute mieux, mais la perte est trop
+  massive pour n’être qu’un effet de config.
+
+**Cause probable** : la **portée du graphe est quantifiée aux positions
+candidates** (coupe la ligne au dernier support atteint, granularité
+30–60 m), là où `OptPyl_NoH` coupe au **pixel** près et prolonge la
+dernière travée jusqu’à sa vraie limite. D’où ~8100 cellules perdues en
+bout de ligne. C’est un **écart de modèle** ForêtAccess (balayage : «
+jusqu’où porte la ligne ? ») vs SEILAPLAN (conception : « ligne vers un
+point d’arrivée **connu** »).
+
+**13c.2 — passe de correction (choisie par l’utilisateur), RÉUSSIE** :
+
+1.  **Prolongation de portée** (`seilaplan::extend_reach`) : le graphe
+    s’arrête au dernier support candidat, mais le câble porte encore
+    jusqu’à un ancrage terminal plus loin. On place l’ancrage au pas
+    raster le plus lointain encore faisable (comme la coupe d’`OptPyl`).
+    → recouvre les ~8100 cellules de bout de ligne perdues. Effet mesuré
+    (config légère) : **−6105 → −1791**.
+2.  **Partage de l’amorçage** (`seed_for_span` / `calc_cable_seeded`) :
+    `seed_grid` (grille 40×40 = 1600 évals de caténaire) était refait à
+    **chaque** tension de la bissection `calc_sta`, alors qu’il ne
+    dépend que de la géométrie (même `Lo` de départ). Calculé **une
+    fois** par travée. → ~3× moins cher. Résultat inchangé (l’amorçage
+    n’affecte pas la racine). 52 tests cargo verts.
+
+**Confrontation ColduPre finale** (config `4/8/12 m`, supports à 40 m,
+`n_sk=12`) : **seilaplan = 34894 cellules vs `_NoH` = 31275 → +3619**
+(gagne 3943, **perd 324**), **perf ×2,8**. → **CA-13.3 (couverture ↑) et
+CA-13.4 (perf \< 5×) tenus.** Défauts config alignés sur ces valeurs.
+
+**Réserve (→ 13d)** : +3619 **dépasse** le gain net de l’oracle
+`c_option_h=true` (+470) — signe d’un possible **excès d’optimisme**
+(prolongation trop permissive et/ou absence de sélection de lignes, Lot
+5). À trancher par la **validation ligne à ligne vs SEILAPLAN**
+(CA-13.5) et la comparaison cellule à cellule à l’oracle
+`sylvaccess_hopt`. Puis retrait de `OptPyl_Up2` et du flag
+`optimiser_hauteur_fixation`.
+
 ### 2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)
 
 Deuxième incrément de `specs/013`. Le cœur de l’algorithme de **Bont &

@@ -94,7 +94,13 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 <span>  <span class="va">l_slope</span>,</span>
 <span>  <span class="va">prop_slope</span>,</span>
 <span>  <span class="va">l_hor</span>,</span>
-<span>  <span class="va">optim_h</span></span>
+<span>  <span class="va">optim_h</span>,</span>
+<span>  <span class="va">methode_seilaplan</span>,</span>
+<span>  <span class="va">hm_min</span>,</span>
+<span>  <span class="va">hm_max</span>,</span>
+<span>  <span class="va">hm_delta</span>,</span>
+<span>  <span class="va">min_dist_mast</span>,</span>
+<span>  <span class="va">n_sk</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -260,6 +266,32 @@ départs ; réduction fidèle au balayage R (mêmes départ/azimut/longueur).</p
 
 <dt id="arg-optim-h">optim_h<a class="anchor" aria-label="anchor" href="#arg-optim-h"></a></dt>
 <dd><p>Optimise the attachment height on each support (<code>c_option_h</code>).</p></dd>
+
+
+<dt id="arg-methode-seilaplan">methode_seilaplan<a class="anchor" aria-label="anchor" href="#arg-methode-seilaplan"></a></dt>
+<dd><p>Place supports with the SEILAPLAN graph (Bont &amp;
+Heinimann 2012) instead of Sylvaccess <code>OptPyl_NoH</code> (spec 013). Optimises
+both support position and height.</p></dd>
+
+
+<dt id="arg-hm-min">hm_min<a class="anchor" aria-label="anchor" href="#arg-hm-min"></a></dt>
+<dd><p>Lowest intermediate-support height level (m), SEILAPLAN only.</p></dd>
+
+
+<dt id="arg-hm-max">hm_max<a class="anchor" aria-label="anchor" href="#arg-hm-max"></a></dt>
+<dd><p>Highest intermediate-support height level (m), SEILAPLAN only.</p></dd>
+
+
+<dt id="arg-hm-delta">hm_delta<a class="anchor" aria-label="anchor" href="#arg-hm-delta"></a></dt>
+<dd><p>Height step between levels (m), SEILAPLAN only.</p></dd>
+
+
+<dt id="arg-min-dist-mast">min_dist_mast<a class="anchor" aria-label="anchor" href="#arg-min-dist-mast"></a></dt>
+<dd><p>Minimum horizontal spacing between supports (m), SEILAPLAN only.</p></dd>
+
+
+<dt id="arg-n-sk">n_sk<a class="anchor" aria-label="anchor" href="#arg-n-sk"></a></dt>
+<dd><p>Number of pre-tension steps swept by the graph, SEILAPLAN only.</p></dd>
 
 </dl></div>
     <div class="section level2">
