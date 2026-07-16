@@ -652,6 +652,97 @@ fn desserte_dist_to_end(
     )
 }
 
+/// Trace a forest road through mandatory waypoints (road-design A\* solver, Lot 15b).
+///
+/// Ports SylvaRoad's `Astar_force_wp`: A\* on the disc-neighbourhood graph, with
+/// geometric transition cost plus parabolic direction/slope penalties, hairpin
+/// handling (turning `radius`, limit angle), longitudinal-profile control
+/// (`check_profile`) and self-intersection avoidance (spec 015 Sec. 4). The
+/// neighbourhood table is (re)built internally from the DEM and obstacle mask.
+///
+/// All grids are row-major and flattened; `waypoints` are 0-based flattened cell
+/// indices (>= 2), the first the origin and the last the final goal.
+///
+/// @param alt Elevation values (row-major, m).
+/// @param obs Obstacle mask (1 = blocked / non-crossable), row-major.
+/// @param obs2 Excess cross-slope mask (1 = terrain slope over `trans_slope_all`).
+/// @param local_slope Fraction (0..1) of the neighbourhood with steep cross-slope.
+/// @param zone Passable mask (1 = passable) for the inverse-distance heuristic.
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param waypoints 0-based flattened cell indices to visit, in order.
+/// @param bufgoal Finish tolerance around the final goal (m).
+/// @param csize Cell size (m).
+/// @param min_slope Minimum road grade (percent).
+/// @param max_slope Maximum road grade (percent).
+/// @param penalty_xy Turn (direction-change) penalty (m per 180 deg).
+/// @param penalty_z Slope-change ("wave") penalty.
+/// @param max_diff_z Max elevation gap between road and terrain (m).
+/// @param d_neighborhood Neighbourhood radius (m).
+/// @param angle_hairpin Angle above which a turn is a hairpin (deg).
+/// @param lmax_ab_sl Max road length with excess cross-slope (m).
+/// @param radius Turning radius for trucks (m).
+/// @param prop_sl_max Max local steep-cross-slope fraction at a hairpin.
+/// @param max_slope_hairpin Slope tolerance parameter for the hairpin limit angle.
+/// @param tal Hairpin limit-angle tuning parameter.
+/// @param modhair Minimum-spacing-between-hairpins parameter.
+/// @return A list: `path` (1-based flattened cell indices), `cost`, `feasible`.
+/// @export
+#[extendr]
+fn desserte_trace(
+    alt: Vec<f64>,
+    obs: Vec<i32>,
+    obs2: Vec<i32>,
+    local_slope: Vec<f64>,
+    zone: Vec<i32>,
+    nr: i32,
+    nc: i32,
+    waypoints: Vec<i32>,
+    bufgoal: f64,
+    csize: f64,
+    min_slope: f64,
+    max_slope: f64,
+    penalty_xy: f64,
+    penalty_z: f64,
+    max_diff_z: f64,
+    d_neighborhood: f64,
+    angle_hairpin: f64,
+    lmax_ab_sl: f64,
+    radius: f64,
+    prop_sl_max: f64,
+    max_slope_hairpin: f64,
+    tal: f64,
+    modhair: f64,
+) -> List {
+    let (nr, nc) = (nr as usize, nc as usize);
+    let p = desserte::solver::SolverParams {
+        csize,
+        min_slope,
+        max_slope,
+        penalty_xy,
+        penalty_z,
+        max_diff_z,
+        d_neighborhood,
+        angle_hairpin,
+        lmax_ab_sl,
+        radius,
+        prop_sl_max,
+        max_slope_hairpin,
+        tal,
+        modhair,
+    };
+    let table = desserte::neighborhood::build_neib_table(
+        &alt, &obs, nr, nc, d_neighborhood, csize, min_slope, max_slope,
+    );
+    let wp: Vec<usize> = waypoints.iter().map(|&w| w as usize).collect();
+    let res = desserte::solver::solve(
+        &alt, &obs, &obs2, &local_slope, &zone, &table, nr, nc, &wp, bufgoal, &p,
+    );
+    // Indices renvoyes en 1-based (convention R).
+    let path: Vec<i32> = res.path.iter().map(|&i| i as i32 + 1).collect();
+    list!(path = path, cost = res.cost, feasible = res.feasible)
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -671,6 +762,7 @@ extendr_module! {
     fn cable_scan;
     fn dfci_scan;
     fn desserte_dist_to_end;
+    fn desserte_trace;
 }
 
 #[cfg(test)]
