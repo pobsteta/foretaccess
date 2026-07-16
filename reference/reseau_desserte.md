@@ -75,6 +75,8 @@ reseau_desserte(
 ## Value
 
 A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
-created roads, one feature per road, with creation order and cost),
-`reseau` (a `SpatRaster` of the whole network, for Lot 17), `cout`
-(total) and the recall of the `mode` and `heuristique`.
+created roads, one feature per road, with creation `ordre`, `cout` and
+planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
+network, for Lot 17), `cout` (total), `connexe` (a single connected
+component, CA-16.5), `desservies` (a logical, one per parcel, CA-16.1)
+and the recall of the `mode` and `heuristique`.

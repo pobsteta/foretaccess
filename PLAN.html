@@ -66,9 +66,9 @@
 <li>
 <strong>Lot 15c (orchestration R) en cycle dev</strong> : <code>tracer_desserte(pre, cout, waypoints, config)</code> (<code>R/desserte_trace.R</code>) rend un objet <code>foretaccess_trace</code> (une <code>sf</code> LINESTRING de la route, coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (<code>obs2</code>) et fraction locale de fort dévers (<code>local_slope</code> par focale disque), convertit les waypoints (sf/cellules) en indices, appelle <code>desserte_trace</code>, reconstruit la polyligne (centres de cellules). Config <code>desserte$trace</code> ajoutée (paramètres SylvaRoad) + validation. 18 tests. <strong>Lot 15 clos</strong> (15a→15c, #59/#60/#61) ; oracle <code>meisenthal2</code> non publié → validé par invariants.</li>
 <li>
-<strong>Lot 16a/16b (réseau MTAP glouton + Steiner) en cycle dev</strong> : <code>reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, mode, skidding_m, ...)</code> (<code>R/desserte_reseau.R</code>) rend un objet <code>foretaccess_reseau</code> (<code>sf</code> LINESTRING des routes créées + <code>SpatRaster</code> du réseau + coût total). Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au <strong>réseau courant</strong> par le solveur Lot 15 (variante <strong>multi-cible</strong> : A* qui s’arrête sur toute cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage par distance de débardage. Trois heuristiques d’ordre (plus proche, plus gros volume, aléatoire reproductible). Nouveau Rust : <code>heuristic::dist_to_end_multi</code>, <code>solver::solve_network</code> + <code>build_network</code>, binding <code>desserte_reseau</code>. <strong>16b (<code>mode = "steiner"</code>, Chung &amp; Sessions)</strong> : graphe complet des terminaux (réseau + un nœud d’accès par parcelle, cellule la plus proche du réseau), arêtes = coûts du solveur Lot 15 (<code>desserte_reseau</code> réseau↔︎parcelle, <code>desserte_trace</code> parcelle↔︎parcelle, N² tracés), <strong>MST Prim</strong>, puis <strong>matérialisation avec réutilisation</strong> (chaque parcelle, dans l’ordre racine→feuilles de l’arbre, se greffe sur le réseau courant → fusion des cellules partagées, élagage des doublons). Tout en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4 (Steiner ≤ glouton) vérifié. 24 tests cargo + 16 tests R. Reste <strong>16c</strong> (raccordement/connexité, sortie affinée).</li>
+<strong>Lot 16 (réseau MTAP glouton + Steiner + connexité) livré, en cycle dev</strong> : <code>reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, mode, skidding_m, ...)</code> (<code>R/desserte_reseau.R</code>) rend un objet <code>foretaccess_reseau</code> (<code>sf</code> LINESTRING des routes créées avec <code>longueur</code> + <code>SpatRaster</code> du réseau + coût total + <code>connexe</code> + <code>desservies</code>). Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au <strong>réseau courant</strong> par le solveur Lot 15 (variante <strong>multi-cible</strong> : A* qui s’arrête sur toute cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage par distance de débardage. Trois heuristiques d’ordre (plus proche, plus gros volume, aléatoire reproductible). Nouveau Rust : <code>heuristic::dist_to_end_multi</code>, <code>solver::solve_network</code> + <code>build_network</code>, binding <code>desserte_reseau</code>. <strong>16b (<code>mode = "steiner"</code>, Chung &amp; Sessions)</strong> : graphe complet des terminaux (réseau + un nœud d’accès par parcelle, cellule la plus proche du réseau), arêtes = coûts du solveur Lot 15 (<code>desserte_reseau</code> réseau↔︎parcelle, <code>desserte_trace</code> parcelle↔︎parcelle, N² tracés), <strong>MST Prim</strong>, puis <strong>matérialisation avec réutilisation</strong> (chaque parcelle, dans l’ordre racine→feuilles de l’arbre, se greffe sur le réseau courant → fusion des cellules partagées, élagage des doublons). Tout en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4 (Steiner ≤ glouton) vérifié. <strong>16c</strong> : raster réseau continu (rasterisation des géométries <code>touches=TRUE</code>), <code>connexe</code> (<code><a href="https://rspatial.github.io/terra/reference/patches.html" class="external-link">terra::patches</a></code>, CA-16.5), <code>desservies</code> par parcelle (CA-16.1), <code>longueur</code> par tronçon. 24 tests cargo + 20 tests R. <strong>Lot 16 clos</strong> ; reste Lots 17 (flux/typage) et 18 (multi-start).</li>
 <li>
-<strong>Branche</strong> : <code>feat/lot16b-steiner</code> (cycle dev)</li>
+<strong>Branche</strong> : <code>feat/lot16c-connexite</code> (cycle dev)</li>
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0.9000</code> (cycle dev après release <code>v1.1.0</code>)</li>
 <li>
@@ -190,7 +190,7 @@
 </tr><tr><td>16</td>
 <td>Réseau MTAP</td>
 <td><code>specs/016-reseau-mtap.md</code></td>
-<td>🔨 en cours (16a glouton + 16b Steiner livrés)</td>
+<td>✅ livré (16a glouton, 16b Steiner, 16c connexité)</td>
 <td><em>(cycle dev)</em></td>
 </tr><tr><td>17</td>
 <td>Flux &amp; typage</td>
@@ -310,6 +310,23 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-16--lot-16c--raccordement--connexité--sortie-affinée-lot-16-clos">2026-07-16 — Lot 16c : raccordement / connexité + sortie affinée (Lot 16 clos)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--lot-16c--raccordement--connexit%C3%A9--sortie-affin%C3%A9e-lot-16-clos"></a></h3>
+<p>Sortie <code>foretaccess_reseau</code> complétée pour clore le Lot 16 :</p>
+<ul><li>
+<strong><code>reseau</code> (raster) continu</strong> : le voisinage disque du solveur (Lot 15) avance par sauts ; les cellules de passage sont donc espacées. On rasterise désormais les <strong>géométries</strong> (routes créées
+<ul><li>réseau existant, <code>touches = TRUE</code>) plutôt que les seules cellules-jalons → réseau raster sans trous, prêt pour le Lot 17 (flux).</li>
+</ul></li>
+<li>
+<strong><code>connexe</code></strong> (logique, <strong>CA-16.5</strong>) : <code><a href="https://rspatial.github.io/terra/reference/patches.html" class="external-link">terra::patches</a></code> (voisinage 8) sur le raster continu — une seule composante ⇒ aucune route isolée. Vrai par construction (l’A* multi-cible s’arrête sur une cellule de réseau) mais désormais <strong>vérifié</strong>.</li>
+<li>
+<strong><code>desservies</code></strong> (logique par parcelle, <strong>CA-16.1</strong>) : chaque parcelle a-t-elle une cellule sur le réseau ou à distance de débardage (<code>skidding_m</code>) d’une route ? Couvre le cas « desservie par proximité, sans route construite ».</li>
+<li>
+<strong><code>lignes$longueur</code></strong> : longueur planimétrique (m) par tronçon (<code><a href="https://r-spatial.github.io/sf/reference/geos_measures.html" class="external-link">sf::st_length</a></code>, CRS projeté).</li>
+<li>
+<code>print.foretaccess_reseau</code> affiche parcelles desservies + connexité.</li>
+</ul><p>Nouveaux helpers R <code>.reseau_connexe</code>, <code>.reseau_desservies</code>. <strong>20 tests R</strong> (4 ajoutés : CA-16.5 glouton+steiner, CA-16.1 desserte, desserte par débardage, longueur). <strong>Lot 16 clos</strong> (16a glouton, 16b Steiner, 16c connexité). Reste l’épic : Lot 17 (flux/typage), Lot 18 (optimisation multi-start).</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-16--lot-16b--mode-steiner-mst-des-terminaux--matérialisation-avec-réutilisation">2026-07-16 — Lot 16b : mode Steiner (MST des terminaux + matérialisation avec réutilisation)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--lot-16b--mode-steiner-mst-des-terminaux--mat%C3%A9rialisation-avec-r%C3%A9utilisation"></a></h3>
 <p><code>reseau_desserte</code> gagne un argument <code>mode = c("glouton", "steiner")</code>. Le mode <strong>Steiner</strong> (Chung &amp; Sessions, « qualité ») est implémenté <strong>entièrement en R</strong> au-dessus des bindings du Lot 15/16a — aucun nouveau code Rust :</p>

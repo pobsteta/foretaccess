@@ -79,29 +79,35 @@
   cellules). Config `desserte$trace` ajoutée (paramètres SylvaRoad) +
   validation. 18 tests. **Lot 15 clos** (15a→15c, \#59/#60/#61) ; oracle
   `meisenthal2` non publié → validé par invariants.
-- **Lot 16a/16b (réseau MTAP glouton + Steiner) en cycle dev** :
+- **Lot 16 (réseau MTAP glouton + Steiner + connexité) livré, en cycle
+  dev** :
   `reseau_desserte(pre, cout, parcelles, desserte_existante, heuristique, mode, skidding_m, ...)`
   (`R/desserte_reseau.R`) rend un objet `foretaccess_reseau` (`sf`
-  LINESTRING des routes créées + `SpatRaster` du réseau + coût total).
-  Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque
-  parcelle est raccordée au **réseau courant** par le solveur Lot 15
-  (variante **multi-cible** : A\* qui s’arrête sur toute cellule de
-  réseau), la route créée grossit le réseau (réutilisation →
-  arborescence). Pré-élagage par distance de débardage. Trois
-  heuristiques d’ordre (plus proche, plus gros volume, aléatoire
-  reproductible). Nouveau Rust : `heuristic::dist_to_end_multi`,
-  `solver::solve_network` + `build_network`, binding `desserte_reseau`.
-  **16b (`mode = "steiner"`, Chung & Sessions)** : graphe complet des
-  terminaux (réseau + un nœud d’accès par parcelle, cellule la plus
-  proche du réseau), arêtes = coûts du solveur Lot 15 (`desserte_reseau`
-  réseau↔︎parcelle, `desserte_trace` parcelle↔︎parcelle, N² tracés), **MST
-  Prim**, puis **matérialisation avec réutilisation** (chaque parcelle,
-  dans l’ordre racine→feuilles de l’arbre, se greffe sur le réseau
-  courant → fusion des cellules partagées, élagage des doublons). Tout
-  en R au-dessus des bindings existants (pas de nouveau Rust). CA-16.4
-  (Steiner ≤ glouton) vérifié. 24 tests cargo + 16 tests R. Reste
-  **16c** (raccordement/connexité, sortie affinée).
-- **Branche** : `feat/lot16b-steiner` (cycle dev)
+  LINESTRING des routes créées avec `longueur` + `SpatRaster` du
+  réseau + coût total + `connexe` + `desservies`). Portage du MTAP→STAP
+  glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée
+  au **réseau courant** par le solveur Lot 15 (variante **multi-cible**
+  : A\* qui s’arrête sur toute cellule de réseau), la route créée
+  grossit le réseau (réutilisation → arborescence). Pré-élagage par
+  distance de débardage. Trois heuristiques d’ordre (plus proche, plus
+  gros volume, aléatoire reproductible). Nouveau Rust :
+  `heuristic::dist_to_end_multi`, `solver::solve_network` +
+  `build_network`, binding `desserte_reseau`. **16b (`mode = "steiner"`,
+  Chung & Sessions)** : graphe complet des terminaux (réseau + un nœud
+  d’accès par parcelle, cellule la plus proche du réseau), arêtes =
+  coûts du solveur Lot 15 (`desserte_reseau` réseau↔︎parcelle,
+  `desserte_trace` parcelle↔︎parcelle, N² tracés), **MST Prim**, puis
+  **matérialisation avec réutilisation** (chaque parcelle, dans l’ordre
+  racine→feuilles de l’arbre, se greffe sur le réseau courant → fusion
+  des cellules partagées, élagage des doublons). Tout en R au-dessus des
+  bindings existants (pas de nouveau Rust). CA-16.4 (Steiner ≤ glouton)
+  vérifié. **16c** : raster réseau continu (rasterisation des géométries
+  `touches=TRUE`), `connexe`
+  ([`terra::patches`](https://rspatial.github.io/terra/reference/patches.html),
+  CA-16.5), `desservies` par parcelle (CA-16.1), `longueur` par tronçon.
+  24 tests cargo + 20 tests R. **Lot 16 clos** ; reste Lots 17
+  (flux/typage) et 18 (multi-start).
+- **Branche** : `feat/lot16c-connexite` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -197,7 +203,7 @@
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
-| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 🔨 en cours (16a glouton + 16b Steiner livrés) | *(cycle dev)* |
+| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
@@ -395,6 +401,36 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-16 — Lot 16c : raccordement / connexité + sortie affinée (Lot 16 clos)
+
+Sortie `foretaccess_reseau` complétée pour clore le Lot 16 :
+
+- **`reseau` (raster) continu** : le voisinage disque du solveur
+  (Lot 15) avance par sauts ; les cellules de passage sont donc
+  espacées. On rasterise désormais les **géométries** (routes créées
+  - réseau existant, `touches = TRUE`) plutôt que les seules
+    cellules-jalons → réseau raster sans trous, prêt pour le Lot 17
+    (flux).
+- **`connexe`** (logique, **CA-16.5**) :
+  [`terra::patches`](https://rspatial.github.io/terra/reference/patches.html)
+  (voisinage 8) sur le raster continu — une seule composante ⇒ aucune
+  route isolée. Vrai par construction (l’A\* multi-cible s’arrête sur
+  une cellule de réseau) mais désormais **vérifié**.
+- **`desservies`** (logique par parcelle, **CA-16.1**) : chaque parcelle
+  a-t-elle une cellule sur le réseau ou à distance de débardage
+  (`skidding_m`) d’une route ? Couvre le cas « desservie par proximité,
+  sans route construite ».
+- **`lignes$longueur`** : longueur planimétrique (m) par tronçon
+  ([`sf::st_length`](https://r-spatial.github.io/sf/reference/geos_measures.html),
+  CRS projeté).
+- `print.foretaccess_reseau` affiche parcelles desservies + connexité.
+
+Nouveaux helpers R `.reseau_connexe`, `.reseau_desservies`. **20 tests
+R** (4 ajoutés : CA-16.5 glouton+steiner, CA-16.1 desserte, desserte par
+débardage, longueur). **Lot 16 clos** (16a glouton, 16b Steiner, 16c
+connexité). Reste l’épic : Lot 17 (flux/typage), Lot 18 (optimisation
+multi-start).
 
 ### 2026-07-16 — Lot 16b : mode Steiner (MST des terminaux + matérialisation avec réutilisation)
 

@@ -124,9 +124,11 @@ served without building a road.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>foretaccess_reseau</code> object: <code>lignes</code> (an <code>sf</code> LINESTRING of the
-created roads, one feature per road, with creation order and cost), <code>reseau</code>
-(a <code>SpatRaster</code> of the whole network, for Lot 17), <code>cout</code> (total) and the
-recall of the <code>mode</code> and <code>heuristique</code>.</p>
+created roads, one feature per road, with creation <code>ordre</code>, <code>cout</code> and
+planimetric <code>longueur</code> in m), <code>reseau</code> (a <code>SpatRaster</code> of the whole
+network, for Lot 17), <code>cout</code> (total), <code>connexe</code> (a single connected
+component, CA-16.5), <code>desservies</code> (a logical, one per parcel, CA-16.1) and
+the recall of the <code>mode</code> and <code>heuristique</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
