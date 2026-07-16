@@ -65,11 +65,12 @@
   des distances (écart médian 0 m, pondération de piste comprise), et le **Lot 6 (DFCI)** confronté
   à l'oracle (12a.4, 99,87 %). Suite possible : dettes câble (hauteur de fixation, sélection de
   lignes tamponnées) et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en `1.x`.
-- **Dette assumée du câble** : optimisation de la hauteur de fixation (`c_option_h = 1`, hors
-  défaut v3.6) — **portage tenté puis mis en attente le 16/07** (flag `optimiser_hauteur_fixation`,
-  défaut `FALSE`) : le code existe (`OptPyl_Up`/`Up2` transcrits) mais ne reproduit pas l'oracle
-  (voir journal 16/07) et est ~20× plus lent. Le `_NoH` (défaut) est intact. Phase 2 acquisition :
-  MNH LiDAR → volume, BD Forêt v3.
+- **Dette assumée du câble** : optimisation de la hauteur de fixation. Le portage de
+  `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été **tenté puis abandonné le 16/07** (bugué,
+  ~20× plus lent, code d'origine lui-même planté). **Voie retenue à la place** : transcrire
+  l'algorithme **SEILAPLAN** (Bont & Heinimann 2012, graphe + plus court chemin), plus sain et
+  validé — voir `specs/013-seilaplan-hauteur.md` et `docs/comparaison-cable-seilaplan.md`. Le `_NoH`
+  (défaut) reste intact. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
 
 ## Avancement par lot
 
