@@ -251,6 +251,27 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-16 — SEILAPLAN 13c (câblage) : `methode_supports = "seilaplan"` de bout en bout
+
+Troisième incrément de `specs/013` — l'intégration du graphe (13b) dans le balayage `cable_scan`.
+
+- **Config** (`R/config.R`) : `cable$methode_supports = "sylvaccess"` (défaut) `| "seilaplan"`, plus
+  les réglages du graphe (`hauteur_support_{min,max}_m`, `pas_hauteur_support_m`,
+  `distance_min_support_m`, `nb_pas_pretension`), avec validateurs.
+- **Rust** (`scan.rs`, `lib.rs`) : la branche `seilaplan` de `scan()` appelle `optimize_supports`
+  sur le profil au demi-mètre (`zs`). Positions candidates = crêtes (`peak_positions`) **∪ grille
+  régulière** au pas `Min_Dist_Mast` — les crêtes seules ne suffisent pas sur terrain lisse (il faut
+  des points où couper la ligne / poser un support, l'équivalent de la coupe d'`OptPyl`). Le graphe
+  étant **symétrique**, un seul passage : plus de gymnastique machine-en-haut/bas ni de profil
+  retourné. Portée du graphe → dernier index couvert du profil aller.
+- **Bindings** regénérés (`rextendr::document()`), doc `potentiel_cable` §Écarts complétée.
+- **Tests** : R bout-en-bout (`methode_supports = "seilaplan"` tourne, couvre des cellules
+  forestières dans l'enveloppe, longueur dans `[lmin, lmax]`) ; méthode inconnue refusée à la
+  validation. 52 tests cargo intacts. Défaut `"sylvaccess"` : non-régression garantie.
+
+**Reste 13c** : confrontation ColduPre (CA-13.3 couverture ↑ vs `_NoH`, CA-13.4 perf). Puis 13d
+(validation ligne à ligne vs SEILAPLAN, retrait de `OptPyl_Up2` et du flag).
+
 ### 2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)
 
 Deuxième incrément de `specs/013`. Le cœur de l'algorithme de **Bont & Heinimann 2012**, transcrit

@@ -220,8 +220,15 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   (port de `peakdetect`). 6 tests `cargo` : CA-13.1 (support quand le direct échoue),
   pas de support inutile, hauteur fixe = optimisation de position (CA-13.2, esprit),
   coupe native, coût `KostStue`, `peakdetect`. Non câblé à `cable_scan` (→ 13c).
-- **13c — intégration** : câblage `cable_scan` / config (`methode_supports`), extrémités
-  (mât/ancrage) ; confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
+- **13c — intégration** 🔶 *(câblage fait 2026-07-16 ; confrontation ColduPre en cours)* :
+  câblage `cable_scan` / config (`methode_supports = "sylvaccess" | "seilaplan"`,
+  + `hauteur_support_{min,max}_m`, `pas_hauteur_support_m`, `distance_min_support_m`,
+  `nb_pas_pretension`). La branche `seilaplan` de `scan()` appelle `optimize_supports`
+  sur le profil au demi-mètre (`zs`), positions candidates = crêtes (`peak_positions`) ∪
+  grille régulière au pas `Min_Dist_Mast` (pour couper/poser sur terrain lisse) ; le
+  graphe étant **symétrique**, un seul passage (pas de gymnastique machine-en-haut/bas).
+  Bindings regénérés, test R bout-en-bout (`methode_supports = "seilaplan"` tourne et
+  couvre). **Reste** : confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
 - **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
   retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
 

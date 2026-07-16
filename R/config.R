@@ -114,6 +114,20 @@ foretaccess_config <- function(skidder = list(),
       # hauteur (`OptPyl_Up`/`Up2`), plus permissif mais nettement plus lent.
       optimiser_hauteur_fixation = FALSE, # c_option_h
 
+      # Methode de placement des supports (spec 013). "sylvaccess" (defaut,
+      # `OptPyl_NoH`, fidelite ColduPre garantie) ou "seilaplan" (graphe + Dijkstra
+      # a la Bont & Heinimann : optimise position ET hauteur des supports, sans la
+      # gymnastique machine-en-haut/bas). Voir docs/comparaison-cable-seilaplan.md.
+      methode_supports           = "sylvaccess",
+      # Reglages du graphe SEILAPLAN (ignores si methode_supports = "sylvaccess") :
+      # niveaux de hauteur des supports intermediaires `min..max` au pas `delta`,
+      # espacement minimal entre supports, et finesse du balayage de pre-tension.
+      hauteur_support_min_m      = 2,     # min_HM
+      hauteur_support_max_m      = 12,    # max_HM
+      pas_hauteur_support_m      = 2,     # Abstufung_HM (delta h)
+      distance_min_support_m     = 30,    # Min_Dist_Mast
+      nb_pas_pretension          = 20,    # balayage de pre-tension (n_sk)
+
       # Validite geometrique de la ligne (`check_line`) : elle doit finir en foret, ne
       # pas traverser trop de non-foret d'affilee, et ne pas courir en travers d'un
       # versant raide. Sans ces bornes, les lignes filent jusqu'a `longueur_max_m` a
@@ -277,6 +291,13 @@ validate_config <- function(cfg) {
   checkmate::assert_int(ca$nb_supports_max, lower = 0)
   checkmate::assert_number(ca$hauteur_support_inter_m, lower = 0, finite = TRUE)
   checkmate::assert_number(ca$longueur_min_travee_m, lower = 0, finite = TRUE)
+  checkmate::assert_choice(ca$methode_supports, c("sylvaccess", "seilaplan"))
+  checkmate::assert_number(ca$hauteur_support_min_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(ca$hauteur_support_max_m,
+                           lower = ca$hauteur_support_min_m, finite = TRUE)
+  checkmate::assert_number(ca$pas_hauteur_support_m, lower = 0.1, finite = TRUE)
+  checkmate::assert_number(ca$distance_min_support_m, lower = 0, finite = TRUE)
+  checkmate::assert_int(as.integer(ca$nb_pas_pretension), lower = 1)
   checkmate::assert_number(ca$angle_transversal_deg, lower = 0, upper = 90)
   checkmate::assert_number(ca$pente_transversale_max_pct, lower = 0, finite = TRUE)
   checkmate::assert_number(ca$distance_transversale_max_m, lower = 0, finite = TRUE)

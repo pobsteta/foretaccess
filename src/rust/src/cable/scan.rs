@@ -11,6 +11,7 @@
 
 use crate::cable::ligne;
 use crate::cable::optpyl;
+use crate::cable::seilaplan;
 use rayon::prelude::*;
 
 /// Un rayon precalcule : cellules traversees (decalages ligne/colonne) et leur
@@ -244,6 +245,12 @@ pub fn scan(
     prop_slope: f64,
     l_hor: f64,
     optim_h: bool,
+    methode_seilaplan: bool,
+    hm_min: f64,
+    hm_max: f64,
+    hm_delta: f64,
+    min_dist_mast: f64,
+    n_sk: usize,
 ) -> ScanOut {
     let n = nr * nc;
     let aire_cell = res * res;
@@ -381,7 +388,62 @@ pub fn scan(
             };
 
             // Portee retenue, en index du profil aller, et nombre de supports poses.
-            let (iterm, nb_sup) = if machine_en_haut {
+            let (iterm, nb_sup) = if methode_seilaplan {
+                // Placement des supports a la SEILAPLAN (graphe + Dijkstra, spec
+                // 013). Le graphe est symetrique : un seul passage, sans la
+                // gymnastique machine-en-haut / machine-en-bas de Sylvaccess.
+                // Positions candidates = cretes du profil au demi-metre (`zs`).
+                let step_idx = ((min_dist_mast / 0.5).round() as usize).max(1);
+                let mut cands = seilaplan::peak_positions(&zs, step_idx, 0.0);
+                // Complement : grille reguliere au pas `min_dist_mast`. Les cretes
+                // seules ne suffisent pas sur terrain lisse -- il faut des points
+                // ou le graphe puisse poser un support ou couper la ligne a une
+                // longueur faisable (l'equivalent de la coupe de `OptPyl`).
+                let mut k = step_idx;
+                while k + 1 < zs.len() {
+                    cands.push(k);
+                    k += step_idx;
+                }
+                let gp = seilaplan::GraphParams {
+                    min_hm: hm_min,
+                    max_hm: hm_max,
+                    dhm: hm_delta,
+                    min_dist_mast,
+                    // Pas de donnee d'arbres-supports : hm_nat = max => pas de
+                    // penalite de depassement (spec 013 §4.4).
+                    hm_nat: hm_max,
+                    h_start: htower,
+                    h_end,
+                    // Plage de pre-tension balayee : de 30 % de l'admissible a
+                    // l'admissible, `detail` proportionne a `tmax`.
+                    t_min: 0.3 * tmax,
+                    t_max: tmax,
+                    n_sk,
+                    detail: (tmax / 100.0).max(500.0),
+                };
+                let cm = seilaplan::CableMat {
+                    f_o,
+                    tmax,
+                    q1,
+                    q2,
+                    q3,
+                    eao,
+                    hline_min,
+                    hline_max,
+                    csize: res,
+                    dsupdep: 0.0,
+                    dsupend: 0.0,
+                };
+                let sol = seilaplan::optimize_supports(&xs, &zs, &cands, &gp, &cm);
+                // Portee (distance) -> dernier index du profil aller couvert.
+                let longueur_sp = sol.reach_idx as f64 * 0.5;
+                let iterm = prof_hd
+                    .iter()
+                    .rposition(|&d| d <= longueur_sp)
+                    .unwrap_or(0);
+                let nb_sup = sol.positions.len().saturating_sub(2); // hors extremites
+                (iterm, nb_sup)
+            } else if machine_en_haut {
                 // Placement des supports, avec coupe de la ligne a defaut.
                 let spans = optpyl::optpyl(&base);
                 match spans.last() {

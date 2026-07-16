@@ -41,6 +41,11 @@
 #' **~20x plus lent** (46 min pour 2 departs). A n'activer que pour experimenter. Cf.
 #' `PLAN.md` (dette assumee du cable) et `specs/004-cable.md`.
 #'
+#' Alternative : `cable$methode_supports = "seilaplan"` bascule le placement des
+#' supports sur le **graphe + Dijkstra** de Bont & Heinimann (2012), qui optimise
+#' position **et** hauteur en reutilisant notre mecanique caténaire (spec 013). Le
+#' defaut reste `"sylvaccess"` (`OptPyl_NoH`, fidelite ColduPre garantie).
+#'
 #' Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris en compte :
 #' la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
 #' demi-largeur `c_l_hor` autour du segment, comme `create_rast_couv` chez Sylvaccess.
@@ -125,7 +130,10 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     lsans_foret = ct$lsans_foret, angle_transv = ct$angle_transv,
     slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope,
     l_hor = ct$l_hor,
-    optim_h = ct$optim_h
+    optim_h = ct$optim_h,
+    methode_seilaplan = ct$methode_seilaplan,
+    hm_min = ct$hm_min, hm_max = ct$hm_max, hm_delta = ct$hm_delta,
+    min_dist_mast = ct$min_dist_mast, n_sk = ct$n_sk
   )
 
   couvert <- sc$couvert == 1L
@@ -285,6 +293,13 @@ bornes_pente_cable <- function(ca) {
     prop_slope = ca$proportion_transversale_max,
     l_hor = ca$distance_laterale_max_m,
     optim_h = isTRUE(ca$optimiser_hauteur_fixation), # c_option_h
+    # Methode de placement des supports (spec 013).
+    methode_seilaplan = identical(ca$methode_supports, "seilaplan"),
+    hm_min = ca$hauteur_support_min_m,
+    hm_max = ca$hauteur_support_max_m,
+    hm_delta = ca$pas_hauteur_support_m,
+    min_dist_mast = ca$distance_min_support_m,
+    n_sk = as.integer(ca$nb_pas_pretension),
     # `Lsans_foret = min(c_lmax * 0,1, c_lmin)` chez Sylvaccess, sauf surcharge.
     lsans_foret = if (is.na(ca$longueur_sans_foret_max_m)) {
       min(ca$longueur_max_m * 0.1, ca$longueur_min_m)
