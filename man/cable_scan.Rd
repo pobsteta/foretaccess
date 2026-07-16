@@ -44,7 +44,6 @@ cable_scan(
   l_slope,
   prop_slope,
   l_hor,
-  optim_h,
   methode_seilaplan,
   hm_min,
   hm_max,
@@ -131,8 +130,6 @@ cable_scan(
 \item{prop_slope}{Maximum share of the line on a steep cross-slope.}
 
 \item{l_hor}{Lateral yarding half-width buffered around each line (m).}
-
-\item{optim_h}{Optimise the attachment height on each support (\code{c_option_h}).}
 
 \item{methode_seilaplan}{Place supports with the SEILAPLAN graph (Bont &
 Heinimann 2012) instead of Sylvaccess \code{OptPyl_NoH} (spec 013). Optimises

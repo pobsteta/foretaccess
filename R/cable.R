@@ -31,20 +31,17 @@
 #' avec les bornes `aval_*` niees, et elle ne peut pas etre coupee du cote machine --
 #' seulement raccourcie par le haut.
 #'
-#' @section Ecarts assumes avec Sylvaccess v3.6:
-#' L'optimisation de la **hauteur de fixation** sur chaque support (`c_option_h`,
-#' `cable$optimiser_hauteur_fixation`) est **experimentale** et desactivee par defaut
-#' (variante `_NoH`, le defaut de v3.6). Le portage des variantes a hauteur balayee
-#' (`OptPyl_Up` / `OptPyl_Up2`) existe mais **ne reproduit pas encore l'oracle** : sur
-#' ColduPre il *reduit* la couverture (net -999 cellules) la ou Sylvaccess l'*augmente*
-#' (net +470), signe d'un defaut restant dans la passe machine-en-bas ; et il est
-#' **~20x plus lent** (46 min pour 2 departs). A n'activer que pour experimenter. Cf.
-#' `PLAN.md` (dette assumee du cable) et `specs/004-cable.md`.
+#' @section Optimisation de la hauteur des supports:
+#' Par defaut (`cable$methode_supports = "sylvaccess"`), la hauteur de fixation
+#' n'est **pas** optimisee : elle vaut `hauteur_support_inter_m` sur les supports
+#' intermediaires et `hauteur_support_terminal_m` au terminus (variante `_NoH` de
+#' Sylvaccess v3.6, celle qui tient la fidelite ColduPre).
 #'
-#' Alternative : `cable$methode_supports = "seilaplan"` bascule le placement des
-#' supports sur le **graphe + Dijkstra** de Bont & Heinimann (2012), qui optimise
-#' position **et** hauteur en reutilisant notre mecanique caténaire (spec 013). Le
-#' defaut reste `"sylvaccess"` (`OptPyl_NoH`, fidelite ColduPre garantie).
+#' `cable$methode_supports = "seilaplan"` bascule le placement des supports sur le
+#' **graphe + Dijkstra** de Bont & Heinimann (2012), qui optimise position **et**
+#' hauteur en reutilisant notre mecanique caténaire (spec 013). Confronte cellule a
+#' cellule a l'oracle Sylvaccess `c_option_h=true` : accord 94,7 % (vs 93,2 % pour
+#' le `_NoH`), couverture en hausse et fidele a l'oracle, perf ~2,8x le `_NoH`.
 #'
 #' Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris en compte :
 #' la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
@@ -89,13 +86,6 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
   validate_config(config)
 
   ct <- .constantes_cable(config$cable)
-  if (isTRUE(ct$optim_h)) {
-    cli::cli_warn(c(
-      "Optimisation de hauteur de fixation ({.code optimiser_hauteur_fixation}) EXPERIMENTALE.",
-      "!" = "Elle ne reproduit pas l'oracle Sylvaccess (reduit la couverture) et est ~20x plus lente.",
-      "i" = "Defaut recommande : {.code FALSE}. Voir {.file PLAN.md} (dette cable)."
-    ))
-  }
   res <- terra::res(pre$mnt)[1]
   nr <- terra::nrow(pre$mnt)
   nc <- terra::ncol(pre$mnt)
@@ -130,7 +120,6 @@ potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
     lsans_foret = ct$lsans_foret, angle_transv = ct$angle_transv,
     slope_trans = ct$slope_trans, l_slope = ct$l_slope, prop_slope = ct$prop_slope,
     l_hor = ct$l_hor,
-    optim_h = ct$optim_h,
     methode_seilaplan = ct$methode_seilaplan,
     hm_min = ct$hm_min, hm_max = ct$hm_max, hm_delta = ct$hm_delta,
     min_dist_mast = ct$min_dist_mast, n_sk = ct$n_sk
@@ -292,7 +281,6 @@ bornes_pente_cable <- function(ca) {
     l_slope = ca$distance_transversale_max_m,
     prop_slope = ca$proportion_transversale_max,
     l_hor = ca$distance_laterale_max_m,
-    optim_h = isTRUE(ca$optimiser_hauteur_fixation), # c_option_h
     # Methode de placement des supports (spec 013).
     methode_seilaplan = identical(ca$methode_supports, "seilaplan"),
     hm_min = ca$hauteur_support_min_m,

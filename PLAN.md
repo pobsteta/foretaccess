@@ -251,6 +251,31 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-16 — SEILAPLAN 13d : validation cellule à cellule à l'oracle `c_option_h=true`
+
+Dernier incrément de `specs/013`. La réserve de 13c.2 (le +3619 dépasse le gain oracle +470) est
+**levée** : confronté **cellule à cellule** à l'oracle Sylvaccess `c_option_h=true`
+(`sylvaccess_hopt`) sur **sa propre fenêtre câble** (28336 cellules forestières calculées), le
+graphe SEILAPLAN **colle à l'oracle**, il ne sur-couvre pas.
+
+| comparaison (fenêtre oracle) | accord | faux+ (sur-couvre) | faux− (sous-couvre) |
+|---|---|---|---|
+| FA `_NoH` vs oracle-hopt | 93,15 % | 25 | 1915 |
+| **FA seilaplan vs oracle-hopt** | **94,73 %** | **29** | **1465** |
+
+- **En fenêtre**, seilaplan gagne **+454** cellules (26399 → 26853) — quasi le **+470** de l'oracle —
+  avec l'accord qui **monte** (93,15 → 94,73 %) et **quasi aucun faux-positif nouveau** (25 → 29).
+  Donc le CA-13.5 est tenu : seilaplan **reproduit fidèlement** `c_option_h=true`, il récupère du
+  trop-conservateur sans devenir trop-optimiste.
+- Le **+3619** de tête (grille entière) est **dominé par le hors-fenêtre** (~3165) : c'est l'écart
+  **de fenêtrage** FA/Sylvaccess (Sylvaccess ne calcule le câble que dans un buffer autour des
+  places de départ ; nous balayons toute la grille), **déjà connu** et présent aussi sur le `_NoH` —
+  **pas** un défaut d'optimisation de hauteur. Il se réduira avec la sélection de lignes (Lot 5).
+
+**Conclusion** : la voie SEILAPLAN **tient CA-13.3 (couverture ↑, fidèle à l'oracle), CA-13.4 (perf
+×2,8) et CA-13.5 (accord cellule à cellule ↑)**. Reste le nettoyage : retrait d'`OptPyl_Up2` et du
+flag `optimiser_hauteur_fixation`, superseded.
+
 ### 2026-07-16 — SEILAPLAN 13c (câblage) : `methode_supports = "seilaplan"` de bout en bout
 
 Troisième incrément de `specs/013` — l'intégration du graphe (13b) dans le balayage `cable_scan`.

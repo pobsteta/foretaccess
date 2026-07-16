@@ -74,6 +74,13 @@ L'algorithme de SEILAPLAN (**Bont & Heinimann 2012**, publié et validé) est
 **vraisemblablement plus sain** que `OptPyl_Up2`. D'où la décision : **transcrire
 SEILAPLAN plutôt que déboguer `OptPyl_Up2`** — objet de `specs/013`.
 
+> **Fait (2026-07-16, spec 013).** SEILAPLAN est **implémenté** (graphe + Dijkstra en Rust,
+> réutilisant notre caténaire Newton/Irvine à tension imposée) et activable par
+> `cable$methode_supports = "seilaplan"` (défaut `"sylvaccess"` = `_NoH`). Confronté **cellule à
+> cellule** à l'oracle Sylvaccess `c_option_h=true` sur ColduPre : **accord 94,7 %** (vs 93,2 % pour
+> le `_NoH`), couverture en hausse et **fidèle à l'oracle** (+454 en fenêtre ≈ le +470 de l'oracle),
+> **perf ~2,8×** le `_NoH`. Le code shelvé `OptPyl_Up2` et son flag ont été retirés.
+
 ## 4. Ils résolvent des problèmes différents
 
 | | SEILAPLAN | ForêtAccess / Sylvaccess |

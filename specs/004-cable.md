@@ -230,28 +230,24 @@ Pas de SIG dans le crate au-delà du profil d'altitudes passé en vecteur.
    sol), 4c (optimisation des supports), 4d (balayage 360°/pixel + orchestration R + tuilage).
    4a est le cœur, testable seul contre les équations.
 5. **Chariot classique seulement** (`c_car_type = 0`). L'automoteur est reporté (comme
-   l'option 2 du skidder). L'**optimisation de hauteur des supports** (`c_option_h`) a été
-   **portée puis mise en attente** (2026-07-16, flag `cable$optimiser_hauteur_fixation`, défaut
-   `FALSE`) — voir *§ Statut c_option_h* ci-dessous.
+   l'option 2 du skidder). L'**optimisation de hauteur des supports** (`c_option_h`) est
+   **résolue par la voie SEILAPLAN** (`cable$methode_supports = "seilaplan"`, spec 013) — voir
+   *§ Statut c_option_h* ci-dessous.
 
-### Statut `c_option_h` (optimisation de la hauteur de fixation)
+### Statut `c_option_h` (optimisation de la hauteur de fixation) — **résolu (spec 013)**
 
-Portage tenté le 2026-07-16, **mis en attente derrière un flag** (`optimiser_hauteur_fixation`,
-défaut `FALSE`). Le `_NoH` (défaut v3.6) reste la seule voie recommandée, bit-pour-bit inchangée.
+Le portage direct de `OptPyl_Up`/`Up2` de Sylvaccess a été **tenté puis abandonné** (2026-07-16) :
+il *réduisait* la couverture (net −999) au lieu de l'augmenter (oracle +470), était ~20× plus lent,
+et le code amont de Sylvaccess **plante lui-même** sur ce chemin (`OptPyl_Up2`, `Tab` sous-dimensionné,
+corrigé `×2000` pour régénérer l'oracle). Ce code shelvé et son flag `optimiser_hauteur_fixation`
+ont été **retirés** (2026-07-16, 13d).
 
-- **Mécanique** (`OptPyl_Up`/`Up2` du `.pyx`) : hauteur terminale abaissée tant que la travée tient,
-  supports intermédiaires balayés `ceil(hline_min)..Hintsup`, ancrage balayé en machine-en-bas.
-  Plafond par pixel `Line[:,7]` = `Hintsup` (12 m) quand `test_hfor=0` (aucun fichier d'arbres) —
-  confirmé dans `get_ligne` (`Sylvaccess_0_functions.py:1358`).
-- **Bug amont** : le chemin `c_option_h=true` de Sylvaccess **plante** (`OptPyl_Up2`, `Tab`
-  sous-dimensionné). Corrigé pour régénérer l'oracle (buffer `×2000`, résultats identiques).
-- **Gain oracle** : +517/−47 cellules sur ColduPre (~1,7 %), opt-in.
-- **Pourquoi en attente** : le port `optim_h=true` *réduit* la couverture (net −999) au lieu de
-  l'augmenter (oracle +470) — bug de fidélité restant, vraisemblablement dans `optpyl_up2` ; et perf
-  ~20× (46 min / 2 départs). À reprendre si le besoin le justifie. Détails : `PLAN.md` (journal 16/07).
-- **Voie de reprise retenue** : plutôt que déboguer `optpyl_up2`, transcrire l'algorithme
-  **SEILAPLAN** (Bont & Heinimann 2012, graphe + plus court chemin), plus sain et validé — cf.
-  `specs/013-seilaplan-hauteur.md` et `docs/comparaison-cable-seilaplan.md`.
+La voie retenue et **implémentée** : transcrire l'algorithme **SEILAPLAN** (Bont & Heinimann 2012,
+graphe + Dijkstra), activé par `cable$methode_supports = "seilaplan"` (défaut `"sylvaccess"` = `_NoH`,
+fidélité ColduPre garantie, bit-pour-bit inchangée). Confronté cellule à cellule à l'oracle
+`c_option_h=true` : **accord 94,7 %** (vs 93,2 % pour le `_NoH`), couverture en hausse et **fidèle à
+l'oracle** (+454 en fenêtre ≈ le +470 de l'oracle), **perf ~2,8×** le `_NoH`. Voir
+`specs/013-seilaplan-hauteur.md`, `docs/comparaison-cable-seilaplan.md`, `PLAN.md` (journal 16/07).
 6. **Défauts matériels v3.6** dans `config$cable`, complétés depuis `Tab_Param_cable.csv`
    (masse linéaire 1,85 kg/m, diamètre 18 mm, rupture 35000 kgF, sécurité 2, mât 10,5 m,
    `lmax` 750 m, `lmin` 150 m, garde `[3,5 ; 50]` m, `nb_supports_max` 3).
