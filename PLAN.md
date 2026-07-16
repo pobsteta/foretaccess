@@ -115,10 +115,14 @@
   [`calculer_flux()`](https://pobsteta.github.io/foretaccess/reference/calculer_flux.md)
   sème des sources (≥ 1/parcelle) et accumule le volume vers l’exutoire
   le plus proche (Dijkstra multi-source sur l’arbre) → colonne `flux`
-  sur les `troncons`. CA-17.1/17.2/17.3/17.4 couverts. 26 tests R. Reste
-  **17c** (typage + conversion temporaire + persistance Lot 8). Ensuite
-  Lot 18 (multi-start).
-- **Branche** : `feat/lot17b-flux` (cycle dev)
+  sur les `troncons`. **17c** :
+  [`typer_desserte()`](https://pobsteta.github.io/foretaccess/reference/typer_desserte.md)
+  classe les tronçons par seuils de flux
+  (primaire/secondaire/tertiaire), option de conversion temporaire (part
+  de longueur, zones prioritaires), sortie `foretaccess_desserte_typee`
+  persistable via le Lot 8 (GeoPackage/PostGIS). CA-17.1→17.6 couverts.
+  41 tests R. **Lot 17 clos**. Reste Lot 18 (optimisation multi-start).
+- **Branche** : `feat/lot17c-typage` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -215,7 +219,7 @@
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
-| 17 | Flux & typage | `specs/017-flux-typage.md` | 🔨 en cours (17a vectorisation + 17b flux livrés) | *(cycle dev)* |
+| 17 | Flux & typage | `specs/017-flux-typage.md` | ✅ livré (17a vectorisation, 17b flux, 17c typage) | *(cycle dev)* |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
@@ -412,6 +416,26 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-16 — Lot 17c : typage des routes & conversion temporaire + persistance (Lot 17 clos)
+
+`typer_desserte(graphe, seuils_flux, conversion_temporaire)`
+(`R/desserte_flux.R`) porte le « Road Type Determination » de
+ForestRoadNetwork. Chaque tronçon est classé par **seuils de flux**
+(bornes nommées croissantes : flux fort → primaire, … , faible →
+tertiaire ; `findInterval`). Option **conversion temporaire** :
+convertit une part (`proportion`) de la longueur d’un type en routes
+temporaires/hivernales, **en priorité dans les zones dédiées**
+(`zones`), glouton par longueur décroissante. Sortie
+`foretaccess_desserte_typee` : `troncons` (`sf` avec `type`), `noeuds`,
+`sources`, `recap` (longueur par type).
+
+**Persistance (Lot 8)** : la sortie est un `sf` standard, écrit/relu via
+le socle spatial (`storage_gpkg` + `sb_write_layer`/`sb_read_layer`),
+testé en GeoPackage. **CA-17.5** (typage respecte les seuils),
+**CA-17.6** (part convertie respectée ± un tronçon) vérifiés. 41 tests R
+(15 ajoutés). **Lot 17 clos** (17a vectorisation, 17b flux, 17c typage).
+Reste l’épic : Lot 18 (optimisation multi-start), dernier lot.
 
 ### 2026-07-16 — Lot 17b : sources & accumulation de flux (Wood Flux Determination)
 
