@@ -209,9 +209,17 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   transcrit de `opti_sta.py`. 7 tests `cargo` (flèche croissante quand la tension
   baisse, garde violée si sol trop haut, effort refusé au-delà de `tmax`, plage
   `[MinSTA, MaxSTA]` bornée / infaisable). Non câblé à `cable_scan` (→ 13b/13c).
-- **13b — graphe + Dijkstra** en Rust (`cablehelp`) : positions candidates
-  (`peakdetect`), niveaux de hauteur `δh`, coût `KostStue`, balayage `sk` + Dijkstra
-  maison, coupe native. Tests `cargo` (CA-13.1, CA-13.2 : à hauteur fixe = `_NoH`).
+- **13b — graphe + Dijkstra** ✅ *(2026-07-16)* en Rust (`cable::seilaplan`) :
+  `optimize_supports(di, zi, candidats, GraphParams, CableMat)` transcrit de
+  `main_opti.py::optimization`. Nœuds = (position candidate × niveau de hauteur
+  `δh`), extrémités à hauteur fixe ; arêtes forward avec `Min_Dist_Mast` (exceptions
+  départ/arrivée), faisabilité par `calc_sta` (13a) ; coût `KostStue` (`kost_stue`) ;
+  balayage `n_sk` pré-tensions + **Dijkstra maison** (`BinaryHeap`, sans scipy) ;
+  sélection portée max puis coût min ; **coupe native** (portée maximale si
+  l'arrivée n'est pas atteignable). Positions candidates = crêtes via `peak_positions`
+  (port de `peakdetect`). 6 tests `cargo` : CA-13.1 (support quand le direct échoue),
+  pas de support inutile, hauteur fixe = optimisation de position (CA-13.2, esprit),
+  coupe native, coût `KostStue`, `peakdetect`. Non câblé à `cable_scan` (→ 13c).
 - **13c — intégration** : câblage `cable_scan` / config (`methode_supports`), extrémités
   (mât/ancrage) ; confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
 - **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
