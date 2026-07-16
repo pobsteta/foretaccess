@@ -82,8 +82,14 @@
   l'arbre) → colonne `flux` sur les `troncons`. **17c** : `typer_desserte()` classe les tronçons par
   seuils de flux (primaire/secondaire/tertiaire), option de conversion temporaire (part de longueur,
   zones prioritaires), sortie `foretaccess_desserte_typee` persistable via le Lot 8 (GeoPackage/PostGIS).
-  CA-17.1→17.6 couverts. 41 tests R. **Lot 17 clos**. Reste Lot 18 (optimisation multi-start).
-- **Branche** : `feat/lot17c-typage` (cycle dev)
+  CA-17.1→17.6 couverts. 41 tests R. **Lot 17 clos**.
+- **Lot 18a (optimisation multi-start) en cycle dev** : `optimiser_reseau(..., strategie = "multistart",
+  n_start, graine)` (`R/desserte_optim.R`) lance le glouton sous K ordres perturbés et retient le
+  moins cher. Noyau Rust `desserte_reseau_multistart` : table bâtie une fois, essais en parallèle
+  (`rayon`), essai 0 = ordre de base (jamais pire que le glouton, CA-18.1), permutations reproductibles
+  (SplitMix64, CA-18.2). Sortie `foretaccess_reseau` + `strategie`/`journal`. Refactor R : `.reseau_preparer`/
+  `.reseau_assembler` partagés. 1 test cargo + 7 tests R. Reste **18b** (recuit) et **18c** (rip-up & reroute).
+- **Branche** : `feat/lot18a-multistart` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
@@ -157,7 +163,7 @@
 | 15 | Solveur de tracé (A*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | ✅ livré (17a vectorisation, 17b flux, 17c typage) | *(cycle dev)* |
-| 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
+| 18 | Optimisation du réseau | `specs/018-optimisation-multistart.md` | 🔨 en cours (18a multi-start livré) | *(cycle dev)* |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -319,6 +325,25 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — Lot 18a : optimisation multi-start du réseau (noyau Rust, `rayon`)
+
+Ouverture du Lot 18 (optimisation, Akay 2004). `optimiser_reseau(pre, cout, parcelles,
+desserte_existante, strategie = "multistart", n_start, graine, ...)` (`R/desserte_optim.R`) coiffe
+le glouton du Lot 16 d'une couche d'exploration : il lance le réseau glouton sous **K ordres
+d'insertion perturbés** et retient le réseau de moindre coût total. Sortie `foretaccess_reseau`
+(même type que Lot 16) enrichie de `strategie` + `journal` (coût par essai).
+
+**Noyau Rust `desserte_reseau_multistart`** : la table de voisinage est bâtie **une seule fois** et
+partagée entre les essais, qui tournent en **parallèle** (`rayon`, `par_iter`). L'essai 0 est
+l'ordre de base (heuristique) → le résultat n'est **jamais pire** que le glouton simple (CA-18.1).
+Les essais 1.. sont des permutations Fisher-Yates reproductibles (PRNG SplitMix64 sans dépendance,
+graine fixée → déterminisme, CA-18.2). Refactorisation R : `.reseau_preparer` (prep commune) et
+`.reseau_assembler` (assemblage `foretaccess_reseau`) extraits de `reseau_desserte` et partagés avec
+l'optimiseur. Nouveau Rust : `build_network_with_table` (cœur réutilisant la table),
+`build_network_multistart`. CA-18.1/18.2/18.5 couverts (le réseau optimisé reste desservi/connexe).
+1 test cargo (parallèle correct + reproductible) + 7 tests R. Reste **18b** (recuit simulé) et
+**18c** (rip-up & reroute). `recuit`/`riprute` renvoient une erreur informative pour l'instant.
 
 ### 2026-07-16 — Lot 17c : typage des routes & conversion temporaire + persistance (Lot 17 clos)
 

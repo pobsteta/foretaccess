@@ -104,7 +104,8 @@ reference:
   desc: >
     Conception d'un réseau de desserte : surface de coût de construction (Lot 14),
     solveur de tracé A* (Lot 15, noyau Rust), réseau multi-cibles glouton/Steiner
-    (Lot 16), vectorisation en graphe, flux de bois et typage des routes (Lot 17).
+    (Lot 16), vectorisation en graphe, flux de bois et typage des routes (Lot 17),
+    optimisation multi-start (Lot 18).
   contents:
   - surface_cout_construction
   - tracer_desserte
@@ -112,9 +113,11 @@ reference:
   - vectoriser_reseau
   - calculer_flux
   - typer_desserte
+  - optimiser_reseau
   - desserte_dist_to_end
   - desserte_trace
   - desserte_reseau
+  - desserte_reseau_multistart
 - title: Non-régression
   contents:
   - compare_to_oracle

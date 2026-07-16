@@ -13,6 +13,7 @@
 //! `cost` (g), `dplan`, `slope_from`, `az_from`, `came_from`, `dist_hairpin`,
 //! `lsl`, `nbptbef`, `dtocp` (h), `is_hairpin`.
 
+use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 
@@ -460,6 +461,28 @@ pub fn build_network(
     p: &SolverParams,
 ) -> NetworkResult {
     let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
+    build_network_with_table(
+        dtm, obs, obs2, local_slope, zone, nr, nc, sources_ordered, network0, skidding, &table, p,
+    )
+}
+
+/// Coeur du glouton MTAP->STAP avec une table de voisinage **deja batie** : permet
+/// de reutiliser la table entre plusieurs ordres d'insertion (multi-start, Lot 18).
+#[allow(clippy::too_many_arguments)]
+pub fn build_network_with_table(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    sources_ordered: &[usize],
+    network0: &[usize],
+    skidding: f64,
+    table: &NeibTable,
+    p: &SolverParams,
+) -> NetworkResult {
     let mut roadset: HashSet<usize> = network0.iter().copied().collect();
     let circle = skidding_circle(skidding, p.csize);
     let mut paths = Vec::new();
@@ -473,7 +496,7 @@ pub fn build_network(
             continue; // deja desservie par debardage
         }
         let targets: Vec<usize> = roadset.iter().copied().collect();
-        let res = solve_network(dtm, obs, obs2, local_slope, zone, &table, nr, nc, src, &targets, p);
+        let res = solve_network(dtm, obs, obs2, local_slope, zone, table, nr, nc, src, &targets, p);
         if res.feasible && !res.path.is_empty() {
             for &c in &res.path {
                 roadset.insert(c);
@@ -484,6 +507,90 @@ pub fn build_network(
     }
 
     NetworkResult { paths, costs }
+}
+
+/// Resultat d'une optimisation multi-start : le meilleur reseau (chemins + couts)
+/// et le journal des couts totaux par essai (courbe d'exploration).
+pub struct MultistartResult {
+    pub paths: Vec<Vec<usize>>,
+    pub costs: Vec<f64>,
+    pub best: usize,
+    pub journal: Vec<f64>,
+}
+
+/// Melange de Fisher-Yates deterministe : permutation reproductible de `base`
+/// pilotee par une graine (PRNG SplitMix64, sans dependance externe).
+fn shuffle_seeded(base: &[usize], seed: u64) -> Vec<usize> {
+    let mut v = base.to_vec();
+    let mut state = seed;
+    let mut next = || {
+        // SplitMix64.
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    };
+    for i in (1..v.len()).rev() {
+        let j = (next() % (i as u64 + 1)) as usize;
+        v.swap(i, j);
+    }
+    v
+}
+
+/// Multi-start parallele (Lot 18) : evalue `n_start` ordres d'insertion perturbes
+/// (l'essai 0 est l'ordre de base, garantissant un cout <= glouton simple), retient
+/// le reseau de moindre cout total. La table de voisinage est batie une seule fois
+/// et partagee entre les essais (`rayon`).
+#[allow(clippy::too_many_arguments)]
+pub fn build_network_multistart(
+    dtm: &[f64],
+    obs: &[i32],
+    obs2: &[i32],
+    local_slope: &[f64],
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    sources_base: &[usize],
+    network0: &[usize],
+    skidding: f64,
+    n_start: usize,
+    seed: u64,
+    p: &SolverParams,
+) -> MultistartResult {
+    let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
+    let n = n_start.max(1);
+    // Essai 0 = ordre de base ; essais suivants = permutations reproductibles.
+    let orders: Vec<Vec<usize>> = (0..n)
+        .map(|t| {
+            if t == 0 {
+                sources_base.to_vec()
+            } else {
+                shuffle_seeded(sources_base, seed ^ (t as u64).wrapping_mul(0x2545_F491_4F6C_DD1D))
+            }
+        })
+        .collect();
+    let results: Vec<NetworkResult> = orders
+        .par_iter()
+        .map(|ord| {
+            build_network_with_table(
+                dtm, obs, obs2, local_slope, zone, nr, nc, ord, network0, skidding, &table, p,
+            )
+        })
+        .collect();
+    let journal: Vec<f64> = results.iter().map(|r| r.costs.iter().sum()).collect();
+    let best = journal
+        .iter()
+        .enumerate()
+        .min_by(|a, b| a.1.total_cmp(b.1))
+        .map(|(i, _)| i)
+        .unwrap_or(0);
+    MultistartResult {
+        paths: results[best].paths.clone(),
+        costs: results[best].costs.clone(),
+        best,
+        journal,
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -915,6 +1022,37 @@ mod tests {
             &[s], &network0, 100.0, &p,
         );
         assert_eq!(net.paths.len(), 0);
+    }
+
+    #[test]
+    fn multistart_best_le_base_and_reproducible() {
+        let p = params();
+        let (nr, nc) = (5usize, 11usize);
+        let g = setup(nr, nc, 8.0, &p);
+        let network0: Vec<usize> = (0..nr).map(|y| y * nc).collect();
+        let sources = [nc + (nc - 1), 3 * nc + (nc - 1), 2 * nc + (nc - 2)];
+        // Cout du glouton simple sur l'ordre de base (essai 0).
+        let base = build_network(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, &p,
+        );
+        let base_cost: f64 = base.costs.iter().sum();
+        // Multi-start : le meilleur essai n'est jamais pire que l'ordre de base.
+        let ms = build_network_multistart(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, 8, 42, &p,
+        );
+        let best_cost: f64 = ms.costs.iter().sum();
+        assert!(best_cost <= base_cost + 1e-9);
+        assert_eq!(ms.journal.len(), 8);
+        assert_eq!(ms.journal[0], base_cost); // l'essai 0 est bien l'ordre de base
+        // Reproductibilite a graine fixee.
+        let ms2 = build_network_multistart(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
+            &sources, &network0, 0.0, 8, 42, &p,
+        );
+        assert_eq!(ms.journal, ms2.journal);
+        assert_eq!(ms.best, ms2.best);
     }
 
     #[test]
