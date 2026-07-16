@@ -289,12 +289,26 @@ et prolonge la dernière travée jusqu'à sa vraie limite. D'où ~8100 cellules 
 ligne. C'est un **écart de modèle** ForêtAccess (balayage : « jusqu'où porte la ligne ? ») vs
 SEILAPLAN (conception : « ligne vers un point d'arrivée **connu** »).
 
-**Décision à prendre (point de fork, cf. c_option_h)** : soit (a) **prolonger la portée** de la
-dernière travée au-delà du dernier support (comme `OptPyl`) **+** réduire le coût (moins de nœuds,
-`calc_sta` moins cher) pour viser CA-13.3/13.4 ; soit (b) **shelver** derrière le défaut `sylvaccess`
-(le câblage reste, opt-in expérimental), comme `OptPyl_Up2`. À arbitrer avec l'utilisateur.
+**13c.2 — passe de correction (choisie par l'utilisateur), RÉUSSIE** :
 
-**Reste 13d** : selon la décision, validation ligne à ligne vs SEILAPLAN + nettoyage `OptPyl_Up2`.
+1. **Prolongation de portée** (`seilaplan::extend_reach`) : le graphe s'arrête au dernier support
+   candidat, mais le câble porte encore jusqu'à un ancrage terminal plus loin. On place l'ancrage au
+   pas raster le plus lointain encore faisable (comme la coupe d'`OptPyl`). → recouvre les ~8100
+   cellules de bout de ligne perdues. Effet mesuré (config légère) : **−6105 → −1791**.
+2. **Partage de l'amorçage** (`seed_for_span` / `calc_cable_seeded`) : `seed_grid` (grille 40×40
+   = 1600 évals de caténaire) était refait à **chaque** tension de la bissection `calc_sta`, alors
+   qu'il ne dépend que de la géométrie (même `Lo` de départ). Calculé **une fois** par travée. →
+   ~3× moins cher. Résultat inchangé (l'amorçage n'affecte pas la racine). 52 tests cargo verts.
+
+**Confrontation ColduPre finale** (config `4/8/12 m`, supports à 40 m, `n_sk=12`) :
+**seilaplan = 34894 cellules vs `_NoH` = 31275 → +3619** (gagne 3943, **perd 324**), **perf ×2,8**.
+→ **CA-13.3 (couverture ↑) et CA-13.4 (perf < 5×) tenus.** Défauts config alignés sur ces valeurs.
+
+**Réserve (→ 13d)** : +3619 **dépasse** le gain net de l'oracle `c_option_h=true` (+470) — signe d'un
+possible **excès d'optimisme** (prolongation trop permissive et/ou absence de sélection de lignes,
+Lot 5). À trancher par la **validation ligne à ligne vs SEILAPLAN** (CA-13.5) et la comparaison
+cellule à cellule à l'oracle `sylvaccess_hopt`. Puis retrait de `OptPyl_Up2` et du flag
+`optimiser_hauteur_fixation`.
 
 ### 2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)
 

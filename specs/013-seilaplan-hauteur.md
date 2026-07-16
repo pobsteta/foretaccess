@@ -234,8 +234,13 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   légère (échoue CA-13.3, qui veut ↑). **Cause probable** : la portée du graphe est
   **quantifiée aux positions candidates** (coupe au dernier support), là où `OptPyl_NoH` coupe
   au **pixel** et prolonge la dernière travée — écart de modèle *scan* vs *conception*. Cf.
-  `PLAN.md` (journal 16/07) : **décision à prendre** (prolonger la portée + réduire le coût, vs
-  shelver derrière le défaut `sylvaccess`).
+  `PLAN.md` (journal 16/07). **13c.2 — passe de correction, réussie** : (1) `extend_reach` prolonge
+  la dernière travée jusqu'à l'ancrage faisable le plus lointain (coupe au pas raster, comme
+  `OptPyl`) → recouvre les ~8100 cellules de bout de ligne ; (2) `seed_for_span` / `calc_cable_seeded`
+  partagent l'amorçage `seed_grid` (calculé une fois par travée, pas par tension) → ~3× moins cher,
+  résultat inchangé. **Confrontation finale** (config `4/8/12 m`, supports 40 m, `n_sk=12`) :
+  **+3619 cellules vs `_NoH`** (perd 324), **perf ×2,8** → **CA-13.3 et CA-13.4 tenus**. Réserve :
+  +3619 dépasse le gain oracle (+470) → excès d'optimisme possible, à trancher en 13d (CA-13.5).
 - **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
   retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
 

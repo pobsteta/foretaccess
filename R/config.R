@@ -122,11 +122,14 @@ foretaccess_config <- function(skidder = list(),
       # Reglages du graphe SEILAPLAN (ignores si methode_supports = "sylvaccess") :
       # niveaux de hauteur des supports intermediaires `min..max` au pas `delta`,
       # espacement minimal entre supports, et finesse du balayage de pre-tension.
-      hauteur_support_min_m      = 2,     # min_HM
+      # Valeurs confrontees a ColduPre (16/07) : couverture +3619 vs `_NoH`,
+      # perf ~2,8x (cf. PLAN.md). Un pas de hauteur plus fin ou des supports plus
+      # rapproches couvrent marginalement plus mais coutent quadratiquement.
+      hauteur_support_min_m      = 4,     # min_HM
       hauteur_support_max_m      = 12,    # max_HM
-      pas_hauteur_support_m      = 2,     # Abstufung_HM (delta h)
-      distance_min_support_m     = 30,    # Min_Dist_Mast
-      nb_pas_pretension          = 20,    # balayage de pre-tension (n_sk)
+      pas_hauteur_support_m      = 4,     # Abstufung_HM (delta h) -> 4, 8, 12 m
+      distance_min_support_m     = 40,    # Min_Dist_Mast
+      nb_pas_pretension          = 12,    # balayage de pre-tension (n_sk)
 
       # Validite geometrique de la ligne (`check_line`) : elle doit finir en foret, ne
       # pas traverser trop de non-foret d'affilee, et ne pas courir en travers d'un

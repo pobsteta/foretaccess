@@ -435,8 +435,19 @@ pub fn scan(
                     dsupend: 0.0,
                 };
                 let sol = seilaplan::optimize_supports(&xs, &zs, &cands, &gp, &cm);
+                // Prolonge la portee au-dela du dernier support (coupe au pas
+                // raster, comme OptPyl) : le graphe s'arrete au dernier support
+                // candidat, mais le cable porte encore jusqu'a un ancrage plus
+                // loin. Sans ca, ~8100 cellules de bout de ligne sont perdues.
+                let reach_idx = if sol.full_span {
+                    sol.reach_idx
+                } else {
+                    let h_last = *sol.heights.last().unwrap_or(&h_end);
+                    let step = ((res / 0.5).round() as usize).max(1);
+                    seilaplan::extend_reach(&xs, &zs, sol.reach_idx, h_last, h_end, &cm, step)
+                };
                 // Portee (distance) -> dernier index du profil aller couvert.
-                let longueur_sp = sol.reach_idx as f64 * 0.5;
+                let longueur_sp = reach_idx as f64 * 0.5;
                 let iterm = prof_hd
                     .iter()
                     .rposition(|&d| d <= longueur_sp)
