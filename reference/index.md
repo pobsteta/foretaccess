@@ -255,6 +255,14 @@ OpenStreetMap).
 - [`list_countries()`](https://pobsteta.github.io/foretaccess/reference/list_countries.md)
   : Liste les pays configurés
 
+## Conception de desserte (Lots 14-18)
+
+Conception d’un réseau de desserte : surface de coût de construction
+(Lot 14).
+
+- [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
+  : Build the construction-cost surface of a new forest road
+
 ## Non-régression
 
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)

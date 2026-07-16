@@ -13,6 +13,7 @@ foretaccess_config(
   porteur = list(),
   cable = list(),
   dfci = list(),
+  desserte = list(),
   general = list()
 )
 ```
@@ -35,6 +36,11 @@ foretaccess_config(
 - dfci:
 
   Liste des paramètres du camion DFCI (beta, Lot 6 ; voir *Détails*).
+
+- desserte:
+
+  Liste des paramètres de conception de desserte (épic Lots 14-18) ;
+  `desserte$cout` porte le barème de coût de construction (Lot 14).
 
 - general:
 
