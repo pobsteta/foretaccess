@@ -1,9 +1,10 @@
 # specs/013 — Optimisation de la hauteur des supports façon SEILAPLAN (Bont & Heinimann 2012)
 
-> **Statut** : **proposé** (2026-07-16). Remplace le chantier `c_option_h` transcrit
-> de Sylvaccess (`OptPyl_Up`/`OptPyl_Up2`), **shelvé** car bugué (réduit la couverture)
-> et lent (~20× le `_NoH`) — cf. `PLAN.md` (journal 16/07), `specs/004` (§ Statut
-> c_option_h).
+> **Statut** : **proposé, algorithme précisé sur le source** (2026-07-16). Remplace le
+> chantier `c_option_h` transcrit de Sylvaccess (`OptPyl_Up`/`OptPyl_Up2`), **shelvé**
+> car bugué (réduit la couverture) et lent (~20× le `_NoH`) — cf. `PLAN.md` (journal
+> 16/07), `specs/004` (§ Statut c_option_h). L'algorithme SEILAPLAN a été **lu dans le
+> code du plugin** (§2), pas seulement dans le papier.
 > **Exigence** : fidélité du moteur câble (levier : optimisation de la hauteur).
 > **Dépend de** : Lot 4 (noyau câble Rust `cablehelp` : caténaire Newton/Irvine,
 > `test_span`, faisabilité de travée), Lot 5 (sélection de lignes, à terme).
@@ -38,50 +39,87 @@ et non celle de Zweifel. On découple *optimisation* (nouvelle) et *mécanique*
 
 ## 2. Le modèle SEILAPLAN (Bont & Heinimann 2012)
 
-D'après Bont et al. (2022, §3.2) — **à confirmer/préciser sur le papier B&H 2012 et le
-source du plugin** (cf. §5 Prérequis) :
+**Source lu** (2026-07-16) : plugin SEILAPLAN, `core/main_opti.py` (graphe + Dijkstra),
+`core/opti_sta.py` (`calcSTA`), `core/cableline.py` (`calcCable`/`calcBandH`, Zweifel),
+`core/peakdetect.py` (positions candidates). L'algorithme ci-dessous est transcrit de ce
+code, pas seulement du papier.
 
-Le problème « placer les supports intermédiaires (position **et** hauteur) qui
-minimisent leur **nombre** puis leur **hauteur** » est représenté comme un **graphe
-orienté acyclique** sur le profil de terrain :
+Le problème « placer les supports (position **et** hauteur) minimisant leur **nombre**
+puis leur **hauteur** » est un **plus court chemin dans un graphe** :
 
-- **Nœuds** : positions candidates de support le long du profil, discrétisées au pas
-  `δl ≈ 10 m`, chacune déclinée en hauteurs candidates au pas `δh ≈ 1 m`
-  (de `hline_min` à une hauteur max). Plus le mât (départ) et l'ancrage (arrivée),
-  hauteurs fixées.
-- **Arêtes** : une arête relie deux nœuds consécutifs `(pos_i, h_i) → (pos_j, h_j)` si
-  la **travée** entre eux est **faisable** — vérifiée par la mécanique caténaire :
-  1. garde au sol ≥ minimum (`hline_min..hline_max`) ;
-  2. tension du câble ≤ admissible (`Tmax`) ;
-  3. gradient minimal du câble respecté (cas gravitaire).
-  Le **coût** d'une arête encode la préférence : d'abord *nombre* de supports (chaque
-  support intermédiaire = +1), puis *hauteur* (départage lexicographique ou coût
-  pondéré `nb·K + Σ hauteurs`).
-- **Solution** : le **plus court chemin** (Dijkstra / DAG shortest-path) de l'ancrage
-  amont à l'ancrage aval minimise nombre puis hauteur des supports.
+### 2.1 Nœuds
+Un nœud = un couple **(position candidate, hauteur)**.
+- **Positions** : les points **saillants** du profil (`StuetzenPos`, détectés par
+  `peakdetect`), soumis à un espacement minimal `Min_Dist_Mast`. Pas *tous* les pixels
+  au pas `δl` — seulement les crêtes de terrain où un support a un sens.
+- **Hauteurs** : `range(min_HM, max_HM + 1, Abstufung_HM)` — niveaux au pas
+  `Abstufung_HM` (`δh ≈ 1 m`), de `min_HM` à `max_HM`.
+- **Extrémités** : mât de départ (hauteur fixe `HM_Kran`, ou variable si support/ancrage),
+  ancrage d'arrivée (hauteur 0, ou variable). Traités à part (`stufenAnzAnf`,
+  `stufenAnzEnd`).
 
-Contraintes vérifiées au niveau global (Fig. 2 du papier) : (I) garde au sol min,
-(II) tension admissible non dépassée, (III) gradient minimal (gravité).
+### 2.2 Arêtes — plage de pré-tension admissible (`calcSTA`)
+Pour chaque paire de nœuds `(a, e)` telle que `di[e] - di[a] > Min_Dist_Mast` (plus les
+arêtes départ/arrivée), on calcule via `calcSTA` la **plage de pré-tension globale du
+câble** `[MinSTA, MaxSTA]` pour laquelle la travée est faisable :
+- `calcSTA` fait une **bissection** sur la pré-tension `STA` entre `min_SK` et `zul_SK` ;
+- à chaque `STA`, `calcCable` (mécanique **Zweifel**) vérifie **garde au sol** (via
+  `checkCable` + `sc`, le *soil clearance*) **et effort** (`ST_max ≤ zul_SK`) ;
+- rend `Min`/`Max` = bornes de `STA` où la travée tient. `CableLineImpossible` sinon.
 
-**Réglages** : `δl ≈ 10 m`, `δh ≈ 1 m` (recommandés B&H 2012). Exposés en config.
+C'est la **différence de modèle majeure** avec nous (voir §3) : SEILAPLAN a **une
+pré-tension globale unique** pour toute la ligne (skyline à ancrages fixes des deux
+côtés), et chaque travée la **contraint** ; il ne propage pas la tension travée à travée.
+
+### 2.3 Coût des arêtes
+```
+KostStue = (h == 0 ? 1 : (h + 100)²) × (1 + 4·[h > HM_nat])   (+ pénalité 1er support)
+```
+où `h` = hauteur du support **aval** de l'arête, `HM_nat` = hauteur d'un support
+*naturel* (arbre disponible). Donc : chaque support coûte au moins `≈ 100² = 10000`
+(→ minimise le **nombre**), puis `(h+100)²` croît avec la hauteur (→ minimise la
+**hauteur**), avec un facteur **×5** si le support dépasse l'arbre naturel disponible
+(→ évite les mâts artificiels). Hauteur 0 → coût 1 (jamais 0, sinon « pas d'arête »).
+
+### 2.4 Balayage de pré-tension + plus court chemin
+Boucle externe sur la pré-tension entière `sk` de `min_SK` à `zul_SK` :
+1. arête `(a,e)` **active** ssi `MinSTA < sk < MaxSTA` (travée compatible avec `sk`) ;
+2. matrice de graphe `G[a,e] = KostStue` sur les arêtes actives, plus nœuds
+   source/puits virtuels ;
+3. **Dijkstra** (`scipy.sparse.csgraph.dijkstra`, orienté) depuis le puits ;
+4. `LengthInLP` = nœud le plus lointain atteignable (**portée maximale** ; coupe si le
+   profil entier ne passe pas).
+On retient la solution qui **maximise la portée** puis **minimise le coût** ; `OptSTA`
+= la pré-tension optimale associée.
+
+**Sorties** : positions des supports (`stueIdx`), leurs hauteurs (`Loesung_HM`), la
+pré-tension optimale (`OptSTA`), la valeur objectif (`Value`).
+
+**Réglages exposés** : `δh = Abstufung_HM` (≈ 1 m), `Min_Dist_Mast` (≈ 10 m),
+`[min_SK, zul_SK]` (plage de pré-tension), `HM_nat` (hauteur d'arbre-support).
 
 ---
 
-## 3. Périmètre et frontières
+## 3. Périmètre, frontières et le point dur mécanique
 
-**Ce qu'on garde (inchangé, déjà validé)** :
-- La **caténaire** Newton/Irvine (`cablehelp::newton`, `catenaire`) et le test de
-  faisabilité d'une travée `test_span` (garde au sol via `calcul_zs`, tension `Tmax`,
-  bornes de pente). C'est lui qui décide si une arête existe.
-- L'orchestration R (`potentiel_cable`), le balayage 360°/pixel, la couverture, le
-  pêchage latéral, `check_line` (validité géométrique de la ligne).
+**Ce qu'on remplace** : le placement des supports `OptPyl_*` (faisceau `get_Tabis`,
+propagation de tension travée à travée) → **graphe + Dijkstra** à la B&H (§2), avec
+optimisation de la hauteur.
 
-**Ce qu'on remplace** :
-- Le placement des supports `OptPyl_*` (faisceau `get_Tabis`) → **graphe + plus court
-  chemin** à la B&H, avec optimisation de la hauteur.
+**Le point dur : deux modèles mécaniques différents.**
+- **Nous/Sylvaccess** : la tension est **propagée** travée à travée (chaque travée
+  hérite `tcalc` de la précédente ; `test_span` teste **une** tension). Heuristique
+  gloutonne, dépendante de l'ordre.
+- **SEILAPLAN** : **une pré-tension globale unique** `STA` pour toute la ligne ; chaque
+  travée fournit une **plage** `[MinSTA, MaxSTA]` ; une ligne est faisable à `sk` ssi
+  **toutes** ses travées admettent `sk` (Dijkstra à `sk` fixe). Modèle « standing
+  skyline, ancrages fixes des deux côtés », plus proche de la pose réelle.
+
+Adopter la méthode SEILAPLAN, c'est donc adopter **son modèle de pré-tension globale**,
+pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue une travée
+à une pré-tension donnée (`calcCable`) — cf. §4 décision 1.
 
 **Ce qui reste hors périmètre** :
-- La mécanique de **Zweifel** (on ne la porte pas ; on garde Irvine).
 - La **friction** au sabot (absente de Sylvaccess v3.6 comme de notre port ; SEILAPLAN
   l'a, effet mineur et conservateur — décision séparée si un jour souhaité).
 - La **sélection de lignes** (Lot 5) et le dimensionnement des arbres-supports (DBH).
@@ -90,37 +128,54 @@ Contraintes vérifiées au niveau global (Fig. 2 du papier) : (I) garde au sol m
 
 ## 4. Décisions à trancher (avant implémentation)
 
-1. **Remplacement ou coexistence ?** Le graphe B&H remplace-t-il `OptPyl` **partout**
-   (y compris `c_option_h=0`, hauteur fixe = un seul niveau `δh`), ou seulement quand
-   l'utilisateur active l'optimisation de hauteur ? *Recommandation* : un sélecteur
-   `cable$methode_supports = c("sylvaccess", "seilaplan")` ; `sylvaccess` reste le
-   défaut (fidélité ColduPre garantie), `seilaplan` active le graphe. Le flag
-   expérimental `optimiser_hauteur_fixation` est **retiré** (remplacé).
-2. **Coût des arêtes** : lexicographique (nombre puis hauteur) ou pondéré (`nb·K + Σh`) ?
-   À caler sur B&H 2012.
-3. **Machine en haut / en bas** : le graphe traite-t-il les deux sens par retournement
-   du profil (comme aujourd'hui) ? *A priori oui*, le graphe est symétrique.
-4. **Coupe de ligne** : quand aucun chemin ancrage→ancrage n'existe, couper au plus
-   loin atteignable (comme `OptPyl`) — nœud puits = position la plus lointaine reliée.
-5. **Rust ou R ?** Le graphe (nœuds ≤ `L/δl × H/δh`, arêtes = travées faisables) reste
-   petit ; l'implémenter en **Rust** dans `cablehelp` (à côté de `optpyl.rs`), appelé
-   par `cable_scan`, cohérent avec ADR-003 (frontière minimale).
+1. **Mécanique de `calcCable` : notre caténaire ou Zweifel ?** *(la plus importante)*
+   Le graphe a besoin, pour une travée + une pré-tension `STA`, de : garde au sol tenue
+   ? effort ≤ admissible ? Deux options :
+   - **(a) Réutiliser notre caténaire** Newton/Irvine : reparamétrer pour prendre une
+     **pré-tension imposée** (au lieu de propager) et rendre `(garde_ok, effort_ok, sag)`.
+     Notre solveur Newton résout déjà la caténaire élastique ; il faut l'appeler à
+     tension fixée et vérifier `calcul_zs` contre `sc`. **Recommandé** : garde notre
+     mécanique validée, évite de porter Zweifel.
+   - **(b) Porter Zweifel** (`calcCable`/`calcBandH`, ~200 lignes Python) : fidélité
+     exacte à SEILAPLAN, mais deux mécaniques à maintenir et un écart de résultat avec
+     notre `_NoH` actuel. *À réserver si (a) diverge trop de SEILAPLAN en CA-13.5.*
+2. **Positions candidates** : reprendre `peakdetect` (points saillants du profil) plutôt
+   qu'un pas régulier `δl`. Décider du portage de `peakdetect` (détection de crêtes) ou
+   d'un équivalent (extrema locaux de la seconde dérivée du profil).
+3. **Remplacement ou coexistence ?** Sélecteur `cable$methode_supports =
+   c("sylvaccess", "seilaplan")` ; `sylvaccess` (= `OptPyl_NoH`) reste le **défaut**
+   (fidélité ColduPre garantie), `seilaplan` active le graphe. Le flag expérimental
+   `optimiser_hauteur_fixation` et le code `OptPyl_Up2` shelvé sont **retirés**.
+4. **Coût** : reprendre `KostStue = (h==0 ? 1 : (h+100)²)·(1+4·[h>HM_nat])` (§2.3) tel
+   quel — il encode déjà « nombre puis hauteur, pénalité arbre ». `HM_nat` = hauteur
+   d'arbre-support ; sans donnée d'arbres (cas ForêtAccess actuel), le fixer à `max_HM`
+   (pas de pénalité) ou l'exposer.
+5. **Machine en haut / en bas** : le graphe est **symétrique** (Dijkstra bidirectionnel
+   sur le profil) — un seul solveur, sans la gymnastique `Up`/`Up2`/retournement. À
+   confirmer sur le traitement des extrémités (mât fixe vs ancrage 0).
+6. **Coupe de ligne** : native — `LengthInLP` = nœud le plus lointain atteignable ; si
+   le profil entier ne passe pas, on garde la portée max. Pas de logique séparée.
+7. **Rust ou R ?** Graphe petit (nœuds ≤ `n_saillants × H/δh`, ~centaines) mais évalué
+   **par départ × azimut** (des milliers de fois). L'implémenter en **Rust** dans
+   `cablehelp`, avec un Dijkstra maison (pas de dépendance scipy), appelé par
+   `cable_scan`. Cohérent ADR-003.
 
 ---
 
-## 5. Prérequis (à faire avant de coder)
+## 5. Prérequis
 
-1. **Obtenir Bont & Heinimann (2012)**, *Optimum geometric layout of a single cable
-   road*, Eur. J. For. Res. 131(5):1439-1448 — pour la formulation exacte du graphe
-   (coûts, contraintes, gestion du gradient gravitaire).
-2. **Lire le source SEILAPLAN** (module d'optimisation, `github.com/piMoll/SEILAPLAN`,
-   sous-dossier hors `gui/`) : l'algorithme y est en Python/NumPy, lisible. Identifier
-   la construction du graphe et le solveur.
+1. ✅ **Source SEILAPLAN lu** (2026-07-16) : `core/main_opti.py`, `core/opti_sta.py`,
+   `core/cableline.py`, `core/peakdetect.py` (dépôt cloné, GPL). L'algorithme est
+   transcrit en §2. Reste à lire en détail `cableline.py::calcCable` (formules Zweifel)
+   **si** on choisit l'option 4.1(b) — inutile si (a).
+2. ⏳ **Obtenir Bont & Heinimann (2012)**, Eur. J. For. Res. 131(5):1439-1448 — utile
+   pour la justification théorique et le gradient gravitaire, mais le **code** est déjà
+   la référence d'implémentation.
 3. **Banc de référence** : réutiliser l'oracle `c_option_h=true` déjà régénéré
    (`data-raw/oracle/coldupre/sylvaccess_hopt/`, cf.
    [[regenerer-oracle-sylvaccess]]) **comme repère de direction** (la couverture doit
-   *augmenter*), et — idéalement — **exécuter SEILAPLAN** sur quelques profils pour
-   comparer position/hauteur des supports ligne à ligne.
+   *augmenter*), et — idéalement — **exécuter SEILAPLAN** (STANDALONE.py du dépôt) sur
+   quelques profils pour comparer position/hauteur des supports ligne à ligne (CA-13.5).
 
 ---
 
@@ -145,12 +200,17 @@ Contraintes vérifiées au niveau global (Fig. 2 du papier) : (I) garde au sol m
 
 ## 7. Découpage
 
-- **13a** — graphe + plus court chemin en Rust (`cablehelp`), réutilisant `test_span`
-  comme oracle de faisabilité d'arête ; tests `cargo` (CA-13.1, CA-13.2).
-- **13b** — câblage `cable_scan` / config (`methode_supports`), sens haut/bas, coupe ;
-  confrontation ColduPre (CA-13.3, CA-13.4).
-- **13c** — comparaison ligne à ligne à SEILAPLAN (CA-13.5) ; retrait du flag
-  `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2` shelvé.
+- **13a — brique mécanique** : `calc_cable(travée, pré-tension) → (garde_ok, effort_ok,
+  sag)` en Rust, via notre caténaire Newton/Irvine à **tension imposée** (décision
+  4.1a), + `calc_sta` (bissection → `[MinSTA, MaxSTA]`) transcrit de `opti_sta.py`.
+  Tests `cargo` contre quelques travées de référence.
+- **13b — graphe + Dijkstra** en Rust (`cablehelp`) : positions candidates
+  (`peakdetect`), niveaux de hauteur `δh`, coût `KostStue`, balayage `sk` + Dijkstra
+  maison, coupe native. Tests `cargo` (CA-13.1, CA-13.2 : à hauteur fixe = `_NoH`).
+- **13c — intégration** : câblage `cable_scan` / config (`methode_supports`), extrémités
+  (mât/ancrage) ; confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
+- **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
+  retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
 
 ---
 
