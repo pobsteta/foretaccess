@@ -17,7 +17,8 @@
 // appelants hors tests) arrive en 13b/13c. Les tests l'exercent deja.
 #![allow(dead_code)]
 
-use super::supports::{calc_cable, SpanGeom};
+use super::faisabilite::check_droite;
+use super::supports::{calc_cable, calc_cable_seeded, seed_for_span, SpanGeom};
 
 /// Plage de pre-tension admissible d'une travee (sortie de `calc_sta`).
 pub struct StaRange {
@@ -44,10 +45,13 @@ pub fn calc_sta(g: &SpanGeom, t_min: f64, t_max: f64, detail: f64) -> StaRange {
     let mut speicher: Vec<(f64, bool, bool)> = Vec::new();
     let mut impossible = false;
 
-    // Evalue une pre-tension via `calc_cable`, ramenant la non-convergence a
-    // une double infaisabilite (garde et effort faux).
+    // Amorçage calcule UNE fois pour la travee (meme Lo de depart a toute
+    // tension), partage entre les evaluations de la bissection (perf).
+    let (sth, stv) = seed_for_span(g);
+    // Evalue une pre-tension via `calc_cable_seeded`, ramenant la non-convergence
+    // a une double infaisabilite (garde et effort faux).
     let eval = |sta: f64| {
-        let r = calc_cable(g, sta);
+        let r = calc_cable_seeded(g, sta, sth, stv);
         (r.converged && r.garde_ok, r.converged && r.effort_ok)
     };
 
@@ -64,37 +68,31 @@ pub fn calc_sta(g: &SpanGeom, t_min: f64, t_max: f64, detail: f64) -> StaRange {
         if !e1 {
             impossible = true;
         } else {
-            // 3. Deux bissections : maxSTA (pilotee par l'effort), puis minSTA
-            //    (pilotee par la garde), partageant le cache `speicher`.
-            for which_max in [true, false] {
-                let mut delta = (t_max - t_min) / 2.0;
-                let mut sta = t_min + delta;
-                while delta > detail && sta >= t_min {
-                    // Reutilise une evaluation deja en cache (egalite exacte,
-                    // fidele a `element[1][0] == STA` du source).
-                    let hit = speicher.iter().find(|e| e.0 == sta).copied();
-                    let (cp, ef) = match hit {
-                        Some((_, cp, ef)) => (cp, ef),
-                        None => {
-                            let (cp, ef) = eval(sta);
-                            speicher.push((sta, cp, ef));
-                            (cp, ef)
-                        }
-                    };
-                    let vorzeichen = if which_max {
-                        if ef {
-                            1.0
-                        } else {
-                            -1.0
-                        }
-                    } else if !cp {
-                        1.0
-                    } else {
-                        -1.0
-                    };
-                    sta += delta * vorzeichen;
-                    delta /= 2.0;
-                }
+            // 3. Une seule bissection : minSTA (seuil de garde au sol). Dans NOTRE
+            //    mecanique, `effort_ok = (t_impose <= tmax)` est vrai pour toute
+            //    tension <= tmax (t_impose EST la tension charge centree), donc
+            //    MaxSTA = t_max toujours -- la bissection maxSTA de `calcSTA`
+            //    (utile a Zweifel, ou ST_max = STA + surcharge peut depasser
+            //    zul_SK) serait ici pur gaspillage. On la supprime (2x moins de
+            //    Newton par arete). Ecart de mecanique documente (spec 013 §9).
+            let mut delta = (t_max - t_min) / 2.0;
+            let mut sta = t_min + delta;
+            while delta > detail && sta >= t_min {
+                // Reutilise une evaluation deja en cache (egalite exacte, fidele
+                // a `element[1][0] == STA` du source).
+                let hit = speicher.iter().find(|e| e.0 == sta).copied();
+                let (cp, _ef) = match hit {
+                    Some((_, cp, ef)) => (cp, ef),
+                    None => {
+                        let (cp, ef) = eval(sta);
+                        speicher.push((sta, cp, ef));
+                        (cp, ef)
+                    }
+                };
+                // Seuil de garde : si la garde casse, il faut plus de tension.
+                let vorzeichen = if !cp { 1.0 } else { -1.0 };
+                sta += delta * vorzeichen;
+                delta /= 2.0;
             }
         }
     }
@@ -313,6 +311,45 @@ fn edge_span<'a>(
     }
 }
 
+/// Prolonge la portee au-dela du dernier support atteint, comme la coupe
+/// d'`OptPyl` (spec 013, 13c.2). Le graphe s'arrete au **dernier support**
+/// (position candidate) ; mais depuis ce support le cable peut encore porter
+/// jusqu'a un **ancrage terminal** place plus loin. On cherche le terminal `q` le
+/// plus lointain (`p_last < q <= prof_end`) tel que la travee
+/// `(p_last, h_last) -> (q, h_end)` tienne a une tension `<= tmax`, en balayant du
+/// bout vers `p_last` au pas `step` (granularite raster : plus fin ne gagne pas de
+/// cellule). Rend l'index terminal ; `p_last` si rien ne porte au-dela.
+///
+/// C'est ce qui reconcilie la **portee** du graphe (quantifiee aux positions
+/// candidates) avec celle de `OptPyl_NoH` (coupe au pixel) : sans lui, ~8100
+/// cellules de bout de ligne sont perdues sur ColduPre (cf. `PLAN.md` 16/07).
+#[allow(clippy::too_many_arguments)]
+pub fn extend_reach(
+    di: &[f64],
+    zi: &[f64],
+    p_last: usize,
+    h_last: f64,
+    h_end: f64,
+    mat: &CableMat,
+    step: usize,
+) -> usize {
+    let prof_end = di.len() - 1;
+    let step = step.max(1);
+    let mut q = prof_end;
+    while q > p_last {
+        let span = edge_span(di, zi, p_last, q, h_last, h_end, mat);
+        let r = calc_cable(&span, mat.tmax);
+        if r.converged && r.garde_ok && r.effort_ok {
+            return q;
+        }
+        if q <= p_last + step {
+            break;
+        }
+        q -= step;
+    }
+    p_last
+}
+
 /// Etat de la file de priorite du Dijkstra (min-heap sur le cout).
 struct State {
     cost: f64,
@@ -435,6 +472,26 @@ pub fn optimize_supports(
             let is_start = i == start;
             let is_end = j == end;
             if !(spacing_ok || is_start || is_end) {
+                continue;
+            }
+            // Pre-filtre geometrique (check_droite) : ecarte a peu de frais les
+            // travees dont la corde passe deja sous la garde -- meme gate que
+            // `test_span`, avant le couteux `calc_sta` (marches de Newton).
+            let za = zi[na.pos] + na.h;
+            let ze = zi[ne.pos] + ne.h;
+            let hh = (za - ze).abs();
+            let dd = di[ne.pos] - di[na.pos];
+            let (xup_g, zup_g, fact) = if za >= ze {
+                (di[na.pos], za, 1.0)
+            } else {
+                (di[ne.pos], ze, -1.0)
+            };
+            if check_droite(
+                fact, hh, dd, xup_g, zup_g, di, zi, mat.hline_min, mat.hline_max,
+                mat.tmax, mat.q1, mat.q2, mat.q3, mat.f_o, na.pos as i64, ne.pos as i64,
+                mat.dsupdep, mat.dsupend,
+            ) == 0
+            {
                 continue;
             }
             let span = edge_span(di, zi, na.pos, ne.pos, na.h, ne.h, mat);

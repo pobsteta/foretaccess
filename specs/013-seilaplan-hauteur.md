@@ -220,8 +220,27 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   (port de `peakdetect`). 6 tests `cargo` : CA-13.1 (support quand le direct échoue),
   pas de support inutile, hauteur fixe = optimisation de position (CA-13.2, esprit),
   coupe native, coût `KostStue`, `peakdetect`. Non câblé à `cable_scan` (→ 13c).
-- **13c — intégration** : câblage `cable_scan` / config (`methode_supports`), extrémités
-  (mât/ancrage) ; confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
+- **13c — intégration** 🔶 *(câblage fait 2026-07-16 ; confrontation ColduPre en cours)* :
+  câblage `cable_scan` / config (`methode_supports = "sylvaccess" | "seilaplan"`,
+  + `hauteur_support_{min,max}_m`, `pas_hauteur_support_m`, `distance_min_support_m`,
+  `nb_pas_pretension`). La branche `seilaplan` de `scan()` appelle `optimize_supports`
+  sur le profil au demi-mètre (`zs`), positions candidates = crêtes (`peak_positions`) ∪
+  grille régulière au pas `Min_Dist_Mast` (pour couper/poser sur terrain lisse) ; le
+  graphe étant **symétrique**, un seul passage (pas de gymnastique machine-en-haut/bas).
+  Bindings regénérés, test R bout-en-bout (`methode_supports = "seilaplan"` tourne et
+  couvre). **Confrontation ColduPre (16/07)** — deux optims (pré-filtre `check_droite`,
+  suppression bissection `maxSTA`, résultats inchangés) puis mesure : **perf ~9× le `_NoH`**
+  en config fine (échoue CA-13.4 < 5×) ; **couverture −6105 cellules** vs `_NoH` en config
+  légère (échoue CA-13.3, qui veut ↑). **Cause probable** : la portée du graphe est
+  **quantifiée aux positions candidates** (coupe au dernier support), là où `OptPyl_NoH` coupe
+  au **pixel** et prolonge la dernière travée — écart de modèle *scan* vs *conception*. Cf.
+  `PLAN.md` (journal 16/07). **13c.2 — passe de correction, réussie** : (1) `extend_reach` prolonge
+  la dernière travée jusqu'à l'ancrage faisable le plus lointain (coupe au pas raster, comme
+  `OptPyl`) → recouvre les ~8100 cellules de bout de ligne ; (2) `seed_for_span` / `calc_cable_seeded`
+  partagent l'amorçage `seed_grid` (calculé une fois par travée, pas par tension) → ~3× moins cher,
+  résultat inchangé. **Confrontation finale** (config `4/8/12 m`, supports 40 m, `n_sk=12`) :
+  **+3619 cellules vs `_NoH`** (perd 324), **perf ×2,8** → **CA-13.3 et CA-13.4 tenus**. Réserve :
+  +3619 dépasse le gain oracle (+470) → excès d'optimisme possible, à trancher en 13d (CA-13.5).
 - **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
   retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
 

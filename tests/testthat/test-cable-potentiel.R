@@ -153,3 +153,35 @@ test_that("`departs` exige un CRS et refuse la reprojection implicite", {
   autre_crs <- sf::st_sf(geometry = sf::st_sfc(sf::st_point(c(6, 45)), crs = 4326))
   expect_error(potentiel_cable(pre, config_cable_court(), departs = autre_crs), "CRS")
 })
+
+# --- Methode SEILAPLAN (spec 013) --------------------------------------------
+# `methode_supports = "seilaplan"` bascule le placement des supports sur le graphe
+# + Dijkstra (Bont & Heinimann) au lieu de `OptPyl_NoH`. On verifie le bout-en-bout :
+# la methode tourne et produit un objet cable structure et coherent.
+
+test_that("methode_supports = 'seilaplan' tourne de bout en bout", {
+  config_sp <- foretaccess_config(cable = list(
+    longueur_max_m = 60, longueur_min_m = 20,
+    methode_supports = "seilaplan"
+  ))
+  pre <- pre_cable(x_dep = 105, y_dep = 62.5)
+  ca <- potentiel_cable(pre, config_sp)
+
+  expect_s3_class(ca, "foretaccess_cable")
+  expect_true(terra::is.factor(ca$accessibilite))
+
+  codes <- terra::values(ca$accessibilite)
+  acc <- codes == 1L
+  # Le graphe couvre des cellules forestieres, dans l'enveloppe geometrique.
+  expect_gt(sum(acc, na.rm = TRUE), 0)
+  lg <- terra::values(ca$longueur_ligne)
+  expect_true(all(!is.na(lg[acc])))
+  expect_true(all(lg[acc] >= 20 & lg[acc] <= 60))
+})
+
+test_that("une methode_supports inconnue est refusee a la validation", {
+  expect_error(
+    foretaccess_config(cable = list(methode_supports = "zweifel")),
+    "methode_supports"
+  )
+})

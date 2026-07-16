@@ -489,6 +489,14 @@ fn cable_test_span(
 /// @param prop_slope Maximum share of the line on a steep cross-slope.
 /// @param l_hor Lateral yarding half-width buffered around each line (m).
 /// @param optim_h Optimise the attachment height on each support (`c_option_h`).
+/// @param methode_seilaplan Place supports with the SEILAPLAN graph (Bont &
+///   Heinimann 2012) instead of Sylvaccess `OptPyl_NoH` (spec 013). Optimises
+///   both support position and height.
+/// @param hm_min Lowest intermediate-support height level (m), SEILAPLAN only.
+/// @param hm_max Highest intermediate-support height level (m), SEILAPLAN only.
+/// @param hm_delta Height step between levels (m), SEILAPLAN only.
+/// @param min_dist_mast Minimum horizontal spacing between supports (m), SEILAPLAN only.
+/// @param n_sk Number of pre-tension steps swept by the graph, SEILAPLAN only.
 /// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 ///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 ///   `li_ipc`, `li_nsup`.
@@ -536,6 +544,12 @@ fn cable_scan(
     prop_slope: f64,
     l_hor: f64,
     optim_h: bool,
+    methode_seilaplan: bool,
+    hm_min: f64,
+    hm_max: f64,
+    hm_delta: f64,
+    min_dist_mast: f64,
+    n_sk: i32,
 ) -> List {
     let vopt = if has_vol { Some(vol.as_slice()) } else { None };
     let out = scan::scan(
@@ -546,6 +560,7 @@ fn cable_scan(
         pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
         &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor,
         optim_h,
+        methode_seilaplan, hm_min, hm_max, hm_delta, min_dist_mast, n_sk.max(1) as usize,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
     let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();

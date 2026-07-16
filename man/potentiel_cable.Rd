@@ -77,8 +77,19 @@ seulement raccourcie par le haut.
 
 \section{Ecarts assumes avec Sylvaccess v3.6}{
 
-L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h = 1})
-n'est pas implementee : on tient la variante \verb{_NoH}, qui est le defaut de v3.6.
+L'optimisation de la \strong{hauteur de fixation} sur chaque support (\code{c_option_h},
+\code{cable$optimiser_hauteur_fixation}) est \strong{experimentale} et desactivee par defaut
+(variante \verb{_NoH}, le defaut de v3.6). Le portage des variantes a hauteur balayee
+(\code{OptPyl_Up} / \code{OptPyl_Up2}) existe mais \strong{ne reproduit pas encore l'oracle} : sur
+ColduPre il \emph{reduit} la couverture (net -999 cellules) la ou Sylvaccess l'\emph{augmente}
+(net +470), signe d'un defaut restant dans la passe machine-en-bas ; et il est
+\strong{~20x plus lent} (46 min pour 2 departs). A n'activer que pour experimenter. Cf.
+\code{PLAN.md} (dette assumee du cable) et \code{specs/004-cable.md}.
+
+Alternative : \code{cable$methode_supports = "seilaplan"} bascule le placement des
+supports sur le \strong{graphe + Dijkstra} de Bont & Heinimann (2012), qui optimise
+position \strong{et} hauteur en reutilisant notre mecanique caténaire (spec 013). Le
+defaut reste \code{"sylvaccess"} (\code{OptPyl_NoH}, fidelite ColduPre garantie).
 
 Le \strong{pechage lateral} (\code{distance_laterale_max_m}, \code{c_l_hor}) est pris en compte :
 la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de

@@ -404,6 +404,32 @@ pub struct CalcCable {
 /// sur `Lo` sont identiques a `find_lomin` (grille grossiere puis Newton chaud).
 #[allow(dead_code)] // cablee a `cable_scan` en 13b/13c ; exercee par les tests.
 pub fn calc_cable(g: &SpanGeom, t_impose: f64) -> CalcCable {
+    let (sth, stv) = seed_for_span(g);
+    calc_cable_seeded(g, t_impose, sth, stv)
+}
+
+/// Amorçage `(Th, Tv)` d'une travee a `Lo = corde + 2` -- le point de depart de
+/// la marche de `calc_cable`. **Identique pour toute tension imposee** sur cette
+/// travee (meme `Lo` de depart), donc calculable **une seule fois** et partage
+/// entre les appels d'une bissection `calc_sta` (perf : `seed_grid` = 40x40
+/// evaluations de catenaire, sinon refaites a chaque tension). Voir
+/// `calc_cable_seeded`.
+#[allow(dead_code)]
+pub fn seed_for_span(g: &SpanGeom) -> (f64, f64) {
+    let diag = (g.d * g.d + g.h * g.h).sqrt();
+    let lo = diag + 2.0;
+    let w = g.q1 * G * lo;
+    let s1 = 0.5 * lo;
+    let f = f_charge(lo, g.f_o, g.q2, g.q3, s1, g.dsupdep, g.dsupend);
+    seed_grid(lo, g.eao, w, f, s1, g.d, g.h, g.tmax)
+}
+
+/// Variante de `calc_cable` a **amorçage fourni** (`sth`, `stv` = sortie de
+/// `seed_for_span`). Resultat identique a `calc_cable` -- l'amorçage n'affecte que
+/// le point de depart du Newton chaud, pas la racine. Permet de partager le seed
+/// entre les evaluations d'une meme travee (cf. `calc_sta`).
+#[allow(dead_code)]
+pub fn calc_cable_seeded(g: &SpanGeom, t_impose: f64, sth: f64, stv: f64) -> CalcCable {
     let err = 1.0;
     let error = 50.0; // tolerance sur |Tcalc - t_impose|
     let diag = (g.d * g.d + g.h * g.h).sqrt();
@@ -412,8 +438,7 @@ pub fn calc_cable(g: &SpanGeom, t_impose: f64) -> CalcCable {
     let mut s1 = 0.5 * lo;
     let mut f = f_charge(lo, g.f_o, g.q2, g.q3, s1, g.dsupdep, g.dsupend);
 
-    // Amorçage par grille grossiere (substitut a Tabmesh), puis Newton chaud.
-    let (sth, stv) = seed_grid(lo, g.eao, w, f, s1, g.d, g.h, g.tmax);
+    // Amorçage partage (substitut a Tabmesh), puis Newton chaud.
     let (mut th, mut tv, ok0) = newton_centre(sth, stv, lo, g.eao, w, f, s1, g.d, g.h, err);
     let mut converged = ok0;
     let mut tcalc = (th * th + tv * tv).sqrt();
