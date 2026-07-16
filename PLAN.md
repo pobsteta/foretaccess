@@ -128,11 +128,15 @@
   retient le moins cher. Noyau Rust `desserte_reseau_multistart` : table
   bâtie une fois, essais en parallèle (`rayon`), essai 0 = ordre de base
   (jamais pire que le glouton, CA-18.1), permutations reproductibles
-  (SplitMix64, CA-18.2). Sortie `foretaccess_reseau` +
-  `strategie`/`journal`. Refactor R : `.reseau_preparer`/
-  `.reseau_assembler` partagés. 1 test cargo + 7 tests R. Reste **18b**
-  (recuit) et **18c** (rip-up & reroute).
-- **Branche** : `feat/lot18a-multistart` (cycle dev)
+  (SplitMix64, CA-18.2). **18b** : `strategie = "recuit"` (recuit
+  simulé, Akay 2004) — énergie = coût total, voisin = échange dans
+  l’ordre, acceptation de Metropolis, refroidissement géométrique ;
+  `journal` = meilleur coût par itération (monotone, CA-18.4). Noyau
+  Rust `desserte_reseau_recuit`. Sortie `foretaccess_reseau` +
+  `strategie`/`journal`. Refactor R :
+  `.reseau_preparer`/`.reseau_assembler` partagés. 2 tests cargo + 12
+  tests R. Reste **18c** (rip-up & reroute).
+- **Branche** : `feat/lot18b-recuit` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -230,7 +234,7 @@
 | 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | ✅ livré (16a glouton, 16b Steiner, 16c connexité) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | ✅ livré (17a vectorisation, 17b flux, 17c typage) | *(cycle dev)* |
-| 18 | Optimisation du réseau | `specs/018-optimisation-multistart.md` | 🔨 en cours (18a multi-start livré) | *(cycle dev)* |
+| 18 | Optimisation du réseau | `specs/018-optimisation-multistart.md` | 🔨 en cours (18a multi-start + 18b recuit livrés) | *(cycle dev)* |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -426,6 +430,24 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-16 — Lot 18b : recuit simulé sur l’ordre d’insertion (Akay 2004)
+
+`optimiser_reseau(..., strategie = "recuit", n_iter, temp0, refroidissement, graine)`
+ajoute le **recuit simulé** au-dessus du glouton. Noyau Rust
+`desserte_reseau_recuit` : **énergie** = coût total du réseau ;
+**voisin** = échange de deux positions dans l’ordre d’insertion ;
+**acceptation de Metropolis** (`exp(-Δ/T)`), **refroidissement
+géométrique**. Part de l’ordre de base et renvoie le **meilleur réseau
+rencontré** → jamais pire que le glouton (CA-18.1). Température initiale
+automatique (fraction de l’énergie de base) si `temp0 <= 0`. La table de
+voisinage est bâtie une seule fois ; tirages via SplitMix64
+(déterminisme, CA-18.2).
+
+Le `journal` est le **meilleur coût par itération** (monotone
+décroissant, **CA-18.4**). PRNG factorisé (`splitmix_next`) partagé avec
+le multi-start. 2 tests cargo (18a+18b) + 12 tests R. Reste **18c**
+(rip-up & reroute) pour clore le Lot 18 et l’épic desserte.
 
 ### 2026-07-16 — Lot 18a : optimisation multi-start du réseau (noyau Rust, `rayon`)
 

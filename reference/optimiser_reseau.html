@@ -68,6 +68,9 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 <span>  strategie <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"multistart"</span>, <span class="st">"recuit"</span>, <span class="st">"riprute"</span><span class="op">)</span>,</span>
 <span>  heuristique <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plus_proche"</span>, <span class="st">"plus_gros_volume"</span>, <span class="st">"aleatoire"</span><span class="op">)</span>,</span>
 <span>  n_start <span class="op">=</span> <span class="fl">16</span>,</span>
+<span>  n_iter <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>  temp0 <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  refroidissement <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  graine <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  skidding_m <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  volume_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -96,7 +99,8 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 
 
 <dt id="arg-strategie">strategie<a class="anchor" aria-label="anchor" href="#arg-strategie"></a></dt>
-<dd><p>Optimisation strategy: <code>"multistart"</code> (default).</p></dd>
+<dd><p>Optimisation strategy: <code>"multistart"</code> (default) or <code>"recuit"</code>
+(simulated annealing on the insertion order).</p></dd>
 
 
 <dt id="arg-heuristique">heuristique<a class="anchor" aria-label="anchor" href="#arg-heuristique"></a></dt>
@@ -104,11 +108,24 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 
 
 <dt id="arg-n-start">n_start<a class="anchor" aria-label="anchor" href="#arg-n-start"></a></dt>
-<dd><p>Number of insertion orders to try (multi-start).</p></dd>
+<dd><p>Number of insertion orders to try (<code>"multistart"</code>).</p></dd>
+
+
+<dt id="arg-n-iter">n_iter<a class="anchor" aria-label="anchor" href="#arg-n-iter"></a></dt>
+<dd><p>Number of annealing iterations (<code>"recuit"</code>).</p></dd>
+
+
+<dt id="arg-temp-">temp0<a class="anchor" aria-label="anchor" href="#arg-temp-"></a></dt>
+<dd><p>Initial annealing temperature (<code>"recuit"</code>); <code>&lt;= 0</code> derives it from
+the base network cost.</p></dd>
+
+
+<dt id="arg-refroidissement">refroidissement<a class="anchor" aria-label="anchor" href="#arg-refroidissement"></a></dt>
+<dd><p>Geometric cooling factor in <code>(0, 1)</code> (<code>"recuit"</code>).</p></dd>
 
 
 <dt id="arg-graine">graine<a class="anchor" aria-label="anchor" href="#arg-graine"></a></dt>
-<dd><p>Integer seed for the reproducible order permutations.</p></dd>
+<dd><p>Integer seed for the reproducible order permutations / moves.</p></dd>
 
 
 <dt id="arg-skidding-m">skidding_m<a class="anchor" aria-label="anchor" href="#arg-skidding-m"></a></dt>

@@ -20,6 +20,9 @@ optimiser_reseau(
   strategie = c("multistart", "recuit", "riprute"),
   heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
   n_start = 16,
+  n_iter = 200,
+  temp0 = 0,
+  refroidissement = 0.95,
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
@@ -47,7 +50,8 @@ optimiser_reseau(
 
 - strategie:
 
-  Optimisation strategy: `"multistart"` (default).
+  Optimisation strategy: `"multistart"` (default) or `"recuit"`
+  (simulated annealing on the insertion order).
 
 - heuristique:
 
@@ -56,11 +60,24 @@ optimiser_reseau(
 
 - n_start:
 
-  Number of insertion orders to try (multi-start).
+  Number of insertion orders to try (`"multistart"`).
+
+- n_iter:
+
+  Number of annealing iterations (`"recuit"`).
+
+- temp0:
+
+  Initial annealing temperature (`"recuit"`); `<= 0` derives it from the
+  base network cost.
+
+- refroidissement:
+
+  Geometric cooling factor in `(0, 1)` (`"recuit"`).
 
 - graine:
 
-  Integer seed for the reproducible order permutations.
+  Integer seed for the reproducible order permutations / moves.
 
 - skidding_m:
 
