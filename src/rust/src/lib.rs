@@ -7,6 +7,7 @@
 use extendr_api::prelude::*;
 
 mod cable;
+mod desserte;
 mod dfci;
 use cable::catenaire;
 use cable::faisabilite;
@@ -618,6 +619,39 @@ fn dfci_scan(
     list!(dist = out.dist, deniv = out.deniv, lien = out.lien, acc = out.acc)
 }
 
+/// Inverse cost-distance from a target cell (road-design A\* heuristic, Lot 15a).
+///
+/// Ports SylvaRoad's `calcul_distance_de_cout`: geometric 8-neighbour distance
+/// (step = resolution, or `resolution * sqrt(2)` on the diagonal) propagated from
+/// the target over the passable zone (`zone == 1`). The step cost is unit
+/// (distance only), so the result is a lower bound of the remaining road cost —
+/// an admissible A\* heuristic (spec 015, CA-15.8).
+///
+/// @param zone Passable mask (1 = passable, 0 = blocked), row-major.
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param csize Cell size (m); square cells assumed.
+/// @param y_end Target row (0-based).
+/// @param x_end Target column (0-based).
+/// @param max_distance Propagation ceiling (m); cells beyond it stay `NA`.
+/// @return A row-major numeric vector: 0 at the target, cumulated distance
+///   elsewhere, `NA` for unreached cells.
+/// @export
+#[extendr]
+fn desserte_dist_to_end(
+    zone: Vec<i32>,
+    nr: i32,
+    nc: i32,
+    csize: f64,
+    y_end: i32,
+    x_end: i32,
+    max_distance: f64,
+) -> Vec<f64> {
+    desserte::heuristic::dist_to_end(
+        &zone, nr as usize, nc as usize, csize, y_end as usize, x_end as usize, max_distance,
+    )
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -636,6 +670,7 @@ extendr_module! {
     fn cable_test_span;
     fn cable_scan;
     fn dfci_scan;
+    fn desserte_dist_to_end;
 }
 
 #[cfg(test)]
