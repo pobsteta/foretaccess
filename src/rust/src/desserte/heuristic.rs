@@ -57,11 +57,39 @@ pub fn dist_to_end(
     x_end: usize,
     max_distance: f64,
 ) -> Vec<f64> {
+    if y_end >= nr || x_end >= nc {
+        return vec![f64::NAN; nr * nc];
+    }
+    dist_from_seeds(zone, nr, nc, csize, &[y_end * nc + x_end], max_distance)
+}
+
+/// Distance-de-cout inverse depuis un **ensemble** de cellules cibles (semees a
+/// 0). Sert au reseau de desserte (Lot 16) : l'heuristique vise le reseau entier,
+/// `h = 0` sur toute cellule de reseau. `ends` = indices de cellules aplatis.
+pub fn dist_to_end_multi(
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    csize: f64,
+    ends: &[usize],
+    max_distance: f64,
+) -> Vec<f64> {
+    dist_from_seeds(zone, nr, nc, csize, ends, max_distance)
+}
+
+/// Coeur commun : Dijkstra 8-connexe (pas Euclidien) depuis une ou plusieurs
+/// sources semees a 0, sur la zone franchissable (`zone == 1`). Renvoie la grille
+/// aplatie : 0 aux sources, distance cumulee ailleurs, `NaN` hors de portee.
+fn dist_from_seeds(
+    zone: &[i32],
+    nr: usize,
+    nc: usize,
+    csize: f64,
+    seeds: &[usize],
+    max_distance: f64,
+) -> Vec<f64> {
     let n = nr * nc;
     let mut out = vec![f64::NAN; n];
-    if y_end >= nr || x_end >= nc {
-        return out;
-    }
 
     // 8 voisins et leur pas planimetrique.
     let offsets: [(i32, i32); 8] = [
@@ -76,14 +104,14 @@ pub fn dist_to_end(
     ];
     let step: [f64; 8] = offsets.map(|(dr, dc)| ((dr * dr + dc * dc) as f64).sqrt() * csize);
 
-    let start = y_end * nc + x_end;
     let mut best = vec![f64::INFINITY; n];
-    best[start] = 0.0;
     let mut heap = BinaryHeap::new();
-    heap.push(State {
-        dist: 0.0,
-        idx: start,
-    });
+    for &s in seeds {
+        if s < n && best[s] != 0.0 {
+            best[s] = 0.0;
+            heap.push(State { dist: 0.0, idx: s });
+        }
+    }
 
     while let Some(State { dist, idx }) = heap.pop() {
         if dist > best[idx] {
@@ -91,8 +119,7 @@ pub fn dist_to_end(
         }
         let y = (idx / nc) as i32;
         let x = (idx % nc) as i32;
-        for k in 0..8 {
-            let (dr, dc) = offsets[k];
+        for (k, &(dr, dc)) in offsets.iter().enumerate() {
             let y1 = y + dr;
             let x1 = x + dc;
             if y1 < 0 || y1 >= nr as i32 || x1 < 0 || x1 >= nc as i32 {
@@ -113,9 +140,9 @@ pub fn dist_to_end(
         }
     }
 
-    for i in 0..n {
-        if best[i].is_finite() {
-            out[i] = best[i];
+    for (o, b) in out.iter_mut().zip(best.iter()) {
+        if b.is_finite() {
+            *o = *b;
         }
     }
     out
@@ -133,6 +160,20 @@ mod tests {
         assert_eq!(d[4], 0.0); // centre
         assert!((d[1] - 10.0).abs() < 1e-9); // dessus (orthogonal)
         assert!((d[0] - (10.0 * 2f64.sqrt())).abs() < 1e-9); // coin (diagonale)
+    }
+
+    #[test]
+    fn multi_source_is_zero_on_every_seed() {
+        // Deux cibles (coins gauche) : distance 0 sur chacune, distance a la plus
+        // proche ailleurs.
+        let zone = vec![1; 9];
+        let d = dist_to_end_multi(&zone, 3, 3, 10.0, &[0, 6], 1e9);
+        assert_eq!(d[0], 0.0);
+        assert_eq!(d[6], 0.0);
+        // La cellule (0,1) est a 10 m de la cible (0,0).
+        assert!((d[1] - 10.0).abs() < 1e-9);
+        // Le centre (1,1) est a une diagonale (~14,14 m) des deux cibles.
+        assert!((d[4] - 10.0 * 2f64.sqrt()).abs() < 1e-9);
     }
 
     #[test]

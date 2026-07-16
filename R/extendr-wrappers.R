@@ -357,4 +357,42 @@ desserte_dist_to_end <- function(zone, nr, nc, csize, y_end, x_end, max_distance
 #' @export
 desserte_trace <- function(alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_trace, alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
 
+#' Build a forest-road network serving ordered parcel cells (greedy MTAP, Lot 16a).
+#'
+#' Ports ForestRoadNetwork's greedy MTAP->STAP loop: each source cell (in the
+#' caller-provided heuristic order) is connected to the current network with the
+#' Lot 15 constrained solver, and the created road grows the network for later
+#' sources (reuse -> tree). A source already within `skidding` metres of a road is
+#' skipped. The neighbourhood table is built once. All grids are row-major and
+#' flattened; cell indices are 0-based on input, 1-based on output.
+#'
+#' @param alt Elevation values (row-major, m).
+#' @param obs Obstacle mask (1 = blocked), row-major.
+#' @param obs2 Excess cross-slope mask, row-major.
+#' @param local_slope Fraction (0..1) of the neighbourhood with steep cross-slope.
+#' @param zone Passable mask (1 = passable), row-major.
+#' @param nr Number of raster rows.
+#' @param nc Number of raster columns.
+#' @param sources Parcel cells to serve, 0-based flattened, in heuristic order.
+#' @param network0 Existing-road cells, 0-based flattened.
+#' @param skidding Skidding distance (m): a source within it of a road is skipped.
+#' @param csize Cell size (m).
+#' @param min_slope Minimum road grade (percent).
+#' @param max_slope Maximum road grade (percent).
+#' @param penalty_xy Turn penalty.
+#' @param penalty_z Slope-change penalty.
+#' @param max_diff_z Max elevation gap road/terrain (m).
+#' @param d_neighborhood Neighbourhood radius (m).
+#' @param angle_hairpin Hairpin angle threshold (deg).
+#' @param lmax_ab_sl Max road length with excess cross-slope (m).
+#' @param radius Turning radius (m).
+#' @param prop_sl_max Max local steep-cross-slope fraction at a hairpin.
+#' @param max_slope_hairpin Hairpin limit-angle parameter.
+#' @param tal Hairpin limit-angle parameter.
+#' @param modhair Hairpin spacing parameter.
+#' @return A list: `paths` (a list of 1-based cell-index vectors, one per built
+#'   road) and `costs` (one cost per built road).
+#' @export
+desserte_reseau <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_reseau, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+
 # nolint end

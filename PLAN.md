@@ -54,9 +54,19 @@
   faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (`obs2`) et fraction locale de
   fort dévers (`local_slope` par focale disque), convertit les waypoints (sf/cellules) en indices,
   appelle `desserte_trace`, reconstruit la polyligne (centres de cellules). Config `desserte$trace`
-  ajoutée (paramètres SylvaRoad) + validation. 18 tests. **Lot 15 clos** (15a→15c) ; oracle
-  `meisenthal2` non publié → validé par invariants. Suite : **Lot 16** (réseau MTAP).
-- **Branche** : `feat/lot15c-orchestration` (cycle dev)
+  ajoutée (paramètres SylvaRoad) + validation. 18 tests. **Lot 15 clos** (15a→15c, #59/#60/#61) ;
+  oracle `meisenthal2` non publié → validé par invariants.
+- **Lot 16a (réseau glouton MTAP) en cycle dev** : `reseau_desserte(pre, cout, parcelles,
+  desserte_existante, heuristique, skidding_m, ...)` (`R/desserte_reseau.R`) rend un objet
+  `foretaccess_reseau` (`sf` LINESTRING des routes créées + `SpatRaster` du réseau + coût total).
+  Portage du MTAP→STAP glouton de ForestRoadNetwork (Klemet) : chaque parcelle est raccordée au
+  **réseau courant** par le solveur Lot 15 (variante **multi-cible** : A* qui s'arrête sur toute
+  cellule de réseau), la route créée grossit le réseau (réutilisation → arborescence). Pré-élagage
+  par distance de débardage. Trois heuristiques d'ordre (plus proche, plus gros volume, aléatoire
+  reproductible). Nouveau Rust : `heuristic::dist_to_end_multi`, `solver::solve_network` +
+  `build_network`, binding `desserte_reseau`. 24 tests cargo + 12 tests R. Reste **16b** (Steiner)
+  et **16c** (raccordement/connexité, sortie affinée).
+- **Branche** : `feat/lot16a-reseau-glouton` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
@@ -128,7 +138,7 @@
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
 | 15 | Solveur de tracé (A*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
-| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 📋 proposé | — |
+| 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 🔨 en cours (16a glouton livré) | *(cycle dev)* |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |
 

@@ -743,6 +743,100 @@ fn desserte_trace(
     list!(path = path, cost = res.cost, feasible = res.feasible)
 }
 
+/// Build a forest-road network serving ordered parcel cells (greedy MTAP, Lot 16a).
+///
+/// Ports ForestRoadNetwork's greedy MTAP->STAP loop: each source cell (in the
+/// caller-provided heuristic order) is connected to the current network with the
+/// Lot 15 constrained solver, and the created road grows the network for later
+/// sources (reuse -> tree). A source already within `skidding` metres of a road is
+/// skipped. The neighbourhood table is built once. All grids are row-major and
+/// flattened; cell indices are 0-based on input, 1-based on output.
+///
+/// @param alt Elevation values (row-major, m).
+/// @param obs Obstacle mask (1 = blocked), row-major.
+/// @param obs2 Excess cross-slope mask, row-major.
+/// @param local_slope Fraction (0..1) of the neighbourhood with steep cross-slope.
+/// @param zone Passable mask (1 = passable), row-major.
+/// @param nr Number of raster rows.
+/// @param nc Number of raster columns.
+/// @param sources Parcel cells to serve, 0-based flattened, in heuristic order.
+/// @param network0 Existing-road cells, 0-based flattened.
+/// @param skidding Skidding distance (m): a source within it of a road is skipped.
+/// @param csize Cell size (m).
+/// @param min_slope Minimum road grade (percent).
+/// @param max_slope Maximum road grade (percent).
+/// @param penalty_xy Turn penalty.
+/// @param penalty_z Slope-change penalty.
+/// @param max_diff_z Max elevation gap road/terrain (m).
+/// @param d_neighborhood Neighbourhood radius (m).
+/// @param angle_hairpin Hairpin angle threshold (deg).
+/// @param lmax_ab_sl Max road length with excess cross-slope (m).
+/// @param radius Turning radius (m).
+/// @param prop_sl_max Max local steep-cross-slope fraction at a hairpin.
+/// @param max_slope_hairpin Hairpin limit-angle parameter.
+/// @param tal Hairpin limit-angle parameter.
+/// @param modhair Hairpin spacing parameter.
+/// @return A list: `paths` (a list of 1-based cell-index vectors, one per built
+///   road) and `costs` (one cost per built road).
+/// @export
+#[extendr]
+fn desserte_reseau(
+    alt: Vec<f64>,
+    obs: Vec<i32>,
+    obs2: Vec<i32>,
+    local_slope: Vec<f64>,
+    zone: Vec<i32>,
+    nr: i32,
+    nc: i32,
+    sources: Vec<i32>,
+    network0: Vec<i32>,
+    skidding: f64,
+    csize: f64,
+    min_slope: f64,
+    max_slope: f64,
+    penalty_xy: f64,
+    penalty_z: f64,
+    max_diff_z: f64,
+    d_neighborhood: f64,
+    angle_hairpin: f64,
+    lmax_ab_sl: f64,
+    radius: f64,
+    prop_sl_max: f64,
+    max_slope_hairpin: f64,
+    tal: f64,
+    modhair: f64,
+) -> List {
+    let (nr, nc) = (nr as usize, nc as usize);
+    let p = desserte::solver::SolverParams {
+        csize,
+        min_slope,
+        max_slope,
+        penalty_xy,
+        penalty_z,
+        max_diff_z,
+        d_neighborhood,
+        angle_hairpin,
+        lmax_ab_sl,
+        radius,
+        prop_sl_max,
+        max_slope_hairpin,
+        tal,
+        modhair,
+    };
+    let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
+    let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let res = desserte::solver::build_network(
+        &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding, &p,
+    );
+    // Chemins en indices 1-based (convention R).
+    let paths = List::from_values(
+        res.paths
+            .iter()
+            .map(|pth| pth.iter().map(|&i| i as i32 + 1).collect::<Vec<i32>>()),
+    );
+    list!(paths = paths, costs = res.costs)
+}
+
 // Macro to generate exports.
 // This ensures exported functions are registered with R.
 // See corresponding C code in `entrypoint.c`.
@@ -763,6 +857,7 @@ extendr_module! {
     fn dfci_scan;
     fn desserte_dist_to_end;
     fn desserte_trace;
+    fn desserte_reseau;
 }
 
 #[cfg(test)]
