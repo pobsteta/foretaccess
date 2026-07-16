@@ -20,8 +20,14 @@
   câble 98,36 %, **DFCI 99,87 %**), distances collées décomposition comprise. Publie le **Lot 12a.4
   (DFCI)** : moteur radial `debusq_dfci` transcrit (noyau Rust `dfci_scan`), spec 006 réécrite,
   6 classes de défendabilité, lance à 0 m d'écart médian.
-- **Branche** : `main` (release `v1.0.0`)
-- **Version `DESCRIPTION`** : `1.0.0` (release ; retour en cycle dev `1.0.0.9000` juste après)
+- **`v1.1.0` posée** (2026-07-16) : **optimisation de la hauteur des supports câble façon
+  SEILAPLAN** (spec 013, `cable$methode_supports = "seilaplan"`) — graphe + Dijkstra de Bont &
+  Heinimann réutilisant notre caténaire. Confrontée cellule à cellule à l'oracle `c_option_h=true` :
+  accord **93,2 → 94,7 %**, fidèle à l'oracle (+454 ≈ +470 en fenêtre), perf **×2,8**. Défaut
+  `"sylvaccess"` (`_NoH`) inchangé, bit-pour-bit. `OptPyl_Up2` shelvé et le flag
+  `optimiser_hauteur_fixation` retirés. **Dette câble (optimisation de hauteur) : résolue.**
+- **Branche** : `main` (release `v1.1.0`)
+- **Version `DESCRIPTION`** : `1.1.0` (release ; retour en cycle dev `1.1.0.9000` juste après)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -89,6 +95,7 @@
 | 10 | Acquisition depuis AOI | `specs/010-acquisition-aoi.md` | ✅ terminé | `v0.11.0` |
 | 11 | Oracle Sylvaccess réel | *(journal 2026-07-13/14)* | ✅ terminé | `v0.13.0` |
 | 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
+| 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 
 Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.
 
@@ -250,6 +257,17 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-16 — `v1.1.0` : optimisation de la hauteur des supports câble (SEILAPLAN)
+
+Release mineure (feat) : spec 013 bouclée en quatre incréments (13a brique mécanique, 13b graphe +
+Dijkstra, 13c intégration + confrontation, 13d validation + nettoyage). `cable$methode_supports =
+"seilaplan"` optimise position **et** hauteur des supports à la Bont & Heinimann (2012), en
+réutilisant notre caténaire. Confrontée cellule à cellule à l'oracle `c_option_h=true` : accord
+**93,2 → 94,7 %**, fidèle à l'oracle (+454 ≈ +470 en fenêtre), perf **×2,8**. Défaut `"sylvaccess"`
+(`_NoH`) inchangé, bit-pour-bit. `OptPyl_Up2` shelvé et le flag `optimiser_hauteur_fixation` retirés.
+`DESCRIPTION` / `NEWS.md` / `CITATION.cff` alignés sur `1.1.0` ; `release.yml` pose le tag `v1.1.0` au
+merge. Retour en cycle dev `1.1.0.9000` juste après.
 
 ### 2026-07-16 — SEILAPLAN 13d : validation cellule à cellule à l'oracle `c_option_h=true`
 
