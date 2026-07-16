@@ -142,8 +142,8 @@
   tests R. **Lot 18 clos → épic desserte (14→18) complet.** Prochaine
   étape : couper une **release stable**.
 - **Branche** : `feat/lot18c-riprute` (cycle dev)
-- **Version `DESCRIPTION`** : `1.2.0` (release de l’épic desserte ;
-  retour en `1.2.0.9000` juste après merge)
+- **Version `DESCRIPTION`** : `1.2.0.9000` (cycle dev après release
+  `v1.2.0` — épic desserte publié)
 - **Les distances collent, décomposition comprise** (mesuré sur les
   sorties courantes) : débusquage **0,0 m** d’écart médian, traînage
   **en forêt 0,2 m** (120,2 contre 124,0), traînage sur piste **0,4 m**,
