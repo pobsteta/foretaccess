@@ -17,6 +17,7 @@
 // appelants hors tests) arrive en 13b/13c. Les tests l'exercent deja.
 #![allow(dead_code)]
 
+use super::faisabilite::check_droite;
 use super::supports::{calc_cable, SpanGeom};
 
 /// Plage de pre-tension admissible d'une travee (sortie de `calc_sta`).
@@ -64,37 +65,31 @@ pub fn calc_sta(g: &SpanGeom, t_min: f64, t_max: f64, detail: f64) -> StaRange {
         if !e1 {
             impossible = true;
         } else {
-            // 3. Deux bissections : maxSTA (pilotee par l'effort), puis minSTA
-            //    (pilotee par la garde), partageant le cache `speicher`.
-            for which_max in [true, false] {
-                let mut delta = (t_max - t_min) / 2.0;
-                let mut sta = t_min + delta;
-                while delta > detail && sta >= t_min {
-                    // Reutilise une evaluation deja en cache (egalite exacte,
-                    // fidele a `element[1][0] == STA` du source).
-                    let hit = speicher.iter().find(|e| e.0 == sta).copied();
-                    let (cp, ef) = match hit {
-                        Some((_, cp, ef)) => (cp, ef),
-                        None => {
-                            let (cp, ef) = eval(sta);
-                            speicher.push((sta, cp, ef));
-                            (cp, ef)
-                        }
-                    };
-                    let vorzeichen = if which_max {
-                        if ef {
-                            1.0
-                        } else {
-                            -1.0
-                        }
-                    } else if !cp {
-                        1.0
-                    } else {
-                        -1.0
-                    };
-                    sta += delta * vorzeichen;
-                    delta /= 2.0;
-                }
+            // 3. Une seule bissection : minSTA (seuil de garde au sol). Dans NOTRE
+            //    mecanique, `effort_ok = (t_impose <= tmax)` est vrai pour toute
+            //    tension <= tmax (t_impose EST la tension charge centree), donc
+            //    MaxSTA = t_max toujours -- la bissection maxSTA de `calcSTA`
+            //    (utile a Zweifel, ou ST_max = STA + surcharge peut depasser
+            //    zul_SK) serait ici pur gaspillage. On la supprime (2x moins de
+            //    Newton par arete). Ecart de mecanique documente (spec 013 §9).
+            let mut delta = (t_max - t_min) / 2.0;
+            let mut sta = t_min + delta;
+            while delta > detail && sta >= t_min {
+                // Reutilise une evaluation deja en cache (egalite exacte, fidele
+                // a `element[1][0] == STA` du source).
+                let hit = speicher.iter().find(|e| e.0 == sta).copied();
+                let (cp, _ef) = match hit {
+                    Some((_, cp, ef)) => (cp, ef),
+                    None => {
+                        let (cp, ef) = eval(sta);
+                        speicher.push((sta, cp, ef));
+                        (cp, ef)
+                    }
+                };
+                // Seuil de garde : si la garde casse, il faut plus de tension.
+                let vorzeichen = if !cp { 1.0 } else { -1.0 };
+                sta += delta * vorzeichen;
+                delta /= 2.0;
             }
         }
     }
@@ -435,6 +430,26 @@ pub fn optimize_supports(
             let is_start = i == start;
             let is_end = j == end;
             if !(spacing_ok || is_start || is_end) {
+                continue;
+            }
+            // Pre-filtre geometrique (check_droite) : ecarte a peu de frais les
+            // travees dont la corde passe deja sous la garde -- meme gate que
+            // `test_span`, avant le couteux `calc_sta` (marches de Newton).
+            let za = zi[na.pos] + na.h;
+            let ze = zi[ne.pos] + ne.h;
+            let hh = (za - ze).abs();
+            let dd = di[ne.pos] - di[na.pos];
+            let (xup_g, zup_g, fact) = if za >= ze {
+                (di[na.pos], za, 1.0)
+            } else {
+                (di[ne.pos], ze, -1.0)
+            };
+            if check_droite(
+                fact, hh, dd, xup_g, zup_g, di, zi, mat.hline_min, mat.hline_max,
+                mat.tmax, mat.q1, mat.q2, mat.q3, mat.f_o, na.pos as i64, ne.pos as i64,
+                mat.dsupdep, mat.dsupend,
+            ) == 0
+            {
                 continue;
             }
             let span = edge_span(di, zi, na.pos, ne.pos, na.h, ne.h, mat);
