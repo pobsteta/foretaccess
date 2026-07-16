@@ -378,6 +378,8 @@ typage des routes (Lot 17), optimisation multi-start (Lot 18).
 - [`desserte_reseau_recuit()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_recuit.md)
   : Optimise a road network by simulated annealing on the insertion
   order (Lot 18b).
+- [`desserte_reseau_riprute()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_riprute.md)
+  : Optimise a road network by rip-up & reroute local search (Lot 18c).
 
 ## Non-régression
 

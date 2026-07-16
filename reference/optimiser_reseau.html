@@ -71,6 +71,7 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 <span>  n_iter <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  temp0 <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  refroidissement <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  max_passes <span class="op">=</span> <span class="fl">6</span>,</span>
 <span>  graine <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  skidding_m <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  volume_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -99,8 +100,9 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 
 
 <dt id="arg-strategie">strategie<a class="anchor" aria-label="anchor" href="#arg-strategie"></a></dt>
-<dd><p>Optimisation strategy: <code>"multistart"</code> (default) or <code>"recuit"</code>
-(simulated annealing on the insertion order).</p></dd>
+<dd><p>Optimisation strategy: <code>"multistart"</code> (default), <code>"recuit"</code>
+(simulated annealing on the insertion order) or <code>"riprute"</code> (rip-up &amp; reroute
+local search).</p></dd>
 
 
 <dt id="arg-heuristique">heuristique<a class="anchor" aria-label="anchor" href="#arg-heuristique"></a></dt>
@@ -122,6 +124,10 @@ the base network cost.</p></dd>
 
 <dt id="arg-refroidissement">refroidissement<a class="anchor" aria-label="anchor" href="#arg-refroidissement"></a></dt>
 <dd><p>Geometric cooling factor in <code>(0, 1)</code> (<code>"recuit"</code>).</p></dd>
+
+
+<dt id="arg-max-passes">max_passes<a class="anchor" aria-label="anchor" href="#arg-max-passes"></a></dt>
+<dd><p>Maximum improvement passes (<code>"riprute"</code>).</p></dd>
 
 
 <dt id="arg-graine">graine<a class="anchor" aria-label="anchor" href="#arg-graine"></a></dt>

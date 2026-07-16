@@ -23,6 +23,7 @@ optimiser_reseau(
   n_iter = 200,
   temp0 = 0,
   refroidissement = 0.95,
+  max_passes = 6,
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
@@ -50,8 +51,9 @@ optimiser_reseau(
 
 - strategie:
 
-  Optimisation strategy: `"multistart"` (default) or `"recuit"`
-  (simulated annealing on the insertion order).
+  Optimisation strategy: `"multistart"` (default), `"recuit"` (simulated
+  annealing on the insertion order) or `"riprute"` (rip-up & reroute
+  local search).
 
 - heuristique:
 
@@ -74,6 +76,10 @@ optimiser_reseau(
 - refroidissement:
 
   Geometric cooling factor in `(0, 1)` (`"recuit"`).
+
+- max_passes:
+
+  Maximum improvement passes (`"riprute"`).
 
 - graine:
 
