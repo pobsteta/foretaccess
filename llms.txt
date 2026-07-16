@@ -346,7 +346,8 @@ OpenStreetMap).
 
 Conception d’un réseau de desserte : surface de coût de construction
 (Lot 14), solveur de tracé A\* (Lot 15, noyau Rust), réseau multi-cibles
-glouton/Steiner (Lot 16).
+glouton/Steiner (Lot 16), vectorisation en graphe pour flux et typage
+(Lot 17).
 
 - [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
   : Build the construction-cost surface of a new forest road
@@ -354,6 +355,8 @@ glouton/Steiner (Lot 16).
   : Design the optimal route of a new forest road
 - [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
   : Design a forest-road network serving several parcels
+- [`vectoriser_reseau()`](https://pobsteta.github.io/foretaccess/reference/vectoriser_reseau.md)
+  : Vectorise a forest-road network into a topological graph
 - [`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
   : Inverse cost-distance from a target cell (road-design A\\ heuristic,
   Lot 15a).
