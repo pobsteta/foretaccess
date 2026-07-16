@@ -112,3 +112,39 @@ test_that("la methode print resume sans erreur", {
   expect_no_error(print(net))
   expect_invisible(print(net))
 })
+
+# --- Lot 16b : mode Steiner (arbre couvrant de poids minimal) ----------------
+
+test_that("mode steiner : les parcelles sont desservies et raccordees", {
+  s <- reseau_setup()
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "steiner")
+  expect_s3_class(net, "foretaccess_reseau")
+  expect_equal(net$mode, "steiner")
+  expect_gte(nrow(net$lignes), 1)
+  expect_true(all(sf::st_geometry_type(net$lignes) == "LINESTRING"))
+  # Le raster du reseau contient l'existant + les routes creees.
+  expect_true(sum(terra::values(net$reseau), na.rm = TRUE) > 0)
+})
+
+test_that("CA-16.4 : le mode steiner n'est pas plus cher que le glouton", {
+  s <- reseau_setup()
+  glouton <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  steiner <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "steiner")
+  expect_lte(steiner$cout, glouton$cout + 1e-6)
+})
+
+test_that("mode steiner : le reseau est connexe (chaque route touche l'ensemble)", {
+  s <- reseau_setup()
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "steiner")
+  # Une seule parcelle -> une arete reseau<->parcelle (raccord direct).
+  solo <- reseau_desserte(s$pre, s$cout, s$parcelles[1, ], s$route, mode = "steiner")
+  expect_equal(nrow(solo$lignes), 1)
+})
+
+test_that("mode inconnu -> erreur", {
+  s <- reseau_setup()
+  expect_error(
+    reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "n_importe_quoi"),
+    "arg"
+  )
+})

@@ -103,7 +103,8 @@ reference:
 - title: Conception de desserte (Lots 14-18)
   desc: >
     Conception d'un réseau de desserte : surface de coût de construction (Lot 14),
-    solveur de tracé A* (Lot 15, noyau Rust).
+    solveur de tracé A* (Lot 15, noyau Rust), réseau multi-cibles glouton/Steiner
+    (Lot 16).
   contents:
   - surface_cout_construction
   - tracer_desserte

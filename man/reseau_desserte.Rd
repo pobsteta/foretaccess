@@ -10,6 +10,7 @@ reseau_desserte(
   parcelles,
   desserte_existante,
   heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
+  mode = c("glouton", "steiner"),
   skidding_m = 0,
   volume_champ = NULL,
   config = foretaccess_config(),
@@ -28,6 +29,10 @@ reseau_desserte(
 \item{heuristique}{Ordering of parcels: \code{"plus_proche"} (closest first),
 \code{"plus_gros_volume"} (largest volume first) or \code{"aleatoire"} (random).}
 
+\item{mode}{Construction mode: \code{"glouton"} (greedy MTAP->STAP, default) or
+\code{"steiner"} (minimum-spanning-tree approximation over the terminals, a
+quality alternative at the cost of N^2 traces).}
+
 \item{skidding_m}{Skidding distance (m): a parcel cell within it of a road is
 served without building a road.}
 
@@ -43,7 +48,7 @@ served without building a road.}
 A \code{foretaccess_reseau} object: \code{lignes} (an \code{sf} LINESTRING of the
 created roads, one feature per road, with creation order and cost), \code{reseau}
 (a \code{SpatRaster} of the whole network, for Lot 17), \code{cout} (total) and the
-recall of the heuristic.
+recall of the \code{mode} and \code{heuristique}.
 }
 \description{
 Builds a road network connecting N parcels to an existing road network, at
