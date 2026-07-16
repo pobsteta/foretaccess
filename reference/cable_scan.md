@@ -48,7 +48,8 @@ cable_scan(
   slope_trans,
   l_slope,
   prop_slope,
-  l_hor
+  l_hor,
+  optim_h
 )
 ```
 
@@ -209,6 +210,10 @@ cable_scan(
 - l_hor:
 
   Lateral yarding half-width buffered around each line (m).
+
+- optim_h:
+
+  Optimise the attachment height on each support (`c_option_h`).
 
 ## Value
 
