@@ -228,7 +228,14 @@ pas seulement le graphe. Reste à décider **avec quelle mécanique** on évalue
   grille régulière au pas `Min_Dist_Mast` (pour couper/poser sur terrain lisse) ; le
   graphe étant **symétrique**, un seul passage (pas de gymnastique machine-en-haut/bas).
   Bindings regénérés, test R bout-en-bout (`methode_supports = "seilaplan"` tourne et
-  couvre). **Reste** : confrontation ColduPre (CA-13.3 couverture ↑, CA-13.4 perf).
+  couvre). **Confrontation ColduPre (16/07)** — deux optims (pré-filtre `check_droite`,
+  suppression bissection `maxSTA`, résultats inchangés) puis mesure : **perf ~9× le `_NoH`**
+  en config fine (échoue CA-13.4 < 5×) ; **couverture −6105 cellules** vs `_NoH` en config
+  légère (échoue CA-13.3, qui veut ↑). **Cause probable** : la portée du graphe est
+  **quantifiée aux positions candidates** (coupe au dernier support), là où `OptPyl_NoH` coupe
+  au **pixel** et prolonge la dernière travée — écart de modèle *scan* vs *conception*. Cf.
+  `PLAN.md` (journal 16/07) : **décision à prendre** (prolonger la portée + réduire le coût, vs
+  shelver derrière le défaut `sylvaccess`).
 - **13d — validation & nettoyage** : comparaison ligne à ligne à SEILAPLAN (CA-13.5) ;
   retrait du flag `optimiser_hauteur_fixation` expérimental et du code `OptPyl_Up2`.
 

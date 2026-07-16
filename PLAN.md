@@ -269,8 +269,32 @@ Troisième incrément de `specs/013` — l'intégration du graphe (13b) dans le 
   forestières dans l'enveloppe, longueur dans `[lmin, lmax]`) ; méthode inconnue refusée à la
   validation. 52 tests cargo intacts. Défaut `"sylvaccess"` : non-régression garantie.
 
-**Reste 13c** : confrontation ColduPre (CA-13.3 couverture ↑ vs `_NoH`, CA-13.4 perf). Puis 13d
-(validation ligne à ligne vs SEILAPLAN, retrait de `OptPyl_Up2` et du flag).
+**Confrontation ColduPre (16/07)** — deux optimisations perso d'abord (commit `bc5ed3d`, sans
+changer les résultats) : **pré-filtre `check_droite`** avant `calc_sta` (écarte les travées dont la
+corde passe sous la garde, sans Newton) et **suppression de la bissection `maxSTA`** (dans notre
+mécanique `MaxSTA = tmax` toujours, l'effort ne borne qu'à `tmax`). Résultats confrontés au `_NoH` :
+
+- **Perf (CA-13.4)** : config **fine** (6 niveaux de hauteur, supports à 30 m) **~9× le `_NoH`**
+  et croissant — **échoue** la cible (< 5×). L'explosion vient du produit position² × hauteur²
+  d'appels `calc_sta` (chacun marchant `Lo` par Newton). Config **légère** (2 niveaux 6/12 m,
+  supports à 60 m) : **×1,3** seulement — donc le coût est bien dans la densité de nœuds.
+- **Couverture (CA-13.3)** : config légère → seilaplan **25170** cellules vs `_NoH` **31275**,
+  soit **−6105** (gagne 1995, **perd 8100**). **Mauvaise direction** (la cible est ↑, +470 vers
+  l'oracle) — même symptôme que le port `OptPyl_Up2` shelvé. La config fine (trop lente à mesurer)
+  ferait sans doute mieux, mais la perte est trop massive pour n'être qu'un effet de config.
+
+**Cause probable** : la **portée du graphe est quantifiée aux positions candidates** (coupe la
+ligne au dernier support atteint, granularité 30–60 m), là où `OptPyl_NoH` coupe au **pixel** près
+et prolonge la dernière travée jusqu'à sa vraie limite. D'où ~8100 cellules perdues en bout de
+ligne. C'est un **écart de modèle** ForêtAccess (balayage : « jusqu'où porte la ligne ? ») vs
+SEILAPLAN (conception : « ligne vers un point d'arrivée **connu** »).
+
+**Décision à prendre (point de fork, cf. c_option_h)** : soit (a) **prolonger la portée** de la
+dernière travée au-delà du dernier support (comme `OptPyl`) **+** réduire le coût (moins de nœuds,
+`calc_sta` moins cher) pour viser CA-13.3/13.4 ; soit (b) **shelver** derrière le défaut `sylvaccess`
+(le câblage reste, opt-in expérimental), comme `OptPyl_Up2`. À arbitrer avec l'utilisateur.
+
+**Reste 13d** : selon la décision, validation ligne à ligne vs SEILAPLAN + nettoyage `OptPyl_Up2`.
 
 ### 2026-07-16 — SEILAPLAN 13b : graphe + Dijkstra (optimisation position + hauteur)
 
