@@ -25,9 +25,11 @@
 #'   `config$desserte$trace`.
 #' @param graine Optional integer seed for the `"aleatoire"` ordering.
 #' @return A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
-#'   created roads, one feature per road, with creation order and cost), `reseau`
-#'   (a `SpatRaster` of the whole network, for Lot 17), `cout` (total) and the
-#'   recall of the `mode` and `heuristique`.
+#'   created roads, one feature per road, with creation `ordre`, `cout` and
+#'   planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
+#'   network, for Lot 17), `cout` (total), `connexe` (a single connected
+#'   component, CA-16.5), `desservies` (a logical, one per parcel, CA-16.1) and
+#'   the recall of the `mode` and `heuristique`.
 #' @param mode Construction mode: `"glouton"` (greedy MTAP->STAP, default) or
 #'   `"steiner"` (minimum-spanning-tree approximation over the terminals, a
 #'   quality alternative at the cost of N^2 traces).
@@ -70,16 +72,31 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
     .reseau_glouton(ctx, parcelles, heuristique, skidding_m, volume_champ, graine)
   }
 
-  # Polylignes des routes creees (une feature par tronçon).
+  # Polylignes des routes creees (une feature par tronçon), longueur planimetrique.
   crs_grille <- sf::st_crs(terra::crs(grille))
   lignes <- .desserte_paths_en_sf(res$paths, res$costs, grille, crs_grille)
 
-  # Raster du reseau complet (existant + routes creees), pour le Lot 17.
-  cells_reseau <- unique(c(net_cells1, unlist(res$paths)))
+  # Raster du reseau complet (existant + routes creees), pour le Lot 17. Le
+  # voisinage disque du solveur avance par sauts : on rasterise les *geometries*
+  # (routes creees + reseau existant, `touches`) pour un reseau continu, sans
+  # trous entre points de passage.
   reseau_r <- terra::rast(grille)
   terra::values(reseau_r) <- 0
-  reseau_r[cells_reseau] <- 1
   names(reseau_r) <- "reseau"
+  reseau_r[net_cells1] <- 1
+  geoms_reseau <- if (nrow(lignes) > 0) {
+    c(sf::st_geometry(lignes), sf::st_geometry(desserte_existante))
+  } else {
+    sf::st_geometry(desserte_existante)
+  }
+  trace_r <- terra::rasterize(terra::vect(geoms_reseau), grille, field = 1,
+                              background = NA, touches = TRUE)
+  reseau_r[which(!is.na(terra::values(trace_r)))] <- 1
+
+  # Raccordement / connexite (Lot 16c) : le reseau doit former une seule
+  # composante connexe (CA-16.5) et chaque parcelle etre desservie (CA-16.1).
+  connexe <- .reseau_connexe(reseau_r)
+  desservies <- .reseau_desservies(parcelles, reseau_r, grille, skidding_m)
 
   structure(
     list(
@@ -88,6 +105,8 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
       cout = sum(res$costs),
       heuristique = heuristique,
       mode = mode,
+      connexe = connexe,
+      desservies = desservies,
       config = config
     ),
     class = "foretaccess_reseau"
@@ -311,7 +330,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
 .desserte_paths_en_sf <- function(paths, costs, grille, crs_grille) {
   if (length(paths) == 0) {
     return(sf::st_sf(
-      ordre = integer(0), cout = numeric(0),
+      ordre = integer(0), cout = numeric(0), longueur = numeric(0),
       geometry = sf::st_sfc(crs = crs_grille)
     ))
   }
@@ -320,11 +339,41 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
     if (nrow(xy) == 1L) xy <- rbind(xy, xy)
     sf::st_linestring(xy)
   })
-  sf::st_sf(
+  out <- sf::st_sf(
     ordre = seq_along(paths),
     cout = costs,
     geometry = sf::st_sfc(geoms, crs = crs_grille)
   )
+  out$longueur <- as.numeric(sf::st_length(out)) # metres (CRS projete)
+  out[, c("ordre", "cout", "longueur", attr(out, "sf_column"))]
+}
+
+# Connexite (CA-16.5) : le reseau (existant + routes) forme-t-il une seule
+# composante connexe (voisinage 8) ? Sinon, une route est isolee.
+.reseau_connexe <- function(reseau_r) {
+  bin <- terra::ifel(reseau_r > 0, 1L, NA)
+  if (all(is.na(terra::values(bin)))) {
+    return(TRUE) # reseau vide : rien a raccorder
+  }
+  pat <- terra::patches(bin, directions = 8, zeroAsNA = TRUE)
+  ids <- unique(terra::values(pat))
+  length(ids[!is.na(ids)]) <= 1L
+}
+
+# Desserte (CA-16.1) : chaque parcelle a-t-elle au moins une cellule sur le
+# reseau ou a distance de debardage d'une route ?
+.reseau_desservies <- function(parcelles, reseau_r, grille, skidding_m) {
+  v <- terra::vect(parcelles)
+  v$pid_serv <- seq_len(nrow(parcelles))
+  pid <- terra::values(
+    terra::rasterize(v, grille, field = "pid_serv", background = NA)
+  )[, 1]
+  net_bin <- terra::ifel(reseau_r > 0, 1L, NA)
+  dist <- terra::values(terra::distance(net_bin))[, 1]
+  vapply(seq_len(nrow(parcelles)), function(p) {
+    cp <- which(pid == p)
+    length(cp) > 0L && min(dist[cp]) <= skidding_m + 1e-9
+  }, logical(1))
 }
 
 #' @export
@@ -333,6 +382,8 @@ print.foretaccess_reseau <- function(x, ...) {
   cli::cli_text("Mode : {.val {x$mode}}")
   cli::cli_text("Heuristique : {.val {x$heuristique}}")
   cli::cli_text("Routes creees : {nrow(x$lignes)}")
+  cli::cli_text("Parcelles desservies : {sum(x$desservies)}/{length(x$desservies)}")
+  cli::cli_text("Reseau connexe : {ifelse(x$connexe, 'oui', 'non')}")
   cli::cli_text("Cout total : {round(x$cout, 1)}")
   invisible(x)
 }

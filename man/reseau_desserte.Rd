@@ -46,9 +46,11 @@ served without building a road.}
 }
 \value{
 A \code{foretaccess_reseau} object: \code{lignes} (an \code{sf} LINESTRING of the
-created roads, one feature per road, with creation order and cost), \code{reseau}
-(a \code{SpatRaster} of the whole network, for Lot 17), \code{cout} (total) and the
-recall of the \code{mode} and \code{heuristique}.
+created roads, one feature per road, with creation \code{ordre}, \code{cout} and
+planimetric \code{longueur} in m), \code{reseau} (a \code{SpatRaster} of the whole
+network, for Lot 17), \code{cout} (total), \code{connexe} (a single connected
+component, CA-16.5), \code{desservies} (a logical, one per parcel, CA-16.1) and
+the recall of the \code{mode} and \code{heuristique}.
 }
 \description{
 Builds a road network connecting N parcels to an existing road network, at

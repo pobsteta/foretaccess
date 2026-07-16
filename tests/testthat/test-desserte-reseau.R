@@ -148,3 +148,35 @@ test_that("mode inconnu -> erreur", {
     "arg"
   )
 })
+
+# --- Lot 16c : raccordement / connexite + sortie affinee ---------------------
+
+test_that("CA-16.5 : le reseau est connexe (glouton et steiner)", {
+  s <- reseau_setup()
+  g <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  st <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "steiner")
+  expect_true(g$connexe)
+  expect_true(st$connexe)
+})
+
+test_that("CA-16.1 : toutes les parcelles sont desservies", {
+  s <- reseau_setup()
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  expect_length(net$desservies, nrow(s$parcelles))
+  expect_true(all(net$desservies))
+})
+
+test_that("skidding : parcelle desservie par proximite sans route construite", {
+  s <- reseau_setup()
+  proche <- reseau_parcelle(s$pre$mnt, 3, 2, id = 1)
+  net <- reseau_desserte(s$pre, s$cout, proche, s$route, "plus_proche", skidding_m = 100)
+  expect_equal(nrow(net$lignes), 0)
+  expect_true(net$desservies) # desservie par le rayon de debardage
+})
+
+test_that("sortie affinee : les lignes portent une longueur planimetrique positive", {
+  s <- reseau_setup()
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche")
+  expect_true("longueur" %in% names(net$lignes))
+  expect_true(all(net$lignes$longueur > 0))
+})
