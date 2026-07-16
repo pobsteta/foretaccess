@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,24 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.2.0" id="foretaccess-120-2026-07-16">foretaccess 1.2.0 (2026-07-16)<a class="anchor" aria-label="anchor" href="#foretaccess-120-2026-07-16"></a></h2>
+<div class="section level3">
+<h3 id="conception-de-desserte-forestière-épic-lots--1-2-0">Conception de desserte forestière (épic Lots 14 → 18)<a class="anchor" aria-label="anchor" href="#conception-de-desserte-foresti%C3%A8re-%C3%A9pic-lots--1-2-0"></a></h3>
+<p>Nouvelle chaîne complète pour <strong>concevoir</strong> un réseau de desserte forestière (et plus seulement cartographier l’accessibilité), portage propre de <strong>SylvaRoad</strong> (Dupire/ONF), <strong>Forest Road Designer</strong> (PANOimagen) et <strong>ForestRoadNetwork</strong> (Klemet), tous GPL v3. De la surface de coût au réseau typé et optimisé :</p>
+<ul><li>
+<strong>Coût de construction (Lot 14)</strong> — <code><a href="../reference/surface_cout_construction.html">surface_cout_construction()</a></code> produit un <code>foretaccess_cout_construction</code> (deux <code>SpatRaster</code> : <code>cout</code> €/m additif et <code>franchissable</code>), paramétré par <code>config$desserte$cout</code>.</li>
+<li>
+<strong>Solveur de tracé A* (Lot 15, noyau Rust)</strong> — <code><a href="../reference/tracer_desserte.html">tracer_desserte()</a></code> trace une route de moindre coût sous contraintes de constructibilité (pente longitudinale, dévers, épingles, rayon de braquage, contrôle de profil), à voisinage disque, via le crate <code>cablehelp</code> ; sortie <code>foretaccess_trace</code> (<code>sf</code> LINESTRING). Paramètres dans <code>config$desserte$trace</code>.</li>
+<li>
+<strong>Réseau multi-cibles (Lot 16)</strong> — <code>reseau_desserte(..., mode =)</code> connecte N parcelles au réseau existant au moindre coût cumulé, en réutilisant les troncs (arborescence). Deux modes : <code>"glouton"</code> (MTAP→STAP séquentiel) et <code>"steiner"</code> (arbre couvrant de poids minimal). Sortie <code>foretaccess_reseau</code> (<code>sf</code> + raster), vérifiée connexe et desservant toutes les parcelles.</li>
+<li>
+<strong>Flux de bois &amp; typage (Lot 17)</strong> — <code><a href="../reference/vectoriser_reseau.html">vectoriser_reseau()</a></code> transforme le réseau en graphe topologique (<code>foretaccess_reseau_graphe</code>) ; <code><a href="../reference/calculer_flux.html">calculer_flux()</a></code> sème des sources et accumule le volume vers les exutoires ; <code><a href="../reference/typer_desserte.html">typer_desserte()</a></code> classe les tronçons par seuils de flux (primaire/secondaire/tertiaire) avec conversion temporaire optionnelle. Sortie <code>foretaccess_desserte_typee</code>, persistable via le socle spatial (GeoPackage/PostGIS).</li>
+<li>
+<strong>Optimisation du réseau (Lot 18, noyau Rust)</strong> — <code>optimiser_reseau(..., strategie =)</code> explore l’espace des ordres d’insertion pour améliorer le glouton, sans jamais faire pire : <code>"multistart"</code> (K ordres perturbés en parallèle, <code>rayon</code>), <code>"recuit"</code> (recuit simulé, Akay 2004) et <code>"riprute"</code> (rip-up &amp; reroute, avec garde-fou de connexité). Sortie <code>foretaccess_reseau</code> enrichie d’un journal de convergence.</li>
+</ul><p>Travail dérivé de Sylvaccess et des outils cités ci-dessus, distribué sous GPL v3.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.0" id="foretaccess-110-2026-07-16">foretaccess 1.1.0 (2026-07-16)<a class="anchor" aria-label="anchor" href="#foretaccess-110-2026-07-16"></a></h2>
 <div class="section level3">

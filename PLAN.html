@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,7 +74,7 @@
 <li>
 <strong>Branche</strong> : <code>feat/lot18c-riprute</code> (cycle dev)</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0.9000</code> (cycle dev après release <code>v1.1.0</code>)</li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>1.2.0</code> (release de l’épic desserte ; retour en <code>1.2.0.9000</code> juste après merge)</li>
 <li>
 <strong>Les distances collent, décomposition comprise</strong> (mesuré sur les sorties courantes) : débusquage <strong>0,0 m</strong> d’écart médian, traînage <strong>en forêt 0,2 m</strong> (120,2 contre 124,0), traînage sur piste <strong>0,4 m</strong>, distance totale <strong>0,2 m</strong>. Le reliquat est l’<strong>arrondi</strong> : Sylvaccess stocke ses distances en <code>int16</code> (<code>int(dist + 0.5)</code>), nous en flottant — l’écart est borné par la demi-cellule. <em>(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07 était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir l’entrée du 14/07 ci-dessous.)</em>
 </li>
@@ -314,6 +314,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-16--release-v120--épic--conception-de-desserte--lots-1418">2026-07-16 — Release v1.2.0 : épic « conception de desserte » (Lots 14→18)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--release-v120--%C3%A9pic--conception-de-desserte--lots-1418"></a></h3>
+<p>Coupe d’une <strong>release stable <code>v1.2.0</code></strong> regroupant tout l’épic desserte accumulé en cycle dev depuis <code>v1.1.0</code> (13 PRs, #58→#70). <code>DESCRIPTION</code> = <code>NEWS.md</code> (tête) = <code>CITATION.cff</code> = <code>1.2.0</code> (gate CI <code>version-consistency</code>). <code>NEWS.md</code> documente la chaîne complète : <code>surface_cout_construction</code> (14) → <code>tracer_desserte</code> (15) → <code>reseau_desserte</code> (16) → <code>vectoriser_reseau</code>/<code>calculer_flux</code>/ <code>typer_desserte</code> (17) → <code>optimiser_reseau</code> (18). Bump <strong>mineur</strong> (fonctionnalités rétrocompatibles). Après merge : <code>release.yml</code> pose le tag <code>v1.2.0</code> + la release GitHub, puis retour en cycle dev <code>1.2.0.9000</code>.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-16--lot-18c--rip-up--reroute--clôture-du-lot-18-et-de-lépic-desserte">2026-07-16 — Lot 18c : rip-up &amp; reroute + clôture du Lot 18 et de l’épic desserte<a class="anchor" aria-label="anchor" href="#id_2026-07-16--lot-18c--rip-up--reroute--cl%C3%B4ture-du-lot-18-et-de-l%C3%A9pic-desserte"></a></h3>
 <p><code>optimiser_reseau(..., strategie = "riprute", max_passes)</code> ajoute l’<strong>amélioration locale « rip-up &amp; reroute »</strong> et clôt le Lot 18. Noyau Rust <code>desserte_reseau_riprute</code> : part du réseau glouton, puis retire tour à tour chaque chemin et <strong>re-route sa source vers le reste du réseau</strong> (réutilisation) ; un déplacement est retenu s’il <strong>baisse le coût total</strong> <em>et</em> laisse <strong>toutes les sources connectées</strong>. Répète jusqu’à stabilité ou <code>max_passes</code>.</p>
