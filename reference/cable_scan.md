@@ -49,7 +49,6 @@ cable_scan(
   l_slope,
   prop_slope,
   l_hor,
-  optim_h,
   methode_seilaplan,
   hm_min,
   hm_max,
@@ -216,10 +215,6 @@ cable_scan(
 - l_hor:
 
   Lateral yarding half-width buffered around each line (m).
-
-- optim_h:
-
-  Optimise the attachment height on each support (`c_option_h`).
 
 - methode_seilaplan:
 

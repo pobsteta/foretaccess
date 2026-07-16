@@ -1,5 +1,33 @@
 # Changelog
 
+## foretaccess 1.1.0 (2026-07-16)
+
+### Optimisation de la hauteur des supports câble façon SEILAPLAN (spec 013)
+
+Nouvelle méthode de placement des supports du câble-mât, activable par
+`cable$methode_supports = "seilaplan"` (défaut `"sylvaccess"`). Elle
+transcrit l’algorithme de **Bont & Heinimann (2012)** du plugin QGIS
+**SEILAPLAN** — un **graphe + plus court chemin (Dijkstra)** qui
+optimise **position et hauteur** des supports — en réutilisant la
+mécanique caténaire Newton/Irvine déjà validée (noyau Rust `cablehelp`),
+et non la mécanique de Zweifel de SEILAPLAN.
+
+- **Fidélité** : confrontée cellule à cellule à l’oracle Sylvaccess
+  `c_option_h=true` sur ColduPre, la méthode monte l’accord de **93,2 %
+  à 94,7 %**, récupère du trop-conservateur (faux-négatifs 1915 → 1465)
+  sans excès d’optimisme (faux-positifs 25 → 29), pour un gain en
+  fenêtre **+454 ≈ le +470** de l’oracle.
+- **Perf** : ~**2,8×** le `_NoH` (pré-filtre géométrique des arêtes,
+  amorçage Newton partagé par travée, portée prolongée au pas raster).
+- **Défaut inchangé** : `"sylvaccess"` (variante `_NoH`, fidélité
+  ColduPre garantie) reste le défaut, bit-pour-bit identique.
+
+Le portage direct de `OptPyl_Up2` de Sylvaccess (tenté puis shelvé,
+buggé et lent) et le flag expérimental `optimiser_hauteur_fixation` ont
+été **retirés** au profit de cette voie. Voir
+`specs/013-seilaplan-hauteur.md` et
+`docs/comparaison-cable-seilaplan.md`.
+
 ## foretaccess 1.0.0 (2026-07-15)
 
 Première version **majeure**. Le sens du bump est celui décidé au Lot 11

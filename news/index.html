@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,20 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.0" id="foretaccess-110-2026-07-16">foretaccess 1.1.0 (2026-07-16)<a class="anchor" aria-label="anchor" href="#foretaccess-110-2026-07-16"></a></h2>
+<div class="section level3">
+<h3 id="optimisation-de-la-hauteur-des-supports-câble-façon-seilaplan-spec-1-1-0">Optimisation de la hauteur des supports câble façon SEILAPLAN (spec 013)<a class="anchor" aria-label="anchor" href="#optimisation-de-la-hauteur-des-supports-c%C3%A2ble-fa%C3%A7on-seilaplan-spec-1-1-0"></a></h3>
+<p>Nouvelle méthode de placement des supports du câble-mât, activable par <code>cable$methode_supports = "seilaplan"</code> (défaut <code>"sylvaccess"</code>). Elle transcrit l’algorithme de <strong>Bont &amp; Heinimann (2012)</strong> du plugin QGIS <strong>SEILAPLAN</strong> — un <strong>graphe + plus court chemin (Dijkstra)</strong> qui optimise <strong>position et hauteur</strong> des supports — en réutilisant la mécanique caténaire Newton/Irvine déjà validée (noyau Rust <code>cablehelp</code>), et non la mécanique de Zweifel de SEILAPLAN.</p>
+<ul><li>
+<strong>Fidélité</strong> : confrontée cellule à cellule à l’oracle Sylvaccess <code>c_option_h=true</code> sur ColduPre, la méthode monte l’accord de <strong>93,2 % à 94,7 %</strong>, récupère du trop-conservateur (faux-négatifs 1915 → 1465) sans excès d’optimisme (faux-positifs 25 → 29), pour un gain en fenêtre <strong>+454 ≈ le +470</strong> de l’oracle.</li>
+<li>
+<strong>Perf</strong> : ~<strong>2,8×</strong> le <code>_NoH</code> (pré-filtre géométrique des arêtes, amorçage Newton partagé par travée, portée prolongée au pas raster).</li>
+<li>
+<strong>Défaut inchangé</strong> : <code>"sylvaccess"</code> (variante <code>_NoH</code>, fidélité ColduPre garantie) reste le défaut, bit-pour-bit identique.</li>
+</ul><p>Le portage direct de <code>OptPyl_Up2</code> de Sylvaccess (tenté puis shelvé, buggé et lent) et le flag expérimental <code>optimiser_hauteur_fixation</code> ont été <strong>retirés</strong> au profit de cette voie. Voir <code>specs/013-seilaplan-hauteur.md</code> et <code>docs/comparaison-cable-seilaplan.md</code>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.0" id="foretaccess-100-2026-07-15">foretaccess 1.0.0 (2026-07-15)<a class="anchor" aria-label="anchor" href="#foretaccess-100-2026-07-15"></a></h2>
 <p>Première version <strong>majeure</strong>. Le sens du bump est celui décidé au Lot 11 : <code>v1.0.0</code> signifie « <strong>validée contre le vrai moteur Sylvaccess</strong> », non « périmètre atteint ». Ce préalable est désormais tenu sur les <strong>quatre moteurs</strong>, confrontés cellule à cellule au jeu officiel ColduPre (sorties Sylvaccess v3.6 produites en propre, aucun oracle n’étant livré avec le dépôt amont) :</p>

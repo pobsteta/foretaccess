@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,9 +52,12 @@
 <li>
 <strong><code>v1.0.0</code> posée</strong> (2026-07-15) : première version <strong>majeure</strong>, sens du bump = « validée contre le vrai moteur ». Préalable tenu sur les <strong>quatre moteurs</strong> (skidder 99,95 %, porteur 99,72 %, câble 98,36 %, <strong>DFCI 99,87 %</strong>), distances collées décomposition comprise. Publie le <strong>Lot 12a.4 (DFCI)</strong> : moteur radial <code>debusq_dfci</code> transcrit (noyau Rust <code>dfci_scan</code>), spec 006 réécrite, 6 classes de défendabilité, lance à 0 m d’écart médian.</li>
 <li>
-<strong>Branche</strong> : <code>main</code> (release <code>v1.0.0</code>)</li>
+<strong><code>v1.1.0</code> posée</strong> (2026-07-16) : <strong>optimisation de la hauteur des supports câble façon SEILAPLAN</strong> (spec 013, <code>cable$methode_supports = "seilaplan"</code>) — graphe + Dijkstra de Bont &amp; Heinimann réutilisant notre caténaire. Confrontée cellule à cellule à l’oracle <code>c_option_h=true</code> : accord <strong>93,2 → 94,7 %</strong>, fidèle à l’oracle (+454 ≈ +470 en fenêtre), perf <strong>×2,8</strong>. Défaut <code>"sylvaccess"</code> (<code>_NoH</code>) inchangé, bit-pour-bit. <code>OptPyl_Up2</code> shelvé et le flag <code>optimiser_hauteur_fixation</code> retirés. <strong>Dette câble (optimisation de hauteur) : résolue.</strong>
+</li>
 <li>
-<strong>Version <code>DESCRIPTION</code></strong> : <code>1.0.0</code> (release ; retour en cycle dev <code>1.0.0.9000</code> juste après)</li>
+<strong>Branche</strong> : <code>main</code> (release <code>v1.1.0</code>)</li>
+<li>
+<strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0</code> (release ; retour en cycle dev <code>1.1.0.9000</code> juste après)</li>
 <li>
 <strong>Les distances collent, décomposition comprise</strong> (mesuré sur les sorties courantes) : débusquage <strong>0,0 m</strong> d’écart médian, traînage <strong>en forêt 0,2 m</strong> (120,2 contre 124,0), traînage sur piste <strong>0,4 m</strong>, distance totale <strong>0,2 m</strong>. Le reliquat est l’<strong>arrondi</strong> : Sylvaccess stocke ses distances en <code>int16</code> (<code>int(dist + 0.5)</code>), nous en flottant — l’écart est borné par la demi-cellule. <em>(Le « traînage en forêt à 0 m contre 124 m » du journal du 13/07 était le symptôme de la 3ᵉ passe de treuillage manquante ; il a disparu avec elle. Voir l’entrée du 14/07 ci-dessous.)</em>
 </li>
@@ -156,6 +159,11 @@
 <td>
 <code>v0.14.0</code>, <code>v0.15.0</code>
 </td>
+</tr><tr><td>13</td>
+<td>Hauteur supports câble (SEILAPLAN)</td>
+<td><code>specs/013-seilaplan-hauteur.md</code></td>
+<td>✅ terminé (oracle 94,7 %, perf ×2,8)</td>
+<td><code>v1.1.0</code></td>
 </tr></tbody></table><p>Chemin critique MVP : 0 → 1 → (2 ∥ 3 ∥ 4) → 5 → 7 → 8 → 9.</p>
 </div>
 <div class="section level2">
@@ -264,6 +272,31 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-16--v110--optimisation-de-la-hauteur-des-supports-câble-seilaplan">2026-07-16 — <code>v1.1.0</code> : optimisation de la hauteur des supports câble (SEILAPLAN)<a class="anchor" aria-label="anchor" href="#id_2026-07-16--v110--optimisation-de-la-hauteur-des-supports-c%C3%A2ble-seilaplan"></a></h3>
+<p>Release mineure (feat) : spec 013 bouclée en quatre incréments (13a brique mécanique, 13b graphe + Dijkstra, 13c intégration + confrontation, 13d validation + nettoyage). <code>cable$methode_supports = "seilaplan"</code> optimise position <strong>et</strong> hauteur des supports à la Bont &amp; Heinimann (2012), en réutilisant notre caténaire. Confrontée cellule à cellule à l’oracle <code>c_option_h=true</code> : accord <strong>93,2 → 94,7 %</strong>, fidèle à l’oracle (+454 ≈ +470 en fenêtre), perf <strong>×2,8</strong>. Défaut <code>"sylvaccess"</code> (<code>_NoH</code>) inchangé, bit-pour-bit. <code>OptPyl_Up2</code> shelvé et le flag <code>optimiser_hauteur_fixation</code> retirés. <code>DESCRIPTION</code> / <code>NEWS.md</code> / <code>CITATION.cff</code> alignés sur <code>1.1.0</code> ; <code>release.yml</code> pose le tag <code>v1.1.0</code> au merge. Retour en cycle dev <code>1.1.0.9000</code> juste après.</p>
+</div>
+<div class="section level3">
+<h3 id="id_2026-07-16--seilaplan-13d--validation-cellule-à-cellule-à-loracle-c_option_htrue">2026-07-16 — SEILAPLAN 13d : validation cellule à cellule à l’oracle <code>c_option_h=true</code>
+<a class="anchor" aria-label="anchor" href="#id_2026-07-16--seilaplan-13d--validation-cellule-%C3%A0-cellule-%C3%A0-loracle-c_option_htrue"></a></h3>
+<p>Dernier incrément de <code>specs/013</code>. La réserve de 13c.2 (le +3619 dépasse le gain oracle +470) est <strong>levée</strong> : confronté <strong>cellule à cellule</strong> à l’oracle Sylvaccess <code>c_option_h=true</code> (<code>sylvaccess_hopt</code>) sur <strong>sa propre fenêtre câble</strong> (28336 cellules forestières calculées), le graphe SEILAPLAN <strong>colle à l’oracle</strong>, il ne sur-couvre pas.</p>
+<table class="table"><colgroup><col width="25%"><col width="25%"><col width="25%"><col width="25%"></colgroup><thead><tr><th>comparaison (fenêtre oracle)</th>
+<th>accord</th>
+<th>faux+ (sur-couvre)</th>
+<th>faux− (sous-couvre)</th>
+</tr></thead><tbody><tr><td>FA <code>_NoH</code> vs oracle-hopt</td>
+<td>93,15 %</td>
+<td>25</td>
+<td>1915</td>
+</tr><tr><td><strong>FA seilaplan vs oracle-hopt</strong></td>
+<td><strong>94,73 %</strong></td>
+<td><strong>29</strong></td>
+<td><strong>1465</strong></td>
+</tr></tbody></table><ul><li>
+<strong>En fenêtre</strong>, seilaplan gagne <strong>+454</strong> cellules (26399 → 26853) — quasi le <strong>+470</strong> de l’oracle — avec l’accord qui <strong>monte</strong> (93,15 → 94,73 %) et <strong>quasi aucun faux-positif nouveau</strong> (25 → 29). Donc le CA-13.5 est tenu : seilaplan <strong>reproduit fidèlement</strong> <code>c_option_h=true</code>, il récupère du trop-conservateur sans devenir trop-optimiste.</li>
+<li>Le <strong>+3619</strong> de tête (grille entière) est <strong>dominé par le hors-fenêtre</strong> (~3165) : c’est l’écart <strong>de fenêtrage</strong> FA/Sylvaccess (Sylvaccess ne calcule le câble que dans un buffer autour des places de départ ; nous balayons toute la grille), <strong>déjà connu</strong> et présent aussi sur le <code>_NoH</code> — <strong>pas</strong> un défaut d’optimisation de hauteur. Il se réduira avec la sélection de lignes (Lot 5).</li>
+</ul><p><strong>Conclusion</strong> : la voie SEILAPLAN <strong>tient CA-13.3 (couverture ↑, fidèle à l’oracle), CA-13.4 (perf ×2,8) et CA-13.5 (accord cellule à cellule ↑)</strong>. Reste le nettoyage : retrait d’<code>OptPyl_Up2</code> et du flag <code>optimiser_hauteur_fixation</code>, superseded.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-16--seilaplan-13c-câblage--methode_supports--seilaplan-de-bout-en-bout">2026-07-16 — SEILAPLAN 13c (câblage) : <code>methode_supports = "seilaplan"</code> de bout en bout<a class="anchor" aria-label="anchor" href="#id_2026-07-16--seilaplan-13c-c%C3%A2blage--methode_supports--seilaplan-de-bout-en-bout"></a></h3>
 <p>Troisième incrément de <code>specs/013</code> — l’intégration du graphe (13b) dans le balayage <code>cable_scan</code>.</p>

@@ -19,7 +19,7 @@ faisable sont marquees accessibles au cable."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,21 +144,18 @@ avec les bornes <code>aval_*</code> niees, et elle ne peut pas etre coupee du co
 seulement raccourcie par le haut.</p>
     </div>
     <div class="section level2">
-    <h2 id="ecarts-assumes-avec-sylvaccess-v-">Ecarts assumes avec Sylvaccess v3.6<a class="anchor" aria-label="anchor" href="#ecarts-assumes-avec-sylvaccess-v-"></a></h2>
+    <h2 id="optimisation-de-la-hauteur-des-supports">Optimisation de la hauteur des supports<a class="anchor" aria-label="anchor" href="#optimisation-de-la-hauteur-des-supports"></a></h2>
 
 
-<p>L'optimisation de la <strong>hauteur de fixation</strong> sur chaque support (<code>c_option_h</code>,
-<code>cable$optimiser_hauteur_fixation</code>) est <strong>experimentale</strong> et desactivee par defaut
-(variante <code>_NoH</code>, le defaut de v3.6). Le portage des variantes a hauteur balayee
-(<code>OptPyl_Up</code> / <code>OptPyl_Up2</code>) existe mais <strong>ne reproduit pas encore l'oracle</strong> : sur
-ColduPre il <em>reduit</em> la couverture (net -999 cellules) la ou Sylvaccess l'<em>augmente</em>
-(net +470), signe d'un defaut restant dans la passe machine-en-bas ; et il est
-<strong>~20x plus lent</strong> (46 min pour 2 departs). A n'activer que pour experimenter. Cf.
-<code>PLAN.md</code> (dette assumee du cable) et <code>specs/004-cable.md</code>.</p>
-<p>Alternative : <code>cable$methode_supports = "seilaplan"</code> bascule le placement des
-supports sur le <strong>graphe + Dijkstra</strong> de Bont &amp; Heinimann (2012), qui optimise
-position <strong>et</strong> hauteur en reutilisant notre mecanique caténaire (spec 013). Le
-defaut reste <code>"sylvaccess"</code> (<code>OptPyl_NoH</code>, fidelite ColduPre garantie).</p>
+<p>Par defaut (<code>cable$methode_supports = "sylvaccess"</code>), la hauteur de fixation
+n'est <strong>pas</strong> optimisee : elle vaut <code>hauteur_support_inter_m</code> sur les supports
+intermediaires et <code>hauteur_support_terminal_m</code> au terminus (variante <code>_NoH</code> de
+Sylvaccess v3.6, celle qui tient la fidelite ColduPre).</p>
+<p><code>cable$methode_supports = "seilaplan"</code> bascule le placement des supports sur le
+<strong>graphe + Dijkstra</strong> de Bont &amp; Heinimann (2012), qui optimise position <strong>et</strong>
+hauteur en reutilisant notre mecanique caténaire (spec 013). Confronte cellule a
+cellule a l'oracle Sylvaccess <code>c_option_h=true</code> : accord 94,7 % (vs 93,2 % pour
+le <code>_NoH</code>), couverture en hausse et fidele a l'oracle, perf ~2,8x le <code>_NoH</code>.</p>
 <p>Le <strong>pechage lateral</strong> (<code>distance_laterale_max_m</code>, <code>c_l_hor</code>) est pris en compte :
 la couverture d'une ligne faisable n'est pas son seul axe mais le rectangle de
 demi-largeur <code>c_l_hor</code> autour du segment, comme <code>create_rast_couv</code> chez Sylvaccess.</p>

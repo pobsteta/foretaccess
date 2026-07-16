@@ -91,24 +91,20 @@ ligne se resout sur le profil **retourne** (l'ancrage ouvre, le mat
 ferme) avec les bornes `aval_*` niees, et elle ne peut pas etre coupee
 du cote machine – seulement raccourcie par le haut.
 
-## Ecarts assumes avec Sylvaccess v3.6
+## Optimisation de la hauteur des supports
 
-L'optimisation de la **hauteur de fixation** sur chaque support
-(`c_option_h`, `cable$optimiser_hauteur_fixation`) est **experimentale**
-et desactivee par defaut (variante `_NoH`, le defaut de v3.6). Le
-portage des variantes a hauteur balayee (`OptPyl_Up` / `OptPyl_Up2`)
-existe mais **ne reproduit pas encore l'oracle** : sur ColduPre il
-*reduit* la couverture (net -999 cellules) la ou Sylvaccess l'*augmente*
-(net +470), signe d'un defaut restant dans la passe machine-en-bas ; et
-il est **~20x plus lent** (46 min pour 2 departs). A n'activer que pour
-experimenter. Cf. `PLAN.md` (dette assumee du cable) et
-`specs/004-cable.md`.
+Par defaut (`cable$methode_supports = "sylvaccess"`), la hauteur de
+fixation n'est **pas** optimisee : elle vaut `hauteur_support_inter_m`
+sur les supports intermediaires et `hauteur_support_terminal_m` au
+terminus (variante `_NoH` de Sylvaccess v3.6, celle qui tient la
+fidelite ColduPre).
 
-Alternative : `cable$methode_supports = "seilaplan"` bascule le
-placement des supports sur le **graphe + Dijkstra** de Bont & Heinimann
-(2012), qui optimise position **et** hauteur en reutilisant notre
-mecanique caténaire (spec 013). Le defaut reste `"sylvaccess"`
-(`OptPyl_NoH`, fidelite ColduPre garantie).
+`cable$methode_supports = "seilaplan"` bascule le placement des supports
+sur le **graphe + Dijkstra** de Bont & Heinimann (2012), qui optimise
+position **et** hauteur en reutilisant notre mecanique caténaire (spec
+013). Confronte cellule a cellule a l'oracle Sylvaccess
+`c_option_h=true` : accord 94,7 % (vs 93,2 % pour le `_NoH`), couverture
+en hausse et fidele a l'oracle, perf ~2,8x le `_NoH`.
 
 Le **pechage lateral** (`distance_laterale_max_m`, `c_l_hor`) est pris
 en compte : la couverture d'une ligne faisable n'est pas son seul axe
