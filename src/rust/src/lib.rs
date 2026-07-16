@@ -488,6 +488,7 @@ fn cable_test_span(
 /// @param l_slope Maximum cumulated length on a steep cross-slope (m).
 /// @param prop_slope Maximum share of the line on a steep cross-slope.
 /// @param l_hor Lateral yarding half-width buffered around each line (m).
+/// @param optim_h Optimise the attachment height on each support (`c_option_h`).
 /// @return A list: `couvert`, `longueur`, `azimut` (per cell) and the candidate
 ///   line vectors `li_dep`, `li_az`, `li_lg`, `li_surf`, `li_sens`, `li_vol`,
 ///   `li_ipc`, `li_nsup`.
@@ -534,6 +535,7 @@ fn cable_scan(
     l_slope: f64,
     prop_slope: f64,
     l_hor: f64,
+    optim_h: bool,
 ) -> List {
     let vopt = if has_vol { Some(vol.as_slice()) } else { None };
     let out = scan::scan(
@@ -543,6 +545,7 @@ fn cable_scan(
         hintsup, sup_max.max(0) as usize, lmin_span, nbconfig.max(1) as usize,
         pas_azimut.max(1) as usize, pas_depart.max(1) as usize,
         &aspect, &pente, lsans_foret, angle_transv, slope_trans, l_slope, prop_slope, l_hor,
+        optim_h,
     );
     let couvert: Vec<i32> = out.couvert.iter().map(|&b| b as i32).collect();
     let li_dep: Vec<i32> = out.lines.iter().map(|l| l.dep).collect();
