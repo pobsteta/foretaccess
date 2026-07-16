@@ -68,9 +68,18 @@
   rayon de braquage et angle limite, anti-croisement, file secondaire de
   finition, enchaînement des points de passage). Binding
   `desserte_trace` exposé. 19 tests cargo + 10 tests R
-  (CA-15.1/15.4/15.6/15.9). Reste **15c** (orchestration R,
-  `foretaccess_trace` en `sf`).
-- **Branche** : `feat/lot15b-solveur` (cycle dev)
+  (CA-15.1/15.4/15.6/15.9). **15b mergé (#60).**
+- **Lot 15c (orchestration R) en cycle dev** :
+  `tracer_desserte(pre, cout, waypoints, config)` (`R/desserte_trace.R`)
+  rend un objet `foretaccess_trace` (une `sf` LINESTRING de la route,
+  coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive
+  dévers (`obs2`) et fraction locale de fort dévers (`local_slope` par
+  focale disque), convertit les waypoints (sf/cellules) en indices,
+  appelle `desserte_trace`, reconstruit la polyligne (centres de
+  cellules). Config `desserte$trace` ajoutée (paramètres SylvaRoad) +
+  validation. 18 tests. **Lot 15 clos** (15a→15c) ; oracle `meisenthal2`
+  non publié → validé par invariants. Suite : **Lot 16** (réseau MTAP).
+- **Branche** : `feat/lot15c-orchestration` (cycle dev)
 - **Version `DESCRIPTION`** : `1.1.0.9000` (cycle dev après release
   `v1.1.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les
@@ -165,7 +174,7 @@
 | 12 | Fidélité fine & performance | `specs/012-fidelite-performance.md` | 📋 proposé | `v0.14.0`, `v0.15.0` |
 | 13 | Hauteur supports câble (SEILAPLAN) | `specs/013-seilaplan-hauteur.md` | ✅ terminé (oracle 94,7 %, perf ×2,8) | `v1.1.0` |
 | 14 | Coût de construction de desserte | `specs/014-cout-construction.md` | ✅ terminé (R pur, 32 tests) | *(cycle dev)* |
-| 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | 🔨 en cours (15a livré : voisinage + heuristique) | *(cycle dev)* |
+| 15 | Solveur de tracé (A\*) | `specs/015-solveur-trace-astar.md` | ✅ terminé (15a→15c, invariants ; oracle non publié) | *(cycle dev)* |
 | 16 | Réseau MTAP | `specs/016-reseau-mtap.md` | 📋 proposé | — |
 | 17 | Flux & typage | `specs/017-flux-typage.md` | 📋 proposé | — |
 | 18 | Optimisation du réseau | `specs/018-optimisation.md` | 📋 proposé | — |

@@ -61,9 +61,12 @@
 <strong>Lot 15a (voisinage étendu + heuristique inverse) en cycle dev</strong> : premier incrément du <strong>portage Rust</strong> du solveur de tracé (ADR-001 déclenché). Module <code>src/rust/src/desserte/</code> : <code>neighborhood.rs</code> (table de voisinage disque filtrée par la pente en long, portage de <code>build_NeibTable</code> / <code>build_Tab_neibs</code> de SylvaRoad) et <code>heuristic.rs</code> (distance-de-cout inverse depuis la cible = heuristique <code>h</code> admissible, portage de <code>calcul_distance_de_cout</code>). Binding <code>desserte_dist_to_end</code> exposé. 11 tests cargo + 9 tests R. Sources SylvaRoad/FRD clonées et transcrites (la lettre) ; <strong>l’oracle <code>meisenthal2</code> n’est pas publié</strong> (scripts seuls) → validation par invariants (CA-15.1-15.6, 15.8, 15.9), sans l’accord géométrique CA-15.7 tant que l’oracle manque. Suite : <strong>15b</strong> (A* complet) puis <strong>15c</strong> (orchestration R, sortie <code>foretaccess_trace</code> en <code>sf</code>). <strong>15a mergé (#59).</strong>
 </li>
 <li>
-<strong>Lot 15b (solveur A* complet) en cycle dev</strong> : <code>src/rust/src/desserte/</code> complété par <code>geom.rs</code> (<code>connect2</code> DDA, <code>get_intersect</code>, <code>check_profile</code>) et <code>solver.rs</code> (portage de <code>Astar_force_wp</code> / <code>calc_init</code> / <code>basic_calc</code> : coût de transition géométrique + pénalités paraboliques direction/pente, épingles avec rayon de braquage et angle limite, anti-croisement, file secondaire de finition, enchaînement des points de passage). Binding <code>desserte_trace</code> exposé. 19 tests cargo + 10 tests R (CA-15.1/15.4/15.6/15.9). Reste <strong>15c</strong> (orchestration R, <code>foretaccess_trace</code> en <code>sf</code>).</li>
+<strong>Lot 15b (solveur A* complet) en cycle dev</strong> : <code>src/rust/src/desserte/</code> complété par <code>geom.rs</code> (<code>connect2</code> DDA, <code>get_intersect</code>, <code>check_profile</code>) et <code>solver.rs</code> (portage de <code>Astar_force_wp</code> / <code>calc_init</code> / <code>basic_calc</code> : coût de transition géométrique + pénalités paraboliques direction/pente, épingles avec rayon de braquage et angle limite, anti-croisement, file secondaire de finition, enchaînement des points de passage). Binding <code>desserte_trace</code> exposé. 19 tests cargo + 10 tests R (CA-15.1/15.4/15.6/15.9). <strong>15b mergé (#60).</strong>
+</li>
 <li>
-<strong>Branche</strong> : <code>feat/lot15b-solveur</code> (cycle dev)</li>
+<strong>Lot 15c (orchestration R) en cycle dev</strong> : <code>tracer_desserte(pre, cout, waypoints, config)</code> (<code>R/desserte_trace.R</code>) rend un objet <code>foretaccess_trace</code> (une <code>sf</code> LINESTRING de la route, coût, faisabilité). R aplatit MNT/franchissabilité/pente, dérive dévers (<code>obs2</code>) et fraction locale de fort dévers (<code>local_slope</code> par focale disque), convertit les waypoints (sf/cellules) en indices, appelle <code>desserte_trace</code>, reconstruit la polyligne (centres de cellules). Config <code>desserte$trace</code> ajoutée (paramètres SylvaRoad) + validation. 18 tests. <strong>Lot 15 clos</strong> (15a→15c) ; oracle <code>meisenthal2</code> non publié → validé par invariants. Suite : <strong>Lot 16</strong> (réseau MTAP).</li>
+<li>
+<strong>Branche</strong> : <code>feat/lot15c-orchestration</code> (cycle dev)</li>
 <li>
 <strong>Version <code>DESCRIPTION</code></strong> : <code>1.1.0.9000</code> (cycle dev après release <code>v1.1.0</code>)</li>
 <li>
@@ -180,7 +183,7 @@
 </tr><tr><td>15</td>
 <td>Solveur de tracé (A*)</td>
 <td><code>specs/015-solveur-trace-astar.md</code></td>
-<td>🔨 en cours (15a livré : voisinage + heuristique)</td>
+<td>✅ terminé (15a→15c, invariants ; oracle non publié)</td>
 <td><em>(cycle dev)</em></td>
 </tr><tr><td>16</td>
 <td>Réseau MTAP</td>
