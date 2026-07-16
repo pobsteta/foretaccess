@@ -12,6 +12,9 @@ optimiser_reseau(
   strategie = c("multistart", "recuit", "riprute"),
   heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
   n_start = 16,
+  n_iter = 200,
+  temp0 = 0,
+  refroidissement = 0.95,
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
@@ -27,13 +30,21 @@ optimiser_reseau(
 
 \item{desserte_existante}{An \code{sf} LINESTRING of the network to connect to.}
 
-\item{strategie}{Optimisation strategy: \code{"multistart"} (default).}
+\item{strategie}{Optimisation strategy: \code{"multistart"} (default) or \code{"recuit"}
+(simulated annealing on the insertion order).}
 
 \item{heuristique}{Base ordering of parcels (trial 0), see \code{\link[=reseau_desserte]{reseau_desserte()}}.}
 
-\item{n_start}{Number of insertion orders to try (multi-start).}
+\item{n_start}{Number of insertion orders to try (\code{"multistart"}).}
 
-\item{graine}{Integer seed for the reproducible order permutations.}
+\item{n_iter}{Number of annealing iterations (\code{"recuit"}).}
+
+\item{temp0}{Initial annealing temperature (\code{"recuit"}); \verb{<= 0} derives it from
+the base network cost.}
+
+\item{refroidissement}{Geometric cooling factor in \verb{(0, 1)} (\code{"recuit"}).}
+
+\item{graine}{Integer seed for the reproducible order permutations / moves.}
 
 \item{skidding_m}{Skidding distance (m): a parcel cell within it of a road is
 served without building a road.}
