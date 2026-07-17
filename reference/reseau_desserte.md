@@ -19,6 +19,7 @@ reseau_desserte(
   mode = c("glouton", "steiner"),
   skidding_m = 0,
   volume_champ = NULL,
+  pondere_cout = FALSE,
   config = foretaccess_config(),
   graine = NULL
 )
@@ -62,6 +63,12 @@ reseau_desserte(
 
   Optional name of the parcel volume column (for `"plus_gros_volume"`);
   each cell inherits its parcel volume.
+
+- pondere_cout:
+
+  If `TRUE`, weights the trace by the Lot 14 construction cost surface
+  (`cout$cout`, euros/m) instead of pure geometric distance; the trace
+  then minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
 
 - config:
 

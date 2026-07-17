@@ -27,6 +27,7 @@ optimiser_reseau(
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
+  pondere_cout = FALSE,
   config = foretaccess_config()
 )
 ```
@@ -94,6 +95,11 @@ optimiser_reseau(
 
   Optional name of the parcel volume column (for the
   `"plus_gros_volume"` base ordering).
+
+- pondere_cout:
+
+  If `TRUE`, weights the trace by the Lot 14 construction cost surface
+  (`cout$cout`, euros/m) instead of geometric distance.
 
 - config:
 

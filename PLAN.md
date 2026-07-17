@@ -141,6 +141,21 @@
   `.reseau_preparer`/`.reseau_assembler` partagés. 3 tests cargo + 15
   tests R. **Lot 18 clos → épic desserte (14→18) complet.** Prochaine
   étape : couper une **release stable**.
+- **Extension « surface de coût dans le solveur » (post-1.2.0, en cycle
+  dev)** : le solveur A\* consomme désormais la surface €/m du Lot 14
+  (jusque-là elle ne fournissait que le masque d’obstacles). Option
+  `pondere_cout = FALSE` sur
+  `tracer_desserte`/`reseau_desserte`/`optimiser_reseau` : à `TRUE`, la
+  contribution distance de chaque segment est multipliée par le coût
+  moyen de ses deux cellules (`CostGrid` côté Rust), le tracé minimise
+  donc l’euro et non plus la seule géométrie. Admissibilité préservée
+  sans toucher `heuristic.rs` : l’heuristique géométrique est remise à
+  l’échelle par `cmin` (coût minimal sur la zone franchissable), qui
+  reste une borne inférieure du coût restant → A\* optimal. Défaut
+  `FALSE` = comportement SylvaRoad bit-pour-bit. 1 test cargo
+  (`cost_weighting_scales_and_diverts`)
+  - 3 tests R (`test-desserte-pondere.R`). **Branche
+    `feat/desserte-pondere-cout`.**
 - **Branche** : `feat/lot18c-riprute` (cycle dev)
 - **Version `DESCRIPTION`** : `1.2.0.9000` (cycle dev après release
   `v1.2.0` — épic desserte publié)
@@ -435,6 +450,36 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-17 — Extension : la surface de coût €/m consommée par le solveur A\*
+
+Le Lot 14 calculait une surface de coût de construction (€/m) mais le
+solveur de tracé n’en utilisait que le **masque de franchissabilité** —
+le coût lui-même était ignoré. Cette extension (hors SylvaRoad, propre à
+ForêtAccess) le branche : nouvelle option `pondere_cout = FALSE` sur
+`tracer_desserte`, `reseau_desserte` et `optimiser_reseau`. À `TRUE`, la
+contribution distance de chaque segment A\* est pondérée par le coût
+moyen €/m de ses deux cellules (`CostGrid` côté Rust, 5 bindings
+enrichis d’un paramètre `cost`), si bien que le tracé minimise
+l’**euro** et non plus la seule distance géométrique — il contourne les
+cellules chères (fort dévers, pente, ouvrages d’art) et emprunte les
+corridors bon marché.
+
+Point délicat : pondérer les segments **casse l’admissibilité** de
+l’heuristique géométrique. Résolu sans toucher `heuristic.rs` — on remet
+l’heuristique à l’échelle par `cmin` (coût minimal sur la zone
+franchissable) : comme chaque segment coûte au moins `d · cmin`,
+`h_geo · cmin` reste une borne inférieure du coût restant, donc l’A\*
+demeure optimal quel que soit le champ de coût. Défaut `FALSE` =
+comportement d’origine bit-pour-bit (grille neutre
+`CostGrid::neutral()`, `w = None`, `cmin = 1`).
+
+Validation : 1 test cargo (`cost_weighting_scales_and_diverts` — coût
+uniforme ×2 → même tracé plus cher ; corridor bon marché → le tracé
+pondéré remonte s’y coller) + 3 tests R (`test-desserte-pondere.R`). 79
+tests cargo verts, suite desserte R verte, lint 0. Branche
+`feat/desserte-pondere-cout`, cycle dev `1.2.0.9000` (pas de release :
+fonctionnalité rétrocompatible, publiée à la prochaine mineure).
 
 ### 2026-07-16 — Release v1.2.0 : épic « conception de desserte » (Lots 14→18)
 

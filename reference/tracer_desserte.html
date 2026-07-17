@@ -60,7 +60,13 @@ crossability and terrain slope, calls the solver and rebuilds the polyline.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tracer_desserte</span><span class="op">(</span><span class="va">pre</span>, <span class="va">cout</span>, <span class="va">waypoints</span>, config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tracer_desserte</span><span class="op">(</span></span>
+<span>  <span class="va">pre</span>,</span>
+<span>  <span class="va">cout</span>,</span>
+<span>  <span class="va">waypoints</span>,</span>
+<span>  pondere_cout <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -73,13 +79,20 @@ crossability and terrain slope, calls the solver and rebuilds the polyline.</p>
 
 <dt id="arg-cout">cout<a class="anchor" aria-label="anchor" href="#arg-cout"></a></dt>
 <dd><p>A <code>foretaccess_cout_construction</code> object (Lot 14): supplies the
-crossability mask (<code>franchissable</code>).</p></dd>
+crossability mask (<code>franchissable</code>) and, if <code>pondere_cout = TRUE</code>, the
+construction cost surface (<code>cout</code>, euros/m).</p></dd>
 
 
 <dt id="arg-waypoints">waypoints<a class="anchor" aria-label="anchor" href="#arg-waypoints"></a></dt>
 <dd><p>Ordered points the road must visit (start first, end last;
 at least two). An <code>sf</code>/<code>SpatVector</code> of points, a two-column matrix of
 coordinates, or a vector of raster cell numbers (1-based).</p></dd>
+
+
+<dt id="arg-pondere-cout">pondere_cout<a class="anchor" aria-label="anchor" href="#arg-pondere-cout"></a></dt>
+<dd><p>If <code>TRUE</code>, weights the trace by the construction cost
+surface (<code>cout$cout</code>, euros/m) instead of pure geometric distance, so the
+road minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behaviour).</p></dd>
 
 
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>

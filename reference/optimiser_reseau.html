@@ -75,6 +75,7 @@ annealing) and <code>"riprute"</code> (rip-up &amp; reroute) are planned (Lot 18
 <span>  graine <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  skidding_m <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  volume_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pondere_cout <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -142,6 +143,11 @@ served without building a road.</p></dd>
 <dt id="arg-volume-champ">volume_champ<a class="anchor" aria-label="anchor" href="#arg-volume-champ"></a></dt>
 <dd><p>Optional name of the parcel volume column (for the
 <code>"plus_gros_volume"</code> base ordering).</p></dd>
+
+
+<dt id="arg-pondere-cout">pondere_cout<a class="anchor" aria-label="anchor" href="#arg-pondere-cout"></a></dt>
+<dd><p>If <code>TRUE</code>, weights the trace by the Lot 14 construction
+cost surface (<code>cout$cout</code>, euros/m) instead of geometric distance.</p></dd>
 
 
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>

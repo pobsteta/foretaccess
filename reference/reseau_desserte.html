@@ -66,6 +66,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 <span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"glouton"</span>, <span class="st">"steiner"</span><span class="op">)</span>,</span>
 <span>  skidding_m <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  volume_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pondere_cout <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  graine <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -110,6 +111,12 @@ served without building a road.</p></dd>
 <dt id="arg-volume-champ">volume_champ<a class="anchor" aria-label="anchor" href="#arg-volume-champ"></a></dt>
 <dd><p>Optional name of the parcel volume column (for
 <code>"plus_gros_volume"</code>); each cell inherits its parcel volume.</p></dd>
+
+
+<dt id="arg-pondere-cout">pondere_cout<a class="anchor" aria-label="anchor" href="#arg-pondere-cout"></a></dt>
+<dd><p>If <code>TRUE</code>, weights the trace by the Lot 14 construction
+cost surface (<code>cout$cout</code>, euros/m) instead of pure geometric distance; the
+trace then minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behaviour).</p></dd>
 
 
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>

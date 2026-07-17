@@ -33,7 +33,8 @@ desserte_trace(
   prop_sl_max,
   max_slope_hairpin,
   tal,
-  modhair
+  modhair,
+  cost
 )
 ```
 
@@ -130,6 +131,11 @@ desserte_trace(
 - modhair:
 
   Minimum-spacing-between-hairpins parameter.
+
+- cost:
+
+  Construction cost per metre (euros/m) per cell (row-major); `1.0`
+  everywhere = neutral (pure geometry).
 
 ## Value
 

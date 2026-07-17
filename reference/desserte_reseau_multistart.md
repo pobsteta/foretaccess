@@ -36,7 +36,8 @@ desserte_reseau_multistart(
   prop_sl_max,
   max_slope_hairpin,
   tal,
-  modhair
+  modhair,
+  cost
 )
 ```
 
@@ -145,6 +146,11 @@ desserte_reseau_multistart(
 - modhair:
 
   Hairpin spacing parameter.
+
+- cost:
+
+  Construction cost per metre (euros/m) per cell (row-major); `1.0`
+  everywhere = neutral (pure geometry).
 
 ## Value
 

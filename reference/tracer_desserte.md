@@ -11,7 +11,13 @@ terrain slope, calls the solver and rebuilds the polyline.
 ## Usage
 
 ``` r
-tracer_desserte(pre, cout, waypoints, config = foretaccess_config())
+tracer_desserte(
+  pre,
+  cout,
+  waypoints,
+  pondere_cout = FALSE,
+  config = foretaccess_config()
+)
 ```
 
 ## Arguments
@@ -23,13 +29,20 @@ tracer_desserte(pre, cout, waypoints, config = foretaccess_config())
 - cout:
 
   A `foretaccess_cout_construction` object (Lot 14): supplies the
-  crossability mask (`franchissable`).
+  crossability mask (`franchissable`) and, if `pondere_cout = TRUE`, the
+  construction cost surface (`cout`, euros/m).
 
 - waypoints:
 
   Ordered points the road must visit (start first, end last; at least
   two). An `sf`/`SpatVector` of points, a two-column matrix of
   coordinates, or a vector of raster cell numbers (1-based).
+
+- pondere_cout:
+
+  If `TRUE`, weights the trace by the construction cost surface
+  (`cout$cout`, euros/m) instead of pure geometric distance, so the road
+  minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
 
 - config:
 
