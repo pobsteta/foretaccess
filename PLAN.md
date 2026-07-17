@@ -104,8 +104,8 @@
   (coût minimal sur la zone franchissable), qui reste une borne inférieure du coût restant → A* optimal.
   Défaut `FALSE` = comportement SylvaRoad bit-pour-bit. 1 test cargo (`cost_weighting_scales_and_diverts`)
   + 3 tests R (`test-desserte-pondere.R`). **Branche `feat/desserte-pondere-cout`.**
-- **Branche** : `feat/lot18c-riprute` (cycle dev)
-- **Version `DESCRIPTION`** : `1.2.0.9000` (cycle dev après release `v1.2.0` — épic desserte publié)
+- **Branche** : `release/v1.3.0`
+- **Version `DESCRIPTION`** : `1.3.0` (release en cours — pondération coût + `classes_debardage`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -340,6 +340,22 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-17 — Release v1.3.0 : pondération coût + `classes_debardage` + doc
+
+Coupe d'une **release stable `v1.3.0`** (bump **mineur** : deux fonctionnalités
+rétrocompatibles accumulées depuis `v1.2.0`). `DESCRIPTION` = `NEWS.md` (tête) =
+`CITATION.cff` = `1.3.0` (gate CI `version-consistency`). Contenu :
+
+- **`pondere_cout`** (#73) — le solveur A\* consomme la surface de coût €/m du Lot 14 ;
+- **`classes_debardage()`** (#76) — expose le raster « classes de débardage » de Sylvaccess
+  (bandes de distance + inaccessible + inexploitable + hors_foret) ;
+- **doc** (#74, #75, #77) — articles pkgdown desserte/architecture/choix-conception,
+  attributions complètes + schéma des deux épics, note de perf ColduPre, référence exacte
+  de la source Sylvaccess (commit `372abaf`).
+
+Après merge : `release.yml` pose le tag `v1.3.0` + la release GitHub, puis retour en cycle
+dev `1.3.0.9000`.
 
 ### 2026-07-17 — Re-chronométrage ColduPre à isopérimètre (`c_sup = 3`) + site pkgdown
 
