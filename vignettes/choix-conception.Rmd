@@ -1,0 +1,255 @@
+---
+title: "Choix de conception : ForêtAccess vs Sylvaccess"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choix de conception : ForêtAccess vs Sylvaccess}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+ForêtAccess est une **réimplémentation** de Sylvaccess (INRAE, S. Dupire), pas une
+traduction ligne à ligne. À chaque étage, un choix d'ingénierie a été fait — parfois
+opposé à celui de Sylvaccess. Cet article les recense et les justifie, avec leurs
+contreparties. Le fil directeur : **moderniser sans trahir**. La fidélité est prouvée
+*cellule à cellule* contre le vrai moteur v3.6 (skidder 99,95 %, porteur 99,72 %, câble
+98,36 %, DFCI 99,87 % sur ColduPre) — donc ces choix n'ont **pas** coûté en exactitude.
+
+Chaque décision structurante est tracée dans un **ADR** (`docs/adr/`), rappelé en regard.
+
+## Vue d'ensemble
+
+| Dimension | Sylvaccess v3.6 | ForêtAccess | ADR |
+|---|---|---|---|
+| Langage cœur | Python 3 | R (≥ 4.1) | 001 |
+| Point chaud | Cython (`.pyx`) | Rust (`extendr` + `rayon`) | 001 |
+| Types numériques | numpy int8/16/32, float32 | `double` (f64) partout | — |
+| Architecture | logique **dans l'UI** PyQt, ~80 globales | cœur pur, sans UI, sans global | 004 |
+| Paramètres | ~80 variables globales éparses | objet config validé au chargement | 003 |
+| Sorties | écrites « à la main » | base spatiale (PostGIS / GeoPackage) + COG | 002 |
+| Passage à l'échelle | (mono-bloc) | tuilage à halo **certifié** + parallélisme | 005 |
+| Validation | erreurs publiées (article 2015) | non-régression **cellule à cellule** vs v3.6 | 006 |
+| Tracé de desserte | 8-connexité | graphe à voisinage disque | 008 |
+
+## 1. Langage & runtime : R + Rust plutôt que Python + Cython
+
+Sylvaccess est en **Python 3 + Cython**, avec le noyau câble (CableHelp) compilé dans
+`sylvaccess_cython3.pyx`. ForêtAccess bascule sur **R pour le cœur** et **Rust pour le
+point chaud** (ADR-001).
+
+**Pourquoi R plutôt que Python ?** Cohérence d'écosystème : le projet vit dans la galaxie
+Nemeton (package R, PostGIS, outillage SIG). R apporte `terra`/`sf` pour l'I/O SIG, un
+plus-court-chemin mûr (`leastcostpath`/`gdistance`), et surtout `testthat` + `R CMD check`
+pour la discipline de non-régression. Le brief initial envisageait une orchestration
+Python (PyO3 + maturin) ; elle a été écartée au profit de R.
+
+**Pourquoi Rust plutôt que Cython ou C++ pour le noyau câble ?** Le câble est *le* point
+chaud (~60 M lignes à ~1 ms/ligne en v3.6). Il doit rester natif. Rust a été préféré :
+
+- **sûreté mémoire sans surcoût** — pas de segfault ni de fuite silencieuse, garanties à la
+  compilation, contrairement au C/C++ ;
+- **`rayon`** — parallélisme data-parallèle du balayage 360°/pixel en une ligne, sans la
+  fragilité du GIL Python ni la lourdeur d'OpenMP ;
+- **`extendr`/`rextendr`** — une frontière R↔Rust **typée** générée automatiquement
+  (`rextendr::document()`), là où Cython mélange types Python et C dans le même fichier ;
+- **`Cargo.lock` + `cargo test` + `clippy`** — build et tests reproductibles, lints
+  `-D warnings` en CI.
+
+La frontière est volontairement **minuscule** : le crate `cablehelp` n'a que **deux
+dépendances**, `extendr-api` et `rayon`. R passe des tableaux `f64`/`i32`, Rust rend des
+nombres et des indices. **Aucune logique SIG** ne descend dans le crate (ADR-001, ADR-004).
+
+> **Contrepartie assumée** : deux langages à maintenir, et une toolchain Rust (`cargo`)
+> requise pour compiler. `devtools::install()` produit malgré tout un seul artefact.
+
+## 2. Représentation des données : `double` (f64) plutôt que int16 / float32
+
+C'est le choix que résume la question « float plutôt qu'int16 ». Sylvaccess **micro-gère
+ses types numpy** — on y compte des centaines d'usages d'`int8`, `int16`, `int32`,
+`float32`, et à peine une poignée de `float64`. C'est la pratique numpy classique : choisir
+le type le plus compact qui « tient », pour économiser la mémoire.
+
+ForêtAccess fait l'inverse par **nature du langage** : le type numérique de R est le
+**`double` (f64)**, point. Il n'existe pas de vecteur `int16`/`float32` natif en R (seul
+l'`integer` 32 bits existe, peu utilisé ici). Tout le calcul métier — distances, coûts,
+pentes, mécanique câble — se fait donc en **double 64 bits**.
+
+Ce n'est pas qu'une contrainte subie, c'est un choix cohérent :
+
+- **exactitude** : pas de perte de précision `float32`, pas de débordement `int16` sur une
+  distance cumulée ou une tension ;
+- **simplicité** : aucune gestion de type à chaque opération, aucune conversion piégeuse ;
+- **fidélité** : R fait foi de sa propre sémantique numérique, ce qui *facilite* la
+  réplication bit-pour-bit (voir §3).
+
+Les **sorties**, elles, restent compactes : les rasters d'accessibilité sont **catégoriels**
+(quelques codes de classe entiers) et écrits en **GeoTIFF/COG** (`filetype = "COG"`), où
+`terra` choisit un type entier adapté. Le `double` vit en mémoire pendant le calcul, pas sur
+le disque.
+
+> **Contrepartie assumée** : un vecteur `double` pèse ~4× un `int16` et 2× un `float32`. À
+> 5 m, un département fait 80 M de cellules → 640 Mo par couche `double`, et un moteur en
+> matérialise une dizaine. C'est précisément pourquoi la mémoire — et non le temps — est le
+> premier obstacle à l'échelle, et pourquoi le **tuilage** existe (ADR-005, §5).
+
+Détail connexe : R indexe ses cellules `terra` en **1-based** (ligne par ligne), Rust en
+**0-based** aplati. La frontière convertit explicitement (`+1`/`−1`), une fois, aux entrées
+et sorties du crate.
+
+## 3. Fidélité numérique : réplication bit-pour-bit
+
+Un moteur n'est « fait » que **non-régression verte** (ADR-006). Répliquer un `.pyx` au
+`double` près expose des pièges invisibles hors exécution complète — traités explicitement :
+
+- **arrondi** : le `round()` de R suit IEC 60559 (**demi-au-pair**, *round-half-to-even*),
+  alors que `f64::round` de Rust arrondit **demi-loin-de-zéro**. ForêtAccess embarque donc un
+  `round_half_even()` maison côté Rust, utilisé partout où R (et donc Sylvaccess via numpy)
+  arrondit — offsets de rayons, indices de balayage :
+
+  ```rust
+  fn round_half_even(x: f64) -> f64 {
+      let f = x.floor();
+      let diff = x - f;
+      if diff < 0.5 { f }
+      else if diff > 0.5 { f + 1.0 }
+      else if (f as i64) % 2 == 0 { f }   // pile 0.5 -> vers le pair
+      else { f + 1.0 }
+  }
+  ```
+
+- **`seq()`** et les bornes de bandes sont répliquées exactement (dernière borne inclusive,
+  demi-ouverts identiques), pas « à peu près » ;
+- **déterminisme** : les moteurs d'accessibilité n'ont **aucun aléatoire**, donc **aucune
+  graine** — le résultat ne dépend même pas du nombre de workers. Là où la conception de
+  desserte a besoin d'explorer (multi-start, recuit), le hasard est un **PRNG SplitMix64**
+  écrit à la main (pas de crate `rand`), semé explicitement → permutations reproductibles.
+
+**Méthodologie : la lettre, pas l'intention.** On transcrit le `.pyx` *au mot près*, sans
+« corriger » ce qu'on croit y lire. Cas d'école : un test de pondération de piste du skidder
+ressemblait à « minimiser `d_forêt + 0,5·d_piste` » ; l'implémenter proprement sur cette
+objective a été **réfuté par le banc oracle** (traînage médian 138 m contre 124). La règle
+est donc de valider les **distances**, pas seulement l'accord binaire.
+
+## 4. Architecture : cœur pur plutôt que logique dans l'UI
+
+Le défaut majeur de Sylvaccess est le **couplage métier ↔ UI PyQt** : la logique lit ses
+~80 variables directement depuis l'interface. Impossible d'en faire du batch, de le
+réutiliser, ou de le tester automatiquement.
+
+ForêtAccess impose un **cœur pur** (ADR-004) : chaque fonction prend `config + données` et
+rend un résultat, **sans effet de bord caché, sans dépendance UI, sans variable globale
+mutable**. Trois couches nettes :
+
+- *cœur* (calcul : prétraitement, moteurs, sélection, mécanique câble) ;
+- *I/O* (acquisition IGN, `StorageBackend`) ;
+- *orchestration* (pipeline, tuilage, CLI `Rscript`).
+
+L'I/O et l'orchestration dépendent du cœur, **jamais l'inverse**. Une UI éventuelle (Shiny,
+QGIS) ne serait qu'un consommateur. Conséquence directe : le cœur est **déterministe et
+testable en isolation**, ce qui rend la non-régression possible.
+
+## 5. Configuration : un objet validé plutôt que 80 globales
+
+Sylvaccess dissémine ~80 variables globales lues depuis l'UI. ForêtAccess les remplace par
+un **objet de configuration unique, validé au chargement** (`foretaccess_config()`,
+validation `checkmate` : types, bornes, cohérence), ADR-003.
+
+- **aucune valeur métier en dur** dans les moteurs ;
+- **défauts = Sylvaccess v3.6** (et non l'article 2015, dont ils diffèrent) — chaque défaut
+  est documenté *et testé* ;
+- toute divergence de défaut est justifiée en commentaire dans le code.
+
+## 6. Stockage & I/O : base spatiale plutôt que fichiers « à la main »
+
+Sylvaccess écrit ses sorties à la main. ForêtAccess passe par une **interface
+`StorageBackend`** unique (contrat `write_layer`/`read_layer`/`list_layers`, écriture
+idempotente) avec **deux implémentations au même niveau** — **PostGIS** (`DBI`/`RPostgres`)
+et **GeoPackage** (`sf`) — choisies par paramètre de run, aucune n'étant le défaut (ADR-002).
+
+- **vectoriel en base**, requêtable ; **raster hors base** (GeoTIFF/COG sur disque, jamais
+  en PostgreSQL) ;
+- modèle PostGIS : **un schéma par run/massif** (isolation forte, purge simple), index
+  spatiaux systématiques ;
+- **I/O découplée** : chaque entrée est acceptée soit comme chemin de fichier, soit comme
+  objet déjà chargé (`SpatRaster`/`sf`) — ADR-004.
+
+## 7. Passage à l'échelle : tuilage certifié + `rayon`/`mirai`
+
+L'échelle visée va du massif au national. Le brief proposait `joblib`/`dask` (Python) ;
+sans objet en R. ForêtAccess (ADR-005) :
+
+- **tuilage à halo** : les fenêtres écrites sont disjointes, le halo ne sert qu'au calcul.
+  Sa largeur suffisante n'est **pas devinable** pour un plus-court-chemin sans plafond ; elle
+  est **certifiée cellule par cellule**, et le halo grandit tant que le certificat échoue.
+  Résultat tuilé **identique** au mono-bloc, *prouvé* et non supposé — les cellules
+  qu'aucun halo ne certifie sortent en `indetermine`, jamais rangées en douce dans
+  `non_accessible` ;
+- **parallélisme à deux niveaux** : `rayon` **dans** le noyau câble Rust (balayage
+  data-parallèle) ; **`mirai`** au niveau R par tuile. `future`/`furrr` est écarté (ses
+  workers `workRSOCK` survivent aux crashs, et il coûte deux dépendances au lieu d'une) ;
+- **le portage Rust vient après le tuilage, pas avant** : à 3 s/km², le tuilage suffit
+  jusqu'au département ; Rust ne se justifie qu'à partir de la région.
+
+C'est ce parallélisme `rayon` qui rend le câble **~5× plus rapide** que le Cython monocœur à
+périmètre égal (voir la note [`docs/performance-coldupre.md`](https://github.com/pobsteta/foretaccess/blob/main/docs/performance-coldupre.md)).
+
+## 8. Algorithmes : transcription fidèle + composition raisonnée
+
+Deux régimes selon qu'on **réimplémente** ou qu'on **étend** Sylvaccess.
+
+**Réimplémentation fidèle** (moteurs terrestres, câble). On porte la mécanique CableHelp
+(caténaire non-linéaire résolue par Newton) au mot près. Un choix technique notable : là où
+Sylvaccess amorce son Newton par des **tables précalculées `Tabmesh`**, ForêtAccess les
+remplace par un **amorçage `seed_grid`** — une grille grossière 40×40 sur `(Th, Tv)` dont on
+garde le nœud de résidu minimal, à **coût fixe** (1600 évaluations), indépendant de `Tmax`.
+Plus simple, sans table géante à transporter. L'**optimisation de la hauteur des supports**
+(Lot 13) reprend en plus la méthode **SEILAPLAN** (graphe + Dijkstra de Bont & Heinimann),
+absente de la voie par défaut de Sylvaccess.
+
+**Extension raisonnée** (conception de desserte, Lots 14-18). Aucun outil libre ne couvre
+tout : on **compose**. Le solveur de tracé porte **SylvaRoad** et **Forest Road Designer**
+avec un **graphe à voisinage disque** (ADR-008) au lieu de la 8-connexité — laquelle produit
+des zigzags à 45° et interdit rayon de braquage et pente en long. La couche réseau (MTAP,
+Steiner) est un apport propre ; les flux et le typage reprennent **ForestRoadNetwork**. Ce
+dernier est implémenté sur un **graphe natif base-R** (indices de cellule = nœuds) plutôt
+qu'`igraph` — pour éviter une dépendance compilée lourde et fragile en CI, le réseau étant
+de toute façon arborescent (l'accumulation de flux y est un simple parcours de sous-arbre).
+
+## 9. Qualité & CI : spec-driven, ADR, oracle
+
+Sylvaccess valide sur les **erreurs publiées** de l'article 2015. ForêtAccess valide en
+**non-régression cellule à cellule** contre le vrai moteur v3.6 (ADR-006), avec récupération
+du `.pyx` (GPL v3) pour deux usages : générer les oracles *et* traduire les équations.
+
+- développement **spec-driven** : `specs/0XX-*.md` + ADR + tests de non-régression ;
+- **testthat** (édition 3) côté R, **`cargo test`** côté crate, **`clippy -D warnings`** ;
+- **`R CMD check`** sans ERROR ni WARNING, chaînes littérales **ASCII** (portabilité) ;
+- job CI **`version-consistency`** (`DESCRIPTION` = `NEWS.md` = `CITATION.cff`) et **release
+  automatisée** au push d'une version stable (ADR-007) ;
+- reproductibilité : `renv` (R) + `Cargo.lock` (Rust).
+
+## Bilan — ce que chaque choix rapporte et coûte
+
+| Choix | Gain | Contrepartie |
+|---|---|---|
+| Rust (vs Cython/C++) | sûreté mémoire, `rayon`, frontière typée, câble ~5× | 2 langages, toolchain `cargo` |
+| `double` (vs int16/float32) | exactitude, simplicité, réplication facilitée | ~4× la mémoire d'un int16 → impose le tuilage |
+| Cœur pur (vs logique UI) | testable, batch, CLI, non-régression | discipline (aucun I/O dans le calcul) |
+| Config validée (vs globales) | auditable, reproductible | un changement de défaut = décision tracée |
+| Base spatiale (vs fichiers) | requêtable, isolation par schéma | un backend à choisir par run |
+| Tuilage certifié (vs mono-bloc) | échelle nationale, résultat prouvé identique | ~1,6× le mono-bloc (certificat) |
+| Oracle cellule à cellule | fidélité mesurée, pas supposée | dépend d'un Sylvaccess exécutable |
+
+**En une phrase.** ForêtAccess troque la micro-optimisation mémoire et le couplage UI de
+Sylvaccess contre l'**exactitude**, la **testabilité** et le **passage à l'échelle prouvé** —
+sans rien céder sur la fidélité, puisqu'elle est vérifiée cellule à cellule.
+
+## Références
+
+Décisions détaillées : `docs/adr/ADR-001` à `ADR-008`. Performance :
+[`docs/performance-coldupre.md`](https://github.com/pobsteta/foretaccess/blob/main/docs/performance-coldupre.md).
+Attribution complète des travaux dérivés (Sylvaccess, SEILAPLAN, SylvaRoad, Forest Road
+Designer, ForestRoadNetwork) : `README` et `CITATION.cff`.
