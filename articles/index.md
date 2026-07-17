@@ -12,3 +12,5 @@
   réelle](https://pobsteta.github.io/foretaccess/articles/cartes.md):
 - [Architecture & feuille de
   route](https://pobsteta.github.io/foretaccess/articles/architecture.md):
+- [Choix de conception : ForêtAccess vs
+  Sylvaccess](https://pobsteta.github.io/foretaccess/articles/choix-conception.md):
