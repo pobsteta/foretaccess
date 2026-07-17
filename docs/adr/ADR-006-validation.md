@@ -9,9 +9,17 @@
 
 La valeur de ForêtAccess repose sur sa **fidélité** à Sylvaccess v3.6. L'article 2015 ne donne
 que des **erreurs de validation** publiées, pas toutes les équations. Le code source
-(module Cython `sylvaccess_cython3.pyx`, GPL v3, `forge.inrae.fr`) contient les équations
+(module Cython `scripts/sylvaccess_cython3.pyx`, GPL v3) contient les équations
 mécaniques CableHelp, la fonction de coût least-cost, les « unités de vidange optimales » et le
 pas de recherche des supports/raccourcissement.
+
+> **Référence exacte de la source** (traçabilité) : dépôt
+> <https://forge.inrae.fr/sylvain.dupire/sylvaccess>, branche `main`, **commit
+> `372abaf` (2025-06-12)**. Le dépôt ne porte **aucun tag git** : la mention « v3.6 » est
+> interne au code, seul ce commit identifie sans ambiguïté la version portée. Les moteurs
+> viennent des scripts `Sylvaccess_1_skidder.py`, `Sylvaccess_2_cable.py`,
+> `Sylvaccess_3_forwarder.py`, `Sylvaccess_5_dfci.py` et `Sylvaccess_0_functions.py` ;
+> l'oracle de non-régression est le jeu officiel `test/ColduPre/` du même dépôt.
 
 ## Décision
 
