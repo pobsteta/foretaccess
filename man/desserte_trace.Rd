@@ -27,7 +27,8 @@ desserte_trace(
   prop_sl_max,
   max_slope_hairpin,
   tal,
-  modhair
+  modhair,
+  cost
 )
 }
 \arguments{
@@ -76,6 +77,8 @@ desserte_trace(
 \item{tal}{Hairpin limit-angle tuning parameter.}
 
 \item{modhair}{Minimum-spacing-between-hairpins parameter.}
+
+\item{cost}{Construction cost per metre (euros/m) per cell (row-major); \code{1.0} everywhere = neutral (pure geometry).}
 }
 \value{
 A list: \code{path} (1-based flattened cell indices), \code{cost}, \code{feasible}.

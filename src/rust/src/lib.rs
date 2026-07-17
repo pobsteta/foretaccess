@@ -686,6 +686,7 @@ fn desserte_dist_to_end(
 /// @param max_slope_hairpin Slope tolerance parameter for the hairpin limit angle.
 /// @param tal Hairpin limit-angle tuning parameter.
 /// @param modhair Minimum-spacing-between-hairpins parameter.
+/// @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 /// @return A list: `path` (1-based flattened cell indices), `cost`, `feasible`.
 /// @export
 #[extendr]
@@ -713,6 +714,7 @@ fn desserte_trace(
     max_slope_hairpin: f64,
     tal: f64,
     modhair: f64,
+    cost: Vec<f64>,
 ) -> List {
     let (nr, nc) = (nr as usize, nc as usize);
     let p = desserte::solver::SolverParams {
@@ -735,8 +737,9 @@ fn desserte_trace(
         &alt, &obs, nr, nc, d_neighborhood, csize, min_slope, max_slope,
     );
     let wp: Vec<usize> = waypoints.iter().map(|&w| w as usize).collect();
+    let cg = desserte::solver::CostGrid::new(&cost, &zone);
     let res = desserte::solver::solve(
-        &alt, &obs, &obs2, &local_slope, &zone, &table, nr, nc, &wp, bufgoal, &p,
+        &alt, &obs, &obs2, &local_slope, &zone, &table, nr, nc, &wp, bufgoal, &cg, &p,
     );
     // Indices renvoyes en 1-based (convention R).
     let path: Vec<i32> = res.path.iter().map(|&i| i as i32 + 1).collect();
@@ -776,6 +779,7 @@ fn desserte_trace(
 /// @param max_slope_hairpin Hairpin limit-angle parameter.
 /// @param tal Hairpin limit-angle parameter.
 /// @param modhair Hairpin spacing parameter.
+/// @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 /// @return A list: `paths` (a list of 1-based cell-index vectors, one per built
 ///   road) and `costs` (one cost per built road).
 /// @export
@@ -805,6 +809,7 @@ fn desserte_reseau(
     max_slope_hairpin: f64,
     tal: f64,
     modhair: f64,
+    cost: Vec<f64>,
 ) -> List {
     let (nr, nc) = (nr as usize, nc as usize);
     let p = desserte::solver::SolverParams {
@@ -825,8 +830,9 @@ fn desserte_reseau(
     };
     let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
     let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let cg = desserte::solver::CostGrid::new(&cost, &zone);
     let res = desserte::solver::build_network(
-        &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding, &p,
+        &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding, &cg, &p,
     );
     // Chemins en indices 1-based (convention R).
     let paths = List::from_values(
@@ -871,6 +877,7 @@ fn desserte_reseau(
 /// @param max_slope_hairpin Hairpin limit-angle parameter.
 /// @param tal Hairpin limit-angle parameter.
 /// @param modhair Hairpin spacing parameter.
+/// @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 /// @return A list: `paths` (1-based cell-index vectors of the best network),
 ///   `costs` (per-road costs of the best network), `best` (1-based index of the
 ///   best trial) and `journal` (total cost of every trial).
@@ -904,6 +911,7 @@ fn desserte_reseau_multistart(
     max_slope_hairpin: f64,
     tal: f64,
     modhair: f64,
+    cost: Vec<f64>,
 ) -> List {
     let (nr, nc) = (nr as usize, nc as usize);
     let p = desserte::solver::SolverParams {
@@ -924,9 +932,10 @@ fn desserte_reseau_multistart(
     };
     let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
     let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let cg = desserte::solver::CostGrid::new(&cost, &zone);
     let res = desserte::solver::build_network_multistart(
         &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding,
-        n_start.max(1) as usize, seed as u64, &p,
+        n_start.max(1) as usize, seed as u64, &cg, &p,
     );
     // Chemins en indices 1-based (convention R).
     let paths = List::from_values(
@@ -978,6 +987,7 @@ fn desserte_reseau_multistart(
 /// @param max_slope_hairpin Hairpin limit-angle parameter.
 /// @param tal Hairpin limit-angle parameter.
 /// @param modhair Hairpin spacing parameter.
+/// @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 /// @return A list: `paths` (1-based cell-index vectors of the best network),
 ///   `costs` (per-road costs of the best network) and `journal` (best-so-far cost
 ///   per iteration).
@@ -1013,6 +1023,7 @@ fn desserte_reseau_recuit(
     max_slope_hairpin: f64,
     tal: f64,
     modhair: f64,
+    cost: Vec<f64>,
 ) -> List {
     let (nr, nc) = (nr as usize, nc as usize);
     let p = desserte::solver::SolverParams {
@@ -1033,9 +1044,10 @@ fn desserte_reseau_recuit(
     };
     let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
     let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let cg = desserte::solver::CostGrid::new(&cost, &zone);
     let res = desserte::solver::build_network_recuit(
         &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding,
-        n_iter.max(0) as usize, t0, cooling, seed as u64, &p,
+        n_iter.max(0) as usize, t0, cooling, seed as u64, &cg, &p,
     );
     let paths = List::from_values(
         res.paths
@@ -1077,6 +1089,7 @@ fn desserte_reseau_recuit(
 /// @param max_slope_hairpin Hairpin limit-angle parameter.
 /// @param tal Hairpin limit-angle parameter.
 /// @param modhair Hairpin spacing parameter.
+/// @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 /// @return A list: `paths` (1-based cell-index vectors of the improved network),
 ///   `costs` (per-road costs) and `journal` (total cost after each pass).
 /// @export
@@ -1108,6 +1121,7 @@ fn desserte_reseau_riprute(
     max_slope_hairpin: f64,
     tal: f64,
     modhair: f64,
+    cost: Vec<f64>,
 ) -> List {
     let (nr, nc) = (nr as usize, nc as usize);
     let p = desserte::solver::SolverParams {
@@ -1128,9 +1142,10 @@ fn desserte_reseau_riprute(
     };
     let src: Vec<usize> = sources.iter().map(|&s| s as usize).collect();
     let net0: Vec<usize> = network0.iter().map(|&s| s as usize).collect();
+    let cg = desserte::solver::CostGrid::new(&cost, &zone);
     let res = desserte::solver::build_network_riprute(
         &alt, &obs, &obs2, &local_slope, &zone, nr, nc, &src, &net0, skidding,
-        max_pass.max(1) as usize, &p,
+        max_pass.max(1) as usize, &cg, &p,
     );
     let paths = List::from_values(
         res.paths

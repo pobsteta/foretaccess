@@ -13,6 +13,7 @@ reseau_desserte(
   mode = c("glouton", "steiner"),
   skidding_m = 0,
   volume_champ = NULL,
+  pondere_cout = FALSE,
   config = foretaccess_config(),
   graine = NULL
 )
@@ -38,6 +39,10 @@ served without building a road.}
 
 \item{volume_champ}{Optional name of the parcel volume column (for
 \code{"plus_gros_volume"}); each cell inherits its parcel volume.}
+
+\item{pondere_cout}{If \code{TRUE}, weights the trace by the Lot 14 construction
+cost surface (\code{cout$cout}, euros/m) instead of pure geometric distance; the
+trace then minimises monetary cost. Default \code{FALSE} (SylvaRoad behaviour).}
 
 \item{config}{A \code{foretaccess_config}; the solver settings live in
 \code{config$desserte$trace}.}

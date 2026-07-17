@@ -32,6 +32,8 @@
 #'   served without building a road.
 #' @param volume_champ Optional name of the parcel volume column (for the
 #'   `"plus_gros_volume"` base ordering).
+#' @param pondere_cout If `TRUE`, weights the trace by the Lot 14 construction
+#'   cost surface (`cout$cout`, euros/m) instead of geometric distance.
 #' @param config A `foretaccess_config`; the solver settings live in
 #'   `config$desserte$trace`.
 #' @return A `foretaccess_reseau` object (same as Lot 16) for the best network
@@ -42,7 +44,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
                              heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
                              n_start = 16, n_iter = 200, temp0 = 0,
                              refroidissement = 0.95, max_passes = 6, graine = 1,
-                             skidding_m = 0, volume_champ = NULL,
+                             skidding_m = 0, volume_champ = NULL, pondere_cout = FALSE,
                              config = foretaccess_config()) {
   strategie <- match.arg(strategie)
   heuristique <- match.arg(heuristique)
@@ -53,7 +55,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
   checkmate::assert_count(graine)
   validate_config(config)
 
-  ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config)
+  ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config, pondere_cout)
 
   # Ordre de base (essai 0) selon l'heuristique, comme le glouton du Lot 16.
   parc_ids <- .desserte_cellules_parcelles(parcelles, ctx$grille, volume_champ)
@@ -85,7 +87,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
          nr = ctx$nr, nc = ctx$nc, sources = sources0,
          network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m,
          n_start = as.integer(n_start), seed = graine),
-    .desserte_solver_params(ctx$tr, ctx$csize)
+    .desserte_solver_params(ctx$tr, ctx$csize), list(cost = ctx$cost)
   ))
   list(paths = r$paths, costs = r$costs, journal = r$journal, best = r$best)
 }
@@ -98,7 +100,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
          nr = ctx$nr, nc = ctx$nc, sources = sources0,
          network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m,
          n_iter = as.integer(n_iter), t0 = temp0, cooling = cooling, seed = graine),
-    .desserte_solver_params(ctx$tr, ctx$csize)
+    .desserte_solver_params(ctx$tr, ctx$csize), list(cost = ctx$cost)
   ))
   list(paths = r$paths, costs = r$costs, journal = r$journal, best = 1L)
 }
@@ -111,7 +113,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
          nr = ctx$nr, nc = ctx$nc, sources = sources0,
          network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m,
          max_pass = as.integer(max_passes)),
-    .desserte_solver_params(ctx$tr, ctx$csize)
+    .desserte_solver_params(ctx$tr, ctx$csize), list(cost = ctx$cost)
   ))
   list(paths = r$paths, costs = r$costs, journal = r$journal, best = 1L)
 }

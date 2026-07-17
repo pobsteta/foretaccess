@@ -4,17 +4,28 @@
 \alias{tracer_desserte}
 \title{Design the optimal route of a new forest road}
 \usage{
-tracer_desserte(pre, cout, waypoints, config = foretaccess_config())
+tracer_desserte(
+  pre,
+  cout,
+  waypoints,
+  pondere_cout = FALSE,
+  config = foretaccess_config()
+)
 }
 \arguments{
 \item{pre}{A \code{foretaccess_preprocessing} object (DEM, terrain slope).}
 
 \item{cout}{A \code{foretaccess_cout_construction} object (Lot 14): supplies the
-crossability mask (\code{franchissable}).}
+crossability mask (\code{franchissable}) and, if \code{pondere_cout = TRUE}, the
+construction cost surface (\code{cout}, euros/m).}
 
 \item{waypoints}{Ordered points the road must visit (start first, end last;
 at least two). An \code{sf}/\code{SpatVector} of points, a two-column matrix of
 coordinates, or a vector of raster cell numbers (1-based).}
+
+\item{pondere_cout}{If \code{TRUE}, weights the trace by the construction cost
+surface (\code{cout$cout}, euros/m) instead of pure geometric distance, so the
+road minimises monetary cost. Default \code{FALSE} (SylvaRoad behaviour).}
 
 \item{config}{A \code{foretaccess_config}; the solver settings live in
 \code{config$desserte$trace}.}

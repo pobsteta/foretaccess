@@ -353,9 +353,10 @@ desserte_dist_to_end <- function(zone, nr, nc, csize, y_end, x_end, max_distance
 #' @param max_slope_hairpin Slope tolerance parameter for the hairpin limit angle.
 #' @param tal Hairpin limit-angle tuning parameter.
 #' @param modhair Minimum-spacing-between-hairpins parameter.
+#' @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 #' @return A list: `path` (1-based flattened cell indices), `cost`, `feasible`.
 #' @export
-desserte_trace <- function(alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_trace, alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+desserte_trace <- function(alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost) .Call(wrap__desserte_trace, alt, obs, obs2, local_slope, zone, nr, nc, waypoints, bufgoal, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost)
 
 #' Build a forest-road network serving ordered parcel cells (greedy MTAP, Lot 16a).
 #'
@@ -390,10 +391,11 @@ desserte_trace <- function(alt, obs, obs2, local_slope, zone, nr, nc, waypoints,
 #' @param max_slope_hairpin Hairpin limit-angle parameter.
 #' @param tal Hairpin limit-angle parameter.
 #' @param modhair Hairpin spacing parameter.
+#' @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 #' @return A list: `paths` (a list of 1-based cell-index vectors, one per built
 #'   road) and `costs` (one cost per built road).
 #' @export
-desserte_reseau <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_reseau, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+desserte_reseau <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost) .Call(wrap__desserte_reseau, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost)
 
 #' Optimise a road network by multi-start over insertion orders (Lot 18a).
 #'
@@ -429,11 +431,12 @@ desserte_reseau <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, 
 #' @param max_slope_hairpin Hairpin limit-angle parameter.
 #' @param tal Hairpin limit-angle parameter.
 #' @param modhair Hairpin spacing parameter.
+#' @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 #' @return A list: `paths` (1-based cell-index vectors of the best network),
 #'   `costs` (per-road costs of the best network), `best` (1-based index of the
 #'   best trial) and `journal` (total cost of every trial).
 #' @export
-desserte_reseau_multistart <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_start, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_reseau_multistart, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_start, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+desserte_reseau_multistart <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_start, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost) .Call(wrap__desserte_reseau_multistart, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_start, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost)
 
 #' Optimise a road network by simulated annealing on the insertion order (Lot 18b).
 #'
@@ -471,11 +474,12 @@ desserte_reseau_multistart <- function(alt, obs, obs2, local_slope, zone, nr, nc
 #' @param max_slope_hairpin Hairpin limit-angle parameter.
 #' @param tal Hairpin limit-angle parameter.
 #' @param modhair Hairpin spacing parameter.
+#' @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 #' @return A list: `paths` (1-based cell-index vectors of the best network),
 #'   `costs` (per-road costs of the best network) and `journal` (best-so-far cost
 #'   per iteration).
 #' @export
-desserte_reseau_recuit <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_iter, t0, cooling, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_reseau_recuit, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_iter, t0, cooling, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+desserte_reseau_recuit <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_iter, t0, cooling, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost) .Call(wrap__desserte_reseau_recuit, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, n_iter, t0, cooling, seed, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost)
 
 #' Optimise a road network by rip-up & reroute local search (Lot 18c).
 #'
@@ -509,9 +513,10 @@ desserte_reseau_recuit <- function(alt, obs, obs2, local_slope, zone, nr, nc, so
 #' @param max_slope_hairpin Hairpin limit-angle parameter.
 #' @param tal Hairpin limit-angle parameter.
 #' @param modhair Hairpin spacing parameter.
+#' @param cost Construction cost per metre (euros/m) per cell (row-major); `1.0` everywhere = neutral (pure geometry).
 #' @return A list: `paths` (1-based cell-index vectors of the improved network),
 #'   `costs` (per-road costs) and `journal` (total cost after each pass).
 #' @export
-desserte_reseau_riprute <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, max_pass, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair) .Call(wrap__desserte_reseau_riprute, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, max_pass, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair)
+desserte_reseau_riprute <- function(alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, max_pass, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost) .Call(wrap__desserte_reseau_riprute, alt, obs, obs2, local_slope, zone, nr, nc, sources, network0, skidding, max_pass, csize, min_slope, max_slope, penalty_xy, penalty_z, max_diff_z, d_neighborhood, angle_hairpin, lmax_ab_sl, radius, prop_sl_max, max_slope_hairpin, tal, modhair, cost)
 
 # nolint end

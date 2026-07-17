@@ -21,6 +21,9 @@
 #'   served without building a road.
 #' @param volume_champ Optional name of the parcel volume column (for
 #'   `"plus_gros_volume"`); each cell inherits its parcel volume.
+#' @param pondere_cout If `TRUE`, weights the trace by the Lot 14 construction
+#'   cost surface (`cout$cout`, euros/m) instead of pure geometric distance; the
+#'   trace then minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
 #' @param config A `foretaccess_config`; the solver settings live in
 #'   `config$desserte$trace`.
 #' @param graine Optional integer seed for the `"aleatoire"` ordering.
@@ -39,13 +42,13 @@
 reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
                             heuristique = c("plus_proche", "plus_gros_volume", "aleatoire"),
                             mode = c("glouton", "steiner"),
-                            skidding_m = 0, volume_champ = NULL,
+                            skidding_m = 0, volume_champ = NULL, pondere_cout = FALSE,
                             config = foretaccess_config(), graine = NULL) {
   heuristique <- match.arg(heuristique)
   mode <- match.arg(mode)
   validate_config(config)
 
-  ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config)
+  ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config, pondere_cout)
   res <- if (mode == "steiner") {
     .reseau_steiner(ctx, parcelles)
   } else {
@@ -58,7 +61,8 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
 
 # Preparation commune (Lots 16 et 18) : grilles aplaties, reseau existant
 # rasterise, dimensions. Renvoie le contexte partage par les modes/strategies.
-.reseau_preparer <- function(pre, cout, parcelles, desserte_existante, config) {
+.reseau_preparer <- function(pre, cout, parcelles, desserte_existante, config,
+                             pondere_cout = FALSE) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   checkmate::assert_class(cout, "foretaccess_cout_construction")
   tr <- config$desserte$trace
@@ -74,8 +78,20 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
   list(
     g = .desserte_grilles(pre, cout, tr), grille = grille,
     nr = terra::nrow(grille), nc = terra::ncol(grille), csize = terra::res(grille)[1],
-    tr = tr, road_r = road_r, net_cells1 = net_cells1
+    tr = tr, road_r = road_r, net_cells1 = net_cells1,
+    cost = .desserte_grille_cout(cout, grille, pondere_cout)
   )
+}
+
+# Grille de coût €/m consommee par le solveur (pondération monetaire du trace).
+# `pondere_cout = FALSE` -> grille neutre (1.0) = trace purement geometrique
+# (SylvaRoad). Sinon, la surface `cout` €/m du Lot 14 (les valeurs non finies ou
+# <= 0 sont neutralisees cote Rust ; les cellules bloquees ne sont jamais lues).
+.desserte_grille_cout <- function(cout, grille, pondere_cout) {
+  if (!isTRUE(pondere_cout)) {
+    return(rep(1, terra::ncell(grille)))
+  }
+  as.numeric(terra::values(cout$cout))
 }
 
 # Assemblage de l'objet `foretaccess_reseau` a partir des chemins/couts retenus
@@ -145,7 +161,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
          local_slope = ctx$g$local_slope, zone = ctx$g$zone,
          nr = ctx$nr, nc = ctx$nc, sources = sources0,
          network0 = as.integer(ctx$net_cells1 - 1L), skidding = skidding_m),
-    .desserte_solver_params(ctx$tr, ctx$csize)
+    .desserte_solver_params(ctx$tr, ctx$csize), list(cost = ctx$cost)
   ))
   list(paths = res$paths, costs = res$costs)
 }
@@ -182,6 +198,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
   base <- list(alt = ctx$g$alt, obs = ctx$g$obs, obs2 = ctx$g$obs2,
                local_slope = ctx$g$local_slope, zone = ctx$g$zone,
                nr = ctx$nr, nc = ctx$nc)
+  params <- c(params, list(cost = ctx$cost)) # ponderation monetaire (Lot 14)
 
   # Graphe des terminaux : 1 = reseau, 2..n+1 = parcelles. `cost` symetrique ;
   # `paths` indexe par cle(a, b) = (a - 1) * nt + b (a, b 1-based).
