@@ -89,8 +89,38 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
   if (is.null(info)) {
     cli::cli_abort("Couche {.val dem} introuvable pour le pays {.val {country}}.")
   }
-  .fetch_wms_raster(aoi, layer = info$layer, res = res_m, crs = crs, filename = chemin)
-  chemin
+  # Chaine de couches d'altitude : LIDAR HD (Lambert-93 natif, propre) -> HIGHRES
+  # -> RGE ALTI. Le WMS d'altitude sert depuis une pyramide de tuiles web-mercator
+  # rereprojetee ; sur certaines tuiles RGE ALTI cela produit un MNT "blocky" (blocs
+  # plats a marches) qui fabrique de fausses pentes en grille (jusqu'a > 300 %) et
+  # donc de faux "inexploitable". Les couches LIDAR HD n'ont pas cet artefact. On
+  # essaie chaque couche jusqu'a une couverture suffisante (le LIDAR HD n'est pas
+  # partout : hors couverture, le WMS rend un raster majoritairement NA).
+  couches <- c(info$layer, as.character(info$fallback_layers))
+  for (i in seq_along(couches)) {
+    ly <- couches[[i]]
+    ok <- tryCatch({
+      .fetch_wms_raster(aoi, layer = ly, res = res_m, crs = crs, filename = chemin)
+      .mnt_couverture_suffisante(chemin)
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) {
+      if (i > 1L) {
+        cli::cli_inform("MNT : couche principale indisponible sur l'emprise, repli sur {.val {ly}}.")
+      }
+      return(chemin)
+    }
+  }
+  cli::cli_abort("Aucune couche MNT ne couvre l'emprise (essaye : {.val {couches}}).")
+}
+
+# Le MNT couvre-t-il assez l'emprise ? Le LIDAR HD n'est pas partout ; hors
+# couverture le WMS rend un raster majoritairement NA, on passe alors au repli.
+.mnt_couverture_suffisante <- function(chemin, seuil = 0.9) {
+  if (!file.exists(chemin)) {
+    return(FALSE)
+  }
+  v <- terra::values(terra::rast(chemin), mat = FALSE)
+  length(v) > 0 && mean(is.finite(v)) >= seuil
 }
 
 #' Acquiert la desserte depuis BD TOPO (IGN WFS)

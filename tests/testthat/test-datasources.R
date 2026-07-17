@@ -11,7 +11,8 @@ test_that("get_country_config lit le JSON FR et met en cache", {
 
 test_that("get_layer_service resout couche + service (CA-A.3)", {
   dem <- get_layer_service("dem", "FR")
-  expect_equal(dem$layer, "ELEVATION.ELEVATIONGRIDCOVERAGE")
+  expect_equal(dem$layer, "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93")
+  expect_true("ELEVATION.ELEVATIONGRIDCOVERAGE" %in% as.character(dem$fallback_layers))
   expect_equal(dem$url, "https://data.geopf.fr/wms-r/wms")
   expect_equal(as.integer(dem$resolution_m), 5L)
 

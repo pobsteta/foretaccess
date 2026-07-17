@@ -18,8 +18,12 @@
   "layers": {
     "dem": {
       "service": "ign_wms",
-      "layer": "ELEVATION.ELEVATIONGRIDCOVERAGE",
-      "description": "RGE ALTI - Modele Numerique de Terrain (MNT)",
+      "layer": "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93",
+      "fallback_layers": [
+        "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",
+        "ELEVATION.ELEVATIONGRIDCOVERAGE"
+      ],
+      "description": "MNT LIDAR HD (Lambert-93 natif) ; repli HIGHRES puis RGE ALTI",
       "resolution_m": 5
     },
     "roads": {

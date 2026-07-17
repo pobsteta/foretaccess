@@ -43,6 +43,28 @@ test_that("acquire_mnt ecrit un raster en cache et est idempotent (CA-A.6)", {
   })
 })
 
+test_that("acquire_mnt bascule sur une couche de repli si la principale est vide", {
+  withr::with_tempdir({
+    principale <- "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"
+    couches <- character(0)
+    testthat::local_mocked_bindings(.fetch_wms_raster = function(aoi, layer, res, crs, filename) {
+      couches <<- c(couches, layer)
+      r <- terra::rast(terra::ext(terra::vect(aoi)), resolution = res, crs = paste0("EPSG:", crs))
+      # La couche principale (LIDAR HD) n'a pas de donnee ici -> tout NA.
+      terra::values(r) <- if (identical(layer, principale)) NA_real_ else seq_len(terra::ncell(r))
+      terra::writeRaster(r, filename, overwrite = TRUE)
+      r
+    })
+    p <- acquire_mnt(aoi_test(), res_m = 50, cache_dir = "cache")
+    expect_true(file.exists(p))
+    # La principale a ete tentee puis abandonnee au profit du 1er repli.
+    expect_equal(couches[1], principale)
+    expect_gte(length(couches), 2L)
+    # Le MNT rendu est celui du repli (valeurs finies).
+    expect_true(any(is.finite(terra::values(terra::rast(p), mat = FALSE))))
+  })
+})
+
 test_that("acquire_foret et acquire_cadastre renvoient des polygones decoupes", {
   withr::with_tempdir({
     testthat::local_mocked_bindings(.fetch_wfs = function(aoi, typename) polys_fixture())
