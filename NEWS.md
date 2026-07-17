@@ -1,3 +1,34 @@
+# foretaccess 1.3.0 (2026-07-17)
+
+## Nouvelles fonctionnalités
+
+- **Pondération du tracé par la surface de coût de construction** — option
+  `pondere_cout` sur `tracer_desserte()`, `reseau_desserte()` et
+  `optimiser_reseau()`. À `TRUE`, le solveur A\* minimise le **coût de construction
+  €/m** (surface du Lot 14) au lieu de la seule distance géométrique, en contournant
+  les cellules chères et en empruntant les corridors bon marché. L'admissibilité de
+  l'heuristique est préservée (remise à l'échelle par le coût minimal de la zone
+  franchissable), donc le tracé reste optimal. Défaut `FALSE` = comportement d'origine
+  bit-pour-bit (SylvaRoad).
+- **`classes_debardage()`** — expose le raster « classes de débardage » de Sylvaccess
+  à partir de la sortie du skidder : bandes de distance
+  (`config$skidder$classes_distance_m` : 0-250 … > 2000 m) + `inaccessible` +
+  `inexploitable` (pente d'abattage locale dépassée) + `hors_foret`. Raster catégoriel
+  avec table de couleurs, directement cartographiable et compatible `recapituler()`.
+
+## Documentation
+
+- Nouveaux articles pkgdown : *Conception d'un réseau de desserte*, *Architecture &
+  feuille de route*, et *Choix de conception : ForêtAccess vs Sylvaccess* (analyse des
+  choix d'ingénierie face à Sylvaccess).
+- **Attribution complète** des travaux dérivés (Sylvaccess, SEILAPLAN, SylvaRoad,
+  Forest Road Designer, ForestRoadNetwork) dans le README et `CITATION.cff` ; nouveau
+  schéma d'architecture couvrant les deux épics (`man/figures/architecture.svg`).
+- Note de performance dédiée `docs/performance-coldupre.md` : câble re-chronométré à
+  isopérimètre `c_sup = 3` (~40 s, ~5× plus rapide que le Cython grâce à `rayon`).
+- Référence exacte de la source Sylvaccess figée (forge INRAE, commit `372abaf`,
+  ADR-006 et README).
+
 # foretaccess 1.2.0 (2026-07-16)
 
 ## Conception de desserte forestière (épic Lots 14 → 18)
