@@ -13,17 +13,22 @@
 #'
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
 #' @param cout A `foretaccess_cout_construction` object (Lot 14): supplies the
-#'   crossability mask (`franchissable`).
+#'   crossability mask (`franchissable`) and, if `pondere_cout = TRUE`, the
+#'   construction cost surface (`cout`, euros/m).
 #' @param waypoints Ordered points the road must visit (start first, end last;
 #'   at least two). An `sf`/`SpatVector` of points, a two-column matrix of
 #'   coordinates, or a vector of raster cell numbers (1-based).
+#' @param pondere_cout If `TRUE`, weights the trace by the construction cost
+#'   surface (`cout$cout`, euros/m) instead of pure geometric distance, so the
+#'   road minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
 #' @param config A `foretaccess_config`; the solver settings live in
 #'   `config$desserte$trace`.
 #' @return A `foretaccess_trace` object: a list with `ligne` (an `sf` LINESTRING
 #'   of the route), `cout` (total cost), `faisable` (did every segment reach its
 #'   target), `waypoints` (the cell numbers) and the `config`.
 #' @export
-tracer_desserte <- function(pre, cout, waypoints, config = foretaccess_config()) {
+tracer_desserte <- function(pre, cout, waypoints, pondere_cout = FALSE,
+                            config = foretaccess_config()) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   checkmate::assert_class(cout, "foretaccess_cout_construction")
   validate_config(config)
@@ -62,6 +67,9 @@ tracer_desserte <- function(pre, cout, waypoints, config = foretaccess_config())
   }
   wp0 <- as.integer(cells1 - 1L)
 
+  # Grille de coût €/m (Lot 14) si ponderation demandee, sinon neutre (1.0).
+  cost <- if (isTRUE(pondere_cout)) as.numeric(terra::values(cout$cout)) else rep(1, nr * nc)
+
   res <- desserte_trace(
     alt = alt, obs = obs, obs2 = obs2, local_slope = local_slope, zone = zone,
     nr = nr, nc = nc, waypoints = wp0, bufgoal = tr$buffer_arrivee_m,
@@ -70,7 +78,8 @@ tracer_desserte <- function(pre, cout, waypoints, config = foretaccess_config())
     max_diff_z = tr$max_diff_z_m, d_neighborhood = tr$d_neighborhood_m,
     angle_hairpin = tr$angle_epingle, lmax_ab_sl = tr$lmax_devers_m,
     radius = tr$rayon_braquage_m, prop_sl_max = tr$prop_devers_max,
-    max_slope_hairpin = tr$max_slope_hairpin, tal = tr$tal, modhair = tr$modhair
+    max_slope_hairpin = tr$max_slope_hairpin, tal = tr$tal, modhair = tr$modhair,
+    cost = cost
   )
 
   if (!res$feasible) {

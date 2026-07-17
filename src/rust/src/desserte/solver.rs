@@ -57,6 +57,60 @@ impl SolverParams {
     }
 }
 
+/// Pondération monétaire du trace (extension ForetAccess de SylvaRoad). `w` = coût
+/// de construction par metre (€/m) par cellule (row-major) ; `1.0` partout = trace
+/// purement geometrique (comportement SylvaRoad d'origine). La contribution
+/// distance d'un segment est multipliee par le coût moyen de ses deux extremites.
+///
+/// `cmin` = coût minimal sur la **zone franchissable** : il sert a **remettre a
+/// l'echelle l'heuristique geometrique** (`h_geo * cmin`), qui reste ainsi une
+/// borne inferieure du coût pondere restant (chaque segment coûte au moins
+/// `d * cmin`), donc l'A* reste admissible et optimal quel que soit le champ `w`.
+pub struct CostGrid<'a> {
+    w: Option<&'a [f64]>,
+    pub cmin: f64,
+}
+
+impl<'a> CostGrid<'a> {
+    /// Grille neutre : trace purement geometrique (comportement SylvaRoad).
+    pub fn neutral() -> Self {
+        CostGrid { w: None, cmin: 1.0 }
+    }
+
+    /// Depuis la grille €/m et la zone franchissable (`zone == 1`). `cmin` ignore
+    /// les valeurs non finies ou <= 0 ; a defaut (grille neutre) vaut 1.0.
+    pub fn new(w: &'a [f64], zone: &[i32]) -> Self {
+        let cmin = w
+            .iter()
+            .zip(zone.iter())
+            .filter(|(&c, &z)| z == 1 && c.is_finite() && c > 0.0)
+            .map(|(&c, _)| c)
+            .fold(f64::INFINITY, f64::min);
+        CostGrid {
+            w: Some(w),
+            cmin: if cmin.is_finite() { cmin } else { 1.0 },
+        }
+    }
+
+    /// Facteur de coût d'un segment reliant les cellules `a` et `b` (moyenne des
+    /// deux €/m ; `1.0` pour une grille neutre). Une valeur non finie ou <= 0 est
+    /// ramenee a `cmin`.
+    #[inline]
+    fn factor(&self, a: usize, b: usize) -> f64 {
+        match self.w {
+            None => 1.0,
+            Some(w) => {
+                let f = 0.5 * (w[a] + w[b]);
+                if f.is_finite() && f > 0.0 {
+                    f
+                } else {
+                    self.cmin
+                }
+            }
+        }
+    }
+}
+
 /// Etat A* d'une cellule (id-pixel).
 #[derive(Clone, Copy)]
 struct NodeState {
@@ -150,14 +204,17 @@ pub fn solve(
     nc: usize,
     waypoints: &[usize],
     bufgoal: f64,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> TraceResult {
     let n_pix = table.n_pix();
     let mut best = vec![NodeState::empty(); n_pix];
 
-    // Heuristique : distance inverse depuis la cible FINALE (dernier waypoint).
+    // Heuristique : distance inverse depuis la cible FINALE (dernier waypoint),
+    // remise a l'echelle par cmin pour rester admissible sous ponderation de coût.
     let last = *waypoints.last().unwrap();
-    let d2e = dist_to_end(zone, nr, nc, p.csize, last / nc, last % nc, 1.0e9);
+    let mut d2e = dist_to_end(zone, nr, nc, p.csize, last / nc, last % nc, 1.0e9);
+    scale_finite(&mut d2e, cg.cmin);
 
     let n_seg = waypoints.len() - 1;
     let mut full_path: Vec<usize> = Vec::new();
@@ -219,7 +276,7 @@ pub fn solve(
                 break;
             }
             let add: Vec<usize> = if best[idcur].nbptbef == 0 {
-                calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, take_dtoend, ye, xe, p)
+                calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, take_dtoend, ye, xe, cg, p)
             } else {
                 // Finition a proximite de la cible (dernier segment).
                 if seg_bufgoal > 0.0 {
@@ -229,7 +286,7 @@ pub fn solve(
                         push_close(&mut close, idcur, dcg, &best, p);
                     }
                 }
-                basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, take_dtoend, ye, xe, p)
+                basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, take_dtoend, ye, xe, cg, p)
             };
             for &idv in &add {
                 let theo = round1(best[idv].cost + best[idv].dtocp);
@@ -282,6 +339,19 @@ fn round1(x: f64) -> f64 {
     (x * 10.0).round() / 10.0
 }
 
+/// Multiplie en place les valeurs finies d'une grille par `k` (mise a l'echelle de
+/// l'heuristique geometrique ; les `NaN`/inf hors-portee sont laisses tels quels).
+fn scale_finite(v: &mut [f64], k: f64) {
+    if k == 1.0 {
+        return;
+    }
+    for x in v.iter_mut() {
+        if x.is_finite() {
+            *x *= k;
+        }
+    }
+}
+
 /// Trace le chemin de moindre cout d'une `source` vers le RESEAU (ensemble de
 /// cellules `targets`) : l'A* s'arrete des qu'il atteint une cellule du reseau.
 /// Reproduit le Dijkstra multi-cible de ForestRoadNetwork (raccordement d'une
@@ -300,6 +370,7 @@ pub fn solve_network(
     nc: usize,
     source: usize,
     targets: &[usize],
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> TraceResult {
     let echec = || TraceResult {
@@ -333,8 +404,10 @@ pub fn solve_network(
         };
     }
 
-    // Heuristique = distance inverse multi-source depuis tout le reseau.
-    let d2e = dist_to_end_multi(zone, nr, nc, p.csize, targets, 1.0e9);
+    // Heuristique = distance inverse multi-source depuis tout le reseau, remise a
+    // l'echelle par cmin pour rester admissible sous ponderation de coût.
+    let mut d2e = dist_to_end_multi(zone, nr, nc, p.csize, targets, 1.0e9);
+    scale_finite(&mut d2e, cg.cmin);
     let seed = nan_inf(d2e[source]);
 
     let n_pix = table.n_pix();
@@ -371,9 +444,9 @@ pub fn solve_network(
         // take_dtoend = true : l'heuristique est la distance-reseau pre-calculee
         // (ye/xe inutilises dans ce mode).
         let add = if best[idcur].nbptbef == 0 {
-            calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, true, 0, 0, p)
+            calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, true, 0, 0, cg, p)
         } else {
-            basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, true, 0, 0, p)
+            basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, true, 0, 0, cg, p)
         };
         for &idv in &add {
             let theo = round1(best[idv].cost + best[idv].dtocp);
@@ -458,11 +531,12 @@ pub fn build_network(
     sources_ordered: &[usize],
     network0: &[usize],
     skidding: f64,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> NetworkResult {
     let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
     build_network_with_table(
-        dtm, obs, obs2, local_slope, zone, nr, nc, sources_ordered, network0, skidding, &table, p,
+        dtm, obs, obs2, local_slope, zone, nr, nc, sources_ordered, network0, skidding, &table, cg, p,
     )
 }
 
@@ -481,6 +555,7 @@ pub fn build_network_with_table(
     network0: &[usize],
     skidding: f64,
     table: &NeibTable,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> NetworkResult {
     let mut roadset: HashSet<usize> = network0.iter().copied().collect();
@@ -496,7 +571,7 @@ pub fn build_network_with_table(
             continue; // deja desservie par debardage
         }
         let targets: Vec<usize> = roadset.iter().copied().collect();
-        let res = solve_network(dtm, obs, obs2, local_slope, zone, table, nr, nc, src, &targets, p);
+        let res = solve_network(dtm, obs, obs2, local_slope, zone, table, nr, nc, src, &targets, cg, p);
         if res.feasible && !res.path.is_empty() {
             for &c in &res.path {
                 roadset.insert(c);
@@ -558,6 +633,7 @@ pub fn build_network_multistart(
     skidding: f64,
     n_start: usize,
     seed: u64,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> MultistartResult {
     let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
@@ -576,7 +652,7 @@ pub fn build_network_multistart(
         .par_iter()
         .map(|ord| {
             build_network_with_table(
-                dtm, obs, obs2, local_slope, zone, nr, nc, ord, network0, skidding, &table, p,
+                dtm, obs, obs2, local_slope, zone, nr, nc, ord, network0, skidding, &table, cg, p,
             )
         })
         .collect();
@@ -625,12 +701,13 @@ pub fn build_network_recuit(
     t0: f64,
     cooling: f64,
     seed: u64,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> AnnealResult {
     let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
     let eval = |order: &[usize]| {
         let net = build_network_with_table(
-            dtm, obs, obs2, local_slope, zone, nr, nc, order, network0, skidding, &table, p,
+            dtm, obs, obs2, local_slope, zone, nr, nc, order, network0, skidding, &table, cg, p,
         );
         let e: f64 = net.costs.iter().sum();
         (e, net)
@@ -735,11 +812,12 @@ pub fn build_network_riprute(
     network0: &[usize],
     skidding: f64,
     max_pass: usize,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> RipruteResult {
     let table = build_neib_table(dtm, obs, nr, nc, p.d_neighborhood, p.csize, p.min_slope, p.max_slope);
     let init = build_network_with_table(
-        dtm, obs, obs2, local_slope, zone, nr, nc, sources_base, network0, skidding, &table, p,
+        dtm, obs, obs2, local_slope, zone, nr, nc, sources_base, network0, skidding, &table, cg, p,
     );
     let mut paths = init.paths;
     let mut costs = init.costs;
@@ -759,7 +837,7 @@ pub fn build_network_riprute(
                 }
             }
             let targets: Vec<usize> = others.iter().copied().collect();
-            let res = solve_network(dtm, obs, obs2, local_slope, zone, &table, nr, nc, src, &targets, p);
+            let res = solve_network(dtm, obs, obs2, local_slope, zone, &table, nr, nc, src, &targets, cg, p);
             if res.feasible && !res.path.is_empty() && res.cost + 1e-9 < costs[i] {
                 // N'accepter que si le reseau reste entierement connecte.
                 let mut trial = paths.clone();
@@ -793,6 +871,7 @@ fn calc_init(
     take_dtoend: bool,
     ye: usize,
     xe: usize,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> Vec<usize> {
     let (yc, xc) = table.corresp[idcur];
@@ -814,14 +893,16 @@ fn calc_init(
         if !pc.ok {
             continue;
         }
+        // Heuristique geometrique remise a l'echelle par cmin (reste admissible).
         let d_to_cp = if take_dtoend {
             nan_inf(d2e[y * nc + x])
         } else {
-            distplan(y as f64, x as f64, ye as f64, xe as f64) * p.csize
+            distplan(y as f64, x as f64, ye as f64, xe as f64) * p.csize * cg.cmin
         };
         best[idv] = NodeState {
             id: idv as i32,
-            cost: d + pc.new_lsl,
+            // Contribution distance ponderee par le coût de construction €/m.
+            cost: d * cg.factor(yc * nc + xc, y * nc + x) + pc.new_lsl,
             dplan: d,
             slope_from: slope_perc,
             az_from: az,
@@ -851,6 +932,7 @@ fn basic_calc(
     take_dtoend: bool,
     ye: usize,
     xe: usize,
+    cg: &CostGrid,
     p: &SolverParams,
 ) -> Vec<usize> {
     let (yc, xc) = table.corresp[idcur];
@@ -864,7 +946,8 @@ fn basic_calc(
         let idv = nb.id as usize;
         let o = table.offsets[nb.off];
         let d = o.dist;
-        if best[idv].cost < cur.cost + d {
+        // Borne inferieure de l'ajout de coût : au moins `d * cmin` (facteur >= cmin).
+        if best[idv].cost < cur.cost + d * cg.cmin {
             continue; // ne peut pas ameliorer
         }
         let (y, x) = table.corresp[idv];
@@ -950,14 +1033,16 @@ fn basic_calc(
         if !pc.ok {
             continue;
         }
-        let mut new_cost = cur.cost + d + penalty_dir + penalty_slope + pc.new_lsl - cur.lsl;
+        let mut new_cost = cur.cost + d * cg.factor(yc * nc + xc, y * nc + x)
+            + penalty_dir + penalty_slope + pc.new_lsl - cur.lsl;
         if hairpin == 1 {
             new_cost += pen_hp;
         }
+        // Heuristique geometrique remise a l'echelle par cmin (reste admissible).
         let d_to_cp = if take_dtoend {
             nan_inf(d2e[y * nc + x])
         } else {
-            distplan(y as f64, x as f64, ye as f64, xe as f64) * p.csize
+            distplan(y as f64, x as f64, ye as f64, xe as f64) * p.csize * cg.cmin
         };
 
         if best[idv].cost > new_cost {
@@ -1125,7 +1210,7 @@ mod tests {
         // Depart (2,0) -> arrivee (2,8), memes ligne.
         let start = 2 * nc;
         let end = 2 * nc + 8;
-        let r = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[start, end], 0.0, &p);
+        let r = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[start, end], 0.0, &CostGrid::neutral(), &p);
         assert!(r.feasible);
         assert_eq!(*r.path.first().unwrap(), start);
         assert_eq!(*r.path.last().unwrap(), end);
@@ -1140,7 +1225,7 @@ mod tests {
         let a = 2 * nc;
         let b = 2 * nc + 4;
         let c = 2 * nc + 8;
-        let r = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[a, b, c], 0.0, &p);
+        let r = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[a, b, c], 0.0, &CostGrid::neutral(), &p);
         assert!(r.feasible);
         assert!(r.path.contains(&b)); // point de passage intermediaire traverse
         assert_eq!(*r.path.first().unwrap(), a);
@@ -1155,7 +1240,7 @@ mod tests {
         // Reseau = colonne de droite entiere ; source a gauche (2,0).
         let source = 2 * nc;
         let targets: Vec<usize> = (0..nr).map(|y| y * nc + (nc - 1)).collect();
-        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &p);
+        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &CostGrid::neutral(), &p);
         assert!(r.feasible);
         assert_eq!(*r.path.first().unwrap(), source);
         // L'arrivee est une cellule du reseau.
@@ -1169,7 +1254,7 @@ mod tests {
         let g = setup(nr, nc, 8.0, &p);
         let source = 2 * nc + 4;
         let targets = vec![source, 2 * nc + 5];
-        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &p);
+        let r = solve_network(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, source, &targets, &CostGrid::neutral(), &p);
         assert!(r.feasible);
         assert_eq!(r.path, vec![source]);
         assert_eq!(r.cost, 0.0);
@@ -1188,7 +1273,7 @@ mod tests {
         let s2 = 3 * nc + (nc - 1);
         let net = build_network(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &[s1, s2], &network0, 0.0, &p,
+            &[s1, s2], &network0, 0.0, &CostGrid::neutral(), &p,
         );
         assert_eq!(net.paths.len(), 2);
         // Chaque parcelle est raccordee.
@@ -1206,7 +1291,7 @@ mod tests {
         let s = 2 * nc + 1;
         let net = build_network(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &[s], &network0, 100.0, &p,
+            &[s], &network0, 100.0, &CostGrid::neutral(), &p,
         );
         assert_eq!(net.paths.len(), 0);
     }
@@ -1221,13 +1306,13 @@ mod tests {
         // Cout du glouton simple sur l'ordre de base (essai 0).
         let base = build_network(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, &p,
+            &sources, &network0, 0.0, &CostGrid::neutral(), &p,
         );
         let base_cost: f64 = base.costs.iter().sum();
         // Multi-start : le meilleur essai n'est jamais pire que l'ordre de base.
         let ms = build_network_multistart(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, 8, 42, &p,
+            &sources, &network0, 0.0, 8, 42, &CostGrid::neutral(), &p,
         );
         let best_cost: f64 = ms.costs.iter().sum();
         assert!(best_cost <= base_cost + 1e-9);
@@ -1236,7 +1321,7 @@ mod tests {
         // Reproductibilite a graine fixee.
         let ms2 = build_network_multistart(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, 8, 42, &p,
+            &sources, &network0, 0.0, 8, 42, &CostGrid::neutral(), &p,
         );
         assert_eq!(ms.journal, ms2.journal);
         assert_eq!(ms.best, ms2.best);
@@ -1251,12 +1336,12 @@ mod tests {
         let sources = [nc + (nc - 1), 3 * nc + (nc - 1), 2 * nc + (nc - 2)];
         let base = build_network(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, &p,
+            &sources, &network0, 0.0, &CostGrid::neutral(), &p,
         );
         let base_cost: f64 = base.costs.iter().sum();
         let an = build_network_recuit(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &p,
+            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &CostGrid::neutral(), &p,
         );
         let best_cost: f64 = an.costs.iter().sum();
         // Le meilleur rencontre n'est jamais pire que l'ordre de base (CA-18.1).
@@ -1269,7 +1354,7 @@ mod tests {
         // Reproductibilite a graine fixee (CA-18.2).
         let an2 = build_network_recuit(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &p,
+            &sources, &network0, 0.0, 30, 0.0, 0.9, 7, &CostGrid::neutral(), &p,
         );
         assert_eq!(an.journal, an2.journal);
     }
@@ -1283,12 +1368,12 @@ mod tests {
         let sources = [nc + (nc - 1), 3 * nc + (nc - 1), 2 * nc + (nc - 2)];
         let base = build_network(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, &p,
+            &sources, &network0, 0.0, &CostGrid::neutral(), &p,
         );
         let base_cost: f64 = base.costs.iter().sum();
         let rr = build_network_riprute(
             &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, nr, nc,
-            &sources, &network0, 0.0, 6, &p,
+            &sources, &network0, 0.0, 6, &CostGrid::neutral(), &p,
         );
         let rr_cost: f64 = rr.costs.iter().sum();
         // Jamais pire que le glouton de depart (CA-18.1).
@@ -1302,13 +1387,51 @@ mod tests {
     }
 
     #[test]
+    fn cost_weighting_scales_and_diverts() {
+        let mut p = params();
+        p.min_slope = 0.0; // autorise les segments a plat : le coût pilote le trace
+        let (nr, nc) = (5usize, 9usize);
+        let g = setup(nr, nc, 0.0, &p); // terrain plat
+        let start = 2 * nc;
+        let end = 2 * nc + 8;
+        let neu = solve(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc,
+            &[start, end], 0.0, &CostGrid::neutral(), &p,
+        );
+        assert!(neu.feasible);
+
+        // Coût uniforme x2 : meme trace, coût strictement plus eleve.
+        let w2 = vec![2.0; nr * nc];
+        let uni = solve(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc,
+            &[start, end], 0.0, &CostGrid::new(&w2, &g.zone), &p,
+        );
+        assert_eq!(uni.path, neu.path);
+        assert!(uni.cost > neu.cost);
+
+        // Corridor bon marche sur la ligne 0 (reste cher ailleurs) : le trace
+        // pondere remonte vers le nord pour l'emprunter.
+        let mut w = vec![10.0; nr * nc];
+        for x in w.iter_mut().take(nc) {
+            *x = 1.0; // ligne 0 bon marche
+        }
+        let div = solve(
+            &g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc,
+            &[start, end], 0.0, &CostGrid::new(&w, &g.zone), &p,
+        );
+        assert!(div.feasible);
+        let min_row = |r: &TraceResult| r.path.iter().map(|&c| c / nc).min().unwrap();
+        assert!(min_row(&div) < min_row(&neu)); // le trace pondere monte plus haut
+    }
+
+    #[test]
     fn deterministic_trace() {
         let p = params();
         let (nr, nc) = (5usize, 9usize);
         let g = setup(nr, nc, 8.0, &p);
         let (s, e) = (2 * nc, 2 * nc + 8);
-        let r1 = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[s, e], 0.0, &p);
-        let r2 = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[s, e], 0.0, &p);
+        let r1 = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[s, e], 0.0, &CostGrid::neutral(), &p);
+        let r2 = solve(&g.dtm, &g.obs, &g.obs2, &g.local_slope, &g.zone, &g.table, nr, nc, &[s, e], 0.0, &CostGrid::neutral(), &p);
         assert_eq!(r1.path, r2.path);
     }
 }

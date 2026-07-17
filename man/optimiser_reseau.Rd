@@ -19,6 +19,7 @@ optimiser_reseau(
   graine = 1,
   skidding_m = 0,
   volume_champ = NULL,
+  pondere_cout = FALSE,
   config = foretaccess_config()
 )
 }
@@ -55,6 +56,9 @@ served without building a road.}
 
 \item{volume_champ}{Optional name of the parcel volume column (for the
 \code{"plus_gros_volume"} base ordering).}
+
+\item{pondere_cout}{If \code{TRUE}, weights the trace by the Lot 14 construction
+cost surface (\code{cout$cout}, euros/m) instead of geometric distance.}
 
 \item{config}{A \code{foretaccess_config}; the solver settings live in
 \code{config$desserte$trace}.}
