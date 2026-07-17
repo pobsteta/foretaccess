@@ -152,6 +152,9 @@ Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
 - [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
   : Moteur d'accessibilité skidder (débusqueur)
 
+- [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+  : Classify skidding distance into Sylvaccess distance bands
+
 - [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
   : Moteur d'accessibilité porteur (forwarder)
 
