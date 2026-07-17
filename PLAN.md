@@ -104,8 +104,8 @@
   (coût minimal sur la zone franchissable), qui reste une borne inférieure du coût restant → A* optimal.
   Défaut `FALSE` = comportement SylvaRoad bit-pour-bit. 1 test cargo (`cost_weighting_scales_and_diverts`)
   + 3 tests R (`test-desserte-pondere.R`). **Branche `feat/desserte-pondere-cout`.**
-- **Branche** : cycle dev
-- **Version `DESCRIPTION`** : `1.3.0.9000` (cycle dev après release `v1.3.0`)
+- **Branche** : `release/v1.3.1`
+- **Version `DESCRIPTION`** : `1.3.1` (release en cours — fix MNT LIDAR)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
@@ -340,6 +340,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-17 — Release v1.3.1 : fix MNT LIDAR (artefacts de pente en grille)
+
+Release **patch `v1.3.1`** : `acquire_mnt()` bascule sur le **LIDAR HD** (`IGNF_LIDAR-HD_MNT`,
+Lambert-93 natif), repli `HIGHRES` puis RGE ALTI. Diagnostic parti d'un faux `inexploitable`
+en lignes horizontales/verticales sur les classes de débardage : le WMS RGE ALTI servait sur
+certaines tuiles un MNT « en blocs » (marches -> fausses pentes > 350 %). Confirmé en faisant
+tourner Sylvaccess v3.6 sur l'AOI du projet et en comparant les rasters. Sur l'AOI : forêt
+faussement exclue ~33 % -> 0,2 % (conforme Sylvaccess), pente max 357 % -> 165 %. Le bug
+faussait tous les moteurs dependant de la pente, pas seulement l'affichage (#80). `DESCRIPTION`
+= `NEWS.md` = `CITATION.cff` = `1.3.1`. Apres merge : tag + release auto, retour cycle dev
+`1.3.1.9000`.
 
 ### 2026-07-17 — Release v1.3.0 : pondération coût + `classes_debardage` + doc
 
