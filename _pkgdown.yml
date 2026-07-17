@@ -14,8 +14,10 @@ articles:
   navbar: ~
   contents:
   - foretaccess
+  - desserte
   - acquisition
   - cartes
+  - architecture
 
 reference:
 - title: Configuration

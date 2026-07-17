@@ -1,0 +1,139 @@
+---
+title: "Architecture & feuille de route"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Architecture & feuille de route}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+ForêtAccess est une réimplémentation moderne, découplée et testable du modèle
+**Sylvaccess** (INRAE, S. Dupire) : un cœur métier pur en **R** pour les moteurs
+terrestres, un noyau **câble en Rust** (via `extendr`), et des sorties en base
+spatiale (**PostGIS** ou **GeoPackage**). Cet article recense ce qui est
+implémenté, lot par lot, et où le trouver dans la référence.
+
+## Le pipeline
+
+```
+MNT + desserte + forêt
+        │
+        ▼
+   preprocess()  ─────────────────────────────►  grille commune, pente, exposition
+        │
+        ├──► skidder()      (débardage : traînage + treuillage)
+        ├──► porteur()      (portage : conduite + grappin)
+        ├──► camion_dfci()  (défense incendie : zone défendable)
+        └──► potentiel_cable() → selectionner_lignes()  (câble-mât, noyau Rust)
+        │
+        ▼
+   agreger_zones()  ──►  surfaces / volumes par zone et par classe
+        │
+        ▼
+   storage_gpkg() / storage_postgis()  ──►  base spatiale
+```
+
+À côté de la **cartographie** de l'accessibilité (ci-dessus), l'épic
+**conception de desserte** (Lots 14-18) *conçoit* le réseau de routes à créer :
+`surface_cout_construction()` → `tracer_desserte()` → `reseau_desserte()` →
+`vectoriser_reseau()`/`calculer_flux()`/`typer_desserte()` →
+`optimiser_reseau()`. Voir l'article *Conception d'un réseau de desserte*.
+
+## Ce qui est implémenté
+
+| Lot | Sujet | Fonctions clés | Statut |
+|---|---|---|---|
+| 1 | Prétraitement | `preprocess`, `calculer_terrain`, `valider_entrees` | ✅ |
+| 2 | Skidder (débardage) | `skidder`, `treuiller`, `zone_roulable_connectee` | ✅ oracle 99,95 % |
+| 3 | Porteur (portage) | `porteur`, `conduire`, `zone_plate_connectee` | ✅ oracle 99,72 % |
+| 4-5 | Câble-mât (noyau Rust) | `potentiel_cable`, `selectionner_lignes`, `cable_scan` | ✅ oracle 98,36 % |
+| 6 | Camion DFCI (radial) | `camion_dfci`, `dfci_scan` | ✅ oracle 99,87 % |
+| 7 | Passage à l'échelle | `traiter_par_tuiles`, `certifier_propagation` | ✅ |
+| 8 | Base spatiale | `agreger_zones`, `storage_gpkg`, `storage_postgis` | ✅ |
+| 10 | Acquisition d'entrées | `acquire_inputs`, `acquire_mnt`, `datasources` | ✅ |
+| 13 | Hauteur supports (SEILAPLAN) | `config$cable$methode_supports` | ✅ perf ×2,8 |
+| 14 | Surface de coût de construction | `surface_cout_construction` | ✅ |
+| 15 | Tracé A\* (noyau Rust) | `tracer_desserte`, `desserte_trace` | ✅ |
+| 16 | Réseau glouton / Steiner | `reseau_desserte` | ✅ |
+| 17 | Flux de bois & typage | `vectoriser_reseau`, `calculer_flux`, `typer_desserte` | ✅ |
+| 18 | Optimisation du réseau | `optimiser_reseau` | ✅ |
+
+## La frontière R ↔ Rust
+
+La règle est stricte : la logique SIG vit en R, seul le **calcul pur** descend en
+Rust. Deux noyaux y sont portés :
+
+- **Mécanique câble** (`cable_*`, `cable_scan`) : caténaire, tension, supports
+  intermédiaires, balayage 360°/pixel parallélisé (`rayon`). Optimisation de la
+  hauteur des supports façon SEILAPLAN (Lot 13).
+- **Solveur de tracé A\*** (`desserte_trace`, `desserte_reseau*`) : graphe à
+  voisinage disque, coût de transition géométrique + pénalités (direction, pente,
+  dévers), épingles, et depuis peu **pondération par la surface de coût €/m**.
+
+```{r rust}
+library(foretaccess)
+cablehelp_version()
+```
+
+## Fidélité à l'oracle Sylvaccess (jeu ColduPre)
+
+La version majeure `v1.0.0` signifie « validée contre le vrai moteur » : accord
+**cellule à cellule** sur le jeu officiel ColduPre, distances collées
+(décomposition comprise), pas seulement l'accord binaire.
+
+| Moteur | Accord cellule à cellule |
+|---|---|
+| Skidder | 99,95 % |
+| Porteur | 99,72 % |
+| Câble   | 98,36 % |
+| DFCI    | 99,87 % |
+
+## Temps de calcul (ColduPre, 894 × 1034, temps écoulé, machine au repos)
+
+Mesures ForêtAccess : deux passes séquentielles (`workers = 1`), moteurs à leurs
+défauts v3.6 — dont le câble à **`c_sup = 3`** (isopérimètre avec Sylvaccess). Les
+chiffres Sylvaccess sont la mesure de référence antérieure (Cython).
+
+| Moteur | Sylvaccess (Cython, réf.) | ForêtAccess (c_sup = 3) |
+|---|---|---|
+| Prétraitement | — | 1,2 s |
+| Skidder | 14 s | ~15 s (parité) |
+| Porteur | 14 s | ~17–19 s |
+| Câble (`c_sup = 3`) | 3 min 18 s (198 s) | **~40 s** (≈ 165 s CPU, `rayon`) |
+| DFCI | — | ~26–31 s |
+
+Le câble est désormais comparé **à isopérimètre** (3 supports intermédiaires des
+deux côtés) : le noyau Rust parallélisé (`rayon`) le rend **~5× plus rapide** que
+le Cython monocœur — ~40 s de temps écoulé pour ~165 s de temps CPU réparti sur
+les cœurs. Les moteurs terrestres (séquentiels) sont à parité (CPU ≈ écoulé). Le
+portage Rust n'est justifié qu'à l'échelle régionale/nationale pour les moteurs
+terrestres ; à l'échelle du massif ou du département, le tuilage (Lot 7) suffit.
+
+## Configuration
+
+Tous les paramètres métier vivent dans un objet validé au chargement, dont les
+**défauts sont ceux de Sylvaccess v3.6**. Toute divergence est justifiée en
+commentaire dans le code.
+
+```{r config}
+config <- foretaccess_config()
+names(config)
+```
+
+## Attribution
+
+ForêtAccess est un travail dérivé de plusieurs modèles libres, tous GPL v3, selon
+la partie considérée :
+
+- **Sylvaccess** (INRAE, S. Dupire) — moteurs terrestres & câble (Lots 0-13) ;
+- **SEILAPLAN** (Bont & Heinimann ; P. Moll et al.) — hauteur des supports câble (Lot 13) ;
+- **SylvaRoad** (S. Dupire / SylvaLab / ONF) et **Forest Road Designer** (PANOimagen /
+  Gob. La Rioja) — solveur de tracé de desserte (Lot 15) ;
+- **ForestRoadNetwork** (Klemet) — réseau, flux et typage (Lots 16-18).
+
+ForêtAccess est distribué sous **GPL v3** ; merci de citer ces travaux (références
+complètes dans le `README` et `CITATION.cff`).
