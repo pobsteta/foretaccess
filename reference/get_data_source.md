@@ -26,5 +26,5 @@ Une liste (config de la source), ou `NULL` si absente.
 
 ``` r
 get_data_source("dem", "FR")$layer
-#> [1] "ELEVATION.ELEVATIONGRIDCOVERAGE"
+#> [1] "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"
 ```

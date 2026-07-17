@@ -21,7 +21,7 @@ par **clé logique**.
 get_national_crs("FR")
 #> [1] 2154
 get_layer_service("dem", "FR")$layer
-#> [1] "ELEVATION.ELEVATIONGRIDCOVERAGE"
+#> [1] "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"
 get_layer_service("roads", "FR")$typename
 #> [1] "BDTOPO_V3:troncon_de_route"
 list_countries()

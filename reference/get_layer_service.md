@@ -31,5 +31,5 @@ info <- get_layer_service("dem", "FR")
 info$url
 #> [1] "https://data.geopf.fr/wms-r/wms"
 info$layer
-#> [1] "ELEVATION.ELEVATIONGRIDCOVERAGE"
+#> [1] "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"
 ```

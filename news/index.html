@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.3.1" id="foretaccess-131-2026-07-17">foretaccess 1.3.1 (2026-07-17)<a class="anchor" aria-label="anchor" href="#foretaccess-131-2026-07-17"></a></h2>
+<div class="section level3">
+<h3 id="corrections-1-3-1">Corrections<a class="anchor" aria-label="anchor" href="#corrections-1-3-1"></a></h3>
+<ul><li>
+<strong>MNT acquis via LIDAR HD</strong> — <code><a href="../reference/acquire_mnt.html">acquire_mnt()</a></code> récupère désormais le modèle numérique de terrain depuis la couche <strong>LIDAR HD</strong> (<code>IGNF_LIDAR-HD_MNT</code>, Lambert-93 natif), avec repli automatique sur <code>HIGHRES</code> puis RGE ALTI si le LIDAR ne couvre pas l’emprise. Le WMS RGE ALTI servait sur certaines tuiles un MNT « en blocs » dont les marches fabriquaient de fausses pentes en grille (jusqu’à &gt; 350 %), faussant l’exclusion « pente d’abattage » (faux <code>inexploitable</code> en lignes) et, plus généralement, tous les résultats dépendant de la pente. Sur une AOI test, la forêt faussement exclue passe de ~33 % à ~0,2 % (conforme à Sylvaccess).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.3.0" id="foretaccess-130-2026-07-17">foretaccess 1.3.0 (2026-07-17)<a class="anchor" aria-label="anchor" href="#foretaccess-130-2026-07-17"></a></h2>
 <div class="section level3">

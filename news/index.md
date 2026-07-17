@@ -1,5 +1,21 @@
 # Changelog
 
+## foretaccess 1.3.1 (2026-07-17)
+
+### Corrections
+
+- **MNT acquis via LIDAR HD** —
+  [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+  récupère désormais le modèle numérique de terrain depuis la couche
+  **LIDAR HD** (`IGNF_LIDAR-HD_MNT`, Lambert-93 natif), avec repli
+  automatique sur `HIGHRES` puis RGE ALTI si le LIDAR ne couvre pas
+  l’emprise. Le WMS RGE ALTI servait sur certaines tuiles un MNT « en
+  blocs » dont les marches fabriquaient de fausses pentes en grille
+  (jusqu’à \> 350 %), faussant l’exclusion « pente d’abattage » (faux
+  `inexploitable` en lignes) et, plus généralement, tous les résultats
+  dépendant de la pente. Sur une AOI test, la forêt faussement exclue
+  passe de ~33 % à ~0,2 % (conforme à Sylvaccess).
+
 ## foretaccess 1.3.0 (2026-07-17)
 
 ### Nouvelles fonctionnalités
