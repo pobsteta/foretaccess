@@ -104,8 +104,8 @@
   (coût minimal sur la zone franchissable), qui reste une borne inférieure du coût restant → A* optimal.
   Défaut `FALSE` = comportement SylvaRoad bit-pour-bit. 1 test cargo (`cost_weighting_scales_and_diverts`)
   + 3 tests R (`test-desserte-pondere.R`). **Branche `feat/desserte-pondere-cout`.**
-- **Branche** : `release/v1.3.0`
-- **Version `DESCRIPTION`** : `1.3.0` (release en cours — pondération coût + `classes_debardage`)
+- **Branche** : cycle dev
+- **Version `DESCRIPTION`** : `1.3.0.9000` (cycle dev après release `v1.3.0`)
 - **Les distances collent, décomposition comprise** (mesuré sur les sorties courantes) :
   débusquage **0,0 m** d'écart médian, traînage **en forêt 0,2 m** (120,2 contre 124,0),
   traînage sur piste **0,4 m**, distance totale **0,2 m**. Le reliquat est l'**arrondi** :
