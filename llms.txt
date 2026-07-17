@@ -96,6 +96,10 @@ selon la partie utilisée.
   Journal of Forest Research, DOI
   [10.1007/s10310-015-0503-4](https://doi.org/10.1007/s10310-015-0503-4).
 - Sylvaccess : DOI [10.15454/JUBESS](https://doi.org/10.15454/JUBESS).
+  Code source porté :
+  [forge.inrae.fr/sylvain.dupire/sylvaccess](https://forge.inrae.fr/sylvain.dupire/sylvaccess),
+  v3.6, branche `main`, commit `372abaf` (2025-06-12) — dépôt sans tag
+  git, ce commit fait foi.
 
 **Optimisation de la hauteur des supports câble (Lot 13)** — méthode
 **SEILAPLAN** (graphe + Dijkstra de Bont & Heinimann), P. Moll et al.
