@@ -81,7 +81,7 @@ trace_args <- function(alt, nr, nc, waypoints, obs = NULL, bufgoal = 0,
     min_slope = 2, max_slope = 12, penalty_xy = 150, penalty_z = 80,
     max_diff_z = 3, d_neighborhood = d_neighborhood, angle_hairpin = 110,
     lmax_ab_sl = 40, radius = 8, prop_sl_max = 0.25, max_slope_hairpin = 10,
-    tal = 1.5, modhair = 1.5
+    tal = 1.5, modhair = 1.5, cost = rep(1, n)
   )
 }
 
