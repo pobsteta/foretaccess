@@ -451,6 +451,38 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-17 — Re-chronométrage ColduPre à isopérimètre (`c_sup = 3`) + site pkgdown
+
+Deux ajouts. **(1) Site pkgdown** : deux nouveaux articles — un guide
+*Conception d’un réseau de desserte* (bout en bout : coût → tracé →
+réseau → flux/typage → optimisation → pondération par coût, exécutable
+sur terrain synthétique) et une synthèse *Architecture & feuille de
+route* (tous les lots, frontière R/Rust, fidélité, perf). `_pkgdown.yml`
+: navbar `articles` étendu. Les 78 fonctions exportées sont toutes
+couvertes par l’index de référence. Site construit en local (OK).
+
+**(2) Re-chronométrage** de tous les moteurs sur ColduPre (894 × 1034),
+la table de perf de la première mesure câble étant **périmée** : elle
+datait d’avant le Lot 4d, quand le noyau câble était à **zéro support
+intermédiaire** — comparaison biaisée contre un Sylvaccess à
+`c_sup = 3`. Mesure propre (2 passes, `workers = 1`, machine au repos,
+câble à `nb_supports_max = 3`) :
+
+| Moteur | ForêtAccess (écoulé) | CPU | Sylvaccess (réf.) |
+|----|----|----|----|
+| preprocess | 1,2 s | 1,1 s | — |
+| skidder | ~15 s | ~14,5 s | 14 s |
+| porteur | ~17–19 s | ~17 s | 14 s |
+| câble (`c_sup = 3`) | **~40 s** | ~165 s (`rayon`) | 3 min 18 s (198 s) |
+| dfci | ~26–31 s | ~21 s | — |
+
+**Résultat clé** : à isopérimètre supports (3 des deux côtés), le câble
+ForêtAccess est **~5× plus rapide** que le Cython — le noyau Rust
+parallélisé (`rayon`) abat ~165 s CPU en ~40 s écoulé. Les moteurs
+terrestres restent séquentiels et à parité (CPU ≈ écoulé, machine
+réellement au repos cette fois). Chiffres reportés dans
+`vignettes/architecture.Rmd`. Harnais : `data-raw/oracle_coldupre.R`.
+
 ### 2026-07-17 — Extension : la surface de coût €/m consommée par le solveur A\*
 
 Le Lot 14 calculait une surface de coût de construction (€/m) mais le
@@ -1238,6 +1270,11 @@ le câble plus rapide — mais à périmètre non égal (0 support contre 3).
 *(Une première mesure donnait 39,8 s / 47,2 s : elle était faussée par
 huit workers `workRSOCK` orphelins laissés par une suite de tests
 interrompue. Toujours vérifier la charge avant de chronométrer.)*
+
+> ⚠️ **Table périmée** — mesurée avant le Lot 4d (le câble était à
+> `c_sup = 0`). Re-chronométrée à isopérimètre `c_sup = 3` le 2026-07-17
+> : câble **~40 s** (≈165 s CPU, `rayon`) contre 198 s pour Sylvaccess.
+> Voir l’entrée de journal du 2026-07-17.
 
 6.  **Le câble partait de toute la desserte** (`R/cable.R`). Sylvaccess
     ne lance ses lignes que depuis un fichier de départ dédié

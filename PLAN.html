@@ -19,8 +19,10 @@
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/desserte.html">Conception d'un réseau de desserte</a></li>
+    <li><a class="dropdown-item" href="articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
     <li><a class="dropdown-item" href="articles/cartes.html">Cartes de sortie sur une AOI réelle</a></li>
+    <li><a class="dropdown-item" href="articles/architecture.html">Architecture &amp; feuille de route</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -320,6 +322,36 @@
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
 <div class="section level3">
+<h3 id="id_2026-07-17--re-chronométrage-coldupre-à-isopérimètre-c_sup--3--site-pkgdown">2026-07-17 — Re-chronométrage ColduPre à isopérimètre (<code>c_sup = 3</code>) + site pkgdown<a class="anchor" aria-label="anchor" href="#id_2026-07-17--re-chronom%C3%A9trage-coldupre-%C3%A0-isop%C3%A9rim%C3%A8tre-c_sup--3--site-pkgdown"></a></h3>
+<p>Deux ajouts. <strong>(1) Site pkgdown</strong> : deux nouveaux articles — un guide <em>Conception d’un réseau de desserte</em> (bout en bout : coût → tracé → réseau → flux/typage → optimisation → pondération par coût, exécutable sur terrain synthétique) et une synthèse <em>Architecture &amp; feuille de route</em> (tous les lots, frontière R/Rust, fidélité, perf). <code>_pkgdown.yml</code> : navbar <code>articles</code> étendu. Les 78 fonctions exportées sont toutes couvertes par l’index de référence. Site construit en local (OK).</p>
+<p><strong>(2) Re-chronométrage</strong> de tous les moteurs sur ColduPre (894 × 1034), la table de perf de la première mesure câble étant <strong>périmée</strong> : elle datait d’avant le Lot 4d, quand le noyau câble était à <strong>zéro support intermédiaire</strong> — comparaison biaisée contre un Sylvaccess à <code>c_sup = 3</code>. Mesure propre (2 passes, <code>workers = 1</code>, machine au repos, câble à <code>nb_supports_max = 3</code>) :</p>
+<table class="table"><colgroup><col width="25%"><col width="25%"><col width="25%"><col width="25%"></colgroup><thead><tr><th>Moteur</th>
+<th>ForêtAccess (écoulé)</th>
+<th>CPU</th>
+<th>Sylvaccess (réf.)</th>
+</tr></thead><tbody><tr><td>preprocess</td>
+<td>1,2 s</td>
+<td>1,1 s</td>
+<td>—</td>
+</tr><tr><td>skidder</td>
+<td>~15 s</td>
+<td>~14,5 s</td>
+<td>14 s</td>
+</tr><tr><td>porteur</td>
+<td>~17–19 s</td>
+<td>~17 s</td>
+<td>14 s</td>
+</tr><tr><td>câble (<code>c_sup = 3</code>)</td>
+<td><strong>~40 s</strong></td>
+<td>~165 s (<code>rayon</code>)</td>
+<td>3 min 18 s (198 s)</td>
+</tr><tr><td>dfci</td>
+<td>~26–31 s</td>
+<td>~21 s</td>
+<td>—</td>
+</tr></tbody></table><p><strong>Résultat clé</strong> : à isopérimètre supports (3 des deux côtés), le câble ForêtAccess est <strong>~5× plus rapide</strong> que le Cython — le noyau Rust parallélisé (<code>rayon</code>) abat ~165 s CPU en ~40 s écoulé. Les moteurs terrestres restent séquentiels et à parité (CPU ≈ écoulé, machine réellement au repos cette fois). Chiffres reportés dans <code>vignettes/architecture.Rmd</code>. Harnais : <code>data-raw/oracle_coldupre.R</code>.</p>
+</div>
+<div class="section level3">
 <h3 id="id_2026-07-17--extension--la-surface-de-coût-m-consommée-par-le-solveur-a">2026-07-17 — Extension : la surface de coût €/m consommée par le solveur A*<a class="anchor" aria-label="anchor" href="#id_2026-07-17--extension--la-surface-de-co%C3%BBt-m-consomm%C3%A9e-par-le-solveur-a"></a></h3>
 <p>Le Lot 14 calculait une surface de coût de construction (€/m) mais le solveur de tracé n’en utilisait que le <strong>masque de franchissabilité</strong> — le coût lui-même était ignoré. Cette extension (hors SylvaRoad, propre à ForêtAccess) le branche : nouvelle option <code>pondere_cout = FALSE</code> sur <code>tracer_desserte</code>, <code>reseau_desserte</code> et <code>optimiser_reseau</code>. À <code>TRUE</code>, la contribution distance de chaque segment A* est pondérée par le coût moyen €/m de ses deux cellules (<code>CostGrid</code> côté Rust, 5 bindings enrichis d’un paramètre <code>cost</code>), si bien que le tracé minimise l’<strong>euro</strong> et non plus la seule distance géométrique — il contourne les cellules chères (fort dévers, pente, ouvrages d’art) et emprunte les corridors bon marché.</p>
 <p>Point délicat : pondérer les segments <strong>casse l’admissibilité</strong> de l’heuristique géométrique. Résolu sans toucher <code>heuristic.rs</code> — on remet l’heuristique à l’échelle par <code>cmin</code> (coût minimal sur la zone franchissable) : comme chaque segment coûte au moins <code>d · cmin</code>, <code>h_geo · cmin</code> reste une borne inférieure du coût restant, donc l’A* demeure optimal quel que soit le champ de coût. Défaut <code>FALSE</code> = comportement d’origine bit-pour-bit (grille neutre <code>CostGrid::neutral()</code>, <code>w = None</code>, <code>cmin = 1</code>).</p>
@@ -550,6 +582,9 @@
 <td>
 <strong>2 min 18 s</strong> (<code>c_sup = 0</code>)</td>
 </tr></tbody></table><p>Le skidder est <strong>à parité</strong> avec le Cython, le porteur ~30 % plus lent, le câble plus rapide — mais à périmètre non égal (0 support contre 3). <em>(Une première mesure donnait 39,8 s / 47,2 s : elle était faussée par huit workers <code>workRSOCK</code> orphelins laissés par une suite de tests interrompue. Toujours vérifier la charge avant de chronométrer.)</em></p>
+<blockquote>
+<p>⚠️ <strong>Table périmée</strong> — mesurée avant le Lot 4d (le câble était à <code>c_sup = 0</code>). Re-chronométrée à isopérimètre <code>c_sup = 3</code> le 2026-07-17 : câble <strong>~40 s</strong> (≈165 s CPU, <code>rayon</code>) contre 198 s pour Sylvaccess. Voir l’entrée de journal du 2026-07-17.</p>
+</blockquote>
 <ol start="6" style="list-style-type: decimal"><li>
 <strong>Le câble partait de toute la desserte</strong> (<code>R/cable.R</code>). Sylvaccess ne lance ses lignes que depuis un fichier de départ dédié (<code>c_file_departure</code>), filtré sur l’attribut <code>CABLE</code> : <strong>2 tronçons sur 125</strong> à ColduPre. Une place de dépôt de câble-mât exige une aire de retournement et un accès camion — ça n’existe pas sur n’importe quelle piste. Or <code><a href="reference/potentiel_cable.html">potentiel_cable()</a></code> partait de <strong>toute cellule de desserte</strong> : ~60× trop de départs, donc une couverture massivement trop optimiste — et un balayage de <strong>plus d’une heure</strong> contre 3 min 18, sur un problème pourtant plus facile (0 support contre 3). Corrigé : <code>potentiel_cable(departs = )</code> prend une couche de places de dépôt, filtrée sur un champ <code>cable</code> s’il existe ; sans elle, repli sur la desserte entière <strong>avec un message explicite</strong>. Le balayage tombe à <strong>138 s</strong> — plus rapide que Sylvaccess (198 s), à périmètre non égal.</li>
 </ol><p><strong>Piège n° 2 du harnais, corrigé.</strong> Sylvaccess n’écrit pas toutes ses sorties sur la même grille : le moteur câble travaille sur une <strong>fenêtre bufferisée</strong> autour des départs (<code>Zone_accessible.tif</code> = 405 × 380, contre 1034 × 894 pour le skidder). Comparés tels quels, <code><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">terra::values()</a></code> rend deux vecteurs de longueurs différentes que <strong>R recycle en silence</strong> — d’où un taux d’accord parfaitement plausible (93,89 %) et parfaitement faux, dont le seul indice était un recouvrement <strong>nul</strong> entre les deux couvertures. Le harnais réaligne désormais toute couche sur la grille de référence. Et le code positif diffère aussi (<code>Foret_accessible</code> vaut 1, <code>Zone_accessible</code> vaut <strong>2</strong>) : on teste « non-NA et &gt; 0 », jamais « == 1 ».</p>

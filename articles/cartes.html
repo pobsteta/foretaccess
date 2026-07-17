@@ -34,8 +34,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
+<li><a class="dropdown-item" href="../articles/desserte.html">Conception d'un réseau de desserte</a></li>
+    <li><a class="dropdown-item" href="../articles/acquisition.html">Acquérir les entrées depuis une AOI</a></li>
     <li><a class="dropdown-item" href="../articles/cartes.html">Cartes de sortie sur une AOI réelle</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture &amp; feuille de route</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -88,12 +90,12 @@ celui-ci :</p>
 <span></span>
 <span><span class="va">aoi</span> <span class="op">&lt;-</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_read.html" class="external-link">st_read</a></span><span class="op">(</span><span class="st">"aoi.gpkg"</span><span class="op">)</span>                       <span class="co"># emprise (EPSG:2154)</span></span>
 <span><span class="va">inp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/acquire_inputs.html">acquire_inputs</a></span><span class="op">(</span><span class="va">aoi</span>, sources <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mnt"</span>, <span class="st">"desserte"</span>, <span class="st">"foret"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">inp</span><span class="op">$</span><span class="va">desserte</span><span class="op">$</span><span class="va">dfci</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">inp</span><span class="op">$</span><span class="va">desserte</span><span class="op">$</span><span class="va">classe</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"route"</span>, <span class="st">"piste"</span><span class="op">)</span><span class="op">)</span>  <span class="co"># cf. note DFCI</span></span>
 <span><span class="va">pre</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.html">preprocess</a></span><span class="op">(</span><span class="va">inp</span><span class="op">$</span><span class="va">mnt</span>, <span class="va">inp</span><span class="op">$</span><span class="va">desserte</span>, <span class="va">inp</span><span class="op">$</span><span class="va">foret</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">sk</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/skidder.html">skidder</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">po</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/porteur.html">porteur</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
-<span><span class="va">df</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/camion_dfci.html">camion_dfci</a></span><span class="op">(</span><span class="va">pre</span>, <span class="fu"><a href="../reference/foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span></span>
-<span>         dfci <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>classes_source <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"route"</span>, <span class="st">"piste"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>  <span class="co"># cf. note DFCI</span></span>
+<span><span class="va">df</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/camion_dfci.html">camion_dfci</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">cab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/potentiel_cable.html">potentiel_cable</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="va">sel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/selectionner_lignes.html">selectionner_lignes</a></span><span class="op">(</span><span class="va">cab</span><span class="op">)</span></span>
 <span></span>
@@ -145,16 +147,20 @@ quadrant</div>
 <h2 id="note-dfci">Note DFCI<a class="anchor" aria-label="anchor" href="#note-dfci"></a>
 </h2>
 <p>BD TOPO ne distingue pas la classe <strong>DFCI</strong> de la
-desserte (spec 010, décision Q2). Pour cette démonstration, les pistes
-et routes forestières servent de base au camion
-(<code>classes_source = c("route", "piste")</code>) — ce qui est
-réaliste en forêt.</p>
+desserte (spec 010, décision Q2). Le camion lit le flag
+<code>dfci</code> de la desserte (attribut <code>CL_DFCI</code> chez
+Sylvaccess) ; ici on marque les pistes et routes forestières comme
+sources (<code>inp$desserte$dfci &lt;- ...</code>) — réaliste en forêt.
+Le moteur radial classe alors chaque cellule forestière en
+<strong>bandes de défendabilité</strong>
+(<code>defendable_c1/c2/c3</code>, de la plus proche à la plus éloignée)
+ou en non-défendable.</p>
 </div>
 <div class="section level2">
 <h2 id="note-de-performance">Note de performance<a class="anchor" aria-label="anchor" href="#note-de-performance"></a>
 </h2>
-<p>Durées mesurées sur l’<strong>AOI complète</strong> (721 ha, 340 090
-cellules à 5 m dont 248 658 en forêt), un cœur :</p>
+<p>Durées des moteurs terrestres sur l’<strong>AOI complète</strong>
+(721 ha, 340 090 cellules à 5 m dont 248 658 en forêt), un cœur :</p>
 <table class="table">
 <thead><tr class="header">
 <th>Étage</th>
@@ -185,31 +191,23 @@ cellules à 5 m dont 248 658 en forêt), un cœur :</p>
 <td>Agrégation zonale</td>
 <td>&lt;1 s</td>
 </tr>
-<tr class="odd">
-<td><strong>Sous-total hors câble</strong></td>
-<td><strong>~1 min 35 s</strong></td>
-</tr>
-<tr class="even">
-<td><strong>Câble (potentiel 360°/pixel)</strong></td>
-<td><strong>heures à &gt; 1 jour</strong></td>
-</tr>
 </tbody>
 </table>
-<p>Les moteurs terrestres traitent un massif de 721 ha en ~1,5 min. Le
-<strong>câble</strong>, lui, est le goulot : chaque rayon monte jusqu’à
-<code>longueur_max</code> (750 m), et le coût par cellule explose avec
-l’étendue (une fenêtre de 500 m a dépassé 48 min CPU sans terminer). À
-l’échelle de l’AOI, il est <strong>impraticable en l’état</strong> —
-d’où la dette assumée (portage Rust du noyau, tuilage, plafonnement de
-portée). C’est pourquoi la carte câble ci-dessus est calculée sur une
-petite fenêtre.</p>
+<p>Le <strong>câble</strong> a depuis été porté en <strong>Rust
+parallélisé</strong> (<code>rayon</code>) : sur le jeu de référence
+ColduPre (923 k cellules, 3 supports intermédiaires), le balayage
+360°/pixel tourne en <strong>~40 s</strong> — voir la note dédiée <a href="https://github.com/pobsteta/foretaccess/blob/main/docs/performance-coldupre.md" class="external-link"><code>docs/performance-coldupre.md</code></a>.
+La carte câble ci-dessus reste calculée sur une petite fenêtre
+uniquement pour garder la construction du site légère (acquisition IGN +
+tuiles OSM réelles), non par contrainte de calcul.</p>
 </div>
 <div class="section level2">
 <h2 id="attribution">Attribution<a class="anchor" aria-label="anchor" href="#attribution"></a>
 </h2>
 <p>Fond de carte © contributeurs <strong>OpenStreetMap</strong>. Données
 © <strong>IGN</strong> (Géoplateforme). ForêtAccess est distribué sous
-<strong>GPL v3</strong> (dérivé de Sylvaccess, INRAE).</p>
+<strong>GPL v3</strong> (dérivé de Sylvaccess et d’autres modèles
+libres, cf. la section attribution du <code>README</code>).</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
