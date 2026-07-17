@@ -28,3 +28,44 @@ references:
         given-names: Frédéric
     year: 2015
     journal: "Revue Forestière Française"
+  # Optimisation de la hauteur des supports câble (Lot 13).
+  - type: article
+    title: "SEILAPLAN, a QGIS Plugin for Cable Road Layout Design"
+    authors:
+      - family-names: Bont
+        given-names: Leo G.
+      - family-names: Moll
+        given-names: Patrick E.
+      - family-names: Ramstein
+        given-names: Laura
+      - family-names: Frutig
+        given-names: Fritz
+      - family-names: Heinimann
+        given-names: Hans Rudolf
+      - family-names: Schweier
+        given-names: Janine
+    year: 2022
+    journal: "Croatian Journal of Forest Engineering"
+    notes: "Méthode d'optimisation de la hauteur des supports (Lot 13), GPL v3."
+  # Conception de desserte -- solveur de tracé (Lot 15).
+  - type: software
+    title: "SylvaRoad"
+    authors:
+      - family-names: Dupire
+        given-names: Sylvain
+    repository-code: "https://gitlab.com/SDupire/sylvaroad"
+    license: GPL-3.0
+    notes: "SylvaLab / ONF. Solveur de tracé de desserte porté (Lot 15)."
+  - type: software
+    title: "Forest Road Designer"
+    authors:
+      - name: "PANOimagen S.L. / Gobierno de La Rioja"
+    license: GPL-3.0
+    notes: "Solveur de tracé de desserte, référence (Lot 15)."
+  # Conception de desserte -- réseau, flux & typage (Lots 16-18).
+  - type: software
+    title: "ForestRoadNetwork"
+    authors:
+      - family-names: Klemet
+    license: GPL-3.0
+    notes: "Plugin QGIS. Réseau MTAP, flux de bois et typage des routes (Lots 16-18)."

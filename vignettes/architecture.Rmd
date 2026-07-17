@@ -126,6 +126,14 @@ names(config)
 
 ## Attribution
 
-Travail dérivé de **Sylvaccess** (INRAE, S. Dupire), du solveur **SylvaRoad** et
-de **ForestRoadNetwork** (C. Klemet), tous GPL v3. ForêtAccess est distribué sous
-**GPL v3** ; merci de citer ces travaux (voir le `README` et `CITATION.cff`).
+ForêtAccess est un travail dérivé de plusieurs modèles libres, tous GPL v3, selon
+la partie considérée :
+
+- **Sylvaccess** (INRAE, S. Dupire) — moteurs terrestres & câble (Lots 0-13) ;
+- **SEILAPLAN** (Bont & Heinimann ; P. Moll et al.) — hauteur des supports câble (Lot 13) ;
+- **SylvaRoad** (S. Dupire / SylvaLab / ONF) et **Forest Road Designer** (PANOimagen /
+  Gob. La Rioja) — solveur de tracé de desserte (Lot 15) ;
+- **ForestRoadNetwork** (Klemet) — réseau, flux et typage (Lots 16-18).
+
+ForêtAccess est distribué sous **GPL v3** ; merci de citer ces travaux (références
+complètes dans le `README` et `CITATION.cff`).

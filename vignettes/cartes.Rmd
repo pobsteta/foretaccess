@@ -31,12 +31,12 @@ library(maptiles)
 
 aoi <- sf::st_read("aoi.gpkg")                       # emprise (EPSG:2154)
 inp <- acquire_inputs(aoi, sources = c("mnt", "desserte", "foret"))
+inp$desserte$dfci <- as.integer(inp$desserte$classe %in% c("route", "piste"))  # cf. note DFCI
 pre <- preprocess(inp$mnt, inp$desserte, inp$foret)
 
 sk  <- skidder(pre)
 po  <- porteur(pre)
-df  <- camion_dfci(pre, foretaccess_config(
-         dfci = list(classes_source = c("route", "piste"))))  # cf. note DFCI
+df  <- camion_dfci(pre)
 cab <- potentiel_cable(pre)
 sel <- selectionner_lignes(cab)
 
@@ -74,13 +74,16 @@ transparentes (le fond OSM apparaît).
 ## Note DFCI
 
 BD TOPO ne distingue pas la classe **DFCI** de la desserte (spec 010, décision
-Q2). Pour cette démonstration, les pistes et routes forestières servent de base au
-camion (`classes_source = c("route", "piste")`) — ce qui est réaliste en forêt.
+Q2). Le camion lit le flag `dfci` de la desserte (attribut `CL_DFCI` chez
+Sylvaccess) ; ici on marque les pistes et routes forestières comme sources
+(`inp$desserte$dfci <- ...`) — réaliste en forêt. Le moteur radial classe alors
+chaque cellule forestière en **bandes de défendabilité** (`defendable_c1/c2/c3`,
+de la plus proche à la plus éloignée) ou en non-défendable.
 
 ## Note de performance
 
-Durées mesurées sur l'**AOI complète** (721 ha, 340 090 cellules à 5 m dont
-248 658 en forêt), un cœur :
+Durées des moteurs terrestres sur l'**AOI complète** (721 ha, 340 090 cellules à
+5 m dont 248 658 en forêt), un cœur :
 
 | Étage | Durée (721 ha) |
 |---|---|
@@ -90,17 +93,17 @@ Durées mesurées sur l'**AOI complète** (721 ha, 340 090 cellules à 5 m dont
 | Porteur | ~37 s |
 | Camion DFCI | ~13 s |
 | Agrégation zonale | <1 s |
-| **Sous-total hors câble** | **~1 min 35 s** |
-| **Câble (potentiel 360°/pixel)** | **heures à > 1 jour** |
 
-Les moteurs terrestres traitent un massif de 721 ha en ~1,5 min. Le **câble**, lui,
-est le goulot : chaque rayon monte jusqu'à `longueur_max` (750 m), et le coût par
-cellule explose avec l'étendue (une fenêtre de 500 m a dépassé 48 min CPU sans
-terminer). À l'échelle de l'AOI, il est **impraticable en l'état** — d'où la dette
-assumée (portage Rust du noyau, tuilage, plafonnement de portée). C'est pourquoi la
-carte câble ci-dessus est calculée sur une petite fenêtre.
+Le **câble** a depuis été porté en **Rust parallélisé** (`rayon`) : sur le jeu de
+référence ColduPre (923 k cellules, 3 supports intermédiaires), le balayage
+360°/pixel tourne en **~40 s** — voir la note dédiée
+[`docs/performance-coldupre.md`](https://github.com/pobsteta/foretaccess/blob/main/docs/performance-coldupre.md).
+La carte câble ci-dessus reste calculée sur une petite fenêtre uniquement pour
+garder la construction du site légère (acquisition IGN + tuiles OSM réelles), non
+par contrainte de calcul.
 
 ## Attribution
 
 Fond de carte © contributeurs **OpenStreetMap**. Données © **IGN** (Géoplateforme).
-ForêtAccess est distribué sous **GPL v3** (dérivé de Sylvaccess, INRAE).
+ForêtAccess est distribué sous **GPL v3** (dérivé de Sylvaccess et d'autres modèles
+libres, cf. la section attribution du `README`).

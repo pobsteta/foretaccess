@@ -148,6 +148,7 @@ c(geometrique = net_geo$cout, pondere_cout = net_eur$cout)
 
 ## Attribution
 
-Le solveur de tracé porte **SylvaRoad** (INRAE, S. Dupire) et le volet flux/typage
-porte **ForestRoadNetwork** (C. Klemet), tous deux GPL v3. ForêtAccess est
-distribué sous GPL v3 ; merci de citer ces travaux (voir le `README`).
+Le solveur de tracé (Lot 15) porte **SylvaRoad** (S. Dupire / SylvaLab / ONF) et
+**Forest Road Designer** (PANOimagen / Gob. La Rioja) ; le réseau, les flux et le
+typage (Lots 16-18) reprennent **ForestRoadNetwork** (Klemet). Tous GPL v3,
+comme ForêtAccess ; merci de citer ces travaux (références dans le `README`).

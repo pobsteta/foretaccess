@@ -88,7 +88,7 @@ Choix structurants :
 
 ## 3. Architecture cible
 
-Schéma complet (vectoriel, versionnable) : [`docs/architecture.svg`](architecture.svg).
+Schéma complet (vectoriel, versionnable) : [`man/figures/architecture.svg`](../man/figures/architecture.svg).
 
 Version Mermaid (rendue sur GitHub) :
 
@@ -295,7 +295,6 @@ foretaccess/
 ├─ Cargo.toml                   # workspace Rust
 ├─ docs/
 │  ├─ foretaccess-brief.md      # ce document
-│  ├─ architecture.svg          # schéma cible
 │  ├─ PRD.md                    # (à générer)
 │  ├─ ROADMAP.md                # (à générer)
 │  └─ adr/                      # ADR-001…007

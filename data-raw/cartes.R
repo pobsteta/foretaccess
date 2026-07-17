@@ -41,14 +41,16 @@ message("Acquisition IGN...")
 inp <- acquire_inputs(aoi, sources = c("mnt", "desserte", "foret"),
   cache_dir = cache, res_m = 5, buffer_m = 50)
 
+# BD TOPO ne distingue pas la classe DFCI (spec 010 Q2). Le camion lit desormais
+# le flag `dfci` de la desserte (attribut CL_DFCI chez Sylvaccess), rasterise par
+# preprocess en `dfci_source_mask`. Pour la demonstration, on marque les
+# routes/pistes forestieres comme sources du camion (realiste en foret).
+inp$desserte$dfci <- as.integer(inp$desserte$classe %in% c("route", "piste"))
 pre <- preprocess(inp$mnt, inp$desserte, inp$foret)
 message("Moteurs terrestres...")
 sk <- skidder(pre)
 po <- porteur(pre)
-# BD TOPO ne distingue pas la classe DFCI (spec 010 Q2) : pour la demonstration,
-# les pistes/routes forestieres servent de base au camion (realiste en foret).
-cfg_dfci <- foretaccess_config(dfci = list(classes_source = c("route", "piste")))
-df <- camion_dfci(pre, cfg_dfci)
+df <- camion_dfci(pre)
 message("Cable...")
 cab <- potentiel_cable(pre)
 sel <- selectionner_lignes(cab)
@@ -98,7 +100,16 @@ carte <- function(fichier, titre, dessin, legende = NULL) {
 # Raster categoriel semi-transparent + description de sa legende.
 pal_acc <- c(parcourable = "#1a9850", accessible = "#a6d96a",
   non_accessible = "#d73027", hors_foret = "#bdbdbd")
-pal_dfci <- c(defendable = "#2c7fb8", non_defendable = "#d73027", hors_foret = "#bdbdbd")
+# DFCI radial (Lot 12a.4) : 6 classes -- inaccessible, non defendable (pente),
+# trois bandes de lance croissantes (c1 la plus proche = mieux defendue), hors foret.
+pal_dfci <- c(
+  inaccessible         = "#bdbdbd",
+  non_defendable_pente = "#d73027",
+  defendable_c1        = "#08519c",
+  defendable_c2        = "#3182bd",
+  defendable_c3        = "#9ecae1",
+  hors_foret           = "#bdbdbd"
+)
 
 # Raster categoriel : classes metier semi-transparentes (fond OSM visible),
 # `hors_foret` totalement transparent (on voit l'OSM en dessous).

@@ -146,5 +146,7 @@ traitement mono-bloc. Les rasters de sortie s'écrivent en GeoTIFF/COG.
 
 ## Attribution
 
-ForêtAccess est un travail dérivé de **Sylvaccess** (INRAE, S. Dupire), distribué
-sous **GPL v3**. Merci de citer Sylvaccess (voir le `README` et `CITATION.cff`).
+Les moteurs terrestres et le câble dérivent de **Sylvaccess** (INRAE, S. Dupire) ;
+l'optimisation de la hauteur des supports câble reprend la méthode **SEILAPLAN**
+(Bont & Heinimann ; P. Moll et al.). Tous deux GPL v3, comme ForêtAccess. Merci de
+les citer (liste complète et références dans le `README` et `CITATION.cff`).
