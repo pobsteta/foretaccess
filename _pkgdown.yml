@@ -39,6 +39,7 @@ reference:
   desc: Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
   contents:
   - skidder
+  - classes_debardage
   - porteur
   - camion_dfci
   - dfci_scan

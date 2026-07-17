@@ -788,6 +788,83 @@ skidder <- function(pre,
   as.list(chemins)
 }
 
+#' Classify skidding distance into Sylvaccess distance bands
+#'
+#' Turns the continuous skidding distance (`sk$distance_debardage`) into the
+#' categorical **"skidding distance classes"** raster that Sylvaccess exports:
+#' distance bands (`config$skidder$classes_distance_m`, e.g. 0-250, 250-500,
+#' 500-1000, 1000-1500, 1500-2000, >2000 m), plus `inaccessible`,
+#' `inexploitable` (harvest slope exceeded) and `hors_foret`. The `skidder()`
+#' engine already computes the distance; this is the display-ready product.
+#'
+#' Precedence per cell: `hors_foret` (not forest) < distance band (reachable) <
+#' `inaccessible` (forest, not reached) < `inexploitable` (forest, local slope
+#' above the harvest threshold — overrides). The `inexploitable` class requires
+#' `pre` (its `exclusion_mask`); without it those cells stay in their
+#' accessibility class.
+#'
+#' @param sk A `foretaccess_skidder` object (output of [skidder()]).
+#' @param pre The `foretaccess_preprocessing` object used to run the skidder.
+#'   Optional; supplies the harvest-slope exclusion needed for the
+#'   `inexploitable` class.
+#' @param config A `foretaccess_config`; the distance bands live in
+#'   `config$skidder$classes_distance_m`. Defaults to `sk$config`.
+#' @return A categorical `SpatRaster` (`classe_debardage`) with an attached
+#'   colour table, directly plottable and compatible with [recapituler()].
+#' @export
+classes_debardage <- function(sk, pre = NULL, config = sk$config) {
+  checkmate::assert_class(sk, "foretaccess_skidder")
+  if (!is.null(pre)) checkmate::assert_class(pre, "foretaccess_preprocessing")
+  bornes <- config$skidder$classes_distance_m
+  k <- length(bornes) # nombre de bandes (la derniere est ouverte : > bornes[k])
+
+  # Codes de la couche d'accessibilite (robuste aux valeurs numeriques).
+  niv <- terra::levels(sk$accessibilite)[[1]]
+  code <- function(nom) niv[[1]][as.character(niv[[2]]) == nom]
+  acc <- as.numeric(terra::values(sk$accessibilite))
+  dist <- as.numeric(terra::values(sk$distance_debardage))
+
+  # Bande de distance (1..k) ; findInterval : [b1,b2) -> 1, ..., >= bk -> k.
+  band <- findInterval(dist, bornes)
+  band[band < 1] <- 1L
+
+  out <- rep(NA_real_, length(acc))
+  out[acc == code("hors_foret")] <- k + 3 # hors foret (transparent)
+  reachable <- acc %in% c(code("parcourable"), code("accessible")) & is.finite(dist)
+  out[reachable] <- band[reachable]
+  out[acc == code("non_accessible")] <- k + 1 # inaccessible
+
+  # Inexploitable (pente d'abattage locale depassee) : prioritaire, foret seule.
+  if (!is.null(pre)) {
+    excl <- as.numeric(terra::values(pre$exclusion_mask)) == 1
+    foret <- as.numeric(terra::values(pre$foret_mask)) > 0
+    out[foret & excl %in% TRUE] <- k + 2 # inexploitable
+  }
+
+  r <- terra::rast(sk$accessibilite)
+  terra::values(r) <- out
+
+  # Etiquettes : bandes finies "a-b", derniere "> bk", puis les 3 classes hors bande.
+  etiquettes <- c(
+    if (k >= 2) paste0(bornes[-k], "-", bornes[-1]),
+    paste0("> ", bornes[k]),
+    "inaccessible", "inexploitable", "hors_foret"
+  )
+  levels(r) <- data.frame(value = seq_along(etiquettes), classe = etiquettes)
+
+  # Table de couleurs facon Sylvaccess (vert proche -> rouge lointain).
+  pal_bandes <- grDevices::colorRampPalette(
+    c("#1a9e8f", "#9acd32", "#ffe600", "#f6a21e", "#e5720b", "#c0392b")
+  )(k)
+  couleurs <- c(pal_bandes, "#b0b0b0", "#000000", "#00000000") # +inacc +inexpl +hors_foret
+  terra::coltab(r) <- data.frame(
+    value = seq_along(etiquettes),
+    col = couleurs
+  )
+  names(r) <- "classe_debardage" # apres levels<-, qui ecrase le nom de couche
+  r
+}
+
 #' @export
 print.foretaccess_skidder <- function(x, ...) {
   r <- x$recap
