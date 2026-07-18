@@ -77,14 +77,19 @@
 #' @param cache_dir Répertoire de cache.
 #' @param overwrite Re-télécharger même si le cache existe. Défaut `FALSE`.
 #' @param country Code pays ISO. Défaut `"FR"`.
+#' @param res_lidar_m Résolution fine (m) de téléchargement du **MNT LIDAR HD**
+#'   (couche primaire) sur l'emprise, agrégée ensuite à `res_m`. Défaut 1. Doit
+#'   diviser `res_m` (ex. 1 → 5). Passer `res_lidar_m >= res_m` désactive
+#'   l'agrégation (téléchargement direct à `res_m`).
 #' @return Le chemin du raster `mnt.tif` écrit en cache.
 #' @export
 acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
-                        overwrite = FALSE, country = "FR") {
+                        overwrite = FALSE, country = "FR", res_lidar_m = 1) {
   chemin <- .chemin_cache(cache_dir, "mnt", "tif")
   if (file.exists(chemin) && !overwrite) {
     return(chemin)
   }
+  checkmate::assert_number(res_lidar_m, lower = 0, finite = TRUE)
   info <- get_layer_service("dem", country)
   if (is.null(info)) {
     cli::cli_abort("Couche {.val dem} introuvable pour le pays {.val {country}}.")
@@ -99,10 +104,21 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
   couches <- c(info$layer, as.character(info$fallback_layers))
   for (i in seq_along(couches)) {
     ly <- couches[[i]]
-    ok <- tryCatch({
-      .fetch_wms_raster(aoi, layer = ly, res = res_m, crs = crs, filename = chemin)
-      .mnt_couverture_suffisante(chemin)
-    }, error = function(e) FALSE)
+    # La couche PRIMAIRE (LIDAR HD MNT) est telechargee FINE (res_lidar_m) sur
+    # l'emprise -> `lidar_mnt_aoi_buffer.tif`, puis AGREGEE (moyenne) a res_m : le
+    # 5 m est ainsi derive proprement d'un MNT fin, plutot que demande directement
+    # au WMS (qui echantillonnerait depuis une pyramide plus grossiere). Les replis
+    # (HIGHRES / RGE ALTI, plus grossiers) restent telecharges en direct a res_m.
+    fine <- i == 1L && res_lidar_m < res_m
+    ok <- tryCatch(
+      if (fine) {
+        .acquerir_mnt_fin(aoi, ly, res_m, res_lidar_m, crs, chemin)
+      } else {
+        .fetch_wms_raster(aoi, layer = ly, res = res_m, crs = crs, filename = chemin)
+        .mnt_couverture_suffisante(chemin)
+      },
+      error = function(e) FALSE
+    )
     if (isTRUE(ok)) {
       if (i > 1L) {
         cli::cli_inform("MNT : couche principale indisponible sur l'emprise, repli sur {.val {ly}}.")
@@ -111,6 +127,23 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
     }
   }
   cli::cli_abort("Aucune couche MNT ne couvre l'emprise (essaye : {.val {couches}}).")
+}
+
+# Telecharge le MNT LIDAR HD fin (res_lidar_m) sur l'emprise dans
+# `lidar_mnt_aoi_buffer.tif`, puis l'agrege (moyenne, facteur res_m/res_lidar_m)
+# vers `chemin` (base de calcul a res_m). Renvoie TRUE si la couverture est
+# suffisante (sinon on laisse la boucle basculer sur un repli). Le fin brut est
+# conserve en cache : produit intermediaire reutilisable (autres usages fins).
+.acquerir_mnt_fin <- function(aoi, ly, res_m, res_lidar_m, crs, chemin) {
+  chemin_fin <- file.path(dirname(chemin), "lidar_mnt_aoi_buffer.tif")
+  .fetch_wms_raster(aoi, layer = ly, res = res_lidar_m, crs = crs, filename = chemin_fin)
+  if (!.mnt_couverture_suffisante(chemin_fin)) {
+    return(FALSE)
+  }
+  fact <- max(1L, as.integer(round(res_m / res_lidar_m)))
+  agg <- terra::aggregate(terra::rast(chemin_fin), fact = fact, fun = "mean", na.rm = TRUE)
+  terra::writeRaster(agg, chemin, overwrite = TRUE)
+  .mnt_couverture_suffisante(chemin)
 }
 
 # Le MNT couvre-t-il assez l'emprise ? Le LIDAR HD n'est pas partout ; hors

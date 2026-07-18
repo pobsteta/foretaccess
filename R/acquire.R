@@ -26,6 +26,8 @@
 #'   `obstacles`, `cadastre`).
 #' @param cache_dir Répertoire de cache. Défaut `tempdir()`.
 #' @param res_m Résolution du MNT (m). Défaut 5.
+#' @param res_lidar_m Résolution fine (m) de téléchargement du MNT LIDAR HD,
+#'   agrégée à `res_m` (cf. [acquire_mnt()]). Défaut 1.
 #' @param crs Code EPSG de sortie. Défaut 2154.
 #' @param buffer_m Buffer d'emprise (m) autour de l'AOI. Défaut 100.
 #' @param overwrite Re-télécharger même si le cache existe. Défaut `FALSE`.
@@ -54,6 +56,7 @@ acquire_inputs <- function(aoi,
                            sources = c("mnt", "desserte", "foret", "obstacles", "cadastre"),
                            cache_dir = tempdir(),
                            res_m = 5,
+                           res_lidar_m = 1,
                            crs = 2154,
                            buffer_m = 100,
                            overwrite = FALSE,
@@ -76,7 +79,7 @@ acquire_inputs <- function(aoi,
   )
 
   if ("mnt" %in% sources) {
-    out$mnt <- acquire_mnt(emprise, res_m = res_m, crs = crs,
+    out$mnt <- acquire_mnt(emprise, res_m = res_m, res_lidar_m = res_lidar_m, crs = crs,
       cache_dir = cache_dir, overwrite = overwrite, country = country)
   }
   if ("desserte" %in% sources) {

@@ -65,6 +65,38 @@ test_that("acquire_mnt bascule sur une couche de repli si la principale est vide
   })
 })
 
+test_that("acquire_mnt telecharge le LIDAR HD fin puis l'agrege a res_m", {
+  withr::with_tempdir({
+    res_vues <- numeric(0)
+    testthat::local_mocked_bindings(.fetch_wms_raster = function(aoi, layer, res, crs, filename) {
+      res_vues <<- c(res_vues, res)
+      mnt_fixture_writer(aoi, layer, res, crs, filename)
+    })
+    p <- acquire_mnt(aoi_test(), res_m = 5, res_lidar_m = 1, cache_dir = "cache")
+
+    # La couche primaire est telechargee a la resolution FINE (1 m), pas 5 m.
+    expect_equal(res_vues[1], 1)
+    # Produit fin intermediaire conserve, a ~1 m.
+    p_fin <- file.path("cache", "layers", "mnt", "lidar_mnt_aoi_buffer.tif")
+    expect_true(file.exists(p_fin))
+    expect_equal(terra::res(terra::rast(p_fin)), c(1, 1))
+    # Base de calcul agregee a res_m = 5 m.
+    expect_true(file.exists(p))
+    expect_equal(terra::res(terra::rast(p)), c(5, 5))
+  })
+})
+
+test_that("acquire_mnt : res_lidar_m >= res_m telecharge en direct (pas d'agregation)", {
+  withr::with_tempdir({
+    testthat::local_mocked_bindings(.fetch_wms_raster = mnt_fixture_writer)
+    p <- acquire_mnt(aoi_test(), res_m = 5, res_lidar_m = 5, cache_dir = "cache")
+    expect_true(file.exists(p))
+    expect_equal(terra::res(terra::rast(p)), c(5, 5))
+    # Pas de produit fin ecrit quand l'agregation est desactivee.
+    expect_false(file.exists(file.path("cache", "layers", "mnt", "lidar_mnt_aoi_buffer.tif")))
+  })
+})
+
 test_that("acquire_foret et acquire_cadastre renvoient des polygones decoupes", {
   withr::with_tempdir({
     testthat::local_mocked_bindings(.fetch_wfs = function(aoi, typename) polys_fixture())

@@ -9,6 +9,7 @@ acquire_inputs(
   sources = c("mnt", "desserte", "foret", "obstacles", "cadastre"),
   cache_dir = tempdir(),
   res_m = 5,
+  res_lidar_m = 1,
   crs = 2154,
   buffer_m = 100,
   overwrite = FALSE,
@@ -27,6 +28,9 @@ polygonal. \strong{Doit porter un CRS} (règle stricte du projet).}
 \item{cache_dir}{Répertoire de cache. Défaut \code{tempdir()}.}
 
 \item{res_m}{Résolution du MNT (m). Défaut 5.}
+
+\item{res_lidar_m}{Résolution fine (m) de téléchargement du MNT LIDAR HD,
+agrégée à \code{res_m} (cf. \code{\link[=acquire_mnt]{acquire_mnt()}}). Défaut 1.}
 
 \item{crs}{Code EPSG de sortie. Défaut 2154.}
 

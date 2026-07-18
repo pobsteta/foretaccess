@@ -10,7 +10,8 @@ acquire_mnt(
   crs = 2154,
   cache_dir = tempdir(),
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  res_lidar_m = 1
 )
 }
 \arguments{
@@ -25,6 +26,11 @@ acquire_mnt(
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
 
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
+
+\item{res_lidar_m}{Résolution fine (m) de téléchargement du \strong{MNT LIDAR HD}
+(couche primaire) sur l'emprise, agrégée ensuite à \code{res_m}. Défaut 1. Doit
+diviser \code{res_m} (ex. 1 → 5). Passer \code{res_lidar_m >= res_m} désactive
+l'agrégation (téléchargement direct à \code{res_m}).}
 }
 \value{
 Le chemin du raster \code{mnt.tif} écrit en cache.
