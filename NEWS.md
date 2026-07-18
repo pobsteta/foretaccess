@@ -1,3 +1,26 @@
+# foretaccess 1.5.0 (2026-07-18)
+
+## Nouveautés
+
+- **MNT LIDAR HD téléchargé fin puis agrégé** — `acquire_mnt()` récupère désormais
+  la couche primaire (MNT LIDAR HD) à une résolution **fine** (`res_lidar_m`, défaut
+  1 m) sur l'emprise → `lidar_mnt_aoi_buffer.tif`, puis l'**agrège** (moyenne,
+  facteur `res_m / res_lidar_m`) vers le MNT de travail à `res_m`. Le 5 m est ainsi
+  dérivé proprement d'un MNT fin, au lieu d'être demandé directement au WMS (qui
+  échantillonne depuis une pyramide plus grossière). Les couches de repli (HIGHRES /
+  RGE ALTI, plus grossières) restent téléchargées en direct à `res_m`. Nouveau
+  paramètre `res_lidar_m` sur `acquire_mnt()` et `acquire_inputs()` (passer
+  `res_lidar_m >= res_m` désactive l'agrégation).
+
+## Corrections
+
+- **Build** — `R/dfci-source.R` contenait des caractères non-ASCII dans des
+  littéraux de chaîne (messages `cli`), faisant échouer `R CMD check --as-cran`
+  (`error_on = "warning"`) ; accents passés en `\uXXXX`. `acquire_dfci()` et
+  `flag_dfci()` sont ajoutés à l'index de référence pkgdown. (Ces deux checks
+  n'étant pas requis par la protection de branche, la 1.4.0 avait été publiée malgré
+  leur rouge.)
+
 # foretaccess 1.4.0 (2026-07-18)
 
 ## Nouveautés

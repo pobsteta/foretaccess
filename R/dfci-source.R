@@ -10,17 +10,17 @@
 #    les pistes soit TRAVERSANTES et d'emprise suffisante, soit en CUL-DE-SAC
 #    munies d'une aire de retournement. Heuristique explicitement signalee.
 #
-# Comble le maillon « a alimenter via une source DFCI dediee » laisse ouvert en
-# phase 1 (spec 010 §10.2).
+# Comble le maillon "a alimenter via une source DFCI dediee" laisse ouvert en
+# phase 1 (spec 010 section 10.2).
 
 #' Pose le flag DFCI (CL_DFCI) sur la desserte
 #'
 #' Marks the road segments that make up the fire-defence network (DFCI), the
 #' source of the DFCI truck engine (spec 006). The flag is orthogonal to the
 #' `route`/`piste`/`reseau_public` classes. Two strategies, in order:
-#' * **Route A (dedicated OSM source)** — a segment is flagged when it coincides
+#' * **Route A (dedicated OSM source)** -- a segment is flagged when it coincides
 #'   (within `tol_appariement_m`) with an OSM DFCI track (`ref:FR:DFCI`).
-#' * **Route B (geometric fallback)** — when `dfci_lignes` is empty/`NULL`, keep
+#' * **Route B (geometric fallback)** -- when `dfci_lignes` is empty/`NULL`, keep
 #'   the tracks that are either *through-routes* wider than `emprise_min_m`, or
 #'   *dead-ends fitted with a turning area* (within `rayon_retournement_m` of the
 #'   dangling end). This is an explicitly heuristic guess (false positives
@@ -48,7 +48,7 @@ flag_dfci <- function(desserte, dfci_lignes = NULL, retournements = NULL,
   if (!is.null(dfci_lignes) && nrow(dfci_lignes) > 0) {
     desserte$dfci <- .flag_dfci_osm(desserte, dfci_lignes, tol_appariement_m)
     cli::cli_inform(
-      "Réseau DFCI : {sum(desserte$dfci)} tronçon{?s} flaggé{?s} \\
+      "R\u00e9seau DFCI : {sum(desserte$dfci)} tron\u00e7on{?s} flagg\u00e9{?s} \\
        (source OSM {.field ref:FR:DFCI})."
     )
     return(desserte)
@@ -58,10 +58,10 @@ flag_dfci <- function(desserte, dfci_lignes = NULL, retournements = NULL,
   desserte$dfci <- .flag_dfci_repli(desserte, retournements, emprise_min_m,
     rayon_retournement_m)
   cli::cli_inform(c(
-    "!" = "Réseau DFCI : aucune piste OSM {.field ref:FR:DFCI} sur l'emprise, \\
-           repli géométrique.",
-    "i" = "{sum(desserte$dfci)} tronçon{?s} retenu{?s} \\
-           (heuristique emprise / traversée / retournement)."
+    "!" = "R\u00e9seau DFCI : aucune piste OSM {.field ref:FR:DFCI} sur l'emprise, \\
+           repli g\u00e9om\u00e9trique.",
+    "i" = "{sum(desserte$dfci)} tron\u00e7on{?s} retenu{?s} \\
+           (heuristique emprise / travers\u00e9e / retournement)."
   ))
   desserte
 }
