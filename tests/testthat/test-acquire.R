@@ -8,7 +8,9 @@ test_that("acquire_inputs dispatche vers les sources demandees", {
       acquire_desserte = function(aoi, ...) roads_fixture(),
       acquire_foret = function(aoi, ...) polys_fixture(),
       acquire_obstacles = function(aoi, ...) polys_fixture(),
-      acquire_cadastre = function(aoi, ...) polys_fixture()
+      acquire_cadastre = function(aoi, ...) polys_fixture(),
+      acquire_dfci = function(aoi, ...) sf::st_sf(ref = character(0), geometry = sf::st_sfc(crs = 2154)),
+      .acquire_retournements = function(aoi, ...) sf::st_sf(geometry = sf::st_sfc(crs = 2154))
     )
     inp <- acquire_inputs(aoi_test(), cache_dir = "cache")
     expect_s3_class(inp, "foretaccess_inputs")
@@ -68,7 +70,9 @@ test_that("les sorties s'enchainent vers preprocess (CA-A.4)", {
       acquire_desserte = function(aoi, ...) sf::st_read(file.path(toy, "desserte.gpkg"), quiet = TRUE),
       acquire_foret = function(aoi, ...) sf::st_read(file.path(toy, "foret.gpkg"), quiet = TRUE),
       acquire_obstacles = function(aoi, ...) polys_fixture(),
-      acquire_cadastre = function(aoi, ...) NULL
+      acquire_cadastre = function(aoi, ...) NULL,
+      acquire_dfci = function(aoi, ...) sf::st_sf(ref = character(0), geometry = sf::st_sfc(crs = 2154)),
+      .acquire_retournements = function(aoi, ...) sf::st_sf(geometry = sf::st_sfc(crs = 2154))
     )
     inp <- acquire_inputs(aoi_test(), cache_dir = "cache")
     pre <- preprocess(inp$mnt, inp$desserte, inp$foret)
@@ -83,9 +87,33 @@ test_that("print.foretaccess_inputs resume l'acquisition", {
       acquire_desserte = function(aoi, ...) roads_fixture(),
       acquire_foret = function(aoi, ...) polys_fixture(),
       acquire_obstacles = function(aoi, ...) polys_fixture(),
-      acquire_cadastre = function(aoi, ...) polys_fixture()
+      acquire_cadastre = function(aoi, ...) polys_fixture(),
+      acquire_dfci = function(aoi, ...) sf::st_sf(ref = character(0), geometry = sf::st_sfc(crs = 2154)),
+      .acquire_retournements = function(aoi, ...) sf::st_sf(geometry = sf::st_sfc(crs = 2154))
     )
     inp <- acquire_inputs(aoi_test(), cache_dir = "cache")
     expect_message(print(inp), regexp = "Entrees ForetAccess")
+  })
+})
+
+test_that("acquire_inputs pose le flag dfci depuis le reseau OSM", {
+  withr::with_tempdir({
+    testthat::local_mocked_bindings(
+      acquire_mnt = function(aoi, ...) "mnt.tif",
+      acquire_desserte = function(aoi, ...) sf::st_sf(
+        classe = "route",
+        geometry = sf::st_sfc(
+          sf::st_linestring(rbind(c(700200, 6600500), c(700800, 6600500))), crs = 2154)),
+      acquire_foret = function(aoi, ...) polys_fixture(),
+      acquire_obstacles = function(aoi, ...) polys_fixture(),
+      acquire_cadastre = function(aoi, ...) NULL,
+      # Reseau DFCI OSM a 2 m du troncon -> flag pose (Voie A, appariement tampon).
+      acquire_dfci = function(aoi, ...) sf::st_sf(ref = "AL 04",
+        geometry = sf::st_sfc(
+          sf::st_linestring(rbind(c(700200, 6600502), c(700800, 6600502))), crs = 2154))
+    )
+    inp <- acquire_inputs(aoi_test(), cache_dir = "cache")
+    expect_true("dfci" %in% names(inp$desserte))
+    expect_equal(sum(inp$desserte$dfci), 1L)
   })
 })

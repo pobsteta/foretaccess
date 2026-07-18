@@ -20,6 +20,11 @@
   câble 98,36 %, **DFCI 99,87 %**), distances collées décomposition comprise. Publie le **Lot 12a.4
   (DFCI)** : moteur radial `debusq_dfci` transcrit (noyau Rust `dfci_scan`), spec 006 réécrite,
   6 classes de défendabilité, lance à 0 m d'écart médian.
+- **`v1.4.0` posée** (2026-07-18) : **source du réseau DFCI**. Le flag `dfci` (`CL_DFCI`), source
+  du camion DFCI laissée vide depuis la phase 1, est alimenté par `flag_dfci()` — réseau OSM
+  `ref:FR:DFCI` (`acquire_dfci()`, Voie A) puis repli géométrique (piste traversante ≥ 10 m, ou
+  cul-de-sac + aire de retournement, Voie B). Câblé dans `acquire_inputs(dfci = TRUE)`. Comble
+  spec 010 §10.2.
 - **`v1.1.0` posée** (2026-07-16) : **optimisation de la hauteur des supports câble façon
   SEILAPLAN** (spec 013, `cable$methode_supports = "seilaplan"`) — graphe + Dijkstra de Bont &
   Heinimann réutilisant notre caténaire. Confrontée cellule à cellule à l'oracle `c_option_h=true` :
@@ -340,6 +345,27 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-18 — Release v1.4.0 : source du réseau DFCI (OSM `ref:FR:DFCI` + repli géométrique)
+
+Release **mineure `v1.4.0`** : le flag `dfci` (`CL_DFCI`), source du camion DFCI, était laissé
+vide depuis la phase 1 (spec 010 §10.2, « à alimenter via une source dédiée »). Il est
+désormais **posé automatiquement** par `acquire_inputs(..., dfci = TRUE)` via la nouvelle
+fonction exportée `flag_dfci()`, en deux voies :
+- **Voie A** — réseau DFCI **OpenStreetMap** : `acquire_dfci()` récupère les pistes taguées
+  `ref:FR:DFCI` (+ alias `ref:dfci`/`dfci_ref`), l'identifiant officiel d'une piste DFCI (wiki
+  OSM *FR:France/DFCI et DECI*). Appariement au réseau BD TOPO par tampon (`tol_appariement_m`).
+- **Voie B (repli géométrique)** — si OSM ne couvre pas l'emprise : piste **traversante**
+  (degrés d'extrémités ≥ 2/2 sur graphe base-R, cf. Lot 17) et **emprise ≥ 10 m**, *ou*
+  **cul-de-sac** (bout pendant deg 1) muni d'une **aire de retournement**
+  (`highway=turning_circle`/`turning_loop`) à portée. Heuristique signalée (`cli_inform`).
+
+`acquire_desserte()` conserve désormais la **largeur** BD TOPO (emprise), requise par le repli.
+Nouveau `R/dfci-source.R` + `tests/testthat/test-dfci-source.R` (Voie A, repli, degrés
+d'extrémités, chaîne flag → masque source du moteur DFCI). `test-acquire.R` rendu hermétique
+(mock `acquire_dfci`/`.acquire_retournements`) + test de propagation du flag. `DESCRIPTION` =
+`NEWS.md` = `CITATION.cff` = `1.4.0`. Après merge : tag + release auto, retour cycle dev
+`1.4.0.9000`.
 
 ### 2026-07-17 — Release v1.3.1 : fix MNT LIDAR (artefacts de pente en grille)
 

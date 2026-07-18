@@ -43,6 +43,42 @@ osmdata_fixture <- function() {
   list(osm_points = NULL, osm_lines = line, osm_polygons = poly, osm_multipolygons = NULL)
 }
 
+# Retour osmdata_sf simule : une piste DFCI (ligne) portant `ref:FR:DFCI`,
+# traversant l'AOI d'ouest en est. Coordonnees en L93 (comme osmdata_fixture :
+# les fixtures simulent un osmdata deja dans le CRS cible).
+osmdata_dfci_fixture <- function() {
+  ln <- sf::st_sf(osm_id = "10", geometry = sf::st_sfc(
+    sf::st_linestring(rbind(c(700100, 6600500), c(700900, 6600500))), crs = 2154))
+  ln[["ref:FR:DFCI"]] <- "AL 04"
+  list(osm_points = NULL, osm_lines = ln, osm_polygons = NULL, osm_multipolygons = NULL)
+}
+
+# Retour osmdata_sf simule : une aire de retournement (point) au centre de l'AOI.
+osmdata_retournement_fixture <- function() {
+  pt <- sf::st_sf(osm_id = "20",
+    geometry = sf::st_sfc(sf::st_point(c(700500, 6600500)), crs = 2154))
+  list(osm_points = pt, osm_lines = NULL, osm_polygons = NULL, osm_multipolygons = NULL)
+}
+
+# Desserte de repli : trois pistes alignees P1-P2-P3-P4 (noeuds a 100 m). La piste
+# centrale est traversante (deg 2/2), les deux autres en cul-de-sac (bout pendant
+# en P1 et P4). `largeur2` fixe l'emprise de la piste centrale.
+desserte_repli_fixture <- function(largeur2 = 12) {
+  l1 <- sf::st_linestring(rbind(c(0, 0), c(100, 0)))
+  l2 <- sf::st_linestring(rbind(c(100, 0), c(200, 0)))
+  l3 <- sf::st_linestring(rbind(c(200, 0), c(300, 0)))
+  sf::st_sf(
+    classe  = c("piste", "piste", "piste"),
+    largeur = c(NA_real_, largeur2, NA_real_),
+    geometry = sf::st_sfc(l1, l2, l3, crs = 2154)
+  )
+}
+
+# Aire de retournement au bout pendant P4 de la desserte de repli.
+retournement_p4_fixture <- function() {
+  sf::st_sf(geometry = sf::st_sfc(sf::st_point(c(300, 0)), crs = 2154))
+}
+
 # Garde-fou des tests reseau : opt-in explicite + hors CI par defaut.
 # (comme le garde-fou PostGIS). Ne tourne que si FORETACCESS_RUN_ONLINE_TESTS=TRUE.
 skip_if_no_online <- function() {

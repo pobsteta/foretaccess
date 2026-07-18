@@ -177,9 +177,14 @@ tests/testthat/test-datasources.R, test-acquire-*.R (mocks), test-acquire-online
 1. **Cadastre** : **IGN WFS `CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`** (même client
    happign que le reste ; pas d'API Etalab en v1).
 2. **Mapping `classe` de la desserte** : dériver **route/piste** depuis les attributs BD TOPO
-   (`nature`/`importance`) ; la classe **`dfci`** reste **optionnelle/vide en phase 1** (peu
-   distinguable dans BD TOPO), à alimenter plus tard via une **source DFCI dédiée**. Le champ
-   `classe` produit reste conforme au contrat de `preprocess()`.
+   (`nature`/`importance`). Le champ `classe` produit reste conforme au contrat de
+   `preprocess()`.
+   **Source DFCI (levée en v1.4.0)** : le flag **`dfci`** (`CL_DFCI`), longtemps laissé vide
+   « faute de source dédiée », est désormais alimenté par `flag_dfci()` — (A) réseau DFCI
+   **OpenStreetMap** `ref:FR:DFCI` (`acquire_dfci()`), puis (B) **repli géométrique** si OSM ne
+   couvre pas l'emprise : piste traversante d'emprise ≥ 10 m, ou cul-de-sac muni d'une aire de
+   retournement (`highway=turning_circle`/`turning_loop`). Piloté par
+   `acquire_inputs(..., dfci = TRUE)`.
 3. **Obstacles OSM** (par défaut) : **`building`** + surfaces d'eau (`natural=water` /
    `waterway`) + **`railway`** + **`natural=cliff`** (falaises). Jeu extensible via paramètre.
 4. **Buffer AOI** : **100 m** par défaut (`buffer_m = 100`) pour capter la desserte juste hors
