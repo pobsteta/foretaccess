@@ -77,13 +77,18 @@ sk <- skidder(pre)
 | Source | Fournisseur | Sortie |
 |---|---|---|
 | `mnt` | RGE ALTI (IGN WMS) | raster 5 m (`mnt.tif`) |
-| `desserte` | BD TOPO (IGN WFS) | `sf` lignes + champ `classe` (route / piste) |
+| `desserte` | BD TOPO (IGN WFS) | `sf` lignes + champs `classe` (route / piste) et `dfci` (flag `CL_DFCI`) |
 | `foret` | BD Forêt v2 (IGN WFS) | `sf` polygones |
 | `obstacles` | OpenStreetMap | `sf` (bâti, eau, voies ferrées, falaises) |
+| `dfci` | OpenStreetMap | `sf` pistes DFCI (`ref:FR:DFCI`) — pose le flag |
 | `cadastre` | PCI Express (IGN WFS) | `sf` parcelles (optionnel) |
 
-Le champ `classe` de la desserte est dérivé de l'attribut `nature` de BD TOPO ; la
-classe `dfci` reste à alimenter via une source dédiée (voir `?acquire_desserte`).
+Le champ `classe` de la desserte est dérivé de l'attribut `nature` de BD TOPO. Le
+flag `dfci` (`CL_DFCI`), source du camion DFCI (`vignette("dfci")`), est posé par
+[flag_dfci()] : d'abord depuis le **réseau DFCI OpenStreetMap** (`ref:FR:DFCI`,
+via [acquire_dfci()]), puis, si OSM ne couvre pas l'emprise, par un **repli
+géométrique** (piste traversante d'emprise ≥ 10 m, ou cul-de-sac muni d'une aire
+de retournement). L'appel est piloté par `acquire_inputs(..., dfci = TRUE)` (défaut).
 
 ## Robustesse
 

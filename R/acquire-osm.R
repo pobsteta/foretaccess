@@ -89,3 +89,80 @@ acquire_obstacles <- function(aoi, features = c("building", "water", "railway", 
   sf::st_write(obs, chemin, delete_dsn = TRUE, quiet = TRUE)
   obs
 }
+
+# Cles OSM identifiant une piste DFCI (wiki OSM FR:France/DFCI_et_DECI). La cle
+# canonique `ref:FR:DFCI` porte la reference du panneau terrain (format "AL 04") ;
+# les deux autres sont des alias historiques a migrer.
+.CLES_DFCI_OSM <- c("ref:FR:DFCI", "ref:dfci", "dfci_ref")
+
+# Valeurs OSM d'aires de retournement (highway=turning_circle / turning_loop) :
+# points ou un camion peut faire demi-tour au bout d'une impasse DFCI (repli).
+.CLES_RETOURNEMENT_OSM <- c("turning_circle", "turning_loop")
+
+#' Acquiert le réseau DFCI depuis OpenStreetMap
+#'
+#' Récupère les pistes de défense des forêts contre l'incendie (DFCI) portant une
+#' référence OSM `ref:FR:DFCI` (ou les alias `ref:dfci` / `dfci_ref`) au sein de
+#' l'emprise. Ces lignes servent à poser le flag `dfci` (`CL_DFCI`) sur la
+#' desserte via [flag_dfci()] — la source du camion DFCI (spec 006). C'est la
+#' « source dédiée » laissée ouverte en phase 1 (spec 010 §10.2).
+#'
+#' @inheritParams acquire_obstacles
+#' @return Un objet `sf` de lignes DFCI avec un champ `ref`, ou un `sf` vide si
+#'   aucune piste DFCI n'est trouvée.
+#' @seealso [flag_dfci()], [acquire_desserte()]
+#' @export
+acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE) {
+  chemin <- .chemin_cache(cache_dir, "dfci", "gpkg")
+  if (file.exists(chemin) && !overwrite) {
+    return(sf::st_read(chemin, quiet = TRUE))
+  }
+  aoi_wgs <- sf::st_transform(aoi, 4326)
+  bbox_wgs <- sf::st_bbox(aoi_wgs)
+
+  refs <- character(0)
+  geoms <- NULL
+  for (cle in .CLES_DFCI_OSM) {
+    od <- .fetch_osm(bbox_wgs, key = cle, value = NULL)
+    lignes <- od$osm_lines
+    if (!is.null(lignes) && nrow(lignes) > 0) {
+      g <- sf::st_geometry(lignes)
+      r <- if (cle %in% names(lignes)) as.character(lignes[[cle]]) else rep(NA_character_, length(g))
+      geoms <- if (is.null(geoms)) g else do.call(c, list(geoms, g))
+      refs <- c(refs, r)
+    }
+  }
+
+  crs_obj <- sf::st_crs(crs)
+  if (is.null(geoms)) {
+    vide <- sf::st_sf(ref = character(0), geometry = sf::st_sfc(crs = crs_obj))
+    sf::st_write(vide, chemin, delete_dsn = TRUE, quiet = TRUE)
+    return(vide)
+  }
+
+  dfci <- sf::st_sf(ref = refs, geometry = geoms)
+  dfci <- .reprojeter_clip(dfci, aoi, crs)
+  sf::st_write(dfci, chemin, delete_dsn = TRUE, quiet = TRUE)
+  dfci
+}
+
+# Aires de retournement OSM (points), pour le repli geometrique de flag_dfci.
+# Non exporte : detail d'acquisition, mocke via .fetch_osm dans les tests.
+.acquire_retournements <- function(aoi, crs = 2154) {
+  aoi_wgs <- sf::st_transform(aoi, 4326)
+  bbox_wgs <- sf::st_bbox(aoi_wgs)
+  geoms <- NULL
+  for (val in .CLES_RETOURNEMENT_OSM) {
+    od <- .fetch_osm(bbox_wgs, key = "highway", value = val)
+    pts <- od$osm_points
+    if (!is.null(pts) && nrow(pts) > 0) {
+      g <- sf::st_geometry(pts)
+      geoms <- if (is.null(geoms)) g else do.call(c, list(geoms, g))
+    }
+  }
+  crs_obj <- sf::st_crs(crs)
+  if (is.null(geoms)) {
+    return(sf::st_sf(geometry = sf::st_sfc(crs = crs_obj)))
+  }
+  sf::st_transform(sf::st_sf(geometry = geoms), crs)
+}

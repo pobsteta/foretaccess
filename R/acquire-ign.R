@@ -144,7 +144,10 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   brut <- .fetch_wfs(aoi, info$typename)
   d <- .reprojeter_clip(brut, aoi, crs)
   d$classe <- .mapper_classe_desserte(d)
-  d <- d[, "classe", drop = FALSE]
+  # On conserve la largeur BD TOPO (emprise) : critere du repli geometrique DFCI
+  # (`.flag_dfci_repli`). Absente du flux -> NA (colonne quand meme presente).
+  d$largeur <- .largeur_desserte(d)
+  d <- d[, c("classe", "largeur")]
   sf::st_write(d, chemin, delete_dsn = TRUE, quiet = TRUE)
   d
 }

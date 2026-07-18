@@ -12,7 +12,9 @@ acquire_inputs(
   crs = 2154,
   buffer_m = 100,
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  dfci = TRUE,
+  config = NULL
 )
 }
 \arguments{
@@ -33,6 +35,14 @@ polygonal. \strong{Doit porter un CRS} (règle stricte du projet).}
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
 
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
+
+\item{dfci}{Alimenter le flag DFCI (\code{CL_DFCI}) sur la desserte, source du camion
+DFCI (spec 006) : réseau OSM \code{ref:FR:DFCI} (\code{\link[=acquire_dfci]{acquire_dfci()}}), avec repli
+géométrique (\code{\link[=flag_dfci]{flag_dfci()}}) si OSM ne rend rien. Défaut \code{TRUE}.}
+
+\item{config}{Objet \code{\link[=foretaccess_config]{foretaccess_config()}} fournissant les seuils DFCI
+(\code{dfci$tol_appariement_m}, \code{emprise_min_m}, \code{rayon_retournement_m}) passés à
+\code{\link[=flag_dfci]{flag_dfci()}}. Défaut \code{NULL} (seuils par défaut).}
 }
 \value{
 Un objet \code{foretaccess_inputs} : \code{mnt} (chemin raster), \code{desserte},

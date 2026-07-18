@@ -30,6 +30,12 @@
 #' @param buffer_m Buffer d'emprise (m) autour de l'AOI. Défaut 100.
 #' @param overwrite Re-télécharger même si le cache existe. Défaut `FALSE`.
 #' @param country Code pays ISO. Défaut `"FR"`.
+#' @param dfci Alimenter le flag DFCI (`CL_DFCI`) sur la desserte, source du camion
+#'   DFCI (spec 006) : réseau OSM `ref:FR:DFCI` ([acquire_dfci()]), avec repli
+#'   géométrique ([flag_dfci()]) si OSM ne rend rien. Défaut `TRUE`.
+#' @param config Objet [foretaccess_config()] fournissant les seuils DFCI
+#'   (`dfci$tol_appariement_m`, `emprise_min_m`, `rayon_retournement_m`) passés à
+#'   [flag_dfci()]. Défaut `NULL` (seuils par défaut).
 #'
 #' @return Un objet `foretaccess_inputs` : `mnt` (chemin raster), `desserte`,
 #'   `foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `aoi` (`sf` stricte),
@@ -51,12 +57,15 @@ acquire_inputs <- function(aoi,
                            crs = 2154,
                            buffer_m = 100,
                            overwrite = FALSE,
-                           country = "FR") {
+                           country = "FR",
+                           dfci = TRUE,
+                           config = NULL) {
   sources <- match.arg(sources, c("mnt", "desserte", "foret", "obstacles", "cadastre"),
     several.ok = TRUE)
   checkmate::assert_number(res_m, lower = 0, finite = TRUE)
   checkmate::assert_number(buffer_m, lower = 0, finite = TRUE)
   checkmate::assert_flag(overwrite)
+  checkmate::assert_flag(dfci)
 
   aoi_stricte <- .charger_aoi(aoi, crs)
   emprise <- if (buffer_m > 0) sf::st_buffer(aoi_stricte, buffer_m) else aoi_stricte
@@ -85,6 +94,25 @@ acquire_inputs <- function(aoi,
   if ("cadastre" %in% sources) {
     out$parcellaire <- acquire_cadastre(emprise, crs = crs,
       cache_dir = cache_dir, overwrite = overwrite, country = country)
+  }
+
+  # Flag DFCI (CL_DFCI) sur la desserte : reseau OSM `ref:FR:DFCI`, avec repli
+  # geometrique si OSM ne rend rien. Orthogonal aux classes route/piste.
+  if (isTRUE(dfci) && !is.null(out$desserte) && nrow(out$desserte) > 0) {
+    dfci_lignes <- tryCatch(
+      acquire_dfci(emprise, crs = crs, cache_dir = cache_dir, overwrite = overwrite),
+      error = function(e) NULL
+    )
+    retournements <- if (is.null(dfci_lignes) || nrow(dfci_lignes) == 0) {
+      tryCatch(.acquire_retournements(emprise, crs = crs), error = function(e) NULL)
+    } else {
+      NULL
+    }
+    df <- (config %||% foretaccess_config())$dfci
+    out$desserte <- flag_dfci(out$desserte, dfci_lignes, retournements,
+      emprise_min_m = df$emprise_min_m,
+      rayon_retournement_m = df$rayon_retournement_m,
+      tol_appariement_m = df$tol_appariement_m)
   }
 
   out$meta <- list(

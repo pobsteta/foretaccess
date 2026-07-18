@@ -217,7 +217,16 @@ foretaccess_config <- function(skidder = list(),
       pente_defense_max_pct  = 110,  # dfci_slope_max
       # Bornes des classes de defendabilite (m) : bandes [0,120[, [120,280[,
       # [280,440] de longueur de lance (derniere borne inclusive).
-      classes_distance_m     = c(0, 120, 280, 440)  # dfci_class
+      classes_distance_m     = c(0, 120, 280, 440),  # dfci_class
+      # --- Alimentation du flag `dfci` (CL_DFCI) sur la desserte (`flag_dfci`) ---
+      # Ces seuils ne viennent PAS de Sylvaccess (qui suppose le flag deja porte par
+      # la donnee) : ils pilotent l'acquisition de la source DFCI (spec 010 §10.2).
+      # Tolerance d'appariement desserte <-> reseau DFCI OSM `ref:FR:DFCI` (m).
+      tol_appariement_m      = 10,
+      # Repli geometrique : emprise minimale d'une piste DFCI traversante (m).
+      emprise_min_m          = 10,
+      # Repli geometrique : distance max bout d'impasse <-> aire de retournement (m).
+      rayon_retournement_m   = 20
     ),
     # --- Conception de desserte (epic Lots 14-18, spec 014) ------------------
     # Barème de coût de CONSTRUCTION d'une nouvelle desserte (structure additive,
@@ -383,6 +392,9 @@ validate_config <- function(cfg) {
   checkmate::assert_number(df$pente_defense_max_pct, lower = 0)
   checkmate::assert_numeric(df$classes_distance_m, lower = 0, min.len = 2,
     any.missing = FALSE, sorted = TRUE)
+  checkmate::assert_number(df$tol_appariement_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(df$emprise_min_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(df$rayon_retournement_m, lower = 0, finite = TRUE)
 
   ge <- cfg$general
   checkmate::assert_number(ge$resolution_m, lower = 0, finite = TRUE)

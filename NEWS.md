@@ -1,3 +1,27 @@
+# foretaccess 1.4.0 (2026-07-18)
+
+## Nouveautés
+
+- **Source du réseau DFCI** — le flag `dfci` (`CL_DFCI`), source du camion DFCI
+  (spec 006) laissé vide depuis la phase 1 « faute de source dédiée » (spec 010
+  §10.2), est désormais **alimenté automatiquement** par `acquire_inputs()`
+  (paramètre `dfci = TRUE`, défaut). Deux stratégies via la nouvelle fonction
+  exportée `flag_dfci()` :
+  - **Voie A — réseau DFCI OpenStreetMap** : `acquire_dfci()` récupère les pistes
+    taguées `ref:FR:DFCI` (+ alias `ref:dfci`/`dfci_ref`), l'identifiant officiel
+    d'une piste DFCI (wiki OSM *FR:France/DFCI et DECI*). Les tronçons de desserte
+    coïncidant (à tolérance près) sont flaggés.
+  - **Voie B — repli géométrique** (si OSM ne couvre pas l'emprise) : on retient
+    les pistes soit **traversantes** et d'emprise ≥ 10 m, soit en **cul-de-sac
+    muni d'une aire de retournement** (`highway=turning_circle`/`turning_loop`, à
+    portée du bout pendant). Heuristique explicitement signalée (faux positifs
+    possibles).
+- `acquire_desserte()` conserve désormais la **largeur** (emprise) BD TOPO, requise
+  par le critère d'emprise du repli.
+- Les seuils DFCI d'acquisition sont **pilotables via `foretaccess_config()`**
+  (bloc `dfci` : `tol_appariement_m`, `emprise_min_m`, `rayon_retournement_m`) et
+  transmis par `acquire_inputs(..., config = )` à `flag_dfci()`.
+
 # foretaccess 1.3.1 (2026-07-17)
 
 ## Corrections
