@@ -33,6 +33,9 @@
 #' @param dfci Alimenter le flag DFCI (`CL_DFCI`) sur la desserte, source du camion
 #'   DFCI (spec 006) : réseau OSM `ref:FR:DFCI` ([acquire_dfci()]), avec repli
 #'   géométrique ([flag_dfci()]) si OSM ne rend rien. Défaut `TRUE`.
+#' @param config Objet [foretaccess_config()] fournissant les seuils DFCI
+#'   (`dfci$tol_appariement_m`, `emprise_min_m`, `rayon_retournement_m`) passés à
+#'   [flag_dfci()]. Défaut `NULL` (seuils par défaut).
 #'
 #' @return Un objet `foretaccess_inputs` : `mnt` (chemin raster), `desserte`,
 #'   `foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `aoi` (`sf` stricte),
@@ -55,7 +58,8 @@ acquire_inputs <- function(aoi,
                            buffer_m = 100,
                            overwrite = FALSE,
                            country = "FR",
-                           dfci = TRUE) {
+                           dfci = TRUE,
+                           config = NULL) {
   sources <- match.arg(sources, c("mnt", "desserte", "foret", "obstacles", "cadastre"),
     several.ok = TRUE)
   checkmate::assert_number(res_m, lower = 0, finite = TRUE)
@@ -104,7 +108,11 @@ acquire_inputs <- function(aoi,
     } else {
       NULL
     }
-    out$desserte <- flag_dfci(out$desserte, dfci_lignes, retournements)
+    df <- (config %||% foretaccess_config())$dfci
+    out$desserte <- flag_dfci(out$desserte, dfci_lignes, retournements,
+      emprise_min_m = df$emprise_min_m,
+      rayon_retournement_m = df$rayon_retournement_m,
+      tol_appariement_m = df$tol_appariement_m)
   }
 
   out$meta <- list(

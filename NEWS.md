@@ -18,6 +18,9 @@
     possibles).
 - `acquire_desserte()` conserve désormais la **largeur** (emprise) BD TOPO, requise
   par le critère d'emprise du repli.
+- Les seuils DFCI d'acquisition sont **pilotables via `foretaccess_config()`**
+  (bloc `dfci` : `tol_appariement_m`, `emprise_min_m`, `rayon_retournement_m`) et
+  transmis par `acquire_inputs(..., config = )` à `flag_dfci()`.
 
 # foretaccess 1.3.1 (2026-07-17)
 
