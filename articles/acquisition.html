@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -153,8 +153,8 @@ cache et réutilisée au second appel.</p>
 <td><code>desserte</code></td>
 <td>BD TOPO (IGN WFS)</td>
 <td>
-<code>sf</code> lignes + champ <code>classe</code> (route /
-piste)</td>
+<code>sf</code> lignes + champs <code>classe</code> (route / piste)
+et <code>dfci</code> (flag <code>CL_DFCI</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>foret</code></td>
@@ -169,6 +169,13 @@ piste)</td>
 <code>sf</code> (bâti, eau, voies ferrées, falaises)</td>
 </tr>
 <tr class="odd">
+<td><code>dfci</code></td>
+<td>OpenStreetMap</td>
+<td>
+<code>sf</code> pistes DFCI (<code>ref:FR:DFCI</code>) — pose le
+flag</td>
+</tr>
+<tr class="even">
 <td><code>cadastre</code></td>
 <td>PCI Express (IGN WFS)</td>
 <td>
@@ -177,9 +184,15 @@ piste)</td>
 </tbody>
 </table>
 <p>Le champ <code>classe</code> de la desserte est dérivé de l’attribut
-<code>nature</code> de BD TOPO ; la classe <code>dfci</code> reste à
-alimenter via une source dédiée (voir
-<code><a href="../reference/acquire_desserte.html">?acquire_desserte</a></code>).</p>
+<code>nature</code> de BD TOPO. Le flag <code>dfci</code>
+(<code>CL_DFCI</code>), source du camion DFCI
+(<code>vignette("dfci")</code>), est posé par [flag_dfci()] : d’abord
+depuis le <strong>réseau DFCI OpenStreetMap</strong>
+(<code>ref:FR:DFCI</code>, via [acquire_dfci()]), puis, si OSM ne couvre
+pas l’emprise, par un <strong>repli géométrique</strong> (piste
+traversante d’emprise ≥ 10 m, ou cul-de-sac muni d’une aire de
+retournement). L’appel est piloté par
+<code>acquire_inputs(..., dfci = TRUE)</code> (défaut).</p>
 </div>
 <div class="section level2">
 <h2 id="robustesse">Robustesse<a class="anchor" aria-label="anchor" href="#robustesse"></a>

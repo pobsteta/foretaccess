@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,35 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.5.0" id="foretaccess-150-2026-07-18">foretaccess 1.5.0 (2026-07-18)<a class="anchor" aria-label="anchor" href="#foretaccess-150-2026-07-18"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-5-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-5-0"></a></h3>
+<ul><li>
+<strong>MNT LIDAR HD téléchargé fin puis agrégé</strong> — <code><a href="../reference/acquire_mnt.html">acquire_mnt()</a></code> récupère désormais la couche primaire (MNT LIDAR HD) à une résolution <strong>fine</strong> (<code>res_lidar_m</code>, défaut 1 m) sur l’emprise → <code>lidar_mnt_aoi_buffer.tif</code>, puis l’<strong>agrège</strong> (moyenne, facteur <code>res_m / res_lidar_m</code>) vers le MNT de travail à <code>res_m</code>. Le 5 m est ainsi dérivé proprement d’un MNT fin, au lieu d’être demandé directement au WMS (qui échantillonne depuis une pyramide plus grossière). Les couches de repli (HIGHRES / RGE ALTI, plus grossières) restent téléchargées en direct à <code>res_m</code>. Nouveau paramètre <code>res_lidar_m</code> sur <code><a href="../reference/acquire_mnt.html">acquire_mnt()</a></code> et <code><a href="../reference/acquire_inputs.html">acquire_inputs()</a></code> (passer <code>res_lidar_m &gt;= res_m</code> désactive l’agrégation).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="corrections-1-5-0">Corrections<a class="anchor" aria-label="anchor" href="#corrections-1-5-0"></a></h3>
+<ul><li>
+<strong>Build</strong> — <code>R/dfci-source.R</code> contenait des caractères non-ASCII dans des littéraux de chaîne (messages <code>cli</code>), faisant échouer <code>R CMD check --as-cran</code> (<code>error_on = "warning"</code>) ; accents passés en <code>\uXXXX</code>. <code><a href="../reference/acquire_dfci.html">acquire_dfci()</a></code> et <code><a href="../reference/flag_dfci.html">flag_dfci()</a></code> sont ajoutés à l’index de référence pkgdown. (Ces deux checks n’étant pas requis par la protection de branche, la 1.4.0 avait été publiée malgré leur rouge.)</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.4.0" id="foretaccess-140-2026-07-18">foretaccess 1.4.0 (2026-07-18)<a class="anchor" aria-label="anchor" href="#foretaccess-140-2026-07-18"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-4-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-4-0"></a></h3>
+<ul><li>
+<strong>Source du réseau DFCI</strong> — le flag <code>dfci</code> (<code>CL_DFCI</code>), source du camion DFCI (spec 006) laissé vide depuis la phase 1 « faute de source dédiée » (spec 010 §10.2), est désormais <strong>alimenté automatiquement</strong> par <code><a href="../reference/acquire_inputs.html">acquire_inputs()</a></code> (paramètre <code>dfci = TRUE</code>, défaut). Deux stratégies via la nouvelle fonction exportée <code><a href="../reference/flag_dfci.html">flag_dfci()</a></code> :
+<ul><li>
+<strong>Voie A — réseau DFCI OpenStreetMap</strong> : <code><a href="../reference/acquire_dfci.html">acquire_dfci()</a></code> récupère les pistes taguées <code>ref:FR:DFCI</code> (+ alias <code>ref:dfci</code>/<code>dfci_ref</code>), l’identifiant officiel d’une piste DFCI (wiki OSM <em>FR:France/DFCI et DECI</em>). Les tronçons de desserte coïncidant (à tolérance près) sont flaggés.</li>
+<li>
+<strong>Voie B — repli géométrique</strong> (si OSM ne couvre pas l’emprise) : on retient les pistes soit <strong>traversantes</strong> et d’emprise ≥ 10 m, soit en <strong>cul-de-sac muni d’une aire de retournement</strong> (<code>highway=turning_circle</code>/<code>turning_loop</code>, à portée du bout pendant). Heuristique explicitement signalée (faux positifs possibles).</li>
+</ul></li>
+<li>
+<code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> conserve désormais la <strong>largeur</strong> (emprise) BD TOPO, requise par le critère d’emprise du repli.</li>
+<li>Les seuils DFCI d’acquisition sont <strong>pilotables via <code><a href="../reference/foretaccess_config.html">foretaccess_config()</a></code></strong> (bloc <code>dfci</code> : <code>tol_appariement_m</code>, <code>emprise_min_m</code>, <code>rayon_retournement_m</code>) et transmis par <code>acquire_inputs(..., config = )</code> à <code><a href="../reference/flag_dfci.html">flag_dfci()</a></code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.3.1" id="foretaccess-131-2026-07-17">foretaccess 1.3.1 (2026-07-17)<a class="anchor" aria-label="anchor" href="#foretaccess-131-2026-07-17"></a></h2>
 <div class="section level3">

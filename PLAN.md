@@ -26,6 +26,15 @@
   **Lot 12a.4 (DFCI)** : moteur radial `debusq_dfci` transcrit (noyau
   Rust `dfci_scan`), spec 006 réécrite, 6 classes de défendabilité,
   lance à 0 m d’écart médian.
+- **`v1.4.0` posée** (2026-07-18) : **source du réseau DFCI**. Le flag
+  `dfci` (`CL_DFCI`), source du camion DFCI laissée vide depuis la phase
+  1, est alimenté par
+  [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+  — réseau OSM `ref:FR:DFCI`
+  ([`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md),
+  Voie A) puis repli géométrique (piste traversante ≥ 10 m, ou
+  cul-de-sac + aire de retournement, Voie B). Câblé dans
+  `acquire_inputs(dfci = TRUE)`. Comble spec 010 §10.2.
 - **`v1.1.0` posée** (2026-07-16) : **optimisation de la hauteur des
   supports câble façon SEILAPLAN** (spec 013,
   `cable$methode_supports = "seilaplan"`) — graphe + Dijkstra de Bont &
@@ -450,6 +459,60 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-18 — Release v1.5.0 : MNT LIDAR HD fin→agrégé + hotfix build (checks rouges de v1.4.0)
+
+Release **mineure `v1.5.0`**.
+[`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+télécharge la couche primaire (MNT LIDAR HD) à une résolution **fine**
+(`res_lidar_m`, défaut 1 m) sur l’emprise → `lidar_mnt_aoi_buffer.tif`,
+puis l’**agrège** (moyenne, facteur `res_m/res_lidar_m`) vers le MNT de
+travail à `res_m`. Le 5 m est ainsi dérivé proprement d’un MNT fin
+plutôt que demandé directement au WMS (pyramide plus grossière). Replis
+HIGHRES/RGE ALTI inchangés (direct à `res_m`). Nouveau `res_lidar_m` sur
+[`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)/[`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md).
+**NB** : décision utilisateur — on **reste sur le téléchargement WMS**
+du LIDAR HD MNT, **pas** de dalles brutes (idée initiale abandonnée).
+
+**Hotfix build embarqué** : v1.4.0 avait été taguée avec **R-CMD-check
+et pkgdown au rouge** (la protection de branche n’exige que
+`version-consistency`, d’où l’auto-merge). Causes : (1) littéraux de
+chaîne non-ASCII dans `R/dfci-source.R` (messages `cli`) → `\uXXXX` ;
+(2) `acquire_dfci`/`flag_dfci` absents de l’index pkgdown → ajoutés. Le
+cycle dev `1.4.0.9000` (PR \#85) est **sauté** au profit de `1.5.0`.
+`rcmdcheck --as-cran` local : 0 erreur, 0 warning de code (warnings
+restants = local uniquement : checkbashisms, download de crates Rust).
+`DESCRIPTION` = `NEWS.md` = `CITATION.cff` = `1.5.0`. Recommandation :
+rendre R-CMD-check + pkgdown **requis** en protection de branche.
+
+### 2026-07-18 — Release v1.4.0 : source du réseau DFCI (OSM `ref:FR:DFCI` + repli géométrique)
+
+Release **mineure `v1.4.0`** : le flag `dfci` (`CL_DFCI`), source du
+camion DFCI, était laissé vide depuis la phase 1 (spec 010 §10.2, « à
+alimenter via une source dédiée »). Il est désormais **posé
+automatiquement** par `acquire_inputs(..., dfci = TRUE)` via la nouvelle
+fonction exportée
+[`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md),
+en deux voies : - **Voie A** — réseau DFCI **OpenStreetMap** :
+[`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)
+récupère les pistes taguées `ref:FR:DFCI` (+ alias
+`ref:dfci`/`dfci_ref`), l’identifiant officiel d’une piste DFCI (wiki
+OSM *FR:France/DFCI et DECI*). Appariement au réseau BD TOPO par tampon
+(`tol_appariement_m`). - **Voie B (repli géométrique)** — si OSM ne
+couvre pas l’emprise : piste **traversante** (degrés d’extrémités ≥ 2/2
+sur graphe base-R, cf. Lot 17) et **emprise ≥ 10 m**, *ou*
+**cul-de-sac** (bout pendant deg 1) muni d’une **aire de retournement**
+(`highway=turning_circle`/`turning_loop`) à portée. Heuristique signalée
+(`cli_inform`).
+
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+conserve désormais la **largeur** BD TOPO (emprise), requise par le
+repli. Nouveau `R/dfci-source.R` + `tests/testthat/test-dfci-source.R`
+(Voie A, repli, degrés d’extrémités, chaîne flag → masque source du
+moteur DFCI). `test-acquire.R` rendu hermétique (mock
+`acquire_dfci`/`.acquire_retournements`) + test de propagation du flag.
+`DESCRIPTION` = `NEWS.md` = `CITATION.cff` = `1.4.0`. Après merge :
+tag + release auto, retour cycle dev `1.4.0.9000`.
 
 ### 2026-07-17 — Release v1.3.1 : fix MNT LIDAR (artefacts de pente en grille)
 

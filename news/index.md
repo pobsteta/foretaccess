@@ -1,5 +1,72 @@
 # Changelog
 
+## foretaccess 1.5.0 (2026-07-18)
+
+### Nouveautés
+
+- **MNT LIDAR HD téléchargé fin puis agrégé** —
+  [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+  récupère désormais la couche primaire (MNT LIDAR HD) à une résolution
+  **fine** (`res_lidar_m`, défaut 1 m) sur l’emprise →
+  `lidar_mnt_aoi_buffer.tif`, puis l’**agrège** (moyenne, facteur
+  `res_m / res_lidar_m`) vers le MNT de travail à `res_m`. Le 5 m est
+  ainsi dérivé proprement d’un MNT fin, au lieu d’être demandé
+  directement au WMS (qui échantillonne depuis une pyramide plus
+  grossière). Les couches de repli (HIGHRES / RGE ALTI, plus grossières)
+  restent téléchargées en direct à `res_m`. Nouveau paramètre
+  `res_lidar_m` sur
+  [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+  et
+  [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+  (passer `res_lidar_m >= res_m` désactive l’agrégation).
+
+### Corrections
+
+- **Build** — `R/dfci-source.R` contenait des caractères non-ASCII dans
+  des littéraux de chaîne (messages `cli`), faisant échouer
+  `R CMD check --as-cran` (`error_on = "warning"`) ; accents passés en
+  `\uXXXX`.
+  [`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)
+  et
+  [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+  sont ajoutés à l’index de référence pkgdown. (Ces deux checks n’étant
+  pas requis par la protection de branche, la 1.4.0 avait été publiée
+  malgré leur rouge.)
+
+## foretaccess 1.4.0 (2026-07-18)
+
+### Nouveautés
+
+- **Source du réseau DFCI** — le flag `dfci` (`CL_DFCI`), source du
+  camion DFCI (spec 006) laissé vide depuis la phase 1 « faute de source
+  dédiée » (spec 010 §10.2), est désormais **alimenté automatiquement**
+  par
+  [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+  (paramètre `dfci = TRUE`, défaut). Deux stratégies via la nouvelle
+  fonction exportée
+  [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+  :
+  - **Voie A — réseau DFCI OpenStreetMap** :
+    [`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)
+    récupère les pistes taguées `ref:FR:DFCI` (+ alias
+    `ref:dfci`/`dfci_ref`), l’identifiant officiel d’une piste DFCI
+    (wiki OSM *FR:France/DFCI et DECI*). Les tronçons de desserte
+    coïncidant (à tolérance près) sont flaggés.
+  - **Voie B — repli géométrique** (si OSM ne couvre pas l’emprise) : on
+    retient les pistes soit **traversantes** et d’emprise ≥ 10 m, soit
+    en **cul-de-sac muni d’une aire de retournement**
+    (`highway=turning_circle`/`turning_loop`, à portée du bout pendant).
+    Heuristique explicitement signalée (faux positifs possibles).
+- [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+  conserve désormais la **largeur** (emprise) BD TOPO, requise par le
+  critère d’emprise du repli.
+- Les seuils DFCI d’acquisition sont **pilotables via
+  [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)**
+  (bloc `dfci` : `tol_appariement_m`, `emprise_min_m`,
+  `rayon_retournement_m`) et transmis par
+  `acquire_inputs(..., config = )` à
+  [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md).
+
 ## foretaccess 1.3.1 (2026-07-17)
 
 ### Corrections

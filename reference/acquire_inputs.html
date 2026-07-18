@@ -17,7 +17,7 @@ sont déclarés dans inst/datasources/&amp;lt;pays&amp;gt;.json, jamais codés e
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,10 +68,13 @@ sont déclarés dans <code>inst/datasources/&lt;pays&gt;.json</code>, jamais cod
 <span>  sources <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mnt"</span>, <span class="st">"desserte"</span>, <span class="st">"foret"</span>, <span class="st">"obstacles"</span>, <span class="st">"cadastre"</span><span class="op">)</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  res_m <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  res_lidar_m <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  buffer_m <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  country <span class="op">=</span> <span class="st">"FR"</span></span>
+<span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
+<span>  dfci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  config <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +100,11 @@ polygonal. <strong>Doit porter un CRS</strong> (règle stricte du projet).</p></
 <dd><p>Résolution du MNT (m). Défaut 5.</p></dd>
 
 
+<dt id="arg-res-lidar-m">res_lidar_m<a class="anchor" aria-label="anchor" href="#arg-res-lidar-m"></a></dt>
+<dd><p>Résolution fine (m) de téléchargement du MNT LIDAR HD,
+agrégée à <code>res_m</code> (cf. <code><a href="acquire_mnt.html">acquire_mnt()</a></code>). Défaut 1.</p></dd>
+
+
 <dt id="arg-crs">crs<a class="anchor" aria-label="anchor" href="#arg-crs"></a></dt>
 <dd><p>Code EPSG de sortie. Défaut 2154.</p></dd>
 
@@ -111,6 +119,18 @@ polygonal. <strong>Doit porter un CRS</strong> (règle stricte du projet).</p></
 
 <dt id="arg-country">country<a class="anchor" aria-label="anchor" href="#arg-country"></a></dt>
 <dd><p>Code pays ISO. Défaut <code>"FR"</code>.</p></dd>
+
+
+<dt id="arg-dfci">dfci<a class="anchor" aria-label="anchor" href="#arg-dfci"></a></dt>
+<dd><p>Alimenter le flag DFCI (<code>CL_DFCI</code>) sur la desserte, source du camion
+DFCI (spec 006) : réseau OSM <code>ref:FR:DFCI</code> (<code><a href="acquire_dfci.html">acquire_dfci()</a></code>), avec repli
+géométrique (<code><a href="flag_dfci.html">flag_dfci()</a></code>) si OSM ne rend rien. Défaut <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>
+<dd><p>Objet <code><a href="foretaccess_config.html">foretaccess_config()</a></code> fournissant les seuils DFCI
+(<code>dfci$tol_appariement_m</code>, <code>emprise_min_m</code>, <code>rayon_retournement_m</code>) passés à
+<code><a href="flag_dfci.html">flag_dfci()</a></code>. Défaut <code>NULL</code> (seuils par défaut).</p></dd>
 
 </dl></div>
     <div class="section level2">

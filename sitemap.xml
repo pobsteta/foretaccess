@@ -15,6 +15,7 @@
 <url><loc>https://pobsteta.github.io/foretaccess/news/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_cadastre.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_desserte.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_dfci.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_foret.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_inputs.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/acquire_mnt.html</loc></url>
@@ -53,6 +54,7 @@
 <url><loc>https://pobsteta.github.io/foretaccess/reference/dfci_scan.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/distance_treuillage_max.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/fenetre_tuile.html</loc></url>
+<url><loc>https://pobsteta.github.io/foretaccess/reference/flag_dfci.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess-package.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/foretaccess_config.html</loc></url>
 <url><loc>https://pobsteta.github.io/foretaccess/reference/get_country_config.html</loc></url>

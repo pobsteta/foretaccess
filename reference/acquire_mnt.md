@@ -11,7 +11,8 @@ acquire_mnt(
   crs = 2154,
   cache_dir = tempdir(),
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  res_lidar_m = 1
 )
 ```
 
@@ -40,6 +41,13 @@ acquire_mnt(
 - country:
 
   Code pays ISO. Défaut `"FR"`.
+
+- res_lidar_m:
+
+  Résolution fine (m) de téléchargement du **MNT LIDAR HD** (couche
+  primaire) sur l'emprise, agrégée ensuite à `res_m`. Défaut 1. Doit
+  diviser `res_m` (ex. 1 → 5). Passer `res_lidar_m >= res_m` désactive
+  l'agrégation (téléchargement direct à `res_m`).
 
 ## Value
 

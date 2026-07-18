@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,8 @@
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  country <span class="op">=</span> <span class="st">"FR"</span></span>
+<span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
+<span>  res_lidar_m <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -84,6 +85,13 @@
 
 <dt id="arg-country">country<a class="anchor" aria-label="anchor" href="#arg-country"></a></dt>
 <dd><p>Code pays ISO. Défaut <code>"FR"</code>.</p></dd>
+
+
+<dt id="arg-res-lidar-m">res_lidar_m<a class="anchor" aria-label="anchor" href="#arg-res-lidar-m"></a></dt>
+<dd><p>Résolution fine (m) de téléchargement du <strong>MNT LIDAR HD</strong>
+(couche primaire) sur l'emprise, agrégée ensuite à <code>res_m</code>. Défaut 1. Doit
+diviser <code>res_m</code> (ex. 1 → 5). Passer <code>res_lidar_m &gt;= res_m</code> désactive
+l'agrégation (téléchargement direct à <code>res_m</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

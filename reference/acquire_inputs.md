@@ -17,10 +17,13 @@ acquire_inputs(
   sources = c("mnt", "desserte", "foret", "obstacles", "cadastre"),
   cache_dir = tempdir(),
   res_m = 5,
+  res_lidar_m = 1,
   crs = 2154,
   buffer_m = 100,
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  dfci = TRUE,
+  config = NULL
 )
 ```
 
@@ -45,6 +48,13 @@ acquire_inputs(
 
   Résolution du MNT (m). Défaut 5.
 
+- res_lidar_m:
+
+  Résolution fine (m) de téléchargement du MNT LIDAR HD, agrégée à
+  `res_m` (cf.
+  [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)).
+  Défaut 1.
+
 - crs:
 
   Code EPSG de sortie. Défaut 2154.
@@ -60,6 +70,24 @@ acquire_inputs(
 - country:
 
   Code pays ISO. Défaut `"FR"`.
+
+- dfci:
+
+  Alimenter le flag DFCI (`CL_DFCI`) sur la desserte, source du camion
+  DFCI (spec 006) : réseau OSM `ref:FR:DFCI`
+  ([`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)),
+  avec repli géométrique
+  ([`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md))
+  si OSM ne rend rien. Défaut `TRUE`.
+
+- config:
+
+  Objet
+  [`foretaccess_config()`](https://pobsteta.github.io/foretaccess/reference/foretaccess_config.md)
+  fournissant les seuils DFCI (`dfci$tol_appariement_m`,
+  `emprise_min_m`, `rayon_retournement_m`) passés à
+  [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md).
+  Défaut `NULL` (seuils par défaut).
 
 ## Value
 

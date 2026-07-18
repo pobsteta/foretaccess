@@ -368,6 +368,10 @@ OpenStreetMap).
   : Acquiert le parcellaire cadastral (IGN WFS, optionnel)
 - [`acquire_obstacles()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles.md)
   : Acquiert les obstacles depuis OpenStreetMap
+- [`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)
+  : Acquiert le réseau DFCI depuis OpenStreetMap
+- [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+  : Pose le flag DFCI (CL_DFCI) sur la desserte
 - [`datasources`](https://pobsteta.github.io/foretaccess/reference/datasources.md)
   : Sources de données géographiques par pays (config-driven)
 - [`get_country_config()`](https://pobsteta.github.io/foretaccess/reference/get_country_config.md)
