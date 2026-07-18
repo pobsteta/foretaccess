@@ -98,6 +98,8 @@ reference:
   - acquire_foret
   - acquire_cadastre
   - acquire_obstacles
+  - acquire_dfci
+  - flag_dfci
   - datasources
   - get_country_config
   - get_data_source
