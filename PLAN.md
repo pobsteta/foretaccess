@@ -346,6 +346,25 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-18 — Release v1.5.0 : MNT LIDAR HD fin→agrégé + hotfix build (checks rouges de v1.4.0)
+
+Release **mineure `v1.5.0`**. `acquire_mnt()` télécharge la couche primaire (MNT LIDAR HD) à
+une résolution **fine** (`res_lidar_m`, défaut 1 m) sur l'emprise → `lidar_mnt_aoi_buffer.tif`,
+puis l'**agrège** (moyenne, facteur `res_m/res_lidar_m`) vers le MNT de travail à `res_m`. Le
+5 m est ainsi dérivé proprement d'un MNT fin plutôt que demandé directement au WMS (pyramide
+plus grossière). Replis HIGHRES/RGE ALTI inchangés (direct à `res_m`). Nouveau `res_lidar_m`
+sur `acquire_mnt()`/`acquire_inputs()`. **NB** : décision utilisateur — on **reste sur le
+téléchargement WMS** du LIDAR HD MNT, **pas** de dalles brutes (idée initiale abandonnée).
+
+**Hotfix build embarqué** : v1.4.0 avait été taguée avec **R-CMD-check et pkgdown au rouge**
+(la protection de branche n'exige que `version-consistency`, d'où l'auto-merge). Causes : (1)
+littéraux de chaîne non-ASCII dans `R/dfci-source.R` (messages `cli`) → `\uXXXX` ; (2)
+`acquire_dfci`/`flag_dfci` absents de l'index pkgdown → ajoutés. Le cycle dev `1.4.0.9000`
+(PR #85) est **sauté** au profit de `1.5.0`. `rcmdcheck --as-cran` local : 0 erreur, 0 warning
+de code (warnings restants = local uniquement : checkbashisms, download de crates Rust).
+`DESCRIPTION` = `NEWS.md` = `CITATION.cff` = `1.5.0`. Recommandation : rendre R-CMD-check +
+pkgdown **requis** en protection de branche.
+
 ### 2026-07-18 — Release v1.4.0 : source du réseau DFCI (OSM `ref:FR:DFCI` + repli géométrique)
 
 Release **mineure `v1.4.0`** : le flag `dfci` (`CL_DFCI`), source du camion DFCI, était laissé
