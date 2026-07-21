@@ -232,6 +232,15 @@
   **Lot 6 (DFCI)** confronté à l’oracle (12a.4, 99,87 %). Suite possible
   : dettes câble (hauteur de fixation, sélection de lignes tamponnées)
   et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en `1.x`.
+- **`v1.6.0` posée** (2026-07-21) :
+  **[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)**.
+  Le moteur câble exigeait une couche de places de dépôt
+  (`potentiel_cable(departs = )`) sans aider à la produire ;
+  [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+  en dérive des **candidates** de la desserte (accès camion → demi-tour
+  → planéité → proximité de la forêt, puis éclaircissement à
+  `espacement_min_m`). Explicitement heuristique : une place de dépôt
+  reste un fait de terrain, et Sylvaccess la traite en donnée d’entrée.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation.
   Le portage de `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été
   **tenté puis abandonné le 16/07** (bugué, ~20× plus lent, code
@@ -459,6 +468,61 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-21 — `v1.6.0` : `places_depot()`, candidates de places de dépôt pour le câble
+
+Le moteur câble attend une **couche de départ dédiée**
+(`potentiel_cable(departs = )`, équivalent du `c_file_departure` de
+Sylvaccess, filtré sur l’attribut `CABLE` — 2 tronçons sur 125 à
+ColduPre). Sans elle, le balayage part de **toute** la desserte :
+couverture massivement optimiste (une piste n’accueille pas un
+câble-mât) et coût proportionnel au nombre de cellules de départ.
+Jusqu’ici le package **exigeait** cette couche sans aider à la produire.
+
+`places_depot(desserte, mnt, foret, retournements, ...)` (`R/depot.R`)
+en dérive des **candidates**, par des critères vérifiables sur la donnée
+disponible, dans l’ordre :
+
+1.  **Accès camion** — largeur mesurée (`largeur` /
+    `largeur_de_chaussee`) ≥ `largeur_min_m` ; à défaut le flag `dfci`
+    de
+    [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+    ; à défaut la `classe` (`route`/`dfci`). La preuve la plus forte
+    prime. Sans aucun de ces attributs, le critère est
+    **indéterminable** : tout passe, et la fonction le dit.
+2.  **Demi-tour** — traversante (deux extrémités raccordées) ou
+    cul-de-sac muni d’une aire de retournement. Appliqué **uniquement**
+    si une couche `retournements` est fournie : absence de preuve n’est
+    pas preuve d’absence. Réutilise `.degres_extremites()` /
+    `.retournement_a_portee()` de
+    [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+    (pas de duplication).
+3.  **Plateforme** — pente du terrain au point candidat ≤
+    `pente_max_pct` (Horn,
+    [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)).
+    Pente indéterminée (bord du MNT) → écartée.
+4.  **Utilité** — à moins de `distance_foret_max_m` de la forêt, si
+    `foret` est fournie.
+
+Les survivants sont **éclaircis** à `espacement_min_m` (glouton, la plus
+plate d’abord) : deux places voisines balaient deux fois la même forêt
+pour deux fois le prix. Sortie : un `sf` POINT portant le champ `cable`
+(lu tel quel par
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)),
+ou les tronçons porteurs (`sortie = "troncons"`). Garde-fous : CRS
+identique au MNT sans reprojection implicite (ADR-004), erreur
+**actionnable** (quel critère a tout éliminé, quel paramètre assouplir)
+plutôt qu’une couche vide.
+
+**Ce que la fonction n’est pas** : un relevé. Le message de sortie
+l’annonce explicitement — une place de dépôt exige une plateforme et un
+accès grumier qui se valident sur le terrain. Sylvaccess la traite en
+**donnée d’entrée**, et c’est le bon statut ;
+[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+ne comble que le cas où l’on n’en dispose d’aucune. 24 tests
+(`test-depot.R`), un par critère plus l’enchaînement de bout en bout
+dans
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md).
 
 ### 2026-07-18 — Release v1.5.0 : MNT LIDAR HD fin→agrégé + hotfix build (checks rouges de v1.4.0)
 

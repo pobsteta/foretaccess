@@ -125,3 +125,14 @@ alors tres **optimiste** (on desservirait de la foret depuis des pistes
 incapables d'accueillir un cable) et le balayage, proportionnel au
 nombre de departs, devient tres long. Ce repli n'existe que pour les cas
 ou l'on ne dispose d'aucune couche de places de depot.
+
+A defaut d'un releve,
+[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+derive des **candidates** de la desserte (acces camion, demi-tour,
+planeite, proximite de la foret) et rend une couche directement
+consommable ici.
+
+## See also
+
+[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+pour produire la couche `departs`.

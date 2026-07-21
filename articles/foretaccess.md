@@ -121,6 +121,40 @@ faisables** (noyau mécanique en Rust).
 [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
 en retient un sous-ensemble non redondant maximisant la couverture.
 
+Une ligne ne part pas de n’importe où : il lui faut une **place de
+dépôt** (plateforme + accès grumier). C’est une entrée à part entière,
+`potentiel_cable(departs = )` ; sans elle le balayage part de *toute* la
+desserte et la couverture devient très optimiste. À défaut d’un relevé,
+[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+en dérive des candidates, à passer en `departs` :
+
+``` r
+
+places <- places_depot(
+  desserte = file.path(toy, "desserte.gpkg"),
+  mnt      = file.path(toy, "mnt.tif"),
+  foret    = file.path(toy, "foret.gpkg"),
+  pente_max_pct = 25,     # le MNT jouet est un plan a 20 % : aucune plateforme sous 15 %
+  espacement_min_m = 100
+)
+#> ℹ Aucune couche `retournements` : le critere de demi-tour n'est pas applique.
+#> ✔ 3 places de depot candidates sur 1/3 troncons.
+#> ! Candidates heuristiques, pas un releve : une place de depot exige une
+#>   plateforme et un acces grumier a valider sur le terrain.
+#> ℹ A defaut, `potentiel_cable()` part de TOUTE la desserte -- couverture
+#>   beaucoup trop optimiste.
+places[, c("troncon", "acces", "pente_pct")]
+#> Simple feature collection with 3 features and 3 fields
+#> Geometry type: POINT
+#> Dimension:     XY
+#> Bounding box:  xmin: 41.66667 ymin: 41.66667 xmax: 208.3333 ymax: 208.3333
+#> Projected CRS: RGF93 v1 / Lambert-93
+#>   troncon  acces pente_pct                  geometry
+#> 3       3 classe        20 POINT (41.66667 41.66667)
+#> 4       3 classe        20           POINT (125 125)
+#> 5       3 classe        20 POINT (208.3333 208.3333)
+```
+
 ``` r
 
 cab <- potentiel_cable(pre)

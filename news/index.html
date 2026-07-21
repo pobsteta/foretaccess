@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.6.0" id="foretaccess-160-2026-07-21">foretaccess 1.6.0 (2026-07-21)<a class="anchor" aria-label="anchor" href="#foretaccess-160-2026-07-21"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-6-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-6-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/places_depot.html">places_depot()</a></code> — candidates de places de dépôt pour le câble.</strong> Le moteur câble attend une couche de départ dédiée (<code>potentiel_cable(departs = )</code>, l’équivalent du <code>c_file_departure</code> de Sylvaccess) : sans elle, le balayage part de <strong>toute</strong> la desserte, ce qui rend la couverture massivement optimiste (une piste n’accueille pas un câble-mât) et le calcul très long. Quand aucun relevé n’existe, <code><a href="../reference/places_depot.html">places_depot()</a></code> en dérive des <strong>candidates</strong> de la desserte, par quatre critères vérifiables sur la donnée : <strong>accès camion</strong> (largeur mesurée, puis flag <code>dfci</code> de <code><a href="../reference/flag_dfci.html">flag_dfci()</a></code>, puis <code>classe</code> — le premier attribut disponible décide), <strong>demi-tour</strong> (traversante ou cul-de-sac muni d’une aire de retournement, appliqué <em>uniquement</em> si une couche <code>retournements</code> est fournie), <strong>planéité</strong> de la plateforme (pente <code>&lt;= pente_max_pct</code>) et <strong>proximité de la forêt</strong>. Les points retenus sont <strong>éclaircis</strong> à <code>espacement_min_m</code> (la plus plate d’abord), le coût du balayage câble étant proportionnel au nombre de cellules de départ. Sortie : un <code>sf</code> portant le champ <code>cable</code>, à passer directement à <code>potentiel_cable(departs = )</code>, ou les tronçons porteurs (<code>sortie = "troncons"</code>). Le résultat est explicitement annoncé comme <strong>heuristique</strong> : une place de dépôt reste un fait de terrain.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.5.0" id="foretaccess-150-2026-07-18">foretaccess 1.5.0 (2026-07-18)<a class="anchor" aria-label="anchor" href="#foretaccess-150-2026-07-18"></a></h2>
 <div class="section level3">

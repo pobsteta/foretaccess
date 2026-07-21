@@ -99,6 +99,9 @@ Potentiel de lignes (noyau Rust) et sélection multicritère.
 - [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
   : Potentiel d'accessibilite par cable-mat (Lot 4d)
 
+- [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+  : Derive candidate cable landings from a road network
+
 - [`selectionner_lignes()`](https://pobsteta.github.io/foretaccess/reference/selectionner_lignes.md)
   : Selection multicritere des lignes cable (Lot 5)
 

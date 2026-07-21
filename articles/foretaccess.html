@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -178,7 +178,37 @@ limites).</p>
 faisables</strong> (noyau mécanique en Rust).
 <code><a href="../reference/selectionner_lignes.html">selectionner_lignes()</a></code> en retient un sous-ensemble non
 redondant maximisant la couverture.</p>
+<p>Une ligne ne part pas de n’importe où : il lui faut une <strong>place
+de dépôt</strong> (plateforme + accès grumier). C’est une entrée à part
+entière, <code>potentiel_cable(departs = )</code> ; sans elle le
+balayage part de <em>toute</em> la desserte et la couverture devient
+très optimiste. À défaut d’un relevé, <code><a href="../reference/places_depot.html">places_depot()</a></code> en
+dérive des candidates, à passer en <code>departs</code> :</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">places</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/places_depot.html">places_depot</a></span><span class="op">(</span></span>
+<span>  desserte <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"desserte.gpkg"</span><span class="op">)</span>,</span>
+<span>  mnt      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"mnt.tif"</span><span class="op">)</span>,</span>
+<span>  foret    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"foret.gpkg"</span><span class="op">)</span>,</span>
+<span>  pente_max_pct <span class="op">=</span> <span class="fl">25</span>,     <span class="co"># le MNT jouet est un plan a 20 % : aucune plateforme sous 15 %</span></span>
+<span>  espacement_min_m <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Aucune couche `retournements` : le critere de demi-tour n'est pas applique.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> 3 places de depot candidates sur 1/3 troncons.</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Candidates heuristiques, pas un releve : une place de depot exige une</span></span>
+<span><span class="co">#&gt;   plateforme et un acces grumier a valider sur le terrain.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> A defaut, `potentiel_cable()` part de TOUTE la desserte -- couverture</span></span>
+<span><span class="co">#&gt;   beaucoup trop optimiste.</span></span>
+<span><span class="va">places</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"troncon"</span>, <span class="st">"acces"</span>, <span class="st">"pente_pct"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; Simple feature collection with 3 features and 3 fields</span></span>
+<span><span class="co">#&gt; Geometry type: POINT</span></span>
+<span><span class="co">#&gt; Dimension:     XY</span></span>
+<span><span class="co">#&gt; Bounding box:  xmin: 41.66667 ymin: 41.66667 xmax: 208.3333 ymax: 208.3333</span></span>
+<span><span class="co">#&gt; Projected CRS: RGF93 v1 / Lambert-93</span></span>
+<span><span class="co">#&gt;   troncon  acces pente_pct                  geometry</span></span>
+<span><span class="co">#&gt; 3       3 classe        20 POINT (41.66667 41.66667)</span></span>
+<span><span class="co">#&gt; 4       3 classe        20           POINT (125 125)</span></span>
+<span><span class="co">#&gt; 5       3 classe        20 POINT (208.3333 208.3333)</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/potentiel_cable.html">potentiel_cable</a></span><span class="op">(</span><span class="va">pre</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Aucune couche de places de depot (`departs`) : le balayage part des 195</span></span>
 <span><span class="co">#&gt;   cellules de desserte.</span></span>
@@ -197,7 +227,7 @@ redondant maximisant la couverture.</p>
 <p><code><a href="../reference/agreger_zones.html">agreger_zones()</a></code> agrège n’importe quel raster
 d’accessibilité en surfaces (et volumes, si fournis) <strong>par
 zone</strong> — massif, parcelle, commune — et par classe.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Deux zones : moitie ouest / moitie est de l'emprise.</span></span>
 <span><span class="va">e</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/ext.html" class="external-link">ext</a></span><span class="op">(</span><span class="va">pre</span><span class="op">$</span><span class="va">mnt</span><span class="op">)</span></span>
 <span><span class="va">xm</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">e</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="va">e</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span></span>
@@ -229,7 +259,7 @@ zone</strong> — massif, parcelle, commune — et par classe.</p>
 avec deux backends interchangeables : <strong>GeoPackage</strong> et
 <strong>PostGIS</strong>. L’écriture est idempotente ; côté PostGIS, un
 index spatial GiST est créé automatiquement.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gpkg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".gpkg"</span><span class="op">)</span></span>
 <span><span class="va">sb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/storage_gpkg.html">storage_gpkg</a></span><span class="op">(</span><span class="va">gpkg</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/sb_write_layer.html">sb_write_layer</a></span><span class="op">(</span><span class="va">sb</span>, <span class="st">"lignes_cable"</span>, <span class="va">sel</span><span class="op">$</span><span class="va">lignes</span><span class="op">)</span></span>
@@ -237,7 +267,7 @@ index spatial GiST est créé automatiquement.</p>
 <span><span class="fu"><a href="../reference/sb_list_layers.html">sb_list_layers</a></span><span class="op">(</span><span class="va">sb</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "lignes_cable"      "agregation_massif"</span></span></code></pre></div>
 <p>Pour PostGIS, on remplace le backend sans changer le reste :</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">conn</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RPostgres</span><span class="fu">::</span><span class="fu"><a href="https://rpostgres.r-dbi.org/reference/Postgres.html" class="external-link">Postgres</a></span><span class="op">(</span><span class="op">)</span>, dbname <span class="op">=</span> <span class="st">"foretaccess"</span><span class="op">)</span></span>
 <span><span class="va">sb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/storage_postgis.html">storage_postgis</a></span><span class="op">(</span><span class="va">conn</span>, schema <span class="op">=</span> <span class="st">"run_2026"</span><span class="op">)</span>  <span class="co"># un schema par run/massif</span></span>
 <span><span class="fu"><a href="../reference/sb_write_layer.html">sb_write_layer</a></span><span class="op">(</span><span class="va">sb</span>, <span class="st">"agregation_massif"</span>, <span class="va">agg</span><span class="op">)</span>       <span class="co"># + index GiST</span></span></code></pre></div>
