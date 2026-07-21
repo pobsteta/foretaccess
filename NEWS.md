@@ -1,3 +1,24 @@
+# foretaccess 1.6.0 (2026-07-21)
+
+## Nouveautés
+
+- **`places_depot()` — candidates de places de dépôt pour le câble.** Le moteur
+  câble attend une couche de départ dédiée (`potentiel_cable(departs = )`, l'équivalent
+  du `c_file_departure` de Sylvaccess) : sans elle, le balayage part de **toute** la
+  desserte, ce qui rend la couverture massivement optimiste (une piste n'accueille pas
+  un câble-mât) et le calcul très long. Quand aucun relevé n'existe, `places_depot()`
+  en dérive des **candidates** de la desserte, par quatre critères vérifiables sur la
+  donnée : **accès camion** (largeur mesurée, puis flag `dfci` de `flag_dfci()`, puis
+  `classe` — le premier attribut disponible décide), **demi-tour** (traversante ou
+  cul-de-sac muni d'une aire de retournement, appliqué *uniquement* si une couche
+  `retournements` est fournie), **planéité** de la plateforme (pente `<= pente_max_pct`)
+  et **proximité de la forêt**. Les points retenus sont **éclaircis** à
+  `espacement_min_m` (la plus plate d'abord), le coût du balayage câble étant
+  proportionnel au nombre de cellules de départ. Sortie : un `sf` portant le champ
+  `cable`, à passer directement à `potentiel_cable(departs = )`, ou les tronçons
+  porteurs (`sortie = "troncons"`). Le résultat est explicitement annoncé comme
+  **heuristique** : une place de dépôt reste un fait de terrain.
+
 # foretaccess 1.5.0 (2026-07-18)
 
 ## Nouveautés
