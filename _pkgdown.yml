@@ -64,6 +64,7 @@ reference:
   desc: Potentiel de lignes (noyau Rust) et sélection multicritère.
   contents:
   - potentiel_cable
+  - places_depot
   - selectionner_lignes
   - bornes_pente_cable
   - precision_cable

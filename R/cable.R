@@ -60,6 +60,10 @@
 #' devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
 #' d'aucune couche de places de depot.
 #'
+#' A defaut d'un releve, [places_depot()] derive des **candidates** de la desserte
+#' (acces camion, demi-tour, planeite, proximite de la foret) et rend une couche
+#' directement consommable ici.
+#'
 #' @param pre Objet `foretaccess_preprocessing` (voir [preprocess()]).
 #' @param config Objet `foretaccess_config`. Les parametres cable (garde au sol,
 #'   materiel, geometrie) vivent dans `config$cable`.
@@ -79,6 +83,7 @@
 #'   `depart`, `azimut`, `longueur_m`, `surface_ha`, `sens`, `supports`,
 #'   `volume_m3`, `ipc` -- une par (depart, azimut) faisable, pour la selection
 #'   du Lot 5), `recap`, `grid`, `config`, `fichiers`.
+#' @seealso [places_depot()] pour produire la couche `departs`.
 #' @export
 potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
                             write_dir = NULL, bord = NULL) {

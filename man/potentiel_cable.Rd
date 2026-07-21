@@ -106,5 +106,12 @@ tres \strong{optimiste} (on desservirait de la foret depuis des pistes incapable
 d'accueillir un cable) et le balayage, proportionnel au nombre de departs,
 devient tres long. Ce repli n'existe que pour les cas ou l'on ne dispose
 d'aucune couche de places de depot.
+
+A defaut d'un releve, \code{\link[=places_depot]{places_depot()}} derive des \strong{candidates} de la desserte
+(acces camion, demi-tour, planeite, proximite de la foret) et rend une couche
+directement consommable ici.
 }
 
+\seealso{
+\code{\link[=places_depot]{places_depot()}} pour produire la couche \code{departs}.
+}

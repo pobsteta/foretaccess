@@ -89,6 +89,23 @@ Le balayage 360°/pixel produit l'ensemble des **lignes de câble faisables** (n
 mécanique en Rust). `selectionner_lignes()` en retient un sous-ensemble non
 redondant maximisant la couverture.
 
+Une ligne ne part pas de n'importe où : il lui faut une **place de dépôt**
+(plateforme + accès grumier). C'est une entrée à part entière,
+`potentiel_cable(departs = )` ; sans elle le balayage part de *toute* la desserte
+et la couverture devient très optimiste. À défaut d'un relevé, `places_depot()`
+en dérive des candidates, à passer en `departs` :
+
+```{r depot}
+places <- places_depot(
+  desserte = file.path(toy, "desserte.gpkg"),
+  mnt      = file.path(toy, "mnt.tif"),
+  foret    = file.path(toy, "foret.gpkg"),
+  pente_max_pct = 25,     # le MNT jouet est un plan a 20 % : aucune plateforme sous 15 %
+  espacement_min_m = 100
+)
+places[, c("troncon", "acces", "pente_pct")]
+```
+
 ```{r cable}
 cab <- potentiel_cable(pre)
 nrow(cab$lignes)          # lignes candidates
