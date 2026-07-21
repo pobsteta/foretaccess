@@ -7,6 +7,23 @@
 # des CANDIDATES a partir des criteres qu'on sait verifier sur la donnee
 # disponible (acces camion, planeite, demi-tour, proximite de la foret), et le
 # dit explicitement. Une place de depot reelle se valide sur le terrain.
+#
+# CONFRONTATION A L'ORACLE (ColduPre, `CABLE != 0` = 2 troncons sur 125). La
+# premiere version (v1.6.0) n'en retrouvait AUCUN, a tous les seuils. Deux
+# erreurs de modele, corrigees en v1.6.1 :
+#
+#  - la PLANEITE etait mesuree par la pente omnidirectionnelle du MNT au point.
+#    A 5 m de resolution la banquette d'une route (4-5 m) n'est PAS resolue :
+#    on mesurait le VERSANT, pas la plateforme. Les 2 vraies places sont sur des
+#    versants a 24 % et 65 % -- la seconde est le troncon le plus raide du
+#    reseau. Filtrer la-dessus elimine la montagne, c'est-a-dire le terrain ou
+#    l'on cable. On mesure desormais la pente EN LONG locale (denivele le long
+#    de la route sur `fenetre_plateforme_m`) : une route traverse un versant a
+#    65 % avec 1 % en long. Les 2 vraies places y sont a 1,1 % et 3,2 %.
+#  - l'ACCES rejetait les `classe == "piste"` et les `dfci == 0`. Or l'une des
+#    deux vraies places est une piste forestiere non DFCI. Ces attributs ne
+#    discriminent pas : ils informent desormais (colonne `acces`) mais ne
+#    rejettent plus. Seule une largeur MESUREE et insuffisante rejette.
 
 #' Derive candidate cable landings from a road network
 #'
@@ -22,26 +39,58 @@
 #'
 #' @section Criteres:
 #' A road segment yields candidate landings when it passes, in order:
-#' 1. **Truck access** -- carriageway width `>= largeur_min_m` where a width
-#'    attribute is available (`largeur`, `largeur_de_chaussee`); failing that,
-#'    the `dfci` flag of [flag_dfci()]; failing that, a `classe` of `"route"` or
-#'    `"dfci"`. A network carrying none of those attributes cannot be filtered on
-#'    access at all: everything passes, and the function says so.
+#' 1. **Truck access** -- a segment is rejected only on **hard evidence**: a
+#'    *measured* carriageway width (`largeur`, `largeur_de_chaussee`) below
+#'    `largeur_min_m`. The `dfci` flag of [flag_dfci()] and the `classe` are
+#'    recorded in the `acces` column but never reject: on the only oracle
+#'    available they do not discriminate (see *Validation*).
 #' 2. **Turn-around** -- only when `retournements` is supplied: the segment is
 #'    either a through-route (both ends connected to the network) or a dead-end
 #'    with a turning area within `rayon_retournement_m` of its dangling tip.
 #'    Without that layer the criterion is **not** applied -- absence of evidence
 #'    is not evidence of absence.
-#' 3. **Platform** -- terrain slope at the candidate point `<= pente_max_pct`
-#'    (Horn, [calculer_terrain()]). A point where slope is undefined (MNT border)
-#'    is dropped.
+#' 3. **Platform** -- **longitudinal grade** of the road at the candidate point
+#'    `<= pente_max_pct`, measured over `fenetre_plateforme_m` along the
+#'    centreline. Deliberately *not* the terrain slope: at 5 m resolution a road
+#'    bench is not resolved by the DTM, so terrain slope measures the hillside,
+#'    not the platform -- and would eliminate exactly the steep ground where
+#'    cable yarding is used.
 #' 4. **Usefulness** -- only when `foret` is supplied: within
 #'    `distance_foret_max_m` of forest. A landing with no wood to reach is not
 #'    one.
 #'
-#' Surviving points are then **thinned** to `espacement_min_m`, flattest first:
-#' the balance of `potentiel_cable()` is proportional to the number of departure
-#' cells, and two landings 20 m apart sweep the same forest twice.
+#' Sampling puts one candidate every `espacement_min_m` **along each segment**
+#' (at least one per segment, whatever its length): the balance of
+#' [potentiel_cable()] is proportional to the number of departure cells, so a
+#' 2 km road must not yield 400 of them. The spacing is deliberately **not**
+#' enforced *between* segments: a greedy cross-segment thinning evicted both real
+#' ColduPre landings, each beaten by a flatter point 18 m and 93 m away on a
+#' neighbouring road. Recall matters more than tidiness in a pre-filter.
+#'
+#' @section Validation:
+#' Confronted with the only oracle available -- the Sylvaccess ColduPre test set,
+#' whose road network carries the surveyed `CABLE` attribute: **2 landings among
+#' 125 segments**. Both are retained (**recall 2/2**) at every threshold below,
+#' and `pente_max_pct` buys the reduction:
+#'
+#' | `pente_max_pct` | segments kept | recall | margin on the worst true landing |
+#' |---|---|---|---|
+#' | 4 % | 43/125 (34 %) | 2/2 | 0.6 pt |
+#' | **6 %** (default) | **54/125 (43 %)** | **2/2** | **2.6 pt** |
+#' | 8 % | 71/125 (57 %) | 2/2 | 4.6 pt |
+#' | 15 % | 104/125 (83 %) | 2/2 | 11.6 pt |
+#'
+#' Read the other column honestly: **precision is ~4 %**. This is a **coarse
+#' pre-filter** -- it halves the search space while keeping the real landings --
+#' **not** a substitute for a survey. The `CABLE` attribute encodes field
+#' knowledge the geometry does not carry; no threshold on this data isolates the
+#' two real landings. Use the output to *narrow* a field or photo-interpretation
+#' pass, not to feed [potentiel_cable()] blind.
+#'
+#' The default is calibrated on **two** landings. Treat it as an order of
+#' magnitude, and re-tune it on your own massif if you can.
+#'
+#' The bench is reproducible: `data-raw/oracle_places_depot.R`.
 #'
 #' @param desserte Road network: path to a vector file or an `sf` of lines.
 #' @param mnt Digital terrain model: `SpatRaster` or path. Must share the CRS of
@@ -49,11 +98,16 @@
 #' @param foret Forest: path or `sf` of polygons, or `NULL` (criterion 4 off).
 #' @param retournements Turning areas: path or `sf` of points, or `NULL`
 #'   (criterion 2 off).
-#' @param largeur_min_m Minimum carriageway width for a log truck (m).
-#' @param pente_max_pct Maximum terrain slope of the platform (%).
+#' @param largeur_min_m Minimum carriageway width for a log truck (m). Only ever
+#'   applied to a *measured* width; see criterion 1.
+#' @param pente_max_pct Maximum **longitudinal grade** of the road at the
+#'   platform (%), not terrain slope -- see criterion 3.
+#' @param fenetre_plateforme_m Length of road over which that grade is measured,
+#'   centred on the candidate point (m). Roughly the length a landing occupies.
 #' @param distance_foret_max_m Maximum distance to forest (m), used when `foret`
 #'   is supplied.
-#' @param espacement_min_m Minimum spacing between two landings (m).
+#' @param espacement_min_m Spacing between two candidates *along the same*
+#'   segment (m). At least one candidate per segment regardless.
 #' @param rayon_retournement_m Max distance dead-end tip <-> turning area (m),
 #'   used when `retournements` is supplied.
 #' @param sortie `"points"` (default) for the landings themselves, `"troncons"`
@@ -62,21 +116,19 @@
 #' @return An `sf` with a `cable` column (always `1L`, the field read by
 #'   [potentiel_cable()]): `POINT` when `sortie = "points"` (columns `id`,
 #'   `cable`, `troncon` -- the row of `desserte` it sits on --, `acces`,
-#'   `largeur_m`, `pente_pct`), `LINESTRING` when `sortie = "troncons"` (columns
-#'   `troncon`, `cable`, `acces`, `largeur_m`, `pente_pct`, `n_places`).
+#'   `largeur_m`, `pente_pct` -- the longitudinal grade), `LINESTRING` when
+#'   `sortie = "troncons"` (columns `troncon`, `cable`, `acces`, `largeur_m`,
+#'   `pente_pct`, `n_places`).
 #'
 #' @seealso [potentiel_cable()] (consumes the layer), [flag_dfci()] (feeds the
-#'   `dfci` flag used by criterion 1).
+#'   `dfci` flag reported by criterion 1).
 #' @export
 #' @examples
 #' toy <- system.file("extdata/toy", package = "foretaccess")
-#' # Le MNT jouet est un plan a 20 % : on releve le seuil de planeite en
-#' # consequence (aucune plateforme a 15 % sur ce terrain).
 #' places <- places_depot(
 #'   desserte = file.path(toy, "desserte.gpkg"),
 #'   mnt = file.path(toy, "mnt.tif"),
 #'   foret = file.path(toy, "foret.gpkg"),
-#'   pente_max_pct = 25,
 #'   espacement_min_m = 100
 #' )
 #' places
@@ -85,7 +137,8 @@ places_depot <- function(desserte,
                          foret = NULL,
                          retournements = NULL,
                          largeur_min_m = 4,
-                         pente_max_pct = 15,
+                         pente_max_pct = 6,
+                         fenetre_plateforme_m = 50,
                          distance_foret_max_m = 100,
                          espacement_min_m = 200,
                          rayon_retournement_m = 20,
@@ -93,6 +146,7 @@ places_depot <- function(desserte,
   sortie <- match.arg(sortie)
   checkmate::assert_number(largeur_min_m, lower = 0, finite = TRUE)
   checkmate::assert_number(pente_max_pct, lower = 0, finite = TRUE)
+  checkmate::assert_number(fenetre_plateforme_m, lower = 0, finite = TRUE)
   checkmate::assert_number(distance_foret_max_m, lower = 0, finite = TRUE)
   checkmate::assert_number(espacement_min_m, lower = 0, finite = TRUE)
   checkmate::assert_number(rayon_retournement_m, lower = 0, finite = TRUE)
@@ -123,11 +177,12 @@ places_depot <- function(desserte,
   }
 
   # --- 3. Plateforme : points candidats le long des troncons, puis pente ----
+  # La pente est celle de la ROUTE (en long), pas celle du versant : cf. l'entete
+  # du fichier, une banquette n'est pas resolue par un MNT a 5 m.
   pts <- .points_le_long(des, espacement_min_m)
-  pente <- as.numeric(terra::extract(
-    calculer_terrain(mnt)$slope_pct, terra::vect(pts)
-  )[, 2])
-  # Pente indeterminee (bord du MNT) : ecartee, on ne devine pas une plateforme.
+  pente <- .pente_en_long(pts, des, mnt, fenetre_plateforme_m)
+  # Pente indeterminee (bord du MNT, troncon degenere) : ecartee, on ne devine
+  # pas une plateforme.
   garde <- !is.na(pente) & pente <= pente_max_pct
   pts <- pts[garde, ]
   pts$pente_pct <- pente[garde]
@@ -142,9 +197,6 @@ places_depot <- function(desserte,
     .arreter_si_vide(pts, "proximite de la foret", "distance_foret_max_m")
   }
 
-  # --- 5. Espacement : la plateforme la plus plate d'abord ------------------
-  pts <- pts[.espacer(pts, espacement_min_m), ]
-
   pts$cable <- 1L
   pts$id <- seq_len(nrow(pts))
   pts <- pts[, c("id", "cable", "troncon", "acces", "largeur_m", "pente_pct")]
@@ -152,10 +204,11 @@ places_depot <- function(desserte,
   cli::cli_inform(c(
     "v" = "{nrow(pts)} place{?s} de depot candidate{?s} sur
            {length(unique(pts$troncon))}/{n_troncons} troncon{?s}.",
-    "!" = "Candidates heuristiques, pas un releve : une place de depot exige une
-           plateforme et un acces grumier a valider sur le terrain.",
-    "i" = "A defaut, {.fn potentiel_cable} part de TOUTE la desserte -- couverture
-           beaucoup trop optimiste."
+    "!" = "Pre-filtre grossier, pas un releve. Sur l'oracle ColduPre : les 2 vraies
+           places de depot sont retrouvees, mais parmi 54 troncons sur 125
+           (precision ~4 %).",
+    "i" = "A confirmer par photo-interpretation ou visite. Voir la section
+           {.emph Validation} de {.fn places_depot}."
   ))
 
   if (sortie == "points") {
@@ -186,7 +239,20 @@ places_depot <- function(desserte,
   }
   des <- des[grepl("LINE", types), ]
   des$troncon <- seq_len(nrow(des))
-  suppressWarnings(sf::st_cast(des, "LINESTRING"))
+  des <- suppressWarnings(sf::st_cast(des, "LINESTRING"))
+
+  # Troncons de longueur nulle : ni abscisse, ni pente en long. ColduPre en
+  # contient (longueur minimale du reseau = 0 m).
+  nulle <- as.numeric(sf::st_length(des)) <= 0
+  if (any(nulle)) {
+    cli::cli_inform(c(
+      "i" = "{sum(nulle)} troncon{?s} de longueur nulle ecarte{?s}
+             (pas de plateforme mesurable)."
+    ))
+    des <- des[!nulle, ]
+  }
+  .arreter_si_vide(des, "longueur non nulle", "desserte")
+  des
 }
 
 # Aucune reprojection implicite (ADR-004) : une couche mal projetee est une
@@ -216,48 +282,73 @@ places_depot <- function(desserte,
 
 # --- Criteres ---------------------------------------------------------------
 
-# Acces camion, par ordre de force de la preuve : la largeur mesuree prime sur
-# le flag DFCI, qui prime sur la classe. Sans aucun de ces attributs, le critere
-# est indeterminable -- on retient tout, en le disant (le filtrage se fera sur
-# les criteres geometriques).
+# Acces camion. Seule une largeur MESUREE et insuffisante rejette : c'est la
+# seule preuve dure dont on dispose.
+#
+# `dfci` et `classe` sont RAPPORTES (colonne `acces`) mais ne rejettent plus.
+# Confrontation a ColduPre : l'une des deux vraies places de depot est une piste
+# forestiere a `CL_DFCI = 0` -- rejeter sur ces attributs elimine une vraie place
+# sur deux. Ils informent, ils ne tranchent pas.
 .acces_camion <- function(des, largeur_min_m) {
   n <- nrow(des)
   larg <- .largeur_desserte(des)
   dfci <- if (!is.null(des[["dfci"]])) as.integer(des$dfci) else rep(NA_integer_, n)
   classe <- if (!is.null(des[["classe"]])) as.character(des$classe) else rep(NA_character_, n)
 
-  apte <- logical(n)
-  acces <- rep(NA_character_, n)
+  mesuree <- !is.na(larg)
+  apte <- !mesuree | larg >= largeur_min_m
 
-  par_largeur <- !is.na(larg)
-  apte[par_largeur] <- larg[par_largeur] >= largeur_min_m
-  acces[par_largeur] <- "largeur"
+  acces <- rep("indetermine", n)
+  acces[!is.na(classe)] <- paste0("classe:", classe[!is.na(classe)])
+  acces[!is.na(dfci) & dfci == 1L] <- "dfci"
+  acces[mesuree] <- "largeur"
 
-  par_dfci <- !par_largeur & !is.na(dfci)
-  apte[par_dfci] <- dfci[par_dfci] == 1L
-  acces[par_dfci] <- "dfci"
-
-  par_classe <- !par_largeur & !par_dfci & !is.na(classe)
-  apte[par_classe] <- classe[par_classe] %in% c("route", "dfci")
-  acces[par_classe] <- "classe"
-
-  indetermine <- !par_largeur & !par_dfci & !par_classe
-  apte[indetermine] <- TRUE
-  acces[indetermine] <- "indetermine"
-
-  if (any(indetermine)) {
+  if (!any(mesuree)) {
     cli::cli_inform(c(
-      "!" = "{sum(indetermine)} troncon{?s} sans attribut d'acces
-             ({.field largeur}, {.field dfci}, {.field classe}) : critere d'acces
-             camion non applique, ils passent le filtre.",
-      "i" = "Poser le flag {.field dfci} avec {.fn flag_dfci} affine le tri."
+      "!" = "Aucune largeur mesuree ({.field largeur} / {.field largeur_de_chaussee})
+             : le critere d'acces camion ne rejette rien.",
+      "i" = "Les colonnes {.field dfci} et {.field classe} sont rapportees dans
+             {.field acces} mais ne tranchent pas -- sur l'oracle ColduPre elles
+             ecartent une vraie place de depot sur deux."
     ))
   }
   list(apte = apte, acces = acces, largeur_m = larg)
 }
 
+# Pente EN LONG de la route au point candidat : denivele entre les deux bouts
+# d'une fenetre de `fenetre_m` centree sur le point, rapporte a la distance
+# PARCOURUE LE LONG de la route (pas a vol d'oiseau).
+#
+# C'est la grandeur qui decrit une plateforme. La pente omnidirectionnelle du
+# MNT decrit le VERSANT : a 5 m de resolution, la banquette d'une route (4-5 m
+# de large) n'est pas resolue, et une route peut traverser un versant a 65 %
+# avec 1 % en long. Cf. l'entete du fichier (confrontation ColduPre).
+.pente_en_long <- function(pts, des, mnt, fenetre_m) {
+  g <- sf::st_geometry(des)
+  lg <- pts$.longueur
+  demi <- fenetre_m / 2
+  a <- pmax(0, pts$.abscisse - demi)
+  b <- pmin(lg, pts$.abscisse + demi)
+
+  za <- .altitude_sur_ligne(g, pts$.ligne, a / lg, mnt)
+  zb <- .altitude_sur_ligne(g, pts$.ligne, b / lg, mnt)
+
+  d <- b - a
+  ifelse(d > 0, 100 * abs(zb - za) / d, NA_real_)
+}
+
+# Altitude du MNT au point d'abscisse relative `frac` sur la ligne `idx[i]`.
+.altitude_sur_ligne <- function(g, idx, frac, mnt) {
+  pts <- lapply(seq_along(idx), function(i) {
+    sf::st_cast(sf::st_line_sample(g[idx[i]], sample = frac[i]), "POINT")
+  })
+  pts <- sf::st_sfc(do.call(c, lapply(pts, function(p) p[[1]])), crs = sf::st_crs(g))
+  as.numeric(terra::extract(mnt, terra::vect(pts))[, 2])
+}
+
 # Points candidats le long de chaque troncon, un tous les `espacement_m` au plus
-# (au moins un par troncon, au milieu, quelle que soit sa longueur).
+# (au moins un par troncon, au milieu, quelle que soit sa longueur). On garde
+# l'abscisse curviligne : la pente en long se mesure le long de la ligne.
 .points_le_long <- function(des, espacement_m) {
   g <- sf::st_geometry(des)
   lg <- as.numeric(sf::st_length(g))
@@ -267,25 +358,12 @@ places_depot <- function(desserte,
     k <- max(1L, floor(lg[i] / espacement_m))
     frac <- if (k == 1L) 0.5 else seq(0.5 / k, 1 - 0.5 / k, length.out = k)
     p <- sf::st_cast(sf::st_line_sample(g[i], sample = frac), "POINT")
-    sf::st_sf(attrs[rep(i, length(p)), , drop = FALSE], geometry = p)
+    sf::st_sf(attrs[rep(i, length(p)), , drop = FALSE],
+      .ligne = i, .abscisse = frac * lg[i], .longueur = lg[i],
+      geometry = p
+    )
   })
   do.call(rbind, morceaux)
-}
-
-# Eclaircissement glouton : on garde la place la plus plate, puis toute place a
-# au moins `espacement_m` de celles deja gardees. Le cout du balayage cable est
-# proportionnel au nombre de cellules de depart -- deux places voisines balaient
-# deux fois la meme foret.
-.espacer <- function(pts, espacement_m) {
-  xy <- sf::st_coordinates(pts)
-  garde <- integer(0)
-  for (i in order(pts$pente_pct)) {
-    if (!length(garde) ||
-      all(sqrt((xy[i, 1] - xy[garde, 1])^2 + (xy[i, 2] - xy[garde, 2])^2) >= espacement_m)) {
-      garde <- c(garde, i)
-    }
-  }
-  sort(garde)
 }
 
 # Troncons portant au moins une place retenue, avec la pente de leur meilleure.
