@@ -105,3 +105,84 @@ volume_depuis_p1 <- function(p1, mnt, champ = "P1", fun = "mean") {
   ))
   r
 }
+
+# Prepare la couche de volume pour `acquire_inputs()`/`preprocess()` : un
+# `SpatRaster` m3/ha aligne sur la grille du MNT, quelle que soit la forme fournie
+# (raster, chemin, ou `sf` d'unites -> P1). `mnt` est la grille de reference
+# (l'emprise BUFFERISEE, cf. spec 019 sec. 4 : le volume doit couvrir le halo,
+# sinon les lignes de bord sous-estiment Vtot/IPC).
+.preparer_volume <- function(volume, mnt, champ) {
+  if (is.null(mnt)) {
+    cli::cli_abort(c(
+      "{.arg volume} exige un MNT pour definir la grille cible.",
+      "i" = "Ajouter {.val mnt} a {.arg sources} (ou fournir un MNT en amont)."
+    ))
+  }
+  # `out$mnt` est un chemin (acquire_mnt) : la grille de reference doit etre un
+  # SpatRaster pour comparer/rasteriser. `.as_raster` est idempotent.
+  mnt <- .as_raster(mnt, "mnt")
+  # sf / SpatVector : unites portant un volume/ha -> rasterisation P1.
+  if (inherits(volume, c("sf", "sfc", "SpatVector"))) {
+    return(volume_depuis_p1(volume, mnt, champ = champ))
+  }
+  # Raster deja pret -> alignement.
+  if (inherits(volume, "SpatRaster")) {
+    return(.aligner_volume(volume, mnt))
+  }
+  # Chemin : raster ou vecteur ? On tente le raster, repli sur le vecteur.
+  if (is.character(volume) && length(volume) == 1L) {
+    r <- tryCatch(terra::rast(volume), error = function(e) NULL)
+    if (!is.null(r)) {
+      return(.aligner_volume(r, mnt))
+    }
+    return(volume_depuis_p1(volume, mnt, champ = champ))
+  }
+  cli::cli_abort(c(
+    "{.arg volume} doit etre un {.cls SpatRaster}, un {.cls sf} d'unites, ou un chemin.",
+    "x" = "Recu : {.cls {class(volume)[1]}}."
+  ))
+}
+
+# Aligne un raster de volume/ha sur la grille du MNT. CRS different -> abort
+# (ADR-004). Meme CRS, grille differente -> reechantillonnage (densite,
+# bilineaire) avec avertissement. Signale la fraction non couverte de l'emprise.
+.aligner_volume <- function(r, mnt) {
+  r <- .as_raster(r, "volume")
+  if (sf::st_crs(terra::crs(r)) != sf::st_crs(terra::crs(mnt))) {
+    cli::cli_abort(c(
+      "Le CRS de {.arg volume} differe de celui du MNT.",
+      "i" = "Aucune reprojection implicite : reprojeter en amont (ADR-004)."
+    ))
+  }
+  # Meme grille = meme emprise ET meme nombre de lignes/colonnes (donc meme
+  # resolution). Comparaison manuelle : `compareGeom` refuse ses drapeaux nommes
+  # selon la version de terra.
+  meme_grille <- isTRUE(all.equal(
+    as.vector(terra::ext(r)), as.vector(terra::ext(mnt))
+  )) &&
+    terra::nrow(r) == terra::nrow(mnt) &&
+    terra::ncol(r) == terra::ncol(mnt)
+  if (!meme_grille) {
+    cli::cli_inform(c(
+      "!" = "{.arg volume} n'est pas sur la grille du MNT : reechantillonnage
+             (bilineaire, le volume/ha est une densite)."
+    ))
+    r <- terra::resample(r, mnt, method = "bilinear")
+  }
+  names(r) <- "volume"
+
+  # Fraction de l'emprise (cellules de MNT valides) sans volume : ces cellules
+  # comptent pour 0 dans la somme du cable -> Vtot/IPC sous-estimes sur les bords.
+  emprise <- !is.na(terra::values(mnt, mat = FALSE))
+  manque <- emprise & is.na(terra::values(r, mat = FALSE))
+  if (any(manque)) {
+    pct <- round(100 * sum(manque) / sum(emprise))
+    cli::cli_inform(c(
+      "!" = "{pct}% de l'emprise (MNT) n'a pas de volume : ces cellules comptent
+             pour 0 dans la somme du cable (Vtot/IPC sous-estimes sur les bords).",
+      "i" = "Le volume doit couvrir l'emprise BUFFERISEE, pas la seule AOI
+             (spec 019). Verifier l'etendue de la source."
+    ))
+  }
+  r
+}

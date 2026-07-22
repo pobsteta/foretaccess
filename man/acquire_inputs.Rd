@@ -15,6 +15,8 @@ acquire_inputs(
   overwrite = FALSE,
   country = "FR",
   dfci = TRUE,
+  volume = NULL,
+  champ_volume = "P1",
   config = NULL
 )
 }
@@ -44,15 +46,27 @@ agrégée à \code{res_m} (cf. \code{\link[=acquire_mnt]{acquire_mnt()}}). Défa
 DFCI (spec 006) : réseau OSM \code{ref:FR:DFCI} (\code{\link[=acquire_dfci]{acquire_dfci()}}), avec repli
 géométrique (\code{\link[=flag_dfci]{flag_dfci()}}) si OSM ne rend rien. Défaut \code{TRUE}.}
 
+\item{volume}{Volume sur pied à injecter (facultatif). \strong{Jamais téléchargé} :
+sa source est un inventaire ou l'indicateur \strong{P1} de Nemeton (cf.
+\code{\link[=volume_depuis_p1]{volume_depuis_p1()}}). Accepte un \code{SpatRaster} en m3/ha, un chemin de raster,
+ou un \code{sf} d'unités portant un champ m3/ha (rasterisé via \code{\link[=volume_depuis_p1]{volume_depuis_p1()}}).
+Aligné sur la grille du \strong{MNT bufferisé} : le câble somme le volume jusque
+dans le halo, un volume tronqué à l'AOI sous-estime l'IPC des lignes de bord
+(spec 019). CRS différent du MNT : erreur (ADR-004) ; grille différente (même
+CRS) : rééchantillonné, avec avertissement. \code{NULL} (défaut) : pas de volume.}
+
+\item{champ_volume}{Nom du champ m3/ha, utilisé seulement quand \code{volume} est un
+\code{sf}. Défaut \code{"P1"} (la colonne écrite par Nemeton).}
+
 \item{config}{Objet \code{\link[=foretaccess_config]{foretaccess_config()}} fournissant les seuils DFCI
 (\code{dfci$tol_appariement_m}, \code{emprise_min_m}, \code{rayon_retournement_m}) passés à
 \code{\link[=flag_dfci]{flag_dfci()}}. Défaut \code{NULL} (seuils par défaut).}
 }
 \value{
 Un objet \code{foretaccess_inputs} : \code{mnt} (chemin raster), \code{desserte},
-\code{foret}, \code{obstacles}, \code{parcellaire} (\code{sf} ou \code{NULL}), \code{aoi} (\code{sf} stricte),
-\code{meta} (sources, CRS, buffer, date), \code{cache_dir}. Directement consommable par
-\code{\link[=preprocess]{preprocess()}}.
+\code{foret}, \code{obstacles}, \code{parcellaire} (\code{sf} ou \code{NULL}), \code{volume} (\code{SpatRaster}
+m3/ha ou \code{NULL}), \code{aoi} (\code{sf} stricte), \code{meta} (sources, CRS, buffer, date),
+\code{cache_dir}. Directement consommable par \code{\link[=preprocess]{preprocess()}}.
 }
 \description{
 Télécharge automatiquement, à partir d'un simple polygone d'emprise (AOI), les
@@ -81,8 +95,15 @@ aoi <- sf::st_read("mon_massif.gpkg")
 inputs <- acquire_inputs(aoi, cache_dir = "cache")
 pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
                   obstacles_complets = inputs$obstacles)
+
+# Volume via l'indicateur P1 de Nemeton (inventaire ou MNH LiDAR). Nemeton
+# calcule P1 sur l'emprise bufferisee ; acquire_inputs le rasterise.
+p1 <- nemeton::indicateur_p1_volume(parcelles, chm = mnh_lidar)
+inputs <- acquire_inputs(aoi, cache_dir = "cache", volume = p1)
+pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
+                  volume = inputs$volume)
 }
 }
 \seealso{
-\code{\link[=preprocess]{preprocess()}}, \link{datasources}, \code{\link[=acquire_mnt]{acquire_mnt()}}
+\code{\link[=preprocess]{preprocess()}}, \code{\link[=volume_depuis_p1]{volume_depuis_p1()}}, \link{datasources}, \code{\link[=acquire_mnt]{acquire_mnt()}}
 }
