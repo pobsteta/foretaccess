@@ -20,7 +20,9 @@
 #' @param obstacles_complets Obstacles bloquant tous les engins (facultatif).
 #' @param obstacles_partiels Obstacles spécifiques au skidder (facultatif ; la
 #'   sémantique est posée au Lot 2).
-#' @param volume Volume sur pied : raster aligné sur la grille du MNT (facultatif).
+#' @param volume Volume sur pied : raster en m3/ha aligné sur la grille du MNT
+#'   (facultatif). Voir [volume_depuis_p1()] pour le dériver d'une couche d'unités
+#'   (indicateur P1 de Nemeton, inventaire).
 #' @param parcellaire Parcellaire : vecteur de polygones (facultatif ; utilisé au
 #'   Lot 8 pour l'agrégation).
 #' @param config Objet [foretaccess_config()].
