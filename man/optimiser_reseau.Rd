@@ -75,3 +75,15 @@ order is always trial 0, so the result is never worse than the plain greedy of
 available (parallel over K perturbed orders, \code{rayon}); \code{"recuit"} (simulated
 annealing) and \code{"riprute"} (rip-up & reroute) are planned (Lot 18b/18c).
 }
+\section{Performance}{
+
+Each trial is a full greedy build reusing a \strong{single} neighbourhood table and
+running the trials in \strong{parallel} (\code{rayon}). Since the greedy trace was made
+corridor-bounded (see \code{\link[=reseau_desserte]{reseau_desserte()}} \emph{Performance}), the optimisers are now
+tractable at interactive scale: on a departmental run, \code{n_start = 16} costs about
+the same wall-clock as one greedy build. Reasonable exposable defaults:
+\code{n_start} 8-32, \code{n_iter} 100-300 -- no hard cap is needed below those. The
+dominant lever remains \strong{\code{skidding_m}} (set it to the real skidding distance;
+see \code{\link[=reseau_desserte]{reseau_desserte()}}), which governs the number of traces per build.
+}
+

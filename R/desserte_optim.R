@@ -13,6 +13,16 @@
 #' available (parallel over K perturbed orders, `rayon`); `"recuit"` (simulated
 #' annealing) and `"riprute"` (rip-up & reroute) are planned (Lot 18b/18c).
 #'
+#' @section Performance:
+#' Each trial is a full greedy build reusing a **single** neighbourhood table and
+#' running the trials in **parallel** (`rayon`). Since the greedy trace was made
+#' corridor-bounded (see [reseau_desserte()] *Performance*), the optimisers are now
+#' tractable at interactive scale: on a departmental run, `n_start = 16` costs about
+#' the same wall-clock as one greedy build. Reasonable exposable defaults:
+#' `n_start` 8-32, `n_iter` 100-300 -- no hard cap is needed below those. The
+#' dominant lever remains **`skidding_m`** (set it to the real skidding distance;
+#' see [reseau_desserte()]), which governs the number of traces per build.
+#'
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
 #' @param cout A `foretaccess_cout_construction` object (Lot 14).
 #' @param parcelles An `sf` POLYGON of the areas to serve.
