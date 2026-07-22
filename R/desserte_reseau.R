@@ -18,7 +18,10 @@
 #' @param heuristique Ordering of parcels: `"plus_proche"` (closest first),
 #'   `"plus_gros_volume"` (largest volume first) or `"aleatoire"` (random).
 #' @param skidding_m Skidding distance (m): a parcel cell within it of a road is
-#'   served without building a road.
+#'   served without building a road. **Set this to the actual skidding/forwarding
+#'   distance of your operation** -- it is the dominant performance lever (see
+#'   *Performance*). Left at `0`, every parcel cell that is not *on* a road spawns
+#'   its own trace, which is both slow and over-connected.
 #' @param volume_champ Optional name of the parcel volume column (for
 #'   `"plus_gros_volume"`); each cell inherits its parcel volume.
 #' @param pondere_cout If `TRUE`, weights the trace by the Lot 14 construction
@@ -49,6 +52,29 @@
 #'   a road left dangling would raise the component count. This is the flag that
 #'   answers *"is every road I built actually connected?"* -- the one to surface
 #'   as a quality badge, not `connexe`.
+#'
+#' @section Performance:
+#' The cost is one A\* trace **per parcel cell that builds a road**. Two things
+#' govern it:
+#' * **`skidding_m`** -- the number of traces. A parcel is a *block* of cells; at
+#'   `skidding_m = 0` each cell not lying on a road spawns its own trace (hundreds
+#'   per hectare-sized parcel). Set `skidding_m` to the real skidding/forwarding
+#'   distance and a whole parcel is served by a **single** trace as soon as one
+#'   road passes within reach -- collapsing the trace count to roughly one per
+#'   parcel cluster, and the runtime with it.
+#' * **the trace itself** -- each trace is a genuine least-cost road **alignment**
+#'   (direction/slope penalties, hairpin radius, profile checks), not a plain
+#'   shortest path. It is solved by an A\* **bounded to the corridor** between the
+#'   parcel and its nearest network cell (a box padded in proportion to that
+#'   distance), with a fall-back to the full extent if no connection is found in
+#'   the corridor. A parcel connects to the *nearest* network, so the optimum lies
+#'   in that corridor: the bound preserves the result for the realistic case and
+#'   turns a full-extent search into a local one.
+#'
+#' Net effect on a departmental-scale run: a per-parcel trace drops from minutes
+#' to milliseconds, and with a realistic `skidding_m` the whole greedy runs in
+#' seconds to tens of seconds rather than minutes. Steiner (`mode = "steiner"`)
+#' still pays `N^2` traces and stays reserved for small parcel counts.
 #' @param mode Construction mode: `"glouton"` (greedy MTAP->STAP, default) or
 #'   `"steiner"` (minimum-spanning-tree approximation over the terminals, a
 #'   quality alternative at the cost of N^2 traces).

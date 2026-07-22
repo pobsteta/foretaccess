@@ -1,3 +1,26 @@
+# foretaccess 1.12.0 (2026-07-22)
+
+## Performance
+
+- **Moteur glouton de desserte (`reseau_desserte(mode = "glouton")`) : de ~11,5 min
+  à quelques dizaines de secondes** (chantier 1 du brief). Profilage sur
+  Chastel-Nouvel : le coût était **un tracé A\* par cellule-source explorant toute
+  l'emprise** (~200 s/tracé). Deux corrections :
+  - **A\* borné au couloir de raccordement** (noyau Rust `solver.rs`) : chaque
+    parcelle se raccorde au réseau **le plus proche**, donc l'optimum vit dans une
+    boîte autour du segment parcelle → réseau ; l'A\* y est restreint (marge
+    proportionnelle à la distance directe), avec **repli sur l'emprise entière**
+    si aucune connexion n'y est trouvée. Un tracé passe de **~200 s à ~20 ms**,
+    résultat **identique** (suite de tests bit-pour-bit inchangée) : le tracé
+    reste un vrai alignement routier optimal, dans le couloir.
+  - **`skidding_m` documenté comme le levier dominant** : le nombre de tracés =
+    nombre de cellules-source qui construisent une route. À `skidding_m = 0`
+    (défaut) chaque cellule d'une parcelle en génère un ; réglé sur la **distance
+    de débardage réelle**, une parcelle entière est desservie par **un seul**
+    tracé (mesuré : 6 parcelles en 7,7 s au lieu de centaines de secondes).
+  Nouvelle section *Performance* de `?reseau_desserte`. `mode = "steiner"` reste en
+  `N²` tracés, réservé aux petits nombres de parcelles.
+
 # foretaccess 1.11.0 (2026-07-22)
 
 ## Nouveautés
