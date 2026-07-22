@@ -42,6 +42,7 @@ reference:
   - skidder
   - classes_debardage
   - accessfor_correspondance
+  - comparer_accessfor
   - porteur
   - camion_dfci
   - dfci_scan
