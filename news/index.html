@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.12.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.12.0" id="foretaccess-1120-2026-07-22">foretaccess 1.12.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1120-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="performance-1-12-0">Performance<a class="anchor" aria-label="anchor" href="#performance-1-12-0"></a></h3>
+<ul><li>
+<strong>Moteur glouton de desserte (<code>reseau_desserte(mode = "glouton")</code>) : de ~11,5 min à quelques dizaines de secondes</strong> (chantier 1 du brief). Profilage sur Chastel-Nouvel : le coût était <strong>un tracé A* par cellule-source explorant toute l’emprise</strong> (~200 s/tracé). Deux corrections :
+<ul><li>
+<strong>A* borné au couloir de raccordement</strong> (noyau Rust <code>solver.rs</code>) : chaque parcelle se raccorde au réseau <strong>le plus proche</strong>, donc l’optimum vit dans une boîte autour du segment parcelle → réseau ; l’A* y est restreint (marge proportionnelle à la distance directe), avec <strong>repli sur l’emprise entière</strong> si aucune connexion n’y est trouvée. Un tracé passe de <strong>~200 s à ~20 ms</strong>, résultat <strong>identique</strong> (suite de tests bit-pour-bit inchangée) : le tracé reste un vrai alignement routier optimal, dans le couloir.</li>
+<li>
+<strong><code>skidding_m</code> documenté comme le levier dominant</strong> : le nombre de tracés = nombre de cellules-source qui construisent une route. À <code>skidding_m = 0</code> (défaut) chaque cellule d’une parcelle en génère un ; réglé sur la <strong>distance de débardage réelle</strong>, une parcelle entière est desservie par <strong>un seul</strong> tracé (mesuré : 6 parcelles en 7,7 s au lieu de centaines de secondes). Nouvelle section <em>Performance</em> de <code><a href="../reference/reseau_desserte.html">?reseau_desserte</a></code>. <code>mode = "steiner"</code> reste en <code>N²</code> tracés, réservé aux petits nombres de parcelles.</li>
+</ul></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.11.0" id="foretaccess-1110-2026-07-22">foretaccess 1.11.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1110-2026-07-22"></a></h2>
 <div class="section level3">

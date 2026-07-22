@@ -15,7 +15,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.12.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,7 +108,10 @@ quality alternative at the cost of N^2 traces).</p></dd>
 
 <dt id="arg-skidding-m">skidding_m<a class="anchor" aria-label="anchor" href="#arg-skidding-m"></a></dt>
 <dd><p>Skidding distance (m): a parcel cell within it of a road is
-served without building a road.</p></dd>
+served without building a road. <strong>Set this to the actual skidding/forwarding
+distance of your operation</strong> – it is the dominant performance lever (see
+<em>Performance</em>). Left at <code>0</code>, every parcel cell that is not <em>on</em> a road spawns
+its own trace, which is both slow and over-connected.</p></dd>
 
 
 <dt id="arg-volume-champ">volume_champ<a class="anchor" aria-label="anchor" href="#arg-volume-champ"></a></dt>
@@ -158,6 +161,30 @@ a road left dangling would raise the component count. This is the flag that
 answers <em>"is every road I built actually connected?"</em> – the one to surface
 as a quality badge, not <code>connexe</code>.</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p>The cost is one A\* trace <strong>per parcel cell that builds a road</strong>. Two things
+govern it:</p><ul><li><p><strong><code>skidding_m</code></strong> – the number of traces. A parcel is a <em>block</em> of cells; at
+<code>skidding_m = 0</code> each cell not lying on a road spawns its own trace (hundreds
+per hectare-sized parcel). Set <code>skidding_m</code> to the real skidding/forwarding
+distance and a whole parcel is served by a <strong>single</strong> trace as soon as one
+road passes within reach – collapsing the trace count to roughly one per
+parcel cluster, and the runtime with it.</p></li>
+<li><p><strong>the trace itself</strong> – each trace is a genuine least-cost road <strong>alignment</strong>
+(direction/slope penalties, hairpin radius, profile checks), not a plain
+shortest path. It is solved by an A\* <strong>bounded to the corridor</strong> between the
+parcel and its nearest network cell (a box padded in proportion to that
+distance), with a fall-back to the full extent if no connection is found in
+the corridor. A parcel connects to the <em>nearest</em> network, so the optimum lies
+in that corridor: the bound preserves the result for the realistic case and
+turns a full-extent search into a local one.</p></li>
+</ul><p>Net effect on a departmental-scale run: a per-parcel trace drops from minutes
+to milliseconds, and with a realistic <code>skidding_m</code> the whole greedy runs in
+seconds to tens of seconds rather than minutes. Steiner (<code>mode = "steiner"</code>)
+still pays <code>N^2</code> traces and stays reserved for small parcel counts.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
