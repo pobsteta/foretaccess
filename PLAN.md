@@ -170,7 +170,11 @@
 - **`v1.12.0` posée** (2026-07-22) : **perf du glouton de desserte** (chantier 1). A* borné au
   couloir de raccordement (`solver.rs`) : **200 s → 20 ms/tracé**, bit-identique ; `skidding_m`
   documenté comme le levier du nombre de tracés (6 parcelles en 7,7 s réglé sur le débardage).
-  Glouton **~11,5 min → dizaines de s**. Reste : benchmark Steiner/optim + chantiers 4 (LiDAR) et 5.
+  Glouton **~11,5 min → dizaines de s**.
+- **`v1.13.0` posée** (2026-07-22) : **chantier 1 volet 2**. Optimiseurs tractables (multistart
+  n_start=16 → 10,5 s), bornes documentées ; **crash latent de Steiner corrigé** (garde `came_from`
+  dans `basic_calc`, jamais vu car Steiner jamais exécuté à l'échelle). Steiner tourne mais reste
+  O(N²). Reste : borner `solve` (Steiner rapide, user-facing), chantiers 4 (LiDAR) et 5.
 - **`v1.7.0` posée** (2026-07-22) : **`volume_depuis_p1()`**, pont entre l'indicateur **P1** de
   Nemeton (volume sur pied m³/ha, inventaire ou MNH LiDAR) et le raster `pre$volume` que somment le
   câble et la sélection (→ volume de ligne, IPC). Rasterise un `sf` d'unités sur la grille du MNT ;
@@ -382,6 +386,30 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-22 — `v1.13.0` : chantier 1 volet 2 — bornes optimiseurs + crash Steiner corrigé
+
+Suite du chantier 1. Benchmark sur Chastel-Nouvel (après le bornage du glouton en
+1.12.0) :
+- **Optimiseurs tractables** : glouton 8 parcelles 7,2 s ; multistart **n_start=4
+  → 7,0 s**, **n_start=16 → 10,5 s** (table réutilisée + `rayon` parallèle). Défauts
+  exposables : n_start 8-32, n_iter 100-300, sans cap dur. Section *Performance* de
+  `optimiser_reseau`.
+- **Steiner : crash latent trouvé et corrigé.** En exécutant enfin Steiner à
+  l'échelle réelle (jamais fait — brief : « estimé > 5 h »), plantage
+  `index out of bounds ... usize::MAX` : le lookback des épingles / anti-croisement
+  de `basic_calc` remontait `came_from` jusqu'à la source (`-1`) et indexait hors
+  bornes. Gardes `came_from >= 0` ajoutés (`solver.rs`) — près de la source la
+  double-épingle et l'anti-croisement s'arrêtent proprement. Bit-identique ailleurs
+  (suite verte), test de non-régression ajouté. Steiner tourne (4 parcelles = 859 s)
+  mais reste **O(N²)** (tracés parcelle↔parcelle via `solve`, non borné) → réservé
+  aux petits N.
+
+Reste ouvert : **borner `solve`** (rendrait Steiner *rapide* ET accélèrerait
+`tracer_desserte`, mais user-facing → à décider) ; chantiers **4** (LiDAR ALSroads,
+faisabilité) et **5** (`$lignes` contracté — largement résolu par `skidding_m`, cf.
+1.12.0 : `$lignes` a un feature par route, les « 10 640 » du brief étaient
+l'over-connection à `skidding_m=0`).
 
 ### 2026-07-22 — `v1.12.0` : brief desserte chantier 1 — perf du glouton (~11,5 min → dizaines de s)
 

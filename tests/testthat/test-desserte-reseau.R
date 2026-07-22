@@ -161,6 +161,26 @@ test_that("CA-16.5 : le reseau est connexe (glouton et steiner)", {
   expect_true(g$raccorde)
 })
 
+test_that("steiner ne plante pas sur un trace long (garde came_from, regression)", {
+  # Un tracé qui tourne pres de son depart declenche le lookback des epingles /
+  # anti-croisement (`basic_calc`), qui remontait la chaine came_from jusqu'a la
+  # source (-1) et indexait hors bornes -- crash latent revele en executant enfin
+  # Steiner a l'echelle reelle (jamais tourne auparavant). Grille plus large +
+  # parcelle a l'ecart de la route pour forcer un tracé a plusieurs sommets.
+  pre <- reseau_pre(nr = 20, nc = 20, slope_pct = 8, csize = 10)
+  cout <- surface_cout_construction(pre)
+  route <- reseau_route(pre$mnt)
+  parcelles <- rbind(
+    reseau_parcelle(pre$mnt, 18, 18, id = 1, volume = 100),
+    reseau_parcelle(pre$mnt, 3, 17, id = 2, volume = 200)
+  )
+  expect_no_error(
+    net <- reseau_desserte(pre, cout, parcelles, route, mode = "steiner")
+  )
+  expect_s3_class(net, "foretaccess_reseau")
+  expect_true(all(net$desservies))
+})
+
 test_that("existant fragmente : connexe=FALSE mais raccorde=TRUE", {
   # Deux routes existantes DISJOINTES (bord gauche + bord droit) : le reseau
   # global ne sera jamais d'un seul tenant (connexe FALSE), mais les routes

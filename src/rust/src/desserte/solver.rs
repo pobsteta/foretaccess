@@ -1018,7 +1018,7 @@ fn basic_calc(
             hairpin = 1;
         }
         // Epingle en deux virages.
-        if nbptbef > 1 && hairpin == 0 {
+        if nbptbef > 1 && hairpin == 0 && cur.came_from >= 0 {
             let idfrom = cur.came_from as usize;
             let dcurrent = cur.dplan - best[idfrom].dplan;
             difangle2 = super::diff_az(az, best[idfrom].az_from);
@@ -1026,18 +1026,25 @@ fn basic_calc(
                 if loc_slope > p.prop_sl_max {
                     continue;
                 }
-                let (fy, fx) = table.corresp[idfrom];
-                let ycen = 0.5 * (yc as f64 + fy as f64);
-                let xcen = 0.5 * (xc as f64 + fx as f64);
-                let idfrom2 = best[idfrom].came_from as usize;
-                let (a2y, a2x) = table.corresp[idfrom2];
-                let az1 = super::calculate_azimut(a2x as f64, a2y as f64, xcen, ycen);
-                let az2 = super::calculate_azimut(xcen, ycen, x as f64, y as f64);
-                difangle2 = super::diff_az(az1, az2);
-                if difangle2 > p.max_hairpin_angle() {
-                    continue;
+                // La double epingle a besoin d'un 2e predecesseur. Pres de la source
+                // (came_from < 0) il n'existe pas : on saute le raffinement plutot
+                // que d'indexer hors bornes (le mouvement n'est alors pas marque
+                // epingle-double).
+                let cf2 = best[idfrom].came_from;
+                if cf2 >= 0 {
+                    let (fy, fx) = table.corresp[idfrom];
+                    let ycen = 0.5 * (yc as f64 + fy as f64);
+                    let xcen = 0.5 * (xc as f64 + fx as f64);
+                    let idfrom2 = cf2 as usize;
+                    let (a2y, a2x) = table.corresp[idfrom2];
+                    let az1 = super::calculate_azimut(a2x as f64, a2y as f64, xcen, ycen);
+                    let az2 = super::calculate_azimut(xcen, ycen, x as f64, y as f64);
+                    difangle2 = super::diff_az(az1, az2);
+                    if difangle2 > p.max_hairpin_angle() {
+                        continue;
+                    }
+                    hairpin = 1;
                 }
-                hairpin = 1;
             }
         }
         // Epingle trop proche de la precedente.
@@ -1045,13 +1052,17 @@ fn basic_calc(
             continue;
         }
         // Anti-croisement avec les segments precedents du trace.
-        if nbptbef > 1 {
+        if nbptbef > 1 && cur.came_from >= 0 {
             let mut inter = false;
             let mut i = 1;
             let mut idfrom = cur.came_from as usize;
             while i < nbptbef {
                 let (a1y, a1x) = table.corresp[idfrom];
-                idfrom = best[idfrom].came_from as usize;
+                let cf = best[idfrom].came_from;
+                if cf < 0 {
+                    break; // chaine remontee jusqu'a la source : plus de segment a tester
+                }
+                idfrom = cf as usize;
                 let (a2y, a2x) = table.corresp[idfrom];
                 if get_intersect(
                     a1y as f64, a1x as f64, a2y as f64, a2x as f64,
