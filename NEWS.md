@@ -1,3 +1,22 @@
+# foretaccess 1.10.0 (2026-07-22)
+
+## Nouveautés
+
+- **`comparer_accessfor()` — matrice de confusion contre la couche ACCESSFOR de
+  l'IGN (livrable §5 du brief).** Confronte un raster [classes_debardage()] à la
+  référence ACCESSFOR (skidder ou porteur) : rasterisation en **plus proche
+  voisin** (un code de classe ne s'interpole jamais, avec vérification
+  anti-classe-fantôme), traduction via [accessfor_correspondance()], et
+  cross-tabulation **sur la seule intersection des masques forêt** (les surfaces
+  hors intersection sont rapportées à part). Rend l'**accord global** (9 classes),
+  l'**accord agrégé** accessible/non-accessible (le chiffre robuste), la matrice
+  en ha, et un `print` concis. Confronté sur l'AOI Chastel-Nouvel (~610 ha) :
+  accord agrégé **81 % (skidder)** / **86 % (porteur)**, quasi insensible à la
+  variante de masque (défaut vs `MASQUE-FORETV3`, < 1 pt). Le désaccord fin plus
+  marqué du skidder est un décalage de bande (desserte de référence différente),
+  pas un flip d'accessibilité. Détail : `docs/comparaison-accessfor.md` ; chiffres
+  reproductibles : `data-raw/accessfor_compare.R`.
+
 # foretaccess 1.9.0 (2026-07-22)
 
 ## Nouveautés
