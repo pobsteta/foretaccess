@@ -409,67 +409,112 @@ pub fn solve_network(
     let mut d2e = dist_to_end_multi(zone, nr, nc, p.csize, targets, 1.0e9);
     scale_finite(&mut d2e, cg.cmin);
     let seed = nan_inf(d2e[source]);
-
     let n_pix = table.n_pix();
-    let mut best = vec![NodeState::empty(); n_pix];
-    best[id_source] = NodeState {
-        id: id_source as i32,
-        cost: 0.0,
-        dplan: 0.0,
-        slope_from: 0.0,
-        az_from: -1.0,
-        came_from: -1,
-        dist_hairpin: 0.0,
-        lsl: 0.0,
-        nbptbef: 0,
-        dtocp: seed,
-        is_hairpin: 0,
-    };
 
-    let mut heap = BinaryHeap::new();
-    let mut key_frontier: HashSet<(i32, i64, i64)> = HashSet::new();
-    heap.push(QEntry {
-        theo_d: seed,
-        dtocp: seed,
-        id: id_source as i32,
-    });
-
-    let mut reached: Option<usize> = None;
-    while let Some(QEntry { id: idcur, .. }) = heap.pop() {
-        let idcur = idcur as usize;
-        if target_ids.contains(&idcur) {
-            reached = Some(idcur);
-            break;
+    // Fenetre de recherche. Une parcelle se raccorde au reseau LE PLUS PROCHE :
+    // l'optimum reste dans un couloir autour du segment source -> cible la plus
+    // proche. On borne l'A* a la boite englobante (source, cible la plus proche)
+    // elargie d'une marge PROPORTIONNELLE a la distance directe -- petites
+    // fenetres pour les parcelles proches (le cas reel : A* focalise, resultat
+    // identique), grandes pour les parcelles lointaines. Repli sur l'emprise
+    // entiere si aucune cible n'est atteinte dans la fenetre (faisabilite
+    // preservee). Le tissu du reseau reste un GLOUTON (approximation) : borner le
+    // trace au couloir du raccordement le plus proche est coherent avec ca.
+    let (sr, sc) = (source / nc, source % nc);
+    let (mut tr, mut tc, mut dbest) = (sr, sc, usize::MAX);
+    for &t in targets {
+        let (r, c) = (t / nc, t % nc);
+        let d = r.max(sr).saturating_sub(r.min(sr)).max(c.max(sc).saturating_sub(c.min(sc)));
+        if d < dbest {
+            dbest = d;
+            tr = r;
+            tc = c;
         }
-        // take_dtoend = true : l'heuristique est la distance-reseau pre-calculee
-        // (ye/xe inutilises dans ce mode).
-        let add = if best[idcur].nbptbef == 0 {
-            calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, true, 0, 0, cg, p)
+    }
+    let neigh_cells = (p.d_neighborhood / p.csize).ceil() as usize;
+    let pad = (neigh_cells + 5).max(dbest);
+    let r0 = sr.min(tr).saturating_sub(pad);
+    let r1 = (sr.max(tr) + pad).min(nr - 1);
+    let c0 = sc.min(tc).saturating_sub(pad);
+    let c1 = (sc.max(tc) + pad).min(nc - 1);
+    let deja_pleine = r0 == 0 && c0 == 0 && r1 == nr - 1 && c1 == nc - 1;
+
+    // attempt 0 : fenetre bornee ; attempt 1 : emprise entiere (repli).
+    for attempt in 0..2 {
+        let (wr0, wr1, wc0, wc1) = if attempt == 0 {
+            (r0, r1, c0, c1)
         } else {
-            basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, true, 0, 0, cg, p)
+            (0, nr - 1, 0, nc - 1)
         };
-        for &idv in &add {
-            let theo = round1(best[idv].cost + best[idv].dtocp);
-            let dto = round1(best[idv].dtocp);
-            let key = (idv as i32, deci(theo), deci(dto));
-            if key_frontier.insert(key) {
-                heap.push(QEntry {
-                    theo_d: theo,
-                    dtocp: dto,
-                    id: idv as i32,
-                });
+
+        let mut best = vec![NodeState::empty(); n_pix];
+        best[id_source] = NodeState {
+            id: id_source as i32,
+            cost: 0.0,
+            dplan: 0.0,
+            slope_from: 0.0,
+            az_from: -1.0,
+            came_from: -1,
+            dist_hairpin: 0.0,
+            lsl: 0.0,
+            nbptbef: 0,
+            dtocp: seed,
+            is_hairpin: 0,
+        };
+
+        let mut heap = BinaryHeap::new();
+        let mut key_frontier: HashSet<(i32, i64, i64)> = HashSet::new();
+        heap.push(QEntry {
+            theo_d: seed,
+            dtocp: seed,
+            id: id_source as i32,
+        });
+
+        let mut reached: Option<usize> = None;
+        while let Some(QEntry { id: idcur, .. }) = heap.pop() {
+            let idcur = idcur as usize;
+            if target_ids.contains(&idcur) {
+                reached = Some(idcur);
+                break;
+            }
+            // take_dtoend = true : l'heuristique est la distance-reseau pre-calculee
+            // (ye/xe inutilises dans ce mode).
+            let add = if best[idcur].nbptbef == 0 {
+                calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, true, 0, 0, cg, p)
+            } else {
+                basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, true, 0, 0, cg, p)
+            };
+            for &idv in &add {
+                // Hors de la fenetre de recherche : non developpe.
+                let (rv, cv) = table.corresp[idv];
+                if rv < wr0 || rv > wr1 || cv < wc0 || cv > wc1 {
+                    continue;
+                }
+                let theo = round1(best[idv].cost + best[idv].dtocp);
+                let dto = round1(best[idv].dtocp);
+                let key = (idv as i32, deci(theo), deci(dto));
+                if key_frontier.insert(key) {
+                    heap.push(QEntry {
+                        theo_d: theo,
+                        dtocp: dto,
+                        id: idv as i32,
+                    });
+                }
             }
         }
-    }
 
-    match reached {
-        Some(gid) => TraceResult {
-            path: reconstruct(gid, id_source, &best, table, nc),
-            cost: best[gid].cost,
-            feasible: true,
-        },
-        None => echec(),
+        if let Some(gid) = reached {
+            return TraceResult {
+                path: reconstruct(gid, id_source, &best, table, nc),
+                cost: best[gid].cost,
+                feasible: true,
+            };
+        }
+        if deja_pleine {
+            break; // deja pleine emprise : le repli n'apporterait rien
+        }
     }
+    echec()
 }
 
 /// Reseau construit : un chemin (indices aplatis) et son cout par tronçon cree.

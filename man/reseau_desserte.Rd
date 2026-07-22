@@ -35,7 +35,10 @@ reseau_desserte(
 quality alternative at the cost of N^2 traces).}
 
 \item{skidding_m}{Skidding distance (m): a parcel cell within it of a road is
-served without building a road.}
+served without building a road. \strong{Set this to the actual skidding/forwarding
+distance of your operation} -- it is the dominant performance lever (see
+\emph{Performance}). Left at \code{0}, every parcel cell that is not \emph{on} a road spawns
+its own trace, which is both slow and over-connected.}
 
 \item{volume_champ}{Optional name of the parcel volume column (for
 \code{"plus_gros_volume"}); each cell inherits its parcel volume.}
@@ -82,5 +85,32 @@ a road left dangling would raise the component count. This is the flag that
 answers \emph{"is every road I built actually connected?"} -- the one to surface
 as a quality badge, not \code{connexe}.
 }
+}
+
+\section{Performance}{
+
+The cost is one A\* trace \strong{per parcel cell that builds a road}. Two things
+govern it:
+\itemize{
+\item \strong{\code{skidding_m}} -- the number of traces. A parcel is a \emph{block} of cells; at
+\code{skidding_m = 0} each cell not lying on a road spawns its own trace (hundreds
+per hectare-sized parcel). Set \code{skidding_m} to the real skidding/forwarding
+distance and a whole parcel is served by a \strong{single} trace as soon as one
+road passes within reach -- collapsing the trace count to roughly one per
+parcel cluster, and the runtime with it.
+\item \strong{the trace itself} -- each trace is a genuine least-cost road \strong{alignment}
+(direction/slope penalties, hairpin radius, profile checks), not a plain
+shortest path. It is solved by an A\* \strong{bounded to the corridor} between the
+parcel and its nearest network cell (a box padded in proportion to that
+distance), with a fall-back to the full extent if no connection is found in
+the corridor. A parcel connects to the \emph{nearest} network, so the optimum lies
+in that corridor: the bound preserves the result for the realistic case and
+turns a full-extent search into a local one.
+}
+
+Net effect on a departmental-scale run: a per-parcel trace drops from minutes
+to milliseconds, and with a realistic \code{skidding_m} the whole greedy runs in
+seconds to tens of seconds rather than minutes. Steiner (\code{mode = "steiner"})
+still pays \code{N^2} traces and stays reserved for small parcel counts.
 }
 
