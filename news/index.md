@@ -1,5 +1,30 @@
 # Changelog
 
+## foretaccess 1.7.0 (2026-07-22)
+
+### Nouveautés
+
+- **[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)
+  — pont entre l’indicateur P1 de Nemeton et le volume du câble.** Le
+  moteur câble et la sélection (Lot 5) lisent un **raster de volume sur
+  pied en m³/ha** (`pre$volume`) :
+  [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+  le somme sur les cellules forestières qu’une ligne couvre pour en
+  tirer le volume de la ligne et l’**IPC** (indice de production câble =
+  volume / longueur). ForêtAccess ne *calcule* pas ce volume — c’est une
+  entrée. Sa source naturelle est l’indicateur **P1** de Nemeton
+  (`nemeton::indicateur_p1_volume()`), qui rend un `sf` d’unités portant
+  un volume en m³/ha (dérivable d’un inventaire **ou d’un MNH LiDAR**).
+  `volume_depuis_p1(p1, mnt, champ = "P1")` projette ce champ sur la
+  grille du MNT et rend un `SpatRaster` `volume` prêt pour
+  `preprocess(volume = )`. Rasterisation par **centre de cellule** (le
+  volume/ha est une densité, pas une quantité à étaler sur les bords) ;
+  cellules hors unité à `NA` (pas de bois, pas zéro). **Aucune
+  dépendance à Nemeton** : la fonction consomme l’`sf` déjà calculé,
+  d’où qu’il vienne (P1, BD Forêt, relevé). Garde-fous : CRS identique
+  au MNT sans reprojection implicite (ADR-004), champ m³/ha numérique et
+  positif.
+
 ## foretaccess 1.6.1 (2026-07-21)
 
 ### Corrections

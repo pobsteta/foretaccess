@@ -146,6 +146,8 @@ Chargement, validation, alignement, pente/exposition, rasterisation.
   : Validation des entrées du prétraitement
 - [`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
   : Pente et exposition depuis un MNT
+- [`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)
+  : Rasterise a per-hectare volume layer onto the DTM grid
 - [`lire_rasters()`](https://pobsteta.github.io/foretaccess/reference/lire_rasters.md)
   : Relit un prétraitement écrit sur disque
 

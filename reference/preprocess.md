@@ -51,7 +51,11 @@ preprocess(
 
 - volume:
 
-  Volume sur pied : raster aligné sur la grille du MNT (facultatif).
+  Volume sur pied : raster en m3/ha aligné sur la grille du MNT
+  (facultatif). Voir
+  [`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)
+  pour le dériver d'une couche d'unités (indicateur P1 de Nemeton,
+  inventaire).
 
 - parcellaire:
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.7.0" id="foretaccess-170-2026-07-22">foretaccess 1.7.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-170-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-7-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-7-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/volume_depuis_p1.html">volume_depuis_p1()</a></code> — pont entre l’indicateur P1 de Nemeton et le volume du câble.</strong> Le moteur câble et la sélection (Lot 5) lisent un <strong>raster de volume sur pied en m³/ha</strong> (<code>pre$volume</code>) : <code><a href="../reference/potentiel_cable.html">potentiel_cable()</a></code> le somme sur les cellules forestières qu’une ligne couvre pour en tirer le volume de la ligne et l’<strong>IPC</strong> (indice de production câble = volume / longueur). ForêtAccess ne <em>calcule</em> pas ce volume — c’est une entrée. Sa source naturelle est l’indicateur <strong>P1</strong> de Nemeton (<code>nemeton::indicateur_p1_volume()</code>), qui rend un <code>sf</code> d’unités portant un volume en m³/ha (dérivable d’un inventaire <strong>ou d’un MNH LiDAR</strong>). <code>volume_depuis_p1(p1, mnt, champ = "P1")</code> projette ce champ sur la grille du MNT et rend un <code>SpatRaster</code> <code>volume</code> prêt pour <code>preprocess(volume = )</code>. Rasterisation par <strong>centre de cellule</strong> (le volume/ha est une densité, pas une quantité à étaler sur les bords) ; cellules hors unité à <code>NA</code> (pas de bois, pas zéro). <strong>Aucune dépendance à Nemeton</strong> : la fonction consomme l’<code>sf</code> déjà calculé, d’où qu’il vienne (P1, BD Forêt, relevé). Garde-fous : CRS identique au MNT sans reprojection implicite (ADR-004), champ m³/ha numérique et positif.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.6.1" id="foretaccess-161-2026-07-21">foretaccess 1.6.1 (2026-07-21)<a class="anchor" aria-label="anchor" href="#foretaccess-161-2026-07-21"></a></h2>
 <div class="section level3">

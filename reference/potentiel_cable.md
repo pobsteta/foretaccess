@@ -135,4 +135,7 @@ consommable ici.
 ## See also
 
 [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
-pour produire la couche `departs`.
+pour produire la couche `departs` ;
+[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)
+pour produire la couche de volume (`pre$volume`) dont se deduisent
+`volume_m3` et l'IPC des lignes.

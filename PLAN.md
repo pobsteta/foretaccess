@@ -253,6 +253,17 @@
   Banc `data-raw/oracle_places_depot.R`. **Règle qui en découle** :
   toute heuristique se confronte à ColduPre **avant** la PR ; les
   fixtures synthétiques ne testent que la cohérence interne.
+- **`v1.7.0` posée** (2026-07-22) :
+  **[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)**,
+  pont entre l’indicateur **P1** de Nemeton (volume sur pied m³/ha,
+  inventaire ou MNH LiDAR) et le raster `pre$volume` que somment le
+  câble et la sélection (→ volume de ligne, IPC). Rasterise un `sf`
+  d’unités sur la grille du MNT ; **aucune dépendance à Nemeton**
+  (consomme la sortie déjà calculée) → règle stricte 1 respectée, aucune
+  écriture dans le repo frère (règle 6). Reste ouvert : l’acquisition
+  MNH LiDAR → P1 → raster dans
+  [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+  (Phase 2).
 - **Dette assumée du câble** : optimisation de la hauteur de fixation.
   Le portage de `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été
   **tenté puis abandonné le 16/07** (bugué, ~20× plus lent, code
@@ -480,6 +491,54 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-22 — `v1.7.0` : `volume_depuis_p1()`, pont vers l’indicateur P1 de Nemeton
+
+Le moteur câble et la sélection (Lot 5) lisent `pre$volume`, un **raster
+de volume sur pied en m³/ha** :
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+le somme sur les cellules forestières qu’une ligne couvre → volume de la
+ligne et **IPC** (= volume / longueur, `scan.rs:559`). ForêtAccess ne
+calcule pas ce volume ; c’est une **entrée**, et jusqu’ici il fallait la
+rasteriser à la main.
+
+Sa source naturelle est l’indicateur **P1** de Nemeton
+(`nemeton::indicateur_p1_volume()`, `nemeton/R/indicators-productive.R`)
+: un `sf` d’unités portant un volume en **m³/ha**, dérivé d’un
+inventaire (espèce IFN, DBH, densité, tarif) **ou d’un MNH LiDAR**
+(`chm=`). Les unités tombent juste — P1 est déjà en m³/ha, ce que le
+câble attend.
+
+`volume_depuis_p1(p1, mnt, champ = "P1")` (`R/volume.R`) projette ce
+champ sur la grille du MNT et rend un `SpatRaster` `volume` prêt pour
+`preprocess(volume = )`. Rasterisation par **centre de cellule**
+(densité, pas quantité → pas de gonflement des bords) ; hors unité →
+`NA` (pas de bois, pas zéro). Garde-fous : CRS identique au MNT sans
+reprojection implicite (ADR-004), champ numérique/positif/non tout-NA.
+
+**Décision de couplage (tranchée avec l’utilisateur).** L’adaptateur vit
+dans ForêtAccess mais **ne dépend pas de Nemeton** : il consomme l’`sf`
+déjà calculé, d’où qu’il vienne (P1, BD Forêt, relevé). Respecte la
+règle stricte 1 — le calcul du volume est un indicateur d’inventaire
+(domaine de Nemeton) ; ForêtAccess se borne à consommer sa sortie.
+Aucune écriture dans le repo frère (règle 6).
+
+19 tests (`test-volume.R`) : alignement, unités, bout-en-bout via
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
+garde-fous. `@seealso` croisés
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+↔︎
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+↔︎
+[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md).
+Entrée pkgdown (Prétraitement).
+
+> Reste ouvert (non entamé) : l’**acquisition** de bout en bout MNH
+> LiDAR → CHM → P1 → raster, câblée dans
+> [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
+> (Phase 2, dépendance Nemeton + happign).
+> [`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)
+> en est la dernière brique, déjà posée.
 
 ### 2026-07-21 — `v1.6.1` : `places_depot()` confrontée à l’oracle — 0/2 → 2/2
 
