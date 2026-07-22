@@ -271,6 +271,18 @@
   ForêtAccess ; le raccord P1 côté nemetonshiny reste à porter par une
   session Nemeton (règle 6). L’écart « Phase 2 volume » de `specs/010`
   est **levé**.
+- **`v1.9.0` posée** (2026-07-22) : **validation ACCESSFOR (IGN), §3
+  élucidé**.
+  [`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md)
+  fige le crosswalk `class` ACCESSFOR ↔︎
+  [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md),
+  vérifié au WFS sur le dép. 48 (domaine identique terme pour terme,
+  skidder et porteur, jusqu’à la bande ouverte \> 2000 et
+  l’inexploitable pente).
+  [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+  généralisée au porteur. Reste : le livrable §5 (matrice de confusion
+  sur Chastel-Nouvel, rasterisation `near`, intersection des masques,
+  DEUX variantes ACCESSFOR).
 - **Dette assumée du câble** : optimisation de la hauteur de fixation.
   Le portage de `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été
   **tenté puis abandonné le 16/07** (bugué, ~20× plus lent, code
@@ -498,6 +510,50 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-22 — `v1.9.0` : validation ACCESSFOR (IGN) — §3 élucidé, crosswalk + porteur
+
+Ouverture de la **validation externe** des moteurs terrestres contre la
+couche **ACCESSFOR** de l’IGN (WFS `data.geopf.fr`, projet ACCESSFOR,
+édition 2025-01-01, couches polygonales
+`acces_skidder`/`acces_porteur`). Brief émis par la session nemeton
+(`nemeton/specs/brief-foretaccess-accessfor.md`). On commence par le §3
+« à élucider avant tout chiffre ».
+
+**Les trois points du §3, tranchés au WFS (département 48,
+Chastel-Nouvel) :** 1. `class = 2` = **« Zone non exploitable (pente
+trop élevée) »** = notre `inexploitable`. Les classes 7 et 8
+**existent** (l’échantillon national du brief — dép. 01/08/09 — était
+trompeur, il lui manquait 2, 7, 8). 2. ACCESSFOR **ne s’arrête pas à
+1500 m** : bande 5 (1500-2000, code 7) et bande ouverte **\> 2000**
+(code 8) présentes. Comparaison terme pour terme 0 → \>2000, aucune
+troncature à décider. 3. **Crosswalk figé et testé**
+([`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md),
+`R/accessfor.R`) : `class 3..8 → nos bandes 1..6`,
+`class 1 → inaccessible (7)`, `class 2 → inexploitable (8)`,
+`hors_foret (9)` sans code ACCESSFOR (ses polygones *sont* la forêt).
+Jointure sur l’entier, jamais sur `cat`. Un test ancre la table à la
+sortie réelle de
+[`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+— pas de dérive silencieuse. Domaine **identique skidder ET porteur**
+(même schéma, `class=2` au même compte 38 032 → exclusion pente
+indépendante de l’engin, comme notre `pre$exclusion_mask`).
+
+**Prérequis levé** :
+[`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+accepte désormais un `foretaccess_porteur` (assert élargi), condition
+pour chiffrer le porteur contre `acces_porteur`.
+
+**Deux verrous notés pour le §5 (avant chiffres)** : (a) passer `pre` à
+[`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+sinon la classe `inexploitable` manque ; (b) seuil « pente trop élevée »
+d’ACCESSFOR non publié → un écart sur `class=2` serait un artefact de
+paramètre (notre `pente_skidder_max_pct = 30`), pas un bug. **Décision
+§4a (masque) prise avec l’utilisateur : comparer les DEUX variantes**
+(défaut ET `MASQUE-FORETV3`), l’écart entre elles bornant l’artefact de
+masque. Reste à faire : le livrable §5 (rasterisation `near` sur la
+grille de `pre`, intersection des masques, matrice de confusion) sur
+l’AOI Chastel-Nouvel.
 
 ### 2026-07-22 — `v1.8.0` : `acquire_inputs(volume=)`, injection du volume (spec 019)
 

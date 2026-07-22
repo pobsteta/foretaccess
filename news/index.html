@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,16 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.9.0" id="foretaccess-190-2026-07-22">foretaccess 1.9.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-190-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-9-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-9-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/accessfor_correspondance.html">accessfor_correspondance()</a></code> — crosswalk vers la couche ACCESSFOR de l’IGN.</strong> Premier jalon de la validation des moteurs terrestres contre une <strong>référence externe officielle</strong> : la cartographie nationale d’accessibilité forestière de l’IGN (projet <strong>ACCESSFOR</strong>, WFS, édition 2025-01-01), dont les bandes de débardage descendent de la même filiation Sylvaccess que les nôtres. La fonction fige la table de correspondance <code>class</code> ACCESSFOR ↔︎ valeur de [classes_debardage()], à joindre sur l’<strong>entier</strong> (jamais sur le libellé). Le domaine réel a été vérifié au WFS sur le département cible (48) — 8 classes, identiques terme pour terme aux nôtres, <strong>y compris</strong> la bande ouverte <code>&gt; 2000 m</code> et la classe « inexploitable (pente) » : <code>class 3..8</code> → nos bandes <code>1..6</code>, <code>class 1</code> → inaccessible, <code>class 2</code> → inexploitable ; <code>hors_foret</code> n’a pas de code ACCESSFOR (ses polygones <em>sont</em> la forêt). Script reproductible : <code>data-raw/accessfor.R</code>.</li>
+<li>
+<strong>[classes_debardage()] accepte désormais un objet <code>foretaccess_porteur</code></strong> en plus de <code>foretaccess_skidder</code> : même structure (<code>accessibilite</code> + <code>distance_debardage</code>), mêmes bandes. Prérequis à la comparaison du porteur contre <code>acces_porteur</code> d’ACCESSFOR.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.8.0" id="foretaccess-180-2026-07-22">foretaccess 1.8.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-180-2026-07-22"></a></h2>
 <div class="section level3">

@@ -17,7 +17,7 @@ engine already computes the distance; this is the display-ready product.'></head
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,11 +71,14 @@ engine already computes the distance; this is the display-ready product.</p>
 
 
 <dl><dt id="arg-sk">sk<a class="anchor" aria-label="anchor" href="#arg-sk"></a></dt>
-<dd><p>A <code>foretaccess_skidder</code> object (output of <code><a href="skidder.html">skidder()</a></code>).</p></dd>
+<dd><p>A <code>foretaccess_skidder</code> <strong>or</strong> <code>foretaccess_porteur</code> object (output
+of <code><a href="skidder.html">skidder()</a></code> / <code><a href="porteur.html">porteur()</a></code>). Both carry the same <code>accessibilite</code> levels
+and a <code>distance_debardage</code>, so the banding is identical; only the underlying
+distance model differs.</p></dd>
 
 
 <dt id="arg-pre">pre<a class="anchor" aria-label="anchor" href="#arg-pre"></a></dt>
-<dd><p>The <code>foretaccess_preprocessing</code> object used to run the skidder.
+<dd><p>The <code>foretaccess_preprocessing</code> object used to run the engine.
 Optional; supplies the harvest-slope exclusion needed for the
 <code>inexploitable</code> class.</p></dd>
 
@@ -97,6 +100,11 @@ colour table, directly plottable and compatible with <code><a href="recapituler.
 above the harvest threshold — overrides). The <code>inexploitable</code> class requires
 <code>pre</code> (its <code>exclusion_mask</code>); without it those cells stay in their
 accessibility class.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="accessfor_correspondance.html">accessfor_correspondance()</a></code> maps these classes onto the IGN ACCESSFOR
+reference layer.</p></div>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

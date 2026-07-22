@@ -19,12 +19,17 @@ classes_debardage(sk, pre = NULL, config = sk$config)
 
 - sk:
 
-  A `foretaccess_skidder` object (output of
-  [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)).
+  A `foretaccess_skidder` **or** `foretaccess_porteur` object (output of
+  [`skidder()`](https://pobsteta.github.io/foretaccess/reference/skidder.md)
+  /
+  [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)).
+  Both carry the same `accessibilite` levels and a `distance_debardage`,
+  so the banding is identical; only the underlying distance model
+  differs.
 
 - pre:
 
-  The `foretaccess_preprocessing` object used to run the skidder.
+  The `foretaccess_preprocessing` object used to run the engine.
   Optional; supplies the harvest-slope exclusion needed for the
   `inexploitable` class.
 
@@ -46,3 +51,8 @@ Precedence per cell: `hors_foret` (not forest) \< distance band
 (forest, local slope above the harvest threshold — overrides). The
 `inexploitable` class requires `pre` (its `exclusion_mask`); without it
 those cells stay in their accessibility class.
+
+## See also
+
+[`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md)
+maps these classes onto the IGN ACCESSFOR reference layer.

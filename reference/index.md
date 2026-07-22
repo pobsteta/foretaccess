@@ -38,6 +38,12 @@ Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
 - [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
   : Classify skidding distance into Sylvaccess distance bands
 
+- [`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md)
+  :
+
+  Map the IGN ACCESSFOR classes onto
+  [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+
 - [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
   : Moteur d'accessibilité porteur (forwarder)
 

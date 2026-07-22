@@ -1,5 +1,30 @@
 # Changelog
 
+## foretaccess 1.9.0 (2026-07-22)
+
+### Nouveautés
+
+- **[`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md)
+  — crosswalk vers la couche ACCESSFOR de l’IGN.** Premier jalon de la
+  validation des moteurs terrestres contre une **référence externe
+  officielle** : la cartographie nationale d’accessibilité forestière de
+  l’IGN (projet **ACCESSFOR**, WFS, édition 2025-01-01), dont les bandes
+  de débardage descendent de la même filiation Sylvaccess que les
+  nôtres. La fonction fige la table de correspondance `class` ACCESSFOR
+  ↔︎ valeur de \[classes_debardage()\], à joindre sur l’**entier**
+  (jamais sur le libellé). Le domaine réel a été vérifié au WFS sur le
+  département cible (48) — 8 classes, identiques terme pour terme aux
+  nôtres, **y compris** la bande ouverte `> 2000 m` et la classe «
+  inexploitable (pente) » : `class 3..8` → nos bandes `1..6`, `class 1`
+  → inaccessible, `class 2` → inexploitable ; `hors_foret` n’a pas de
+  code ACCESSFOR (ses polygones *sont* la forêt). Script reproductible :
+  `data-raw/accessfor.R`.
+- **\[classes_debardage()\] accepte désormais un objet
+  `foretaccess_porteur`** en plus de `foretaccess_skidder` : même
+  structure (`accessibilite` + `distance_debardage`), mêmes bandes.
+  Prérequis à la comparaison du porteur contre `acces_porteur`
+  d’ACCESSFOR.
+
 ## foretaccess 1.8.0 (2026-07-22)
 
 ### Nouveautés
