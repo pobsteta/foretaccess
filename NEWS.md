@@ -1,3 +1,23 @@
+# foretaccess 1.8.0 (2026-07-22)
+
+## Nouveautés
+
+- **`acquire_inputs(volume = )` — injection du volume sur pied dans le pipeline
+  d'acquisition (spec 019).** Complète `volume_depuis_p1()` (v1.7.0) : `acquire_inputs()`
+  gagne un argument `volume` (facultatif) qui **relaie** un volume sur pied jusque
+  dans `out$volume`, prêt pour `preprocess(volume = )` puis le câble. Le volume
+  est **injecté, jamais téléchargé** — sa source est l'indicateur **P1** de Nemeton
+  (inventaire ou MNH LiDAR). Trois formes acceptées, via un unique argument
+  polymorphe : un `SpatRaster` en m³/ha, un chemin de raster, ou un `sf` d'unités
+  portant un champ m³/ha (`champ_volume`, défaut `"P1"`, rasterisé par
+  `volume_depuis_p1()`). Aligné sur la grille du **MNT bufferisé** : le câble somme
+  le volume jusque dans le halo, un volume tronqué à l'AOI sous-estimerait l'IPC
+  des lignes de bord. CRS différent du MNT → erreur (ADR-004) ; grille différente,
+  même CRS → rééchantillonné (bilinéaire, densité) avec avertissement ; couverture
+  partielle de l'emprise → avertissement chiffré. **Aucune dépendance à Nemeton** :
+  le raccord (P1 → volume) vit dans l'orchestrateur (nemetonshiny). Voir
+  `specs/019-acquisition-volume.md`.
+
 # foretaccess 1.7.0 (2026-07-22)
 
 ## Nouveautés

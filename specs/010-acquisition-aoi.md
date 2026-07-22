@@ -4,7 +4,9 @@
 > Écart assumé vs §10 Q4 : les couches sont découpées sur l'AOI **bufferisée** (et non
 > recadrées sur l'AOI stricte), afin de **conserver** la desserte du voisinage — c'est la
 > finalité même du buffer (utile au plus court chemin, Lot 2). L'AOI stricte est conservée
-> dans `$aoi`. Phase 2 (MNH LiDAR → volume, BD Forêt v3) reste hors périmètre.
+> dans `$aoi`. Phase 2 : le **volume** (MNH LiDAR → P1 → `pre$volume`) est **livré** via
+> `acquire_inputs(volume=)` (v1.8.0, `specs/019`) — le calcul P1 reste chez Nemeton, ForêtAccess
+> l'injecte. La **BD Forêt v3** reste hors périmètre.
 > **Type** : lot **dédié**, en **amont** du prétraitement (alimente `specs/001`). Peut être
 > développé en parallèle (le prétraitement se valide sur le jeu jouet).
 > **Numérotation** : `010` pour ne pas entrer en collision avec les lots 2–9 déjà mappés

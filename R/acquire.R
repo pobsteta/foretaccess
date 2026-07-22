@@ -35,15 +35,25 @@
 #' @param dfci Alimenter le flag DFCI (`CL_DFCI`) sur la desserte, source du camion
 #'   DFCI (spec 006) : réseau OSM `ref:FR:DFCI` ([acquire_dfci()]), avec repli
 #'   géométrique ([flag_dfci()]) si OSM ne rend rien. Défaut `TRUE`.
+#' @param volume Volume sur pied à injecter (facultatif). **Jamais téléchargé** :
+#'   sa source est un inventaire ou l'indicateur **P1** de Nemeton (cf.
+#'   [volume_depuis_p1()]). Accepte un `SpatRaster` en m3/ha, un chemin de raster,
+#'   ou un `sf` d'unités portant un champ m3/ha (rasterisé via [volume_depuis_p1()]).
+#'   Aligné sur la grille du **MNT bufferisé** : le câble somme le volume jusque
+#'   dans le halo, un volume tronqué à l'AOI sous-estime l'IPC des lignes de bord
+#'   (spec 019). CRS différent du MNT : erreur (ADR-004) ; grille différente (même
+#'   CRS) : rééchantillonné, avec avertissement. `NULL` (défaut) : pas de volume.
+#' @param champ_volume Nom du champ m3/ha, utilisé seulement quand `volume` est un
+#'   `sf`. Défaut `"P1"` (la colonne écrite par Nemeton).
 #' @param config Objet [foretaccess_config()] fournissant les seuils DFCI
 #'   (`dfci$tol_appariement_m`, `emprise_min_m`, `rayon_retournement_m`) passés à
 #'   [flag_dfci()]. Défaut `NULL` (seuils par défaut).
 #'
 #' @return Un objet `foretaccess_inputs` : `mnt` (chemin raster), `desserte`,
-#'   `foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `aoi` (`sf` stricte),
-#'   `meta` (sources, CRS, buffer, date), `cache_dir`. Directement consommable par
-#'   [preprocess()].
-#' @seealso [preprocess()], [datasources], [acquire_mnt()]
+#'   `foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `volume` (`SpatRaster`
+#'   m3/ha ou `NULL`), `aoi` (`sf` stricte), `meta` (sources, CRS, buffer, date),
+#'   `cache_dir`. Directement consommable par [preprocess()].
+#' @seealso [preprocess()], [volume_depuis_p1()], [datasources], [acquire_mnt()]
 #' @export
 #' @examples
 #' \dontrun{
@@ -51,6 +61,13 @@
 #' inputs <- acquire_inputs(aoi, cache_dir = "cache")
 #' pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
 #'                   obstacles_complets = inputs$obstacles)
+#'
+#' # Volume via l'indicateur P1 de Nemeton (inventaire ou MNH LiDAR). Nemeton
+#' # calcule P1 sur l'emprise bufferisee ; acquire_inputs le rasterise.
+#' p1 <- nemeton::indicateur_p1_volume(parcelles, chm = mnh_lidar)
+#' inputs <- acquire_inputs(aoi, cache_dir = "cache", volume = p1)
+#' pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
+#'                   volume = inputs$volume)
 #' }
 acquire_inputs <- function(aoi,
                            sources = c("mnt", "desserte", "foret", "obstacles", "cadastre"),
@@ -62,6 +79,8 @@ acquire_inputs <- function(aoi,
                            overwrite = FALSE,
                            country = "FR",
                            dfci = TRUE,
+                           volume = NULL,
+                           champ_volume = "P1",
                            config = NULL) {
   sources <- match.arg(sources, c("mnt", "desserte", "foret", "obstacles", "cadastre"),
     several.ok = TRUE)
@@ -69,13 +88,14 @@ acquire_inputs <- function(aoi,
   checkmate::assert_number(buffer_m, lower = 0, finite = TRUE)
   checkmate::assert_flag(overwrite)
   checkmate::assert_flag(dfci)
+  checkmate::assert_string(champ_volume)
 
   aoi_stricte <- .charger_aoi(aoi, crs)
   emprise <- if (buffer_m > 0) sf::st_buffer(aoi_stricte, buffer_m) else aoi_stricte
 
   out <- list(
     mnt = NULL, desserte = NULL, foret = NULL, obstacles = NULL,
-    parcellaire = NULL, aoi = aoi_stricte
+    parcellaire = NULL, volume = NULL, aoi = aoi_stricte
   )
 
   if ("mnt" %in% sources) {
@@ -118,6 +138,13 @@ acquire_inputs <- function(aoi,
       tol_appariement_m = df$tol_appariement_m)
   }
 
+  # Volume sur pied (m3/ha) : injecte, jamais fetche. Sa source naturelle est
+  # l'indicateur P1 de Nemeton (cf. `volume_depuis_p1()`, spec 019). Aligne sur la
+  # grille du MNT BUFFERISE : le cable somme le volume jusque dans le halo.
+  if (!is.null(volume)) {
+    out$volume <- .preparer_volume(volume, out$mnt, champ_volume)
+  }
+
   out$meta <- list(
     sources = sources, country = country, crs = crs,
     res_m = res_m, buffer_m = buffer_m, date = as.character(Sys.Date())
@@ -154,7 +181,8 @@ print.foretaccess_inputs <- function(x, ...) {
     "Entrees ForetAccess acquises depuis une AOI",
     "*" = "pays / CRS : {x$meta$country} / EPSG:{x$meta$crs} (buffer {x$meta$buffer_m} m)",
     "*" = "mnt : {if (is.null(x$mnt)) '-' else 'raster'} ; desserte : {n(x$desserte)} ; \\
-           foret : {n(x$foret)} ; obstacles : {n(x$obstacles)} ; parcellaire : {n(x$parcellaire)}"
+           foret : {n(x$foret)} ; obstacles : {n(x$obstacles)} ; parcellaire : {n(x$parcellaire)} ; \\
+           volume : {if (is.null(x$volume)) '-' else 'raster'}"
   ))
   invisible(x)
 }
