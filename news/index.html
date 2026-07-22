@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,23 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.6.1" id="foretaccess-161-2026-07-21">foretaccess 1.6.1 (2026-07-21)<a class="anchor" aria-label="anchor" href="#foretaccess-161-2026-07-21"></a></h2>
+<div class="section level3">
+<h3 id="corrections-1-6-1">Corrections<a class="anchor" aria-label="anchor" href="#corrections-1-6-1"></a></h3>
+<ul><li>
+<p><strong><code><a href="../reference/places_depot.html">places_depot()</a></code> — l’heuristique de la 1.6.0 était contredite par l’oracle.</strong> Confrontée au jeu ColduPre, dont la desserte porte l’attribut relevé <code>CABLE</code> (<strong>2 places de dépôt sur 125 tronçons</strong>), la version 1.6.0 n’en retrouvait <strong>aucune</strong>, à tous les seuils. Trois erreurs de modèle, corrigées :</p>
+<ul><li>
+<strong>La planéité mesurait le versant, pas la plateforme.</strong> La pente était extraite du MNT au point candidat ; à 5 m de résolution, la banquette d’une route (4-5 m de large) n’est pas résolue, donc on mesurait le versant. Les deux vraies places sont sur des versants à <strong>24 %</strong> et <strong>65 %</strong> — la seconde est le tronçon le plus raide du réseau. Le critère éliminait donc systématiquement la montagne, c’est-à-dire le terrain où l’on câble. On mesure désormais la <strong>pente en long</strong> de la route (dénivelé le long de l’axe sur <code>fenetre_plateforme_m</code>, nouveau paramètre, défaut 50 m) : les deux vraies places y sont à <strong>1,1 %</strong> et <strong>3,2 %</strong>. Défaut <code>pente_max_pct</code> : 15 → <strong>6 %</strong>.</li>
+<li>
+<strong>L’accès rejetait sur <code>classe</code> et <code>dfci</code>.</strong> Or l’une des deux vraies places est une <em>piste forestière</em> à <code>CL_DFCI = 0</code>. Ces attributs sont désormais <strong>rapportés</strong> dans la colonne <code>acces</code> mais ne rejettent plus ; seule une largeur <strong>mesurée</strong> et insuffisante rejette.</li>
+<li>
+<strong>L’éclaircissement inter-tronçons supprimait les vraies places.</strong> Le glouton « la plus plate d’abord » évinçait les deux, chacune battue par un point plus plat à 18 m et 93 m sur une route voisine. L’espacement ne vaut plus que <strong>le long d’un même tronçon</strong> (l’échantillonnage le garantissait déjà) ; aucun tronçon retenu ne perd sa dernière place.</li>
+</ul><p>Résultat sur l’oracle : <strong>rappel 2/2</strong> (contre 0/2), 54 tronçons retenus sur</p>
+<ol start="125" style="list-style-type: decimal"><li>La <strong>précision reste de l’ordre de 4 %</strong> : <code><a href="../reference/places_depot.html">places_depot()</a></code> est un <strong>pré-filtre grossier</strong>, ce que sa documentation, son message de sortie et sa nouvelle section <em>Validation</em> disent maintenant explicitement. Banc reproductible : <code>data-raw/oracle_places_depot.R</code> ; tests de non-régression opt-in sur ColduPre (<code>SYLVA=...</code>).</li>
+</ol></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.6.0" id="foretaccess-160-2026-07-21">foretaccess 1.6.0 (2026-07-21)<a class="anchor" aria-label="anchor" href="#foretaccess-160-2026-07-21"></a></h2>
 <div class="section level3">

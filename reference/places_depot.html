@@ -17,7 +17,7 @@ checkable on the available data."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,8 @@ checkable on the available data.</p>
 <span>  foret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  retournements <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  largeur_min_m <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>  pente_max_pct <span class="op">=</span> <span class="fl">15</span>,</span>
+<span>  pente_max_pct <span class="op">=</span> <span class="fl">6</span>,</span>
+<span>  fenetre_plateforme_m <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  distance_foret_max_m <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  espacement_min_m <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  rayon_retournement_m <span class="op">=</span> <span class="fl">20</span>,</span>
@@ -100,11 +101,18 @@ checkable on the available data.</p>
 
 
 <dt id="arg-largeur-min-m">largeur_min_m<a class="anchor" aria-label="anchor" href="#arg-largeur-min-m"></a></dt>
-<dd><p>Minimum carriageway width for a log truck (m).</p></dd>
+<dd><p>Minimum carriageway width for a log truck (m). Only ever
+applied to a <em>measured</em> width; see criterion 1.</p></dd>
 
 
 <dt id="arg-pente-max-pct">pente_max_pct<a class="anchor" aria-label="anchor" href="#arg-pente-max-pct"></a></dt>
-<dd><p>Maximum terrain slope of the platform (%).</p></dd>
+<dd><p>Maximum <strong>longitudinal grade</strong> of the road at the
+platform (%), not terrain slope – see criterion 3.</p></dd>
+
+
+<dt id="arg-fenetre-plateforme-m">fenetre_plateforme_m<a class="anchor" aria-label="anchor" href="#arg-fenetre-plateforme-m"></a></dt>
+<dd><p>Length of road over which that grade is measured,
+centred on the candidate point (m). Roughly the length a landing occupies.</p></dd>
 
 
 <dt id="arg-distance-foret-max-m">distance_foret_max_m<a class="anchor" aria-label="anchor" href="#arg-distance-foret-max-m"></a></dt>
@@ -113,7 +121,8 @@ is supplied.</p></dd>
 
 
 <dt id="arg-espacement-min-m">espacement_min_m<a class="anchor" aria-label="anchor" href="#arg-espacement-min-m"></a></dt>
-<dd><p>Minimum spacing between two landings (m).</p></dd>
+<dd><p>Spacing between two candidates <em>along the same</em>
+segment (m). At least one candidate per segment regardless.</p></dd>
 
 
 <dt id="arg-rayon-retournement-m">rayon_retournement_m<a class="anchor" aria-label="anchor" href="#arg-rayon-retournement-m"></a></dt>
@@ -131,8 +140,9 @@ for the road segments that carry them.</p></dd>
     <p>An <code>sf</code> with a <code>cable</code> column (always <code>1L</code>, the field read by
 <code><a href="potentiel_cable.html">potentiel_cable()</a></code>): <code>POINT</code> when <code>sortie = "points"</code> (columns <code>id</code>,
 <code>cable</code>, <code>troncon</code> – the row of <code>desserte</code> it sits on –, <code>acces</code>,
-<code>largeur_m</code>, <code>pente_pct</code>), <code>LINESTRING</code> when <code>sortie = "troncons"</code> (columns
-<code>troncon</code>, <code>cable</code>, <code>acces</code>, <code>largeur_m</code>, <code>pente_pct</code>, <code>n_places</code>).</p>
+<code>largeur_m</code>, <code>pente_pct</code> – the longitudinal grade), <code>LINESTRING</code> when
+<code>sortie = "troncons"</code> (columns <code>troncon</code>, <code>cable</code>, <code>acces</code>, <code>largeur_m</code>,
+<code>pente_pct</code>, <code>n_places</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -143,60 +153,85 @@ for the road segments that carry them.</p></dd>
     <h2 id="criteres">Criteres<a class="anchor" aria-label="anchor" href="#criteres"></a></h2>
 
 
-<p>A road segment yields candidate landings when it passes, in order:</p><ol><li><p><strong>Truck access</strong> – carriageway width <code>&gt;= largeur_min_m</code> where a width
-attribute is available (<code>largeur</code>, <code>largeur_de_chaussee</code>); failing that,
-the <code>dfci</code> flag of <code><a href="flag_dfci.html">flag_dfci()</a></code>; failing that, a <code>classe</code> of <code>"route"</code> or
-<code>"dfci"</code>. A network carrying none of those attributes cannot be filtered on
-access at all: everything passes, and the function says so.</p></li>
+<p>A road segment yields candidate landings when it passes, in order:</p><ol><li><p><strong>Truck access</strong> – a segment is rejected only on <strong>hard evidence</strong>: a
+<em>measured</em> carriageway width (<code>largeur</code>, <code>largeur_de_chaussee</code>) below
+<code>largeur_min_m</code>. The <code>dfci</code> flag of <code><a href="flag_dfci.html">flag_dfci()</a></code> and the <code>classe</code> are
+recorded in the <code>acces</code> column but never reject: on the only oracle
+available they do not discriminate (see <em>Validation</em>).</p></li>
 <li><p><strong>Turn-around</strong> – only when <code>retournements</code> is supplied: the segment is
 either a through-route (both ends connected to the network) or a dead-end
 with a turning area within <code>rayon_retournement_m</code> of its dangling tip.
 Without that layer the criterion is <strong>not</strong> applied – absence of evidence
 is not evidence of absence.</p></li>
-<li><p><strong>Platform</strong> – terrain slope at the candidate point <code>&lt;= pente_max_pct</code>
-(Horn, <code><a href="calculer_terrain.html">calculer_terrain()</a></code>). A point where slope is undefined (MNT border)
-is dropped.</p></li>
+<li><p><strong>Platform</strong> – <strong>longitudinal grade</strong> of the road at the candidate point
+<code>&lt;= pente_max_pct</code>, measured over <code>fenetre_plateforme_m</code> along the
+centreline. Deliberately <em>not</em> the terrain slope: at 5 m resolution a road
+bench is not resolved by the DTM, so terrain slope measures the hillside,
+not the platform – and would eliminate exactly the steep ground where
+cable yarding is used.</p></li>
 <li><p><strong>Usefulness</strong> – only when <code>foret</code> is supplied: within
 <code>distance_foret_max_m</code> of forest. A landing with no wood to reach is not
 one.</p></li>
-</ol><p>Surviving points are then <strong>thinned</strong> to <code>espacement_min_m</code>, flattest first:
-the balance of <code><a href="potentiel_cable.html">potentiel_cable()</a></code> is proportional to the number of departure
-cells, and two landings 20 m apart sweep the same forest twice.</p>
+</ol><p>Sampling puts one candidate every <code>espacement_min_m</code> <strong>along each segment</strong>
+(at least one per segment, whatever its length): the balance of
+<code><a href="potentiel_cable.html">potentiel_cable()</a></code> is proportional to the number of departure cells, so a
+2 km road must not yield 400 of them. The spacing is deliberately <strong>not</strong>
+enforced <em>between</em> segments: a greedy cross-segment thinning evicted both real
+ColduPre landings, each beaten by a flatter point 18 m and 93 m away on a
+neighbouring road. Recall matters more than tidiness in a pre-filter.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="validation">Validation<a class="anchor" aria-label="anchor" href="#validation"></a></h2>
+
+
+<p>Confronted with the only oracle available – the Sylvaccess ColduPre test set,
+whose road network carries the surveyed <code>CABLE</code> attribute: <strong>2 landings among
+125 segments</strong>. Both are retained (<strong>recall 2/2</strong>) at every threshold below,
+and <code>pente_max_pct</code> buys the reduction:</p><table class="table table"><tr><td><code>pente_max_pct</code></td><td>segments kept</td><td>recall</td><td>margin on the worst true landing</td></tr><tr><td>4 %</td><td>43/125 (34 %)</td><td>2/2</td><td>0.6 pt</td></tr><tr><td><strong>6 %</strong> (default)</td><td><strong>54/125 (43 %)</strong></td><td><strong>2/2</strong></td><td><strong>2.6 pt</strong></td></tr><tr><td>8 %</td><td>71/125 (57 %)</td><td>2/2</td><td>4.6 pt</td></tr><tr><td>15 %</td><td>104/125 (83 %)</td><td>2/2</td><td>11.6 pt</td></tr></table><p>Read the other column honestly: <strong>precision is ~4 %</strong>. This is a <strong>coarse
+pre-filter</strong> – it halves the search space while keeping the real landings –
+<strong>not</strong> a substitute for a survey. The <code>CABLE</code> attribute encodes field
+knowledge the geometry does not carry; no threshold on this data isolates the
+two real landings. Use the output to <em>narrow</em> a field or photo-interpretation
+pass, not to feed <code><a href="potentiel_cable.html">potentiel_cable()</a></code> blind.</p>
+<p>The default is calibrated on <strong>two</strong> landings. Treat it as an order of
+magnitude, and re-tune it on your own massif if you can.</p>
+<p>The bench is reproducible: <code>data-raw/oracle_places_depot.R</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="potentiel_cable.html">potentiel_cable()</a></code> (consumes the layer), <code><a href="flag_dfci.html">flag_dfci()</a></code> (feeds the
-<code>dfci</code> flag used by criterion 1).</p></div>
+<code>dfci</code> flag reported by criterion 1).</p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">toy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/toy"</span>, package <span class="op">=</span> <span class="st">"foretaccess"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="co"># Le MNT jouet est un plan a 20 % : on releve le seuil de planeite en</span></span></span>
-<span class="r-in"><span><span class="co"># consequence (aucune plateforme a 15 % sur ce terrain).</span></span></span>
 <span class="r-in"><span><span class="va">places</span> <span class="op">&lt;-</span> <span class="fu">places_depot</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  desserte <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"desserte.gpkg"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  mnt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"mnt.tif"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  foret <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"foret.gpkg"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  pente_max_pct <span class="op">=</span> <span class="fl">25</span>,</span></span>
 <span class="r-in"><span>  espacement_min_m <span class="op">=</span> <span class="fl">100</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Aucune largeur mesuree (<span style="color: #00BB00;">largeur</span> / <span style="color: #00BB00;">largeur_de_chaussee</span>) : le critere d'acces</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   camion ne rejette rien.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Les colonnes <span style="color: #00BB00;">dfci</span> et <span style="color: #00BB00;">classe</span> sont rapportees dans <span style="color: #00BB00;">acces</span> mais ne tranchent pas</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   -- sur l'oracle ColduPre elles ecartent une vraie place de depot sur deux.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Aucune couche `retournements` : le critere de demi-tour n'est pas applique.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> 3 places de depot candidates sur 1/3 troncons.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Candidates heuristiques, pas un releve : une place de depot exige une</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   plateforme et un acces grumier a valider sur le terrain.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> A defaut, `potentiel_cable()` part de TOUTE la desserte -- couverture</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   beaucoup trop optimiste.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> 2 places de depot candidates sur 1/3 troncons.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Pre-filtre grossier, pas un releve. Sur l'oracle ColduPre : les 2 vraies</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   places de depot sont retrouvees, mais parmi 54 troncons sur 125 (precision ~4</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   %).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> A confirmer par photo-interpretation ou visite. Voir la section <span style="font-style: italic;">Validation</span> de</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   `places_depot()`.</span>
 <span class="r-in"><span><span class="va">places</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Simple feature collection with 3 features and 6 fields</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Simple feature collection with 2 features and 6 fields</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Geometry type: POINT</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dimension:     XY</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Bounding box:  xmin: 41.66667 ymin: 41.66667 xmax: 208.3333 ymax: 208.3333</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bounding box:  xmin: 125 ymin: 62.5 xmax: 125 ymax: 187.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Projected CRS: RGF93 v1 / Lambert-93</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id cable troncon  acces largeur_m pente_pct                  geometry</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1     1       3 classe        NA        20 POINT (41.66667 41.66667)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  2     1       3 classe        NA        20           POINT (125 125)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  3     1       3 classe        NA        20 POINT (208.3333 208.3333)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   id cable troncon        acces largeur_m pente_pct          geometry</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1     1       2 classe:piste        NA         0  POINT (125 62.5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  2     1       2 classe:piste        NA         0 POINT (125 187.5)</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

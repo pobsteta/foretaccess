@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,7 +102,9 @@
 <li>
 <strong><code>v1.0.0</code> posée</strong> (2026-07-15, bump majeur confirmé par l’utilisateur). Tous les préalables qui la justifiaient étaient levés : la validation contre le vrai moteur (Lot 11), la décomposition des distances (écart médian 0 m, pondération de piste comprise), et le <strong>Lot 6 (DFCI)</strong> confronté à l’oracle (12a.4, 99,87 %). Suite possible : dettes câble (hauteur de fixation, sélection de lignes tamponnées) et Phase 2 acquisition (MNH LiDAR → volume, BD Forêt v3), en <code>1.x</code>.</li>
 <li>
-<strong><code>v1.6.0</code> posée</strong> (2026-07-21) : <strong><code><a href="reference/places_depot.html">places_depot()</a></code></strong>. Le moteur câble exigeait une couche de places de dépôt (<code>potentiel_cable(departs = )</code>) sans aider à la produire ; <code><a href="reference/places_depot.html">places_depot()</a></code> en dérive des <strong>candidates</strong> de la desserte (accès camion → demi-tour → planéité → proximité de la forêt, puis éclaircissement à <code>espacement_min_m</code>). Explicitement heuristique : une place de dépôt reste un fait de terrain, et Sylvaccess la traite en donnée d’entrée.</li>
+<strong><code>v1.6.0</code> posée</strong> (2026-07-21) : <strong><code><a href="reference/places_depot.html">places_depot()</a></code></strong>. Le moteur câble exigeait une couche de places de dépôt (<code>potentiel_cable(departs = )</code>) sans aider à la produire ; <code><a href="reference/places_depot.html">places_depot()</a></code> en dérive des <strong>candidates</strong> de la desserte (accès camion → demi-tour → planéité → proximité de la forêt). Explicitement heuristique : une place de dépôt reste un fait de terrain, et Sylvaccess la traite en donnée d’entrée.</li>
+<li>
+<strong><code>v1.6.1</code> posée</strong> (2026-07-21) : <strong><code><a href="reference/places_depot.html">places_depot()</a></code> confrontée à l’oracle ColduPre</strong> — la v1.6.0 retrouvait <strong>0 des 2</strong> vraies places (attribut relevé <code>CABLE</code>). Trois erreurs de modèle corrigées (planéité mesurant le <strong>versant</strong> au lieu de la route ; rejet sur <code>classe</code>/<code>dfci</code> alors qu’une vraie place est une piste non DFCI ; éclaircissement inter-tronçons évinçant les deux). Après correction : <strong>rappel 2/2</strong>, 54 tronçons sur 125, <strong>précision ~4 %</strong> — la fonction est requalifiée en <strong>pré-filtre grossier</strong>, pas un relevé. Banc <code>data-raw/oracle_places_depot.R</code>. <strong>Règle qui en découle</strong> : toute heuristique se confronte à ColduPre <strong>avant</strong> la PR ; les fixtures synthétiques ne testent que la cohérence interne.</li>
 <li>
 <strong>Dette assumée du câble</strong> : optimisation de la hauteur de fixation. Le portage de <code>c_option_h = 1</code> (Sylvaccess <code>OptPyl_Up</code>/<code>Up2</code>) a été <strong>tenté puis abandonné le 16/07</strong> (bugué, ~20× plus lent, code d’origine lui-même planté). <strong>Voie retenue à la place</strong> : transcrire l’algorithme <strong>SEILAPLAN</strong> (Bont &amp; Heinimann 2012, graphe + plus court chemin), plus sain et validé — voir <code>specs/013-seilaplan-hauteur.md</code> et <code>docs/comparaison-cable-seilaplan.md</code>. Le <code>_NoH</code> (défaut) reste intact. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.</li>
 </ul></div>
@@ -326,6 +328,22 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-21--v161--places_depot-confrontée-à-loracle--02--22">2026-07-21 — <code>v1.6.1</code> : <code>places_depot()</code> confrontée à l’oracle — 0/2 → 2/2<a class="anchor" aria-label="anchor" href="#id_2026-07-21--v161--places_depot-confront%C3%A9e-%C3%A0-loracle--02--22"></a></h3>
+<p><strong>La v1.6.0 avait été publiée sans confrontation à ColduPre.</strong> 24 tests verts, <code>R CMD check</code> vert, CI verte — mais tous vérifiaient que <em>chaque critère fait ce qu’il annonce</em>, jamais que <em>le résultat ressemble à une vraie couche</em>. Confrontée à l’attribut relevé <code>CABLE</code> du réseau ColduPre (<strong>2 places sur 125 tronçons</strong>), elle n’en retrouvait <strong>aucune</strong>, à tous les seuils. Trois erreurs de modèle :</p>
+<ol style="list-style-type: decimal"><li>
+<strong>La planéité mesurait le versant.</strong> Pente omnidirectionnelle du MNT au point : à 5 m, la banquette d’une route (4-5 m) n’est pas résolue. Les 2 vraies places sont sur des versants à <strong>24 %</strong> et <strong>65 %</strong> — la seconde est le tronçon le plus raide du réseau (percentile 100). Le critère éliminait la montagne, c’est-à-dire le terrain où l’on câble. → <strong>pente en long</strong> (dénivelé le long de l’axe sur <code>fenetre_plateforme_m</code>) : les 2 vraies y sont à <strong>1,1 %</strong> et <strong>3,2 %</strong> (percentiles 19 et 31). Défaut <code>pente_max_pct</code> 15 → <strong>6 %</strong>.</li>
+<li>
+<strong>L’accès rejetait sur <code>classe</code>/<code>dfci</code>.</strong> L’une des deux vraies places est une piste forestière à <code>CL_DFCI = 0</code>. → ces attributs informent (colonne <code>acces</code>) mais ne tranchent plus ; seule une largeur <strong>mesurée</strong> insuffisante rejette.</li>
+<li>
+<strong>L’éclaircissement inter-tronçons les supprimait.</strong> Le glouton « la plus plate d’abord » évinçait les deux, battues par un point à <strong>18 m</strong> et <strong>93 m</strong> sur une route voisine. → l’espacement ne vaut plus que le long d’un même tronçon (l’échantillonnage le garantissait déjà) ; le glouton est supprimé.</li>
+</ol><p>Après correction : <strong>rappel 2/2</strong>, 54 tronçons retenus sur 125. Arbitrage mesuré (<code>pente_max_pct</code> 4 % → 34 % du réseau, marge 0,6 pt ; <strong>6 % → 43 %, marge 2,6 pt</strong> ; 8 % → 57 %, marge 4,6 pt), table reportée dans la doc.</p>
+<p><strong>La précision reste ~4 %</strong>, et c’est structurel : l’attribut <code>CABLE</code> encode du savoir de terrain que la géométrie ne porte pas. <code><a href="reference/places_depot.html">places_depot()</a></code> est requalifiée en <strong>pré-filtre grossier</strong> — dans sa doc (section <em>Validation</em>), dans son message de sortie et dans la vignette. Elle divise par deux l’espace de recherche en gardant les vraies ; elle ne remplace pas un relevé.</p>
+<p>Banc reproductible : <code>data-raw/oracle_places_depot.R</code>. Tests de non-régression opt-in sur ColduPre (<code>SYLVA=…</code>), plus un test de régression synthétique : une route <strong>de niveau sur un versant à 60 %</strong> doit être retenue — c’est le cas que la v1.6.0 rejetait.</p>
+<blockquote>
+<p><strong>Leçon de méthode</strong> : une fonction <em>heuristique</em> (qui devine une donnée métier au lieu de transcrire Sylvaccess) doit être confrontée à ColduPre <strong>avant</strong> la PR. Les fixtures synthétiques et le jeu jouet ne prouvent rien sur la fidélité — ils ne testent que la cohérence interne.</p>
+</blockquote>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-21--v160--places_depot-candidates-de-places-de-dépôt-pour-le-câble">2026-07-21 — <code>v1.6.0</code> : <code>places_depot()</code>, candidates de places de dépôt pour le câble<a class="anchor" aria-label="anchor" href="#id_2026-07-21--v160--places_depot-candidates-de-places-de-d%C3%A9p%C3%B4t-pour-le-c%C3%A2ble"></a></h3>
 <p>Le moteur câble attend une <strong>couche de départ dédiée</strong> (<code>potentiel_cable(departs = )</code>, équivalent du <code>c_file_departure</code> de Sylvaccess, filtré sur l’attribut <code>CABLE</code> — 2 tronçons sur 125 à ColduPre). Sans elle, le balayage part de <strong>toute</strong> la desserte : couverture massivement optimiste (une piste n’accueille pas un câble-mât) et coût proportionnel au nombre de cellules de départ. Jusqu’ici le package <strong>exigeait</strong> cette couche sans aider à la produire.</p>

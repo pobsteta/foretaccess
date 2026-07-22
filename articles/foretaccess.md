@@ -134,26 +134,38 @@ places <- places_depot(
   desserte = file.path(toy, "desserte.gpkg"),
   mnt      = file.path(toy, "mnt.tif"),
   foret    = file.path(toy, "foret.gpkg"),
-  pente_max_pct = 25,     # le MNT jouet est un plan a 20 % : aucune plateforme sous 15 %
   espacement_min_m = 100
 )
+#> ! Aucune largeur mesuree (largeur / largeur_de_chaussee) : le critere d'acces
+#>   camion ne rejette rien.
+#> ℹ Les colonnes dfci et classe sont rapportees dans acces mais ne tranchent pas
+#>   -- sur l'oracle ColduPre elles ecartent une vraie place de depot sur deux.
 #> ℹ Aucune couche `retournements` : le critere de demi-tour n'est pas applique.
-#> ✔ 3 places de depot candidates sur 1/3 troncons.
-#> ! Candidates heuristiques, pas un releve : une place de depot exige une
-#>   plateforme et un acces grumier a valider sur le terrain.
-#> ℹ A defaut, `potentiel_cable()` part de TOUTE la desserte -- couverture
-#>   beaucoup trop optimiste.
+#> ✔ 2 places de depot candidates sur 1/3 troncons.
+#> ! Pre-filtre grossier, pas un releve. Sur l'oracle ColduPre : les 2 vraies
+#>   places de depot sont retrouvees, mais parmi 54 troncons sur 125 (precision ~4
+#>   %).
+#> ℹ A confirmer par photo-interpretation ou visite. Voir la section Validation de
+#>   `places_depot()`.
 places[, c("troncon", "acces", "pente_pct")]
-#> Simple feature collection with 3 features and 3 fields
+#> Simple feature collection with 2 features and 3 fields
 #> Geometry type: POINT
 #> Dimension:     XY
-#> Bounding box:  xmin: 41.66667 ymin: 41.66667 xmax: 208.3333 ymax: 208.3333
+#> Bounding box:  xmin: 125 ymin: 62.5 xmax: 125 ymax: 187.5
 #> Projected CRS: RGF93 v1 / Lambert-93
-#>   troncon  acces pente_pct                  geometry
-#> 3       3 classe        20 POINT (41.66667 41.66667)
-#> 4       3 classe        20           POINT (125 125)
-#> 5       3 classe        20 POINT (208.3333 208.3333)
+#>   troncon        acces pente_pct          geometry
+#> 3       2 classe:piste         0  POINT (125 62.5)
+#> 4       2 classe:piste         0 POINT (125 187.5)
 ```
+
+Le MNT jouet est un plan incliné vers l’est à 20 % : seule la route **de
+niveau** (nord-sud, 0 % en long) porte des plateformes. C’est bien la
+pente **de la route** qui décide, pas celle du versant — mesurer le
+versant éliminerait la montagne, c’est-à-dire le terrain où l’on câble.
+Le détail de la confrontation à l’oracle ColduPre est dans
+[`?places_depot`](https://pobsteta.github.io/foretaccess/reference/places_depot.md),
+section *Validation* : rappel 2/2, précision ~4 % — un **pré-filtre**,
+pas un relevé.
 
 ``` r
 
