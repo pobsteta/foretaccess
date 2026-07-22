@@ -100,11 +100,17 @@ places <- places_depot(
   desserte = file.path(toy, "desserte.gpkg"),
   mnt      = file.path(toy, "mnt.tif"),
   foret    = file.path(toy, "foret.gpkg"),
-  pente_max_pct = 25,     # le MNT jouet est un plan a 20 % : aucune plateforme sous 15 %
   espacement_min_m = 100
 )
 places[, c("troncon", "acces", "pente_pct")]
 ```
+
+Le MNT jouet est un plan incliné vers l'est à 20 % : seule la route **de niveau**
+(nord-sud, 0 % en long) porte des plateformes. C'est bien la pente **de la route**
+qui décide, pas celle du versant — mesurer le versant éliminerait la montagne,
+c'est-à-dire le terrain où l'on câble. Le détail de la confrontation à l'oracle
+ColduPre est dans `?places_depot`, section *Validation* : rappel 2/2, précision
+~4 % — un **pré-filtre**, pas un relevé.
 
 ```{r cable}
 cab <- potentiel_cable(pre)

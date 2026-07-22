@@ -1,3 +1,38 @@
+# foretaccess 1.6.1 (2026-07-21)
+
+## Corrections
+
+- **`places_depot()` — l'heuristique de la 1.6.0 était contredite par l'oracle.**
+  Confrontée au jeu ColduPre, dont la desserte porte l'attribut relevé `CABLE`
+  (**2 places de dépôt sur 125 tronçons**), la version 1.6.0 n'en retrouvait
+  **aucune**, à tous les seuils. Trois erreurs de modèle, corrigées :
+
+  - **La planéité mesurait le versant, pas la plateforme.** La pente était
+    extraite du MNT au point candidat ; à 5 m de résolution, la banquette d'une
+    route (4-5 m de large) n'est pas résolue, donc on mesurait le versant. Les
+    deux vraies places sont sur des versants à **24 %** et **65 %** — la seconde
+    est le tronçon le plus raide du réseau. Le critère éliminait donc
+    systématiquement la montagne, c'est-à-dire le terrain où l'on câble. On
+    mesure désormais la **pente en long** de la route (dénivelé le long de l'axe
+    sur `fenetre_plateforme_m`, nouveau paramètre, défaut 50 m) : les deux vraies
+    places y sont à **1,1 %** et **3,2 %**. Défaut `pente_max_pct` : 15 → **6 %**.
+  - **L'accès rejetait sur `classe` et `dfci`.** Or l'une des deux vraies places
+    est une *piste forestière* à `CL_DFCI = 0`. Ces attributs sont désormais
+    **rapportés** dans la colonne `acces` mais ne rejettent plus ; seule une
+    largeur **mesurée** et insuffisante rejette.
+  - **L'éclaircissement inter-tronçons supprimait les vraies places.** Le glouton
+    « la plus plate d'abord » évinçait les deux, chacune battue par un point plus
+    plat à 18 m et 93 m sur une route voisine. L'espacement ne vaut plus que
+    **le long d'un même tronçon** (l'échantillonnage le garantissait déjà) ;
+    aucun tronçon retenu ne perd sa dernière place.
+
+  Résultat sur l'oracle : **rappel 2/2** (contre 0/2), 54 tronçons retenus sur
+  125. La **précision reste de l'ordre de 4 %** : `places_depot()` est un
+  **pré-filtre grossier**, ce que sa documentation, son message de sortie et sa
+  nouvelle section *Validation* disent maintenant explicitement. Banc
+  reproductible : `data-raw/oracle_places_depot.R` ; tests de non-régression
+  opt-in sur ColduPre (`SYLVA=...`).
+
 # foretaccess 1.6.0 (2026-07-21)
 
 ## Nouveautés

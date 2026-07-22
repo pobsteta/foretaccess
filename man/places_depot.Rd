@@ -10,7 +10,8 @@ places_depot(
   foret = NULL,
   retournements = NULL,
   largeur_min_m = 4,
-  pente_max_pct = 15,
+  pente_max_pct = 6,
+  fenetre_plateforme_m = 50,
   distance_foret_max_m = 100,
   espacement_min_m = 200,
   rayon_retournement_m = 20,
@@ -28,14 +29,20 @@ places_depot(
 \item{retournements}{Turning areas: path or \code{sf} of points, or \code{NULL}
 (criterion 2 off).}
 
-\item{largeur_min_m}{Minimum carriageway width for a log truck (m).}
+\item{largeur_min_m}{Minimum carriageway width for a log truck (m). Only ever
+applied to a \emph{measured} width; see criterion 1.}
 
-\item{pente_max_pct}{Maximum terrain slope of the platform (\%).}
+\item{pente_max_pct}{Maximum \strong{longitudinal grade} of the road at the
+platform (\%), not terrain slope -- see criterion 3.}
+
+\item{fenetre_plateforme_m}{Length of road over which that grade is measured,
+centred on the candidate point (m). Roughly the length a landing occupies.}
 
 \item{distance_foret_max_m}{Maximum distance to forest (m), used when \code{foret}
 is supplied.}
 
-\item{espacement_min_m}{Minimum spacing between two landings (m).}
+\item{espacement_min_m}{Spacing between two candidates \emph{along the same}
+segment (m). At least one candidate per segment regardless.}
 
 \item{rayon_retournement_m}{Max distance dead-end tip <-> turning area (m),
 used when \code{retournements} is supplied.}
@@ -47,8 +54,9 @@ for the road segments that carry them.}
 An \code{sf} with a \code{cable} column (always \code{1L}, the field read by
 \code{\link[=potentiel_cable]{potentiel_cable()}}): \code{POINT} when \code{sortie = "points"} (columns \code{id},
 \code{cable}, \code{troncon} -- the row of \code{desserte} it sits on --, \code{acces},
-\code{largeur_m}, \code{pente_pct}), \code{LINESTRING} when \code{sortie = "troncons"} (columns
-\code{troncon}, \code{cable}, \code{acces}, \code{largeur_m}, \code{pente_pct}, \code{n_places}).
+\code{largeur_m}, \code{pente_pct} -- the longitudinal grade), \code{LINESTRING} when
+\code{sortie = "troncons"} (columns \code{troncon}, \code{cable}, \code{acces}, \code{largeur_m},
+\code{pente_pct}, \code{n_places}).
 }
 \description{
 A cable yarder line cannot start just anywhere: it needs a landing with a
@@ -66,43 +74,74 @@ The result is an \code{sf} carrying a \code{cable} field, ready to be passed str
 
 A road segment yields candidate landings when it passes, in order:
 \enumerate{
-\item \strong{Truck access} -- carriageway width \verb{>= largeur_min_m} where a width
-attribute is available (\code{largeur}, \code{largeur_de_chaussee}); failing that,
-the \code{dfci} flag of \code{\link[=flag_dfci]{flag_dfci()}}; failing that, a \code{classe} of \code{"route"} or
-\code{"dfci"}. A network carrying none of those attributes cannot be filtered on
-access at all: everything passes, and the function says so.
+\item \strong{Truck access} -- a segment is rejected only on \strong{hard evidence}: a
+\emph{measured} carriageway width (\code{largeur}, \code{largeur_de_chaussee}) below
+\code{largeur_min_m}. The \code{dfci} flag of \code{\link[=flag_dfci]{flag_dfci()}} and the \code{classe} are
+recorded in the \code{acces} column but never reject: on the only oracle
+available they do not discriminate (see \emph{Validation}).
 \item \strong{Turn-around} -- only when \code{retournements} is supplied: the segment is
 either a through-route (both ends connected to the network) or a dead-end
 with a turning area within \code{rayon_retournement_m} of its dangling tip.
 Without that layer the criterion is \strong{not} applied -- absence of evidence
 is not evidence of absence.
-\item \strong{Platform} -- terrain slope at the candidate point \verb{<= pente_max_pct}
-(Horn, \code{\link[=calculer_terrain]{calculer_terrain()}}). A point where slope is undefined (MNT border)
-is dropped.
+\item \strong{Platform} -- \strong{longitudinal grade} of the road at the candidate point
+\verb{<= pente_max_pct}, measured over \code{fenetre_plateforme_m} along the
+centreline. Deliberately \emph{not} the terrain slope: at 5 m resolution a road
+bench is not resolved by the DTM, so terrain slope measures the hillside,
+not the platform -- and would eliminate exactly the steep ground where
+cable yarding is used.
 \item \strong{Usefulness} -- only when \code{foret} is supplied: within
 \code{distance_foret_max_m} of forest. A landing with no wood to reach is not
 one.
 }
 
-Surviving points are then \strong{thinned} to \code{espacement_min_m}, flattest first:
-the balance of \code{potentiel_cable()} is proportional to the number of departure
-cells, and two landings 20 m apart sweep the same forest twice.
+Sampling puts one candidate every \code{espacement_min_m} \strong{along each segment}
+(at least one per segment, whatever its length): the balance of
+\code{\link[=potentiel_cable]{potentiel_cable()}} is proportional to the number of departure cells, so a
+2 km road must not yield 400 of them. The spacing is deliberately \strong{not}
+enforced \emph{between} segments: a greedy cross-segment thinning evicted both real
+ColduPre landings, each beaten by a flatter point 18 m and 93 m away on a
+neighbouring road. Recall matters more than tidiness in a pre-filter.
+}
+
+\section{Validation}{
+
+Confronted with the only oracle available -- the Sylvaccess ColduPre test set,
+whose road network carries the surveyed \code{CABLE} attribute: \strong{2 landings among
+125 segments}. Both are retained (\strong{recall 2/2}) at every threshold below,
+and \code{pente_max_pct} buys the reduction:\tabular{llll}{
+   \code{pente_max_pct} \tab segments kept \tab recall \tab margin on the worst true landing \cr
+   4 \% \tab 43/125 (34 \%) \tab 2/2 \tab 0.6 pt \cr
+   \strong{6 \%} (default) \tab \strong{54/125 (43 \%)} \tab \strong{2/2} \tab \strong{2.6 pt} \cr
+   8 \% \tab 71/125 (57 \%) \tab 2/2 \tab 4.6 pt \cr
+   15 \% \tab 104/125 (83 \%) \tab 2/2 \tab 11.6 pt \cr
+}
+
+
+Read the other column honestly: \strong{precision is ~4 \%}. This is a \strong{coarse
+pre-filter} -- it halves the search space while keeping the real landings --
+\strong{not} a substitute for a survey. The \code{CABLE} attribute encodes field
+knowledge the geometry does not carry; no threshold on this data isolates the
+two real landings. Use the output to \emph{narrow} a field or photo-interpretation
+pass, not to feed \code{\link[=potentiel_cable]{potentiel_cable()}} blind.
+
+The default is calibrated on \strong{two} landings. Treat it as an order of
+magnitude, and re-tune it on your own massif if you can.
+
+The bench is reproducible: \code{data-raw/oracle_places_depot.R}.
 }
 
 \examples{
 toy <- system.file("extdata/toy", package = "foretaccess")
-# Le MNT jouet est un plan a 20 \% : on releve le seuil de planeite en
-# consequence (aucune plateforme a 15 \% sur ce terrain).
 places <- places_depot(
   desserte = file.path(toy, "desserte.gpkg"),
   mnt = file.path(toy, "mnt.tif"),
   foret = file.path(toy, "foret.gpkg"),
-  pente_max_pct = 25,
   espacement_min_m = 100
 )
 places
 }
 \seealso{
 \code{\link[=potentiel_cable]{potentiel_cable()}} (consumes the layer), \code{\link[=flag_dfci]{flag_dfci()}} (feeds the
-\code{dfci} flag used by criterion 1).
+\code{dfci} flag reported by criterion 1).
 }

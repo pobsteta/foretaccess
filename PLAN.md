@@ -157,8 +157,16 @@
 - **`v1.6.0` posée** (2026-07-21) : **`places_depot()`**. Le moteur câble exigeait une couche de
   places de dépôt (`potentiel_cable(departs = )`) sans aider à la produire ; `places_depot()` en
   dérive des **candidates** de la desserte (accès camion → demi-tour → planéité → proximité de la
-  forêt, puis éclaircissement à `espacement_min_m`). Explicitement heuristique : une place de dépôt
-  reste un fait de terrain, et Sylvaccess la traite en donnée d'entrée.
+  forêt). Explicitement heuristique : une place de dépôt reste un fait de terrain, et Sylvaccess la
+  traite en donnée d'entrée.
+- **`v1.6.1` posée** (2026-07-21) : **`places_depot()` confrontée à l'oracle ColduPre** — la v1.6.0
+  retrouvait **0 des 2** vraies places (attribut relevé `CABLE`). Trois erreurs de modèle corrigées
+  (planéité mesurant le **versant** au lieu de la route ; rejet sur `classe`/`dfci` alors qu'une
+  vraie place est une piste non DFCI ; éclaircissement inter-tronçons évinçant les deux). Après
+  correction : **rappel 2/2**, 54 tronçons sur 125, **précision ~4 %** — la fonction est requalifiée
+  en **pré-filtre grossier**, pas un relevé. Banc `data-raw/oracle_places_depot.R`.
+  **Règle qui en découle** : toute heuristique se confronte à ColduPre **avant** la PR ; les
+  fixtures synthétiques ne testent que la cohérence interne.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation. Le portage de
   `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été **tenté puis abandonné le 16/07** (bugué,
   ~20× plus lent, code d'origine lui-même planté). **Voie retenue à la place** : transcrire
@@ -350,6 +358,49 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-21 — `v1.6.1` : `places_depot()` confrontée à l'oracle — 0/2 → 2/2
+
+**La v1.6.0 avait été publiée sans confrontation à ColduPre.** 24 tests verts,
+`R CMD check` vert, CI verte — mais tous vérifiaient que *chaque critère fait ce
+qu'il annonce*, jamais que *le résultat ressemble à une vraie couche*. Confrontée
+à l'attribut relevé `CABLE` du réseau ColduPre (**2 places sur 125 tronçons**),
+elle n'en retrouvait **aucune**, à tous les seuils. Trois erreurs de modèle :
+
+1. **La planéité mesurait le versant.** Pente omnidirectionnelle du MNT au point :
+   à 5 m, la banquette d'une route (4-5 m) n'est pas résolue. Les 2 vraies places
+   sont sur des versants à **24 %** et **65 %** — la seconde est le tronçon le plus
+   raide du réseau (percentile 100). Le critère éliminait la montagne, c'est-à-dire
+   le terrain où l'on câble. → **pente en long** (dénivelé le long de l'axe sur
+   `fenetre_plateforme_m`) : les 2 vraies y sont à **1,1 %** et **3,2 %**
+   (percentiles 19 et 31). Défaut `pente_max_pct` 15 → **6 %**.
+2. **L'accès rejetait sur `classe`/`dfci`.** L'une des deux vraies places est une
+   piste forestière à `CL_DFCI = 0`. → ces attributs informent (colonne `acces`)
+   mais ne tranchent plus ; seule une largeur **mesurée** insuffisante rejette.
+3. **L'éclaircissement inter-tronçons les supprimait.** Le glouton « la plus plate
+   d'abord » évinçait les deux, battues par un point à **18 m** et **93 m** sur une
+   route voisine. → l'espacement ne vaut plus que le long d'un même tronçon
+   (l'échantillonnage le garantissait déjà) ; le glouton est supprimé.
+
+Après correction : **rappel 2/2**, 54 tronçons retenus sur 125. Arbitrage mesuré
+(`pente_max_pct` 4 % → 34 % du réseau, marge 0,6 pt ; **6 % → 43 %, marge 2,6 pt** ;
+8 % → 57 %, marge 4,6 pt), table reportée dans la doc.
+
+**La précision reste ~4 %**, et c'est structurel : l'attribut `CABLE` encode du
+savoir de terrain que la géométrie ne porte pas. `places_depot()` est requalifiée
+en **pré-filtre grossier** — dans sa doc (section *Validation*), dans son message
+de sortie et dans la vignette. Elle divise par deux l'espace de recherche en
+gardant les vraies ; elle ne remplace pas un relevé.
+
+Banc reproductible : `data-raw/oracle_places_depot.R`. Tests de non-régression
+opt-in sur ColduPre (`SYLVA=…`), plus un test de régression synthétique : une
+route **de niveau sur un versant à 60 %** doit être retenue — c'est le cas que la
+v1.6.0 rejetait.
+
+> **Leçon de méthode** : une fonction *heuristique* (qui devine une donnée métier
+> au lieu de transcrire Sylvaccess) doit être confrontée à ColduPre **avant** la
+> PR. Les fixtures synthétiques et le jeu jouet ne prouvent rien sur la fidélité —
+> ils ne testent que la cohérence interne.
 
 ### 2026-07-21 — `v1.6.0` : `places_depot()`, candidates de places de dépôt pour le câble
 
