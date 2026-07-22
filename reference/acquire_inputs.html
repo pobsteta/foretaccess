@@ -17,7 +17,7 @@ sont déclarés dans inst/datasources/&amp;lt;pays&amp;gt;.json, jamais codés e
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.7.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,6 +74,8 @@ sont déclarés dans <code>inst/datasources/&lt;pays&gt;.json</code>, jamais cod
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
 <span>  dfci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  volume <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  champ_volume <span class="op">=</span> <span class="st">"P1"</span>,</span>
 <span>  config <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -127,6 +129,22 @@ DFCI (spec 006) : réseau OSM <code>ref:FR:DFCI</code> (<code><a href="acquire_d
 géométrique (<code><a href="flag_dfci.html">flag_dfci()</a></code>) si OSM ne rend rien. Défaut <code>TRUE</code>.</p></dd>
 
 
+<dt id="arg-volume">volume<a class="anchor" aria-label="anchor" href="#arg-volume"></a></dt>
+<dd><p>Volume sur pied à injecter (facultatif). <strong>Jamais téléchargé</strong> :
+sa source est un inventaire ou l'indicateur <strong>P1</strong> de Nemeton (cf.
+<code><a href="volume_depuis_p1.html">volume_depuis_p1()</a></code>). Accepte un <code>SpatRaster</code> en m3/ha, un chemin de raster,
+ou un <code>sf</code> d'unités portant un champ m3/ha (rasterisé via <code><a href="volume_depuis_p1.html">volume_depuis_p1()</a></code>).
+Aligné sur la grille du <strong>MNT bufferisé</strong> : le câble somme le volume jusque
+dans le halo, un volume tronqué à l'AOI sous-estime l'IPC des lignes de bord
+(spec 019). CRS différent du MNT : erreur (ADR-004) ; grille différente (même
+CRS) : rééchantillonné, avec avertissement. <code>NULL</code> (défaut) : pas de volume.</p></dd>
+
+
+<dt id="arg-champ-volume">champ_volume<a class="anchor" aria-label="anchor" href="#arg-champ-volume"></a></dt>
+<dd><p>Nom du champ m3/ha, utilisé seulement quand <code>volume</code> est un
+<code>sf</code>. Défaut <code>"P1"</code> (la colonne écrite par Nemeton).</p></dd>
+
+
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>
 <dd><p>Objet <code><a href="foretaccess_config.html">foretaccess_config()</a></code> fournissant les seuils DFCI
 (<code>dfci$tol_appariement_m</code>, <code>emprise_min_m</code>, <code>rayon_retournement_m</code>) passés à
@@ -136,9 +154,9 @@ géométrique (<code><a href="flag_dfci.html">flag_dfci()</a></code>) si OSM ne 
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Un objet <code>foretaccess_inputs</code> : <code>mnt</code> (chemin raster), <code>desserte</code>,
-<code>foret</code>, <code>obstacles</code>, <code>parcellaire</code> (<code>sf</code> ou <code>NULL</code>), <code>aoi</code> (<code>sf</code> stricte),
-<code>meta</code> (sources, CRS, buffer, date), <code>cache_dir</code>. Directement consommable par
-<code><a href="preprocess.html">preprocess()</a></code>.</p>
+<code>foret</code>, <code>obstacles</code>, <code>parcellaire</code> (<code>sf</code> ou <code>NULL</code>), <code>volume</code> (<code>SpatRaster</code>
+m3/ha ou <code>NULL</code>), <code>aoi</code> (<code>sf</code> stricte), <code>meta</code> (sources, CRS, buffer, date),
+<code>cache_dir</code>. Directement consommable par <code><a href="preprocess.html">preprocess()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -155,7 +173,7 @@ résultat (<code>$aoi</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="preprocess.html">preprocess()</a></code>, <a href="datasources.html">datasources</a>, <code><a href="acquire_mnt.html">acquire_mnt()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="preprocess.html">preprocess()</a></code>, <code><a href="volume_depuis_p1.html">volume_depuis_p1()</a></code>, <a href="datasources.html">datasources</a>, <code><a href="acquire_mnt.html">acquire_mnt()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -165,6 +183,13 @@ résultat (<code>$aoi</code>).</p>
 <span class="r-in"><span><span class="va">inputs</span> <span class="op">&lt;-</span> <span class="fu">acquire_inputs</span><span class="op">(</span><span class="va">aoi</span>, cache_dir <span class="op">=</span> <span class="st">"cache"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">pre</span> <span class="op">&lt;-</span> <span class="fu"><a href="preprocess.html">preprocess</a></span><span class="op">(</span><span class="va">inputs</span><span class="op">$</span><span class="va">mnt</span>, <span class="va">inputs</span><span class="op">$</span><span class="va">desserte</span>, <span class="va">inputs</span><span class="op">$</span><span class="va">foret</span>,</span></span>
 <span class="r-in"><span>                  obstacles_complets <span class="op">=</span> <span class="va">inputs</span><span class="op">$</span><span class="va">obstacles</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Volume via l'indicateur P1 de Nemeton (inventaire ou MNH LiDAR). Nemeton</span></span></span>
+<span class="r-in"><span><span class="co"># calcule P1 sur l'emprise bufferisee ; acquire_inputs le rasterise.</span></span></span>
+<span class="r-in"><span><span class="va">p1</span> <span class="op">&lt;-</span> <span class="fu">nemeton</span><span class="fu">::</span><span class="fu">indicateur_p1_volume</span><span class="op">(</span><span class="va">parcelles</span>, chm <span class="op">=</span> <span class="va">mnh_lidar</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">inputs</span> <span class="op">&lt;-</span> <span class="fu">acquire_inputs</span><span class="op">(</span><span class="va">aoi</span>, cache_dir <span class="op">=</span> <span class="st">"cache"</span>, volume <span class="op">=</span> <span class="va">p1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pre</span> <span class="op">&lt;-</span> <span class="fu"><a href="preprocess.html">preprocess</a></span><span class="op">(</span><span class="va">inputs</span><span class="op">$</span><span class="va">mnt</span>, <span class="va">inputs</span><span class="op">$</span><span class="va">desserte</span>, <span class="va">inputs</span><span class="op">$</span><span class="va">foret</span>,</span></span>
+<span class="r-in"><span>                  volume <span class="op">=</span> <span class="va">inputs</span><span class="op">$</span><span class="va">volume</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

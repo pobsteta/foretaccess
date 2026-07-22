@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.7.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.8.0" id="foretaccess-180-2026-07-22">foretaccess 1.8.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-180-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-8-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-8-0"></a></h3>
+<ul><li>
+<strong><code>acquire_inputs(volume = )</code> — injection du volume sur pied dans le pipeline d’acquisition (spec 019).</strong> Complète <code><a href="../reference/volume_depuis_p1.html">volume_depuis_p1()</a></code> (v1.7.0) : <code><a href="../reference/acquire_inputs.html">acquire_inputs()</a></code> gagne un argument <code>volume</code> (facultatif) qui <strong>relaie</strong> un volume sur pied jusque dans <code>out$volume</code>, prêt pour <code>preprocess(volume = )</code> puis le câble. Le volume est <strong>injecté, jamais téléchargé</strong> — sa source est l’indicateur <strong>P1</strong> de Nemeton (inventaire ou MNH LiDAR). Trois formes acceptées, via un unique argument polymorphe : un <code>SpatRaster</code> en m³/ha, un chemin de raster, ou un <code>sf</code> d’unités portant un champ m³/ha (<code>champ_volume</code>, défaut <code>"P1"</code>, rasterisé par <code><a href="../reference/volume_depuis_p1.html">volume_depuis_p1()</a></code>). Aligné sur la grille du <strong>MNT bufferisé</strong> : le câble somme le volume jusque dans le halo, un volume tronqué à l’AOI sous-estimerait l’IPC des lignes de bord. CRS différent du MNT → erreur (ADR-004) ; grille différente, même CRS → rééchantillonné (bilinéaire, densité) avec avertissement ; couverture partielle de l’emprise → avertissement chiffré. <strong>Aucune dépendance à Nemeton</strong> : le raccord (P1 → volume) vit dans l’orchestrateur (nemetonshiny). Voir <code>specs/019-acquisition-volume.md</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.7.0" id="foretaccess-170-2026-07-22">foretaccess 1.7.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-170-2026-07-22"></a></h2>
 <div class="section level3">

@@ -23,6 +23,8 @@ acquire_inputs(
   overwrite = FALSE,
   country = "FR",
   dfci = TRUE,
+  volume = NULL,
+  champ_volume = "P1",
   config = NULL
 )
 ```
@@ -80,6 +82,25 @@ acquire_inputs(
   ([`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md))
   si OSM ne rend rien. Défaut `TRUE`.
 
+- volume:
+
+  Volume sur pied à injecter (facultatif). **Jamais téléchargé** : sa
+  source est un inventaire ou l'indicateur **P1** de Nemeton (cf.
+  [`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)).
+  Accepte un `SpatRaster` en m3/ha, un chemin de raster, ou un `sf`
+  d'unités portant un champ m3/ha (rasterisé via
+  [`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)).
+  Aligné sur la grille du **MNT bufferisé** : le câble somme le volume
+  jusque dans le halo, un volume tronqué à l'AOI sous-estime l'IPC des
+  lignes de bord (spec 019). CRS différent du MNT : erreur (ADR-004) ;
+  grille différente (même CRS) : rééchantillonné, avec avertissement.
+  `NULL` (défaut) : pas de volume.
+
+- champ_volume:
+
+  Nom du champ m3/ha, utilisé seulement quand `volume` est un `sf`.
+  Défaut `"P1"` (la colonne écrite par Nemeton).
+
 - config:
 
   Objet
@@ -92,9 +113,9 @@ acquire_inputs(
 ## Value
 
 Un objet `foretaccess_inputs` : `mnt` (chemin raster), `desserte`,
-`foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `aoi` (`sf`
-stricte), `meta` (sources, CRS, buffer, date), `cache_dir`. Directement
-consommable par
+`foret`, `obstacles`, `parcellaire` (`sf` ou `NULL`), `volume`
+(`SpatRaster` m3/ha ou `NULL`), `aoi` (`sf` stricte), `meta` (sources,
+CRS, buffer, date), `cache_dir`. Directement consommable par
 [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
 
 ## Details
@@ -114,6 +135,7 @@ conservée dans le résultat (`$aoi`).
 ## See also
 
 [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
+[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md),
 [datasources](https://pobsteta.github.io/foretaccess/reference/datasources.md),
 [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
 
@@ -125,5 +147,12 @@ aoi <- sf::st_read("mon_massif.gpkg")
 inputs <- acquire_inputs(aoi, cache_dir = "cache")
 pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
                   obstacles_complets = inputs$obstacles)
+
+# Volume via l'indicateur P1 de Nemeton (inventaire ou MNH LiDAR). Nemeton
+# calcule P1 sur l'emprise bufferisee ; acquire_inputs le rasterise.
+p1 <- nemeton::indicateur_p1_volume(parcelles, chm = mnh_lidar)
+inputs <- acquire_inputs(aoi, cache_dir = "cache", volume = p1)
+pre <- preprocess(inputs$mnt, inputs$desserte, inputs$foret,
+                  volume = inputs$volume)
 } # }
 ```
