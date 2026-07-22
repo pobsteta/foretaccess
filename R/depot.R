@@ -92,6 +92,28 @@
 #'
 #' The bench is reproducible: `data-raw/oracle_places_depot.R`.
 #'
+#' @section Performance et selectivite:
+#' `places_depot()` scans the whole network by pure coordinate interpolation
+#' (no per-point `sf` call): sub-second on a departmental network. **But its
+#' output size -- the number of landings -- is what governs the cost of the step
+#' after it**, [potentiel_cable()], whose runtime is proportional to the number of
+#' departures. On a raw BD TOPO network **with no measured width and no
+#' `retournements` layer**, criteria 1-2 reject nothing, so only grade and forest
+#' proximity filter -- yielding *hundreds to thousands* of loose departures and an
+#' over-optimistic cable coverage.
+#'
+#' To bring departures down to an **exploitable** count (tens), feed it richer
+#' inputs, in order of effect:
+#' * a **`retournements`** layer (turn-arounds) -- turns criterion 2 on, the
+#'   single biggest cut on a real network;
+#' * a **measured width** (`largeur` / `largeur_de_chaussee`, or LiDAR-derived,
+#'   see `acquire_desserte_lidar()` roadmap) -- turns criterion 1 into a real
+#'   truck-access filter;
+#' * a tighter **`espacement_min_m`** and lower **`pente_max_pct`**.
+#'
+#' Without any of these it stays a coarse pre-filter: usable to *narrow* a manual
+#' pass, not to feed the cable engine blind at interactive speed.
+#'
 #' @param desserte Road network: path to a vector file or an `sf` of lines.
 #' @param mnt Digital terrain model: `SpatRaster` or path. Must share the CRS of
 #'   `desserte` (no implicit reprojection, ADR-004).
@@ -330,40 +352,78 @@ places_depot <- function(desserte,
   a <- pmax(0, pts$.abscisse - demi)
   b <- pmin(lg, pts$.abscisse + demi)
 
-  za <- .altitude_sur_ligne(g, pts$.ligne, a / lg, mnt)
-  zb <- .altitude_sur_ligne(g, pts$.ligne, b / lg, mnt)
+  # Un seul jeu de coordonnees (bouts a et b concatenes) -> un seul extract MNT.
+  za_zb <- .altitude_sur_ligne(g, c(pts$.ligne, pts$.ligne), c(a, b), mnt)
+  n <- nrow(pts)
+  za <- za_zb[seq_len(n)]
+  zb <- za_zb[n + seq_len(n)]
 
   d <- b - a
   ifelse(d > 0, 100 * abs(zb - za) / d, NA_real_)
 }
 
-# Altitude du MNT au point d'abscisse relative `frac` sur la ligne `idx[i]`.
-.altitude_sur_ligne <- function(g, idx, frac, mnt) {
-  pts <- lapply(seq_along(idx), function(i) {
-    sf::st_cast(sf::st_line_sample(g[idx[i]], sample = frac[i]), "POINT")
-  })
-  pts <- sf::st_sfc(do.call(c, lapply(pts, function(p) p[[1]])), crs = sf::st_crs(g))
-  as.numeric(terra::extract(mnt, terra::vect(pts))[, 2])
+# Sommets d'une ligne + longueurs de segment cumulees. Base de toute
+# interpolation le long de la ligne. `sf::st_coordinates` une fois par ligne.
+.sommets_ligne <- function(geom) {
+  m <- sf::st_coordinates(geom)[, 1:2, drop = FALSE]
+  seg <- sqrt(diff(m[, 1])^2 + diff(m[, 2])^2)
+  list(m = m, cum = c(0, cumsum(seg)), seg = seg, tot = sum(seg))
+}
+
+# Coordonnees (x, y) a la distance curviligne `d` le long d'une ligne cachee.
+.interp_le_long <- function(c, d) {
+  d <- min(max(d, 0), c$tot)
+  j <- findInterval(d, c$cum, rightmost.closed = TRUE)
+  j <- max(1L, min(j, nrow(c$m) - 1L))
+  t <- if (c$seg[j] > 0) (d - c$cum[j]) / c$seg[j] else 0
+  c(c$m[j, 1] + t * (c$m[j + 1, 1] - c$m[j, 1]),
+    c$m[j, 2] + t * (c$m[j + 1, 2] - c$m[j, 2]))
+}
+
+# Altitude du MNT au point situe a la distance curviligne `dist_abs[i]` le long de
+# la ligne `idx[i]`. Interpolation de coordonnees -- PAS de `sf::st_line_sample`
+# par point : celui-ci re-parse le CRS a chaque appel (`CPL_crs_parameters` = 73 %
+# du temps de places_depot, profilage 2026-07-22). Sommets extraits une seule fois
+# par ligne UNIQUE, puis un seul `terra::extract` sur la matrice x/y.
+.altitude_sur_ligne <- function(g, idx, dist_abs, mnt) {
+  cache <- new.env(parent = emptyenv())
+  coords_ligne <- function(li) {
+    cle <- as.character(li)
+    if (is.null(cache[[cle]])) cache[[cle]] <- .sommets_ligne(g[[li]])
+    cache[[cle]]
+  }
+  xy <- t(vapply(seq_along(idx), function(i) {
+    .interp_le_long(coords_ligne(idx[i]), dist_abs[i])
+  }, numeric(2)))
+  as.numeric(terra::extract(mnt, xy)[, 1])
 }
 
 # Points candidats le long de chaque troncon, un tous les `espacement_m` au plus
 # (au moins un par troncon, au milieu, quelle que soit sa longueur). On garde
 # l'abscisse curviligne : la pente en long se mesure le long de la ligne.
+#
+# Interpolation de coordonnees (pas de `sf::st_line_sample` ni `st_length` par
+# ligne, tous deux re-parsant le CRS -- meme piege que `.altitude_sur_ligne`).
+# Les points sont batis en UN SEUL `st_as_sf` (un parse de CRS au lieu de N).
 .points_le_long <- function(des, espacement_m) {
   g <- sf::st_geometry(des)
-  lg <- as.numeric(sf::st_length(g))
+  crs <- sf::st_crs(g)
   attrs <- sf::st_drop_geometry(des)
 
-  morceaux <- lapply(seq_along(g), function(i) {
-    k <- max(1L, floor(lg[i] / espacement_m))
+  rows <- lapply(seq_along(g), function(i) {
+    c <- .sommets_ligne(g[[i]])
+    k <- max(1L, floor(c$tot / espacement_m))
     frac <- if (k == 1L) 0.5 else seq(0.5 / k, 1 - 0.5 / k, length.out = k)
-    p <- sf::st_cast(sf::st_line_sample(g[i], sample = frac), "POINT")
-    sf::st_sf(attrs[rep(i, length(p)), , drop = FALSE],
-      .ligne = i, .abscisse = frac * lg[i], .longueur = lg[i],
-      geometry = p
+    abscisse <- frac * c$tot
+    xy <- t(vapply(abscisse, function(d) .interp_le_long(c, d), numeric(2)))
+    cbind(
+      data.frame(.ligne = i, .abscisse = abscisse, .longueur = c$tot),
+      attrs[rep(i, k), , drop = FALSE],
+      x = xy[, 1], y = xy[, 2]
     )
   })
-  do.call(rbind, morceaux)
+  df <- do.call(rbind, rows)
+  sf::st_as_sf(df, coords = c("x", "y"), crs = crs)
 }
 
 # Troncons portant au moins une place retenue, avec la pente de leur meilleure.

@@ -113,6 +113,9 @@ foretaccess_config <- function(skidder = list(),
       # Gardes au sol du cable porteur (v3.6 : c_h_min / c_h_max).
       hauteur_cable_min_m = 3.5,
       hauteur_cable_max_m = 50,
+      # INERTE : conserve pour compat, mais le noyau derive le pas de balayage de
+      # `precision` (cf. precision_cable()), pas de ce champ. Cf. section
+      # Performance de potentiel_cable().
       pas_angulaire_deg   = 1,
       # Geometrie de la ligne (v3.6).
       longueur_max_m             = 750,   # c_lmax

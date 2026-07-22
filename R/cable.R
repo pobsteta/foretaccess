@@ -64,6 +64,23 @@
 #' (acces camion, demi-tour, planeite, proximite de la foret) et rend une couche
 #' directement consommable ici.
 #'
+#' @section Performance:
+#' Le cout du balayage est **proportionnel au nombre de departs x azimuts**. Deux
+#' leviers, dans cet ordre :
+#' * **le nombre de departs** domine : une couche `departs` selective (quelques
+#'   dizaines de places, cf. [places_depot()] et sa recette d'entrees) est le seul
+#'   moyen de rendre le calcul interactif -- le repli `departs = NULL` (toute la
+#'   desserte, des milliers de departs) est intraitable *et* faux ;
+#' * **le pas angulaire** est gouverne par `config$cable$precision` (via
+#'   [precision_cable()]) : `3` (defaut) echantillonne un azimut sur deux et une
+#'   cellule de depart sur deux, `1` balaie au degre. NB : le champ
+#'   `config$cable$pas_angulaire_deg` est **inerte** (valide mais non lu par le
+#'   noyau) -- c'est bien `precision` qui commande le pas, pas lui.
+#'
+#' `longueur_max_m` (750 m) borne la portee des rayons et `nb_supports_max` (3) le
+#' placement -- les baisser reduit le cout. Le **tuilage** n'est pas encore cable
+#' ici (argument `bord` reserve, Lot 7) : le balayage traite l'emprise d'un bloc.
+#'
 #' @param pre Objet `foretaccess_preprocessing` (voir [preprocess()]).
 #' @param config Objet `foretaccess_config`. Les parametres cable (garde au sol,
 #'   materiel, geometrie) vivent dans `config$cable`.
