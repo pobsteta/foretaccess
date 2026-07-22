@@ -15,7 +15,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,10 +137,27 @@ trace then minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behavi
 created roads, one feature per road, with creation <code>ordre</code>, <code>cout</code> and
 planimetric <code>longueur</code> in m), <code>reseau</code> (a <code>SpatRaster</code> of the whole
 network, for Lot 17), <code>desserte</code> (the existing network, kept for the Lot 17
-graph), <code>cout</code> (total), <code>connexe</code> (a single connected component, CA-16.5),
-<code>desservies</code> (a logical, one per parcel, CA-16.1) and the recall of the
-<code>mode</code> and <code>heuristique</code>.</p>
+graph), <code>cout</code> (total), <code>connexe</code> and <code>raccorde</code> (two connectivity flags,
+see <em>Connectivity</em> below), <code>desservies</code> (a logical, one per parcel, CA-16.1)
+and the recall of the <code>mode</code> and <code>heuristique</code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="connectivity">Connectivity<a class="anchor" aria-label="anchor" href="#connectivity"></a></h2>
+
+
+<p>Two booleans, with <strong>different</strong> meanings – read the right one:</p><ul><li><p><strong><code>connexe</code></strong> – does the <em>whole</em> raster network (existing roads + created
+roads) form a <strong>single</strong> 8-connected component (CA-16.5)? This is dominated
+by the <strong>existing</strong> network's own fragmentation: a real reference network is
+thousands of segments that do not touch at grid resolution, so <code>connexe</code> is
+almost always <code>FALSE</code> on real data. <strong>A <code>FALSE</code> here does <em>not</em> mean a
+created road dangles</strong> – it usually just reflects a fragmented input.</p></li>
+<li><p><strong><code>raccorde</code></strong> – do the created roads add <strong>no new</strong> connected component
+relative to the existing network alone? <code>TRUE</code> iff every created road
+attaches to the existing network (directly or through another created road);
+a road left dangling would raise the component count. This is the flag that
+answers <em>"is every road I built actually connected?"</em> – the one to surface
+as a quality badge, not <code>connexe</code>.</p></li>
+</ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

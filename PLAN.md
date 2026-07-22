@@ -518,6 +518,52 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-22 — `v1.11.0` : brief desserte nemetonshiny — chantiers 2 (connexe) + 3 (perf places_depot)
+
+Nouveau brief consolidé reçu (`~/brief-foretaccess.md`, session app
+nemetonshiny, 5 chantiers desserte, mesuré sur 1.9.0). Traités ici : **2
+(connexité)** et **3 (perf `places_depot`)**.
+
+**Chantier 3 — perf `places_depot` (762 s app → intraitable).** Profilé
+sur la vraie desserte (60 km en cache) : **19,3 s, dont 73 % dans
+`CPL_crs_parameters`**, appelé par
+[`sf::st_line_sample`](https://r-spatial.github.io/sf/reference/st_line_sample.html)
+**par point** dans `.pente_en_long` / `.altitude_sur_ligne`, et **par
+ligne** dans `.points_le_long` — chaque appel re-parse le CRS (piège sf
+classique). Réécrit les deux en **interpolation de coordonnées**
+(sommets `st_coordinates` une fois par ligne, `.sommets_ligne` /
+`.interp_le_long` partagés, un seul
+[`terra::extract`](https://rspatial.github.io/terra/reference/extract.html),
+points bâtis en un seul `st_as_sf`). Résultat : **19,3 s → 0,47 s (41×),
+sortie bit-identique** (103 places / 86 tronçons, mêmes pentes). À
+l’échelle app (806 km) ça repasse de ~762 s à quelques secondes. Reste
+la **sélectivité** (trop de départs sans entrées riches) : documentée en
+*recette* (couche `retournements` + largeur mesurée = plus gros
+leviers), pas un bug — dépend du chantier 4 (largeur LiDAR).
+
+**Chantier 2 — sémantique `connexe`.** Diagnostic : `.reseau_connexe()`
+mesure une seule composante 8-connexe de *(existant ∪ créé)* ; sur une
+desserte réelle il est dominé par la **fragmentation de l’existant**
+(Chastel-Nouvel : 3 299 tronçons disjoints → `connexe = FALSE` alors que
+`desservies = 30/30`). Ce **n’est pas un défaut**. Ajouté **`raccorde`**
+= les routes créées n’ajoutent aucune composante vs l’existant seul (⇔
+aucune route isolée) — le booléen à afficher. `connexe` conservé et
+**documenté précisément**
+([`?reseau_desserte`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+section *Connectivity*, `print` mis à jour). Test : existant fragmenté →
+`connexe=FALSE`, `raccorde=TRUE`, `desservies` complet.
+
+**Clarification chantier 3 (câble)** : `config$cable$pas_angulaire_deg`
+est **inerte** (validé mais jamais lu) — le pas de balayage vient de
+`precision`. Doc
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
+section *Performance* + commentaire config. Le brief croyait
+`pas_angulaire_deg` actif.
+
+Reste du brief : **1** (perf glouton/Steiner/optimiseurs — profiler puis
+optimiser), **4** (desserte corrigée LiDAR ALSroads, NDP 1 — étude de
+faisabilité), **5** (`$lignes` contracté, optionnel).
+
 ### 2026-07-22 — `v1.10.0` : validation ACCESSFOR §5 — matrice de confusion
 
 Livrable §5 du brief nemeton. `comparer_accessfor(cl, accessfor)`

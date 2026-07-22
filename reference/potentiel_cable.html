@@ -19,7 +19,7 @@ faisable sont marquees accessibles au cable."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -180,6 +180,24 @@ d'aucune couche de places de depot.</p>
 <p>A defaut d'un releve, <code><a href="places_depot.html">places_depot()</a></code> derive des <strong>candidates</strong> de la desserte
 (acces camion, demi-tour, planeite, proximite de la foret) et rend une couche
 directement consommable ici.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p>Le cout du balayage est <strong>proportionnel au nombre de departs x azimuts</strong>. Deux
+leviers, dans cet ordre :</p><ul><li><p><strong>le nombre de departs</strong> domine : une couche <code>departs</code> selective (quelques
+dizaines de places, cf. <code><a href="places_depot.html">places_depot()</a></code> et sa recette d'entrees) est le seul
+moyen de rendre le calcul interactif – le repli <code>departs = NULL</code> (toute la
+desserte, des milliers de departs) est intraitable <em>et</em> faux ;</p></li>
+<li><p><strong>le pas angulaire</strong> est gouverne par <code>config$cable$precision</code> (via
+<code><a href="precision_cable.html">precision_cable()</a></code>) : <code>3</code> (defaut) echantillonne un azimut sur deux et une
+cellule de depart sur deux, <code>1</code> balaie au degre. NB : le champ
+<code>config$cable$pas_angulaire_deg</code> est <strong>inerte</strong> (valide mais non lu par le
+noyau) – c'est bien <code>precision</code> qui commande le pas, pas lui.</p></li>
+</ul><p><code>longueur_max_m</code> (750 m) borne la portee des rayons et <code>nb_supports_max</code> (3) le
+placement – les baisser reduit le cout. Le <strong>tuilage</strong> n'est pas encore cable
+ici (argument <code>bord</code> reserve, Lot 7) : le balayage traite l'emprise d'un bloc.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

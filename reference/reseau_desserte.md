@@ -85,6 +85,25 @@ A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
 created roads, one feature per road, with creation `ordre`, `cout` and
 planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
 network, for Lot 17), `desserte` (the existing network, kept for the Lot
-17 graph), `cout` (total), `connexe` (a single connected component,
-CA-16.5), `desservies` (a logical, one per parcel, CA-16.1) and the
-recall of the `mode` and `heuristique`.
+17 graph), `cout` (total), `connexe` and `raccorde` (two connectivity
+flags, see *Connectivity* below), `desservies` (a logical, one per
+parcel, CA-16.1) and the recall of the `mode` and `heuristique`.
+
+## Connectivity
+
+Two booleans, with **different** meanings – read the right one:
+
+- **`connexe`** – does the *whole* raster network (existing roads +
+  created roads) form a **single** 8-connected component (CA-16.5)? This
+  is dominated by the **existing** network's own fragmentation: a real
+  reference network is thousands of segments that do not touch at grid
+  resolution, so `connexe` is almost always `FALSE` on real data. **A
+  `FALSE` here does *not* mean a created road dangles** – it usually
+  just reflects a fragmented input.
+
+- **`raccorde`** – do the created roads add **no new** connected
+  component relative to the existing network alone? `TRUE` iff every
+  created road attaches to the existing network (directly or through
+  another created road); a road left dangling would raise the component
+  count. This is the flag that answers *"is every road I built actually
+  connected?"* – the one to surface as a quality badge, not `connexe`.

@@ -115,7 +115,9 @@ net
 #> Heuristique : "plus_proche"
 #> Routes creees : 2
 #> Parcelles desservies : 2/2
-#> Reseau connexe : oui
+#> Routes creees raccordees : oui
+#> Reseau global connexe : oui (souvent 'non' : existant fragmente -- voir
+#> ?reseau_desserte)
 #> Cout total : 144.7
 ```
 

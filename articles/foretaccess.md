@@ -153,9 +153,9 @@ places[, c("troncon", "acces", "pente_pct")]
 #> Dimension:     XY
 #> Bounding box:  xmin: 125 ymin: 62.5 xmax: 125 ymax: 187.5
 #> Projected CRS: RGF93 v1 / Lambert-93
-#>   troncon        acces pente_pct          geometry
-#> 3       2 classe:piste         0  POINT (125 62.5)
-#> 4       2 classe:piste         0 POINT (125 187.5)
+#>     troncon        acces pente_pct          geometry
+#> 2         2 classe:piste         0  POINT (125 62.5)
+#> 2.1       2 classe:piste         0 POINT (125 187.5)
 ```
 
 Le MNT jouet est un plan incliné vers l’est à 20 % : seule la route **de

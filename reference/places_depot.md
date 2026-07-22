@@ -163,6 +163,34 @@ magnitude, and re-tune it on your own massif if you can.
 
 The bench is reproducible: `data-raw/oracle_places_depot.R`.
 
+## Performance et selectivite
+
+`places_depot()` scans the whole network by pure coordinate
+interpolation (no per-point `sf` call): sub-second on a departmental
+network. **But its output size – the number of landings – is what
+governs the cost of the step after it**,
+[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md),
+whose runtime is proportional to the number of departures. On a raw BD
+TOPO network **with no measured width and no `retournements` layer**,
+criteria 1-2 reject nothing, so only grade and forest proximity filter –
+yielding *hundreds to thousands* of loose departures and an
+over-optimistic cable coverage.
+
+To bring departures down to an **exploitable** count (tens), feed it
+richer inputs, in order of effect:
+
+- a **`retournements`** layer (turn-arounds) – turns criterion 2 on, the
+  single biggest cut on a real network;
+
+- a **measured width** (`largeur` / `largeur_de_chaussee`, or
+  LiDAR-derived, see `acquire_desserte_lidar()` roadmap) – turns
+  criterion 1 into a real truck-access filter;
+
+- a tighter **`espacement_min_m`** and lower **`pente_max_pct`**.
+
+Without any of these it stays a coarse pre-filter: usable to *narrow* a
+manual pass, not to feed the cable engine blind at interactive speed.
+
 ## See also
 
 [`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)
@@ -197,7 +225,7 @@ places
 #> Dimension:     XY
 #> Bounding box:  xmin: 125 ymin: 62.5 xmax: 125 ymax: 187.5
 #> Projected CRS: RGF93 v1 / Lambert-93
-#>   id cable troncon        acces largeur_m pente_pct          geometry
-#> 3  1     1       2 classe:piste        NA         0  POINT (125 62.5)
-#> 4  2     1       2 classe:piste        NA         0 POINT (125 187.5)
+#>     id cable troncon        acces largeur_m pente_pct          geometry
+#> 2    1     1       2 classe:piste        NA         0  POINT (125 62.5)
+#> 2.1  2     1       2 classe:piste        NA         0 POINT (125 187.5)
 ```

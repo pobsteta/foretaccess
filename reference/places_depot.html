@@ -17,7 +17,7 @@ checkable on the available data."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -198,6 +198,28 @@ magnitude, and re-tune it on your own massif if you can.</p>
 <p>The bench is reproducible: <code>data-raw/oracle_places_depot.R</code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="performance-et-selectivite">Performance et selectivite<a class="anchor" aria-label="anchor" href="#performance-et-selectivite"></a></h2>
+
+
+<p><code>places_depot()</code> scans the whole network by pure coordinate interpolation
+(no per-point <code>sf</code> call): sub-second on a departmental network. <strong>But its
+output size – the number of landings – is what governs the cost of the step
+after it</strong>, <code><a href="potentiel_cable.html">potentiel_cable()</a></code>, whose runtime is proportional to the number of
+departures. On a raw BD TOPO network <strong>with no measured width and no
+<code>retournements</code> layer</strong>, criteria 1-2 reject nothing, so only grade and forest
+proximity filter – yielding <em>hundreds to thousands</em> of loose departures and an
+over-optimistic cable coverage.</p>
+<p>To bring departures down to an <strong>exploitable</strong> count (tens), feed it richer
+inputs, in order of effect:</p><ul><li><p>a <strong><code>retournements</code></strong> layer (turn-arounds) – turns criterion 2 on, the
+single biggest cut on a real network;</p></li>
+<li><p>a <strong>measured width</strong> (<code>largeur</code> / <code>largeur_de_chaussee</code>, or LiDAR-derived,
+see <code>acquire_desserte_lidar()</code> roadmap) – turns criterion 1 into a real
+truck-access filter;</p></li>
+<li><p>a tighter <strong><code>espacement_min_m</code></strong> and lower <strong><code>pente_max_pct</code></strong>.</p></li>
+</ul><p>Without any of these it stays a coarse pre-filter: usable to <em>narrow</em> a manual
+pass, not to feed the cable engine blind at interactive speed.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="potentiel_cable.html">potentiel_cable()</a></code> (consumes the layer), <code><a href="flag_dfci.html">flag_dfci()</a></code> (feeds the
 <code>dfci</code> flag reported by criterion 1).</p></div>
@@ -229,9 +251,9 @@ magnitude, and re-tune it on your own massif if you can.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dimension:     XY</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Bounding box:  xmin: 125 ymin: 62.5 xmax: 125 ymax: 187.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Projected CRS: RGF93 v1 / Lambert-93</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id cable troncon        acces largeur_m pente_pct          geometry</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1     1       2 classe:piste        NA         0  POINT (125 62.5)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  2     1       2 classe:piste        NA         0 POINT (125 187.5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     id cable troncon        acces largeur_m pente_pct          geometry</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    1     1       2 classe:piste        NA         0  POINT (125 62.5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.1  2     1       2 classe:piste        NA         0 POINT (125 187.5)</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

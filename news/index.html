@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,26 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.11.0" id="foretaccess-1110-2026-07-22">foretaccess 1.11.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1110-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-11-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-11-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/reseau_desserte.html">reseau_desserte()</a></code> : nouveau booléen <code>raccorde</code> + sémantique de <code>connexe</code> clarifiée (chantier 2 du brief desserte).</strong> Sur une desserte réelle, <code>connexe</code> (une seule composante 8-connexe pour <em>existant ∪ créé</em>) vaut presque toujours <code>FALSE</code> — dominé par la <strong>fragmentation du réseau existant</strong> (des milliers de tronçons qui ne se touchent pas à la résolution de la grille), <strong>pas</strong> par un défaut de raccordement. Le nouveau <strong><code>raccorde</code></strong> répond à la vraie question (« toutes les routes créées sont-elles rattachées ? ») : <code>TRUE</code> ssi les routes créées n’ajoutent <strong>aucune</strong> composante par rapport à l’existant seul. C’est le booléen à afficher comme indicateur de qualité. Doc <code><a href="../reference/reseau_desserte.html">?reseau_desserte</a></code> (section <em>Connectivity</em>) et <code>print</code> mis à jour.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="performance-1-11-0">Performance<a class="anchor" aria-label="anchor" href="#performance-1-11-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/places_depot.html">places_depot()</a></code> ~40× plus rapide</strong> (chantier 3 du brief). Le balayage passait par <code><a href="https://r-spatial.github.io/sf/reference/st_line_sample.html" class="external-link">sf::st_line_sample</a></code> <strong>une fois par point</strong> (et par ligne), chaque appel re-parsant le CRS (<code>CPL_crs_parameters</code> = 73 % du temps, profilé sur une desserte réelle). Réécrit en <strong>interpolation de coordonnées</strong> (sommets extraits une fois par ligne, un seul <code><a href="https://rspatial.github.io/terra/reference/extract.html" class="external-link">terra::extract</a></code>) : <strong>19,3 s → 0,47 s</strong> sur 60 km, <strong>sortie bit-identique</strong>. À l’échelle départementale, la fonction repasse sous la seconde.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-1-11-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-1-11-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/places_depot.html">places_depot()</a></code></strong> — nouvelle section <em>Performance et sélectivité</em> : recette d’entrées pour ramener le nombre de départs à un ordre exploitable (couche <code>retournements</code>, largeur mesurée, <code>espacement_min_m</code>/<code>pente_max_pct</code> resserrés).</li>
+<li>
+<strong><code><a href="../reference/potentiel_cable.html">potentiel_cable()</a></code></strong> — nouvelle section <em>Performance</em> : coût ∝ départs × azimuts ; le pas de balayage est gouverné par <code>config$cable$precision</code>, <strong>pas</strong> par <code>config$cable$pas_angulaire_deg</code> qui est <strong>inerte</strong> (validé mais non lu par le noyau) — clarification d’un malentendu signalé par l’app.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.10.0" id="foretaccess-1100-2026-07-22">foretaccess 1.10.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1100-2026-07-22"></a></h2>
 <div class="section level3">

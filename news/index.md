@@ -1,5 +1,49 @@
 # Changelog
 
+## foretaccess 1.11.0 (2026-07-22)
+
+### Nouveautés
+
+- **[`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+  : nouveau booléen `raccorde` + sémantique de `connexe` clarifiée
+  (chantier 2 du brief desserte).** Sur une desserte réelle, `connexe`
+  (une seule composante 8-connexe pour *existant ∪ créé*) vaut presque
+  toujours `FALSE` — dominé par la **fragmentation du réseau existant**
+  (des milliers de tronçons qui ne se touchent pas à la résolution de la
+  grille), **pas** par un défaut de raccordement. Le nouveau
+  **`raccorde`** répond à la vraie question (« toutes les routes créées
+  sont-elles rattachées ? ») : `TRUE` ssi les routes créées n’ajoutent
+  **aucune** composante par rapport à l’existant seul. C’est le booléen
+  à afficher comme indicateur de qualité. Doc
+  [`?reseau_desserte`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+  (section *Connectivity*) et `print` mis à jour.
+
+### Performance
+
+- **[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+  ~40× plus rapide** (chantier 3 du brief). Le balayage passait par
+  [`sf::st_line_sample`](https://r-spatial.github.io/sf/reference/st_line_sample.html)
+  **une fois par point** (et par ligne), chaque appel re-parsant le CRS
+  (`CPL_crs_parameters` = 73 % du temps, profilé sur une desserte
+  réelle). Réécrit en **interpolation de coordonnées** (sommets extraits
+  une fois par ligne, un seul
+  [`terra::extract`](https://rspatial.github.io/terra/reference/extract.html))
+  : **19,3 s → 0,47 s** sur 60 km, **sortie bit-identique**. À l’échelle
+  départementale, la fonction repasse sous la seconde.
+
+### Documentation
+
+- **[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)**
+  — nouvelle section *Performance et sélectivité* : recette d’entrées
+  pour ramener le nombre de départs à un ordre exploitable (couche
+  `retournements`, largeur mesurée, `espacement_min_m`/`pente_max_pct`
+  resserrés).
+- **[`potentiel_cable()`](https://pobsteta.github.io/foretaccess/reference/potentiel_cable.md)**
+  — nouvelle section *Performance* : coût ∝ départs × azimuts ; le pas
+  de balayage est gouverné par `config$cable$precision`, **pas** par
+  `config$cable$pas_angulaire_deg` qui est **inerte** (validé mais non
+  lu par le noyau) — clarification d’un malentendu signalé par l’app.
+
 ## foretaccess 1.10.0 (2026-07-22)
 
 ### Nouveautés
