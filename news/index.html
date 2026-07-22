@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.12.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.13.0" id="foretaccess-1130-2026-07-22">foretaccess 1.13.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1130-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="corrections-1-13-0">Corrections<a class="anchor" aria-label="anchor" href="#corrections-1-13-0"></a></h3>
+<ul><li>
+<strong>Mode Steiner (<code>reseau_desserte(mode = "steiner")</code>) : plantage latent corrigé.</strong> Le lookback des épingles et de l’anti-croisement (<code>basic_calc</code>, noyau Rust) remontait la chaîne <code>came_from</code> jusqu’à la source (<code>-1</code>) et indexait <strong>hors bornes</strong> (<code>index out of bounds ... usize::MAX</code>) — un crash jamais vu car Steiner n’avait jamais tourné à l’échelle réelle (chantier 1 du brief : « estimé &gt; 5 h, non mesuré »). Gardes <code>came_from &gt;= 0</code> ajoutés : près de la source la double-épingle et l’anti-croisement s’arrêtent proprement au lieu de planter. Comportement inchangé partout ailleurs (suite bit-pour-bit identique). Test de non-régression ajouté.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-1-13-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-1-13-0"></a></h3>
+<ul><li>
+<strong>Bornes des optimiseurs (<code><a href="../reference/optimiser_reseau.html">optimiser_reseau()</a></code>) — chantier 1 volet 2 du brief.</strong> Mesuré sur Chastel-Nouvel après le bornage du glouton (1.12.0) : chaque essai réutilise <strong>une</strong> table de voisinage et les essais tournent en <strong>parallèle</strong> (<code>rayon</code>) → <strong><code>n_start = 16</code> en ~10,5 s</strong> (à peine plus qu’un seul glouton). Défauts exposables raisonnables : <code>n_start</code> 8-32, <code>n_iter</code> 100-300, sans cap dur. Le levier dominant reste <code>skidding_m</code>. Nouvelle section <em>Performance</em> de <code><a href="../reference/optimiser_reseau.html">?optimiser_reseau</a></code>. Steiner reste en <strong>N² tracés</strong> (mesuré : 4 parcelles en 859 s) → réservé aux petits nombres de parcelles.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.12.0" id="foretaccess-1120-2026-07-22">foretaccess 1.12.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1120-2026-07-22"></a></h2>
 <div class="section level3">

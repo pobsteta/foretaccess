@@ -1,5 +1,35 @@
 # Changelog
 
+## foretaccess 1.13.0 (2026-07-22)
+
+### Corrections
+
+- **Mode Steiner (`reseau_desserte(mode = "steiner")`) : plantage latent
+  corrigé.** Le lookback des épingles et de l’anti-croisement
+  (`basic_calc`, noyau Rust) remontait la chaîne `came_from` jusqu’à la
+  source (`-1`) et indexait **hors bornes**
+  (`index out of bounds ... usize::MAX`) — un crash jamais vu car
+  Steiner n’avait jamais tourné à l’échelle réelle (chantier 1 du brief
+  : « estimé \> 5 h, non mesuré »). Gardes `came_from >= 0` ajoutés :
+  près de la source la double-épingle et l’anti-croisement s’arrêtent
+  proprement au lieu de planter. Comportement inchangé partout ailleurs
+  (suite bit-pour-bit identique). Test de non-régression ajouté.
+
+### Documentation
+
+- **Bornes des optimiseurs
+  ([`optimiser_reseau()`](https://pobsteta.github.io/foretaccess/reference/optimiser_reseau.md))
+  — chantier 1 volet 2 du brief.** Mesuré sur Chastel-Nouvel après le
+  bornage du glouton (1.12.0) : chaque essai réutilise **une** table de
+  voisinage et les essais tournent en **parallèle** (`rayon`) →
+  **`n_start = 16` en ~10,5 s** (à peine plus qu’un seul glouton).
+  Défauts exposables raisonnables : `n_start` 8-32, `n_iter` 100-300,
+  sans cap dur. Le levier dominant reste `skidding_m`. Nouvelle section
+  *Performance* de
+  [`?optimiser_reseau`](https://pobsteta.github.io/foretaccess/reference/optimiser_reseau.md).
+  Steiner reste en **N² tracés** (mesuré : 4 parcelles en 859 s) →
+  réservé aux petits nombres de parcelles.
+
 ## foretaccess 1.12.0 (2026-07-22)
 
 ### Performance

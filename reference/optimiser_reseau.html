@@ -17,7 +17,7 @@ annealing) and "riprute" (rip-up &amp;amp; reroute) are planned (Lot 18b/18c).'>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.12.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -162,6 +162,19 @@ cost surface (<code>cout$cout</code>, euros/m) instead of geometric distance.</p
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>foretaccess_reseau</code> object (same as Lot 16) for the best network
 found, enriched with <code>strategie</code> and <code>journal</code> (total cost per trial).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p>Each trial is a full greedy build reusing a <strong>single</strong> neighbourhood table and
+running the trials in <strong>parallel</strong> (<code>rayon</code>). Since the greedy trace was made
+corridor-bounded (see <code><a href="reseau_desserte.html">reseau_desserte()</a></code> <em>Performance</em>), the optimisers are now
+tractable at interactive scale: on a departmental run, <code>n_start = 16</code> costs about
+the same wall-clock as one greedy build. Reasonable exposable defaults:
+<code>n_start</code> 8-32, <code>n_iter</code> 100-300 – no hard cap is needed below those. The
+dominant lever remains <strong><code>skidding_m</code></strong> (set it to the real skidding distance;
+see <code><a href="reseau_desserte.html">reseau_desserte()</a></code>), which governs the number of traces per build.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
