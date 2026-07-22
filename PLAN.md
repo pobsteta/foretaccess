@@ -171,8 +171,13 @@
   Nemeton (volume sur pied m³/ha, inventaire ou MNH LiDAR) et le raster `pre$volume` que somment le
   câble et la sélection (→ volume de ligne, IPC). Rasterise un `sf` d'unités sur la grille du MNT ;
   **aucune dépendance à Nemeton** (consomme la sortie déjà calculée) → règle stricte 1 respectée,
-  aucune écriture dans le repo frère (règle 6). Reste ouvert : l'acquisition MNH LiDAR → P1 → raster
-  dans `acquire_inputs()` (Phase 2).
+  aucune écriture dans le repo frère (règle 6).
+- **`v1.8.0` posée** (2026-07-22) : **`acquire_inputs(volume=)`** — le volume `P1` (Nemeton) est
+  relayé dans `out$volume`, aligné sur le MNT bufferisé, prêt pour `preprocess()`. Passthrough
+  polymorphe sans dépendance Nemeton (spec 019, Option B). Constat d'audit : nemetonshiny charge
+  déjà le MNH et orchestre ForêtAccess mais ne passait pas `volume=` — trou comblé côté ForêtAccess ;
+  le raccord P1 côté nemetonshiny reste à porter par une session Nemeton (règle 6). L'écart
+  « Phase 2 volume » de `specs/010` est **levé**.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation. Le portage de
   `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été **tenté puis abandonné le 16/07** (bugué,
   ~20× plus lent, code d'origine lui-même planté). **Voie retenue à la place** : transcrire
@@ -364,6 +369,36 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-22 — `v1.8.0` : `acquire_inputs(volume=)`, injection du volume (spec 019)
+
+Dernier maillon de la chaîne volume, après `volume_depuis_p1()` (v1.7.0).
+`acquire_inputs()` gagne un argument `volume` (+ `champ_volume`) qui **relaie** un
+volume sur pied jusque dans `out$volume`, prêt pour `preprocess(volume=)` → câble.
+
+**Audit croisé ForêtAccess ↔ Nemeton (2026-07-22).** Vérifié : nemetonshiny charge
+déjà le **MNH LiDAR** (`download_ign_lidar_hd(product="mnh")`, `lidar_mnh/chm.tif`),
+calcule P1, et **orchestre déjà ForêtAccess** (`service_accessibility.R`) — mais
+appelle `preprocess()` **sans `volume=`** : c'était le vrai trou. Deux pièges levés
+dans la spec 019 :
+1. **MNT ≠ MNH.** Ce que ForêtAccess charge (`lidar_mnt`, AOI+buffer) est le **sol** ;
+   le volume a besoin de la **canopée** (`lidar_mnh`), produit IGN distinct. « Étendre
+   `lidar_mnt` » ne produit aucun volume.
+2. **Emprise.** Le volume doit couvrir **AOI+buffer** (le câble somme jusque dans le
+   halo, un `NaN` compte pour 0 → sous-estimation de bord). Mais le fetch IGN se fait
+   par dalles de 1 km : « étendre le téléchargement » est un no-op sur les tuiles — ce
+   qui compte est le **découpage** sur AOI+buffer, garanti par l'alignement sur `pre$mnt`.
+
+**Décision de couplage (Option B, tranchée avec l'utilisateur).** Le calcul MNH→P1
+reste chez Nemeton (domaine inventaire, règle 1) ; ForêtAccess consomme via un
+passthrough **sans dépendance Nemeton** ; le raccord `volume = volume_depuis_p1(p1, mnt)`
+vit dans nemetonshiny (spécifié, non codé — règle 6). Pas d'`acquire_volume()` natif
+(question tranchée : non).
+
+Passthrough polymorphe (raster | chemin | sf), garde CRS (abort ADR-004),
+rééchantillonnage même-CRS avec avertissement, avertissement de couverture partielle.
+16 tests (`test-acquire-volume.R`, CA-19.1→19.6). Spec `019-acquisition-volume.md`
+**validée** ; l'écart « Phase 2 volume » de `specs/010` est **levé**.
 
 ### 2026-07-22 — `v1.7.0` : `volume_depuis_p1()`, pont vers l'indicateur P1 de Nemeton
 
