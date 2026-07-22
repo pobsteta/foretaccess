@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -110,7 +110,9 @@
 <li>
 <strong><code>v1.8.0</code> posée</strong> (2026-07-22) : <strong><code>acquire_inputs(volume=)</code></strong> — le volume <code>P1</code> (Nemeton) est relayé dans <code>out$volume</code>, aligné sur le MNT bufferisé, prêt pour <code><a href="reference/preprocess.html">preprocess()</a></code>. Passthrough polymorphe sans dépendance Nemeton (spec 019, Option B). Constat d’audit : nemetonshiny charge déjà le MNH et orchestre ForêtAccess mais ne passait pas <code>volume=</code> — trou comblé côté ForêtAccess ; le raccord P1 côté nemetonshiny reste à porter par une session Nemeton (règle 6). L’écart « Phase 2 volume » de <code>specs/010</code> est <strong>levé</strong>.</li>
 <li>
-<strong><code>v1.9.0</code> posée</strong> (2026-07-22) : <strong>validation ACCESSFOR (IGN), §3 élucidé</strong>. <code><a href="reference/accessfor_correspondance.html">accessfor_correspondance()</a></code> fige le crosswalk <code>class</code> ACCESSFOR ↔︎ <code><a href="reference/classes_debardage.html">classes_debardage()</a></code>, vérifié au WFS sur le dép. 48 (domaine identique terme pour terme, skidder et porteur, jusqu’à la bande ouverte &gt; 2000 et l’inexploitable pente). <code><a href="reference/classes_debardage.html">classes_debardage()</a></code> généralisée au porteur. Reste : le livrable §5 (matrice de confusion sur Chastel-Nouvel, rasterisation <code>near</code>, intersection des masques, DEUX variantes ACCESSFOR).</li>
+<strong><code>v1.9.0</code> posée</strong> (2026-07-22) : <strong>validation ACCESSFOR (IGN), §3 élucidé</strong>. <code><a href="reference/accessfor_correspondance.html">accessfor_correspondance()</a></code> fige le crosswalk <code>class</code> ACCESSFOR ↔︎ <code><a href="reference/classes_debardage.html">classes_debardage()</a></code>, vérifié au WFS sur le dép. 48 (domaine identique terme pour terme, skidder et porteur, jusqu’à la bande ouverte &gt; 2000 et l’inexploitable pente). <code><a href="reference/classes_debardage.html">classes_debardage()</a></code> généralisée au porteur.</li>
+<li>
+<strong><code>v1.10.0</code> posée</strong> (2026-07-22) : <strong>validation ACCESSFOR §5</strong>. <code><a href="reference/comparer_accessfor.html">comparer_accessfor()</a></code> (rasterisation near, intersection des masques, matrice de confusion) confronte skidder/porteur à ACCESSFOR sur Chastel-Nouvel : <strong>accord agrégé 81 % (skidder) / 86 % (porteur)</strong>, stable au masque. <code>docs/comparaison-accessfor.md</code>. <strong>Brief ACCESSFOR clos.</strong> Prochain brief nemeton reçu (<code>brief-foretaccess.md</code>, 4 chantiers : perf desserte, connexité, câble/places de dépôt, <code>$lignes</code> contracté) — chantiers 2+3 d’abord.</li>
 <li>
 <strong>Dette assumée du câble</strong> : optimisation de la hauteur de fixation. Le portage de <code>c_option_h = 1</code> (Sylvaccess <code>OptPyl_Up</code>/<code>Up2</code>) a été <strong>tenté puis abandonné le 16/07</strong> (bugué, ~20× plus lent, code d’origine lui-même planté). <strong>Voie retenue à la place</strong> : transcrire l’algorithme <strong>SEILAPLAN</strong> (Bont &amp; Heinimann 2012, graphe + plus court chemin), plus sain et validé — voir <code>specs/013-seilaplan-hauteur.md</code> et <code>docs/comparaison-cable-seilaplan.md</code>. Le <code>_NoH</code> (défaut) reste intact. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.</li>
 </ul></div>
@@ -334,6 +336,24 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-22--v1100--validation-accessfor-5--matrice-de-confusion">2026-07-22 — <code>v1.10.0</code> : validation ACCESSFOR §5 — matrice de confusion<a class="anchor" aria-label="anchor" href="#id_2026-07-22--v1100--validation-accessfor-5--matrice-de-confusion"></a></h3>
+<p>Livrable §5 du brief nemeton. <code>comparer_accessfor(cl, accessfor)</code> (<code>R/accessfor.R</code>) rasterise ACCESSFOR en <strong>plus proche voisin</strong> sur la grille de <code>cl</code> (vérification que l’ensemble des codes obtenus ⊆ codes d’entrée — pas de classe fabriquée), traduit via <code><a href="reference/accessfor_correspondance.html">accessfor_correspondance()</a></code>, croise <strong>sur l’intersection des masques</strong> et rend accord global, accord agrégé (accessible/non), matrice en ha, surfaces exclues. Fonction <strong>pure et testée hors ligne</strong> (un test a attrapé un vrai bug : <code><a href="https://rdrr.io/r/base/table.html" class="external-link">table()</a></code> 1×1 → fausse diagonale à 100 %, corrigé par facteurs à niveaux fixes).</p>
+<p>Chiffres réels sur Chastel-Nouvel (~610 ha, <code>data-raw/accessfor_compare.R</code>, les DEUX variantes de masque) :</p>
+<table class="table"><thead><tr><th>engin</th>
+<th>masque</th>
+<th>accord global</th>
+<th><strong>accord agrégé</strong></th>
+</tr></thead><tbody><tr><td>skidder</td>
+<td>défaut / V3</td>
+<td>30,6 / 30,9 %</td>
+<td><strong>81,4 / 81,2 %</strong></td>
+</tr><tr><td>porteur</td>
+<td>défaut / V3</td>
+<td>65,8 / 66,5 %</td>
+<td><strong>86,0 / 86,2 %</strong></td>
+</tr></tbody></table><p>Lecture (<code>docs/comparaison-accessfor.md</code>) : accord accessible/non <strong>solide et stable au masque</strong> (l’artefact de masque redouté au §4a est borné, &lt; 1 pt) ; le désaccord fin du skidder est un <strong>décalage de bande</strong> (notre modèle plus optimiste sur la portée, ~86 ha access. vs inaccess. ACCESSFOR contre ~28 en sens inverse), imputable surtout à la <strong>desserte de référence différente</strong> — piste à instruire, pas alerte. Validation = constat de cohérence, pas non-régression (ACCESSFOR est un modèle, pas une vérité terrain). <strong>Brief ACCESSFOR (§3+§5) clos.</strong></p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-22--v190--validation-accessfor-ign--3-élucidé-crosswalk--porteur">2026-07-22 — <code>v1.9.0</code> : validation ACCESSFOR (IGN) — §3 élucidé, crosswalk + porteur<a class="anchor" aria-label="anchor" href="#id_2026-07-22--v190--validation-accessfor-ign--3-%C3%A9lucid%C3%A9-crosswalk--porteur"></a></h3>
 <p>Ouverture de la <strong>validation externe</strong> des moteurs terrestres contre la couche <strong>ACCESSFOR</strong> de l’IGN (WFS <code>data.geopf.fr</code>, projet ACCESSFOR, édition 2025-01-01, couches polygonales <code>acces_skidder</code>/<code>acces_porteur</code>). Brief émis par la session nemeton (<code>nemeton/specs/brief-foretaccess-accessfor.md</code>). On commence par le §3 « à élucider avant tout chiffre ».</p>

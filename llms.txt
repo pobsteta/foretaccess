@@ -167,6 +167,9 @@ Skidder, porteur, camion DFCI, et leurs briques de coût/zone.
   Map the IGN ACCESSFOR classes onto
   [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
 
+- [`comparer_accessfor()`](https://pobsteta.github.io/foretaccess/reference/comparer_accessfor.md)
+  : Compare debarking classes against the IGN ACCESSFOR layer
+
 - [`porteur()`](https://pobsteta.github.io/foretaccess/reference/porteur.md)
   : Moteur d'accessibilité porteur (forwarder)
 

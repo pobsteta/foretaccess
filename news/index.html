@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.9.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.10.0" id="foretaccess-1100-2026-07-22">foretaccess 1.10.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1100-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-10-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-10-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/comparer_accessfor.html">comparer_accessfor()</a></code> — matrice de confusion contre la couche ACCESSFOR de l’IGN (livrable §5 du brief).</strong> Confronte un raster [classes_debardage()] à la référence ACCESSFOR (skidder ou porteur) : rasterisation en <strong>plus proche voisin</strong> (un code de classe ne s’interpole jamais, avec vérification anti-classe-fantôme), traduction via [accessfor_correspondance()], et cross-tabulation <strong>sur la seule intersection des masques forêt</strong> (les surfaces hors intersection sont rapportées à part). Rend l’<strong>accord global</strong> (9 classes), l’<strong>accord agrégé</strong> accessible/non-accessible (le chiffre robuste), la matrice en ha, et un <code>print</code> concis. Confronté sur l’AOI Chastel-Nouvel (~610 ha) : accord agrégé <strong>81 % (skidder)</strong> / <strong>86 % (porteur)</strong>, quasi insensible à la variante de masque (défaut vs <code>MASQUE-FORETV3</code>, &lt; 1 pt). Le désaccord fin plus marqué du skidder est un décalage de bande (desserte de référence différente), pas un flip d’accessibilité. Détail : <code>docs/comparaison-accessfor.md</code> ; chiffres reproductibles : <code>data-raw/accessfor_compare.R</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.9.0" id="foretaccess-190-2026-07-22">foretaccess 1.9.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-190-2026-07-22"></a></h2>
 <div class="section level3">

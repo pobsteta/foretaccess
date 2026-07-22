@@ -280,9 +280,16 @@
   skidder et porteur, jusqu’à la bande ouverte \> 2000 et
   l’inexploitable pente).
   [`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
-  généralisée au porteur. Reste : le livrable §5 (matrice de confusion
-  sur Chastel-Nouvel, rasterisation `near`, intersection des masques,
-  DEUX variantes ACCESSFOR).
+  généralisée au porteur.
+- **`v1.10.0` posée** (2026-07-22) : **validation ACCESSFOR §5**.
+  [`comparer_accessfor()`](https://pobsteta.github.io/foretaccess/reference/comparer_accessfor.md)
+  (rasterisation near, intersection des masques, matrice de confusion)
+  confronte skidder/porteur à ACCESSFOR sur Chastel-Nouvel : **accord
+  agrégé 81 % (skidder) / 86 % (porteur)**, stable au masque.
+  `docs/comparaison-accessfor.md`. **Brief ACCESSFOR clos.** Prochain
+  brief nemeton reçu (`brief-foretaccess.md`, 4 chantiers : perf
+  desserte, connexité, câble/places de dépôt, `$lignes` contracté) —
+  chantiers 2+3 d’abord.
 - **Dette assumée du câble** : optimisation de la hauteur de fixation.
   Le portage de `c_option_h = 1` (Sylvaccess `OptPyl_Up`/`Up2`) a été
   **tenté puis abandonné le 16/07** (bugué, ~20× plus lent, code
@@ -510,6 +517,36 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-22 — `v1.10.0` : validation ACCESSFOR §5 — matrice de confusion
+
+Livrable §5 du brief nemeton. `comparer_accessfor(cl, accessfor)`
+(`R/accessfor.R`) rasterise ACCESSFOR en **plus proche voisin** sur la
+grille de `cl` (vérification que l’ensemble des codes obtenus ⊆ codes
+d’entrée — pas de classe fabriquée), traduit via
+[`accessfor_correspondance()`](https://pobsteta.github.io/foretaccess/reference/accessfor_correspondance.md),
+croise **sur l’intersection des masques** et rend accord global, accord
+agrégé (accessible/non), matrice en ha, surfaces exclues. Fonction
+**pure et testée hors ligne** (un test a attrapé un vrai bug :
+[`table()`](https://rdrr.io/r/base/table.html) 1×1 → fausse diagonale à
+100 %, corrigé par facteurs à niveaux fixes).
+
+Chiffres réels sur Chastel-Nouvel (~610 ha,
+`data-raw/accessfor_compare.R`, les DEUX variantes de masque) :
+
+| engin   | masque      | accord global | **accord agrégé** |
+|---------|-------------|---------------|-------------------|
+| skidder | défaut / V3 | 30,6 / 30,9 % | **81,4 / 81,2 %** |
+| porteur | défaut / V3 | 65,8 / 66,5 % | **86,0 / 86,2 %** |
+
+Lecture (`docs/comparaison-accessfor.md`) : accord accessible/non
+**solide et stable au masque** (l’artefact de masque redouté au §4a est
+borné, \< 1 pt) ; le désaccord fin du skidder est un **décalage de
+bande** (notre modèle plus optimiste sur la portée, ~86 ha access. vs
+inaccess. ACCESSFOR contre ~28 en sens inverse), imputable surtout à la
+**desserte de référence différente** — piste à instruire, pas alerte.
+Validation = constat de cohérence, pas non-régression (ACCESSFOR est un
+modèle, pas une vérité terrain). **Brief ACCESSFOR (§3+§5) clos.**
 
 ### 2026-07-22 — `v1.9.0` : validation ACCESSFOR (IGN) — §3 élucidé, crosswalk + porteur
 
