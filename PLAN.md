@@ -167,6 +167,10 @@
   en **pré-filtre grossier**, pas un relevé. Banc `data-raw/oracle_places_depot.R`.
   **Règle qui en découle** : toute heuristique se confronte à ColduPre **avant** la PR ; les
   fixtures synthétiques ne testent que la cohérence interne.
+- **`v1.12.0` posée** (2026-07-22) : **perf du glouton de desserte** (chantier 1). A* borné au
+  couloir de raccordement (`solver.rs`) : **200 s → 20 ms/tracé**, bit-identique ; `skidding_m`
+  documenté comme le levier du nombre de tracés (6 parcelles en 7,7 s réglé sur le débardage).
+  Glouton **~11,5 min → dizaines de s**. Reste : benchmark Steiner/optim + chantiers 4 (LiDAR) et 5.
 - **`v1.7.0` posée** (2026-07-22) : **`volume_depuis_p1()`**, pont entre l'indicateur **P1** de
   Nemeton (volume sur pied m³/ha, inventaire ou MNH LiDAR) et le raster `pre$volume` que somment le
   câble et la sélection (→ volume de ligne, IPC). Rasterise un `sf` d'unités sur la grille du MNT ;
@@ -378,6 +382,40 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-22 — `v1.12.0` : brief desserte chantier 1 — perf du glouton (~11,5 min → dizaines de s)
+
+Profilage sur Chastel-Nouvel (340k cellules, cache `/tmp/accessfor-cache`),
+instrumenté en Rust (chrono stderr). Diagnostic en trois temps :
+1. **Naïf (30 parcelles dispersées)** : > 1h33 — le coût explose avec la distance
+   parcelle↔réseau (A* plein-emprise par parcelle). Inexploitable comme profil.
+2. **Borné (1/3 parcelles proches)** : **1 parcelle = 201 s, 3 = 569 s** → ~185 s/parcelle.
+   Chaque parcelle = **un tracé A* plein-emprise**.
+3. **Instrumenté** : `d2e` (Dijkstra plein-emprise, heuristique) ≈ **380 ms**, l'A*
+   ≈ **200 s** (explore tout, heuristique en ligne droite non focalisée). ET
+   `.desserte_cellules_parcelles` renvoie **toutes** les cellules d'une parcelle
+   (100×100 m = 400 sources) → à `skidding_m=0`, ~400 tracés/parcelle.
+
+**Corrections :**
+- **A* borné au couloir** (`solver.rs::solve_network`) : boîte englobant
+  (source, cible la plus proche) + marge proportionnelle, repli plein-emprise si
+  aucune cible atteinte. Mesuré : A* **200 s → 20 ms**. Résultat **bit-identique**
+  (toute la suite verte). Le tracé reste un alignement optimal, dans le couloir de
+  raccordement le plus proche (cohérent avec le glouton, qui est déjà une
+  approximation du réseau global).
+- **`skidding_m` = levier dominant du nombre de tracés**, documenté. Réglé sur la
+  distance de débardage : **6 parcelles = 7,7 s** (1 route, 6/6 desservies) vs des
+  centaines de s à `skidding_m=0`.
+
+Net : glouton **~11,5 min → dizaines de secondes** (fenêtre + `skidding_m` réaliste).
+Section *Performance* de `?reseau_desserte`. **Ne casse pas la promesse « tracé
+optimal »** (question utilisateur) : chaque piste est un vrai alignement de moindre
+coût — le glouton assemble ces optimaux localement, l'optimum GLOBAL du réseau
+restant l'affaire de Steiner / `optimiser_reseau`.
+
+Reste du brief : **4** (desserte LiDAR ALSroads, NDP 1 — faisabilité), **5**
+(`$lignes` contracté, optionnel), et le **benchmark Steiner/optimiseurs + bornes
+exposables** (2e volet du chantier 1).
 
 ### 2026-07-22 — `v1.11.0` : brief desserte nemetonshiny — chantiers 2 (connexe) + 3 (perf places_depot)
 
