@@ -113,5 +113,7 @@ directement consommable ici.
 }
 
 \seealso{
-\code{\link[=places_depot]{places_depot()}} pour produire la couche \code{departs}.
+\code{\link[=places_depot]{places_depot()}} pour produire la couche \code{departs} ;
+\code{\link[=volume_depuis_p1]{volume_depuis_p1()}} pour produire la couche de volume (\code{pre$volume}) dont se
+deduisent \code{volume_m3} et l'IPC des lignes.
 }

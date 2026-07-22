@@ -34,6 +34,7 @@ reference:
   - preprocess
   - valider_entrees
   - calculer_terrain
+  - volume_depuis_p1
   - lire_rasters
 - title: Moteurs terrestres (Lots 2-3, 6)
   desc: Skidder, porteur, camion DFCI, et leurs briques de coût/zone.

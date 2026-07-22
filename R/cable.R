@@ -83,7 +83,9 @@
 #'   `depart`, `azimut`, `longueur_m`, `surface_ha`, `sens`, `supports`,
 #'   `volume_m3`, `ipc` -- une par (depart, azimut) faisable, pour la selection
 #'   du Lot 5), `recap`, `grid`, `config`, `fichiers`.
-#' @seealso [places_depot()] pour produire la couche `departs`.
+#' @seealso [places_depot()] pour produire la couche `departs` ;
+#'   [volume_depuis_p1()] pour produire la couche de volume (`pre$volume`) dont se
+#'   deduisent `volume_m3` et l'IPC des lignes.
 #' @export
 potentiel_cable <- function(pre, config = foretaccess_config(), departs = NULL,
                             write_dir = NULL, bord = NULL) {

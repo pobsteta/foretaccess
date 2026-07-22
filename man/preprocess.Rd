@@ -33,7 +33,9 @@ ne la traverse pas.}
 \item{obstacles_partiels}{Obstacles spécifiques au skidder (facultatif ; la
 sémantique est posée au Lot 2).}
 
-\item{volume}{Volume sur pied : raster aligné sur la grille du MNT (facultatif).}
+\item{volume}{Volume sur pied : raster en m3/ha aligné sur la grille du MNT
+(facultatif). Voir \code{\link[=volume_depuis_p1]{volume_depuis_p1()}} pour le dériver d'une couche d'unités
+(indicateur P1 de Nemeton, inventaire).}
 
 \item{parcellaire}{Parcellaire : vecteur de polygones (facultatif ; utilisé au
 Lot 8 pour l'agrégation).}
