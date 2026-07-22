@@ -7,9 +7,12 @@
 classes_debardage(sk, pre = NULL, config = sk$config)
 }
 \arguments{
-\item{sk}{A \code{foretaccess_skidder} object (output of \code{\link[=skidder]{skidder()}}).}
+\item{sk}{A \code{foretaccess_skidder} \strong{or} \code{foretaccess_porteur} object (output
+of \code{\link[=skidder]{skidder()}} / \code{\link[=porteur]{porteur()}}). Both carry the same \code{accessibilite} levels
+and a \code{distance_debardage}, so the banding is identical; only the underlying
+distance model differs.}
 
-\item{pre}{The \code{foretaccess_preprocessing} object used to run the skidder.
+\item{pre}{The \code{foretaccess_preprocessing} object used to run the engine.
 Optional; supplies the harvest-slope exclusion needed for the
 \code{inexploitable} class.}
 
@@ -34,4 +37,8 @@ Precedence per cell: \code{hors_foret} (not forest) < distance band (reachable) 
 above the harvest threshold — overrides). The \code{inexploitable} class requires
 \code{pre} (its \code{exclusion_mask}); without it those cells stay in their
 accessibility class.
+}
+\seealso{
+\code{\link[=accessfor_correspondance]{accessfor_correspondance()}} maps these classes onto the IGN ACCESSFOR
+reference layer.
 }

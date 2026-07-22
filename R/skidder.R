@@ -803,17 +803,22 @@ skidder <- function(pre,
 #' `pre` (its `exclusion_mask`); without it those cells stay in their
 #' accessibility class.
 #'
-#' @param sk A `foretaccess_skidder` object (output of [skidder()]).
-#' @param pre The `foretaccess_preprocessing` object used to run the skidder.
+#' @param sk A `foretaccess_skidder` **or** `foretaccess_porteur` object (output
+#'   of [skidder()] / [porteur()]). Both carry the same `accessibilite` levels
+#'   and a `distance_debardage`, so the banding is identical; only the underlying
+#'   distance model differs.
+#' @param pre The `foretaccess_preprocessing` object used to run the engine.
 #'   Optional; supplies the harvest-slope exclusion needed for the
 #'   `inexploitable` class.
 #' @param config A `foretaccess_config`; the distance bands live in
 #'   `config$skidder$classes_distance_m`. Defaults to `sk$config`.
 #' @return A categorical `SpatRaster` (`classe_debardage`) with an attached
 #'   colour table, directly plottable and compatible with [recapituler()].
+#' @seealso [accessfor_correspondance()] maps these classes onto the IGN ACCESSFOR
+#'   reference layer.
 #' @export
 classes_debardage <- function(sk, pre = NULL, config = sk$config) {
-  checkmate::assert_class(sk, "foretaccess_skidder")
+  checkmate::assert_multi_class(sk, c("foretaccess_skidder", "foretaccess_porteur"))
   if (!is.null(pre)) checkmate::assert_class(pre, "foretaccess_preprocessing")
   bornes <- config$skidder$classes_distance_m
   k <- length(bornes) # nombre de bandes (la derniere est ouverte : > bornes[k])
