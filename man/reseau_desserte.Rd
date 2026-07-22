@@ -54,9 +54,9 @@ A \code{foretaccess_reseau} object: \code{lignes} (an \code{sf} LINESTRING of th
 created roads, one feature per road, with creation \code{ordre}, \code{cout} and
 planimetric \code{longueur} in m), \code{reseau} (a \code{SpatRaster} of the whole
 network, for Lot 17), \code{desserte} (the existing network, kept for the Lot 17
-graph), \code{cout} (total), \code{connexe} (a single connected component, CA-16.5),
-\code{desservies} (a logical, one per parcel, CA-16.1) and the recall of the
-\code{mode} and \code{heuristique}.
+graph), \code{cout} (total), \code{connexe} and \code{raccorde} (two connectivity flags,
+see \emph{Connectivity} below), \code{desservies} (a logical, one per parcel, CA-16.1)
+and the recall of the \code{mode} and \code{heuristique}.
 }
 \description{
 Builds a road network connecting N parcels to an existing road network, at
@@ -65,3 +65,22 @@ ordered, then each is connected to the current network with the Lot 15
 constrained solver, the new road growing the network for later parcels (reuse
 -> tree). A parcel cell already within \code{skidding_m} of a road needs no road.
 }
+\section{Connectivity}{
+
+Two booleans, with \strong{different} meanings -- read the right one:
+\itemize{
+\item \strong{\code{connexe}} -- does the \emph{whole} raster network (existing roads + created
+roads) form a \strong{single} 8-connected component (CA-16.5)? This is dominated
+by the \strong{existing} network's own fragmentation: a real reference network is
+thousands of segments that do not touch at grid resolution, so \code{connexe} is
+almost always \code{FALSE} on real data. \strong{A \code{FALSE} here does \emph{not} mean a
+created road dangles} -- it usually just reflects a fragmented input.
+\item \strong{\code{raccorde}} -- do the created roads add \strong{no new} connected component
+relative to the existing network alone? \code{TRUE} iff every created road
+attaches to the existing network (directly or through another created road);
+a road left dangling would raise the component count. This is the flag that
+answers \emph{"is every road I built actually connected?"} -- the one to surface
+as a quality badge, not \code{connexe}.
+}
+}
+

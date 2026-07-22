@@ -112,6 +112,27 @@ A defaut d'un releve, \code{\link[=places_depot]{places_depot()}} derive des \st
 directement consommable ici.
 }
 
+\section{Performance}{
+
+Le cout du balayage est \strong{proportionnel au nombre de departs x azimuts}. Deux
+leviers, dans cet ordre :
+\itemize{
+\item \strong{le nombre de departs} domine : une couche \code{departs} selective (quelques
+dizaines de places, cf. \code{\link[=places_depot]{places_depot()}} et sa recette d'entrees) est le seul
+moyen de rendre le calcul interactif -- le repli \code{departs = NULL} (toute la
+desserte, des milliers de departs) est intraitable \emph{et} faux ;
+\item \strong{le pas angulaire} est gouverne par \code{config$cable$precision} (via
+\code{\link[=precision_cable]{precision_cable()}}) : \code{3} (defaut) echantillonne un azimut sur deux et une
+cellule de depart sur deux, \code{1} balaie au degre. NB : le champ
+\code{config$cable$pas_angulaire_deg} est \strong{inerte} (valide mais non lu par le
+noyau) -- c'est bien \code{precision} qui commande le pas, pas lui.
+}
+
+\code{longueur_max_m} (750 m) borne la portee des rayons et \code{nb_supports_max} (3) le
+placement -- les baisser reduit le cout. Le \strong{tuilage} n'est pas encore cable
+ici (argument \code{bord} reserve, Lot 7) : le balayage traite l'emprise d'un bloc.
+}
+
 \seealso{
 \code{\link[=places_depot]{places_depot()}} pour produire la couche \code{departs} ;
 \code{\link[=volume_depuis_p1]{volume_depuis_p1()}} pour produire la couche de volume (\code{pre$volume}) dont se

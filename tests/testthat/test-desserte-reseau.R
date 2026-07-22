@@ -157,6 +157,30 @@ test_that("CA-16.5 : le reseau est connexe (glouton et steiner)", {
   st <- reseau_desserte(s$pre, s$cout, s$parcelles, s$route, mode = "steiner")
   expect_true(g$connexe)
   expect_true(st$connexe)
+  # Sur un existant d'un seul tenant, raccorde vaut aussi vrai.
+  expect_true(g$raccorde)
+})
+
+test_that("existant fragmente : connexe=FALSE mais raccorde=TRUE", {
+  # Deux routes existantes DISJOINTES (bord gauche + bord droit) : le reseau
+  # global ne sera jamais d'un seul tenant (connexe FALSE), mais les routes
+  # creees s'accrochent bien a l'existant (raccorde TRUE). C'est le cas
+  # Chastel-Nouvel (3299 troncons disjoints -> connexe FALSE alors que
+  # desservies 30/30). raccorde est le booleen a lire.
+  s <- reseau_setup()
+  ext <- terra::ext(s$pre$mnt)
+  xg <- terra::xyFromCell(s$pre$mnt, terra::cellFromRowCol(s$pre$mnt, 1, 1))[1]
+  xd <- terra::xyFromCell(s$pre$mnt, terra::cellFromRowCol(s$pre$mnt, 1, 11))[1]
+  route2 <- sf::st_sf(id = 1:2, geometry = sf::st_sfc(
+    sf::st_linestring(rbind(c(xg, ext$ymin), c(xg, ext$ymax))),
+    sf::st_linestring(rbind(c(xd, ext$ymin), c(xd, ext$ymax))),
+    crs = 2154
+  ))
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, route2, "plus_proche")
+
+  expect_false(net$connexe) # existant en deux morceaux -> jamais d'un seul tenant
+  expect_true(net$raccorde) # ... mais aucune route creee n'est isolee
+  expect_true(all(net$desservies)) # et les parcelles sont bien desservies
 })
 
 test_that("CA-16.1 : toutes les parcelles sont desservies", {

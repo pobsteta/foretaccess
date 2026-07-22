@@ -31,9 +31,24 @@
 #'   created roads, one feature per road, with creation `ordre`, `cout` and
 #'   planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
 #'   network, for Lot 17), `desserte` (the existing network, kept for the Lot 17
-#'   graph), `cout` (total), `connexe` (a single connected component, CA-16.5),
-#'   `desservies` (a logical, one per parcel, CA-16.1) and the recall of the
-#'   `mode` and `heuristique`.
+#'   graph), `cout` (total), `connexe` and `raccorde` (two connectivity flags,
+#'   see *Connectivity* below), `desservies` (a logical, one per parcel, CA-16.1)
+#'   and the recall of the `mode` and `heuristique`.
+#'
+#' @section Connectivity:
+#' Two booleans, with **different** meanings -- read the right one:
+#' * **`connexe`** -- does the *whole* raster network (existing roads + created
+#'   roads) form a **single** 8-connected component (CA-16.5)? This is dominated
+#'   by the **existing** network's own fragmentation: a real reference network is
+#'   thousands of segments that do not touch at grid resolution, so `connexe` is
+#'   almost always `FALSE` on real data. **A `FALSE` here does *not* mean a
+#'   created road dangles** -- it usually just reflects a fragmented input.
+#' * **`raccorde`** -- do the created roads add **no new** connected component
+#'   relative to the existing network alone? `TRUE` iff every created road
+#'   attaches to the existing network (directly or through another created road);
+#'   a road left dangling would raise the component count. This is the flag that
+#'   answers *"is every road I built actually connected?"* -- the one to surface
+#'   as a quality badge, not `connexe`.
 #' @param mode Construction mode: `"glouton"` (greedy MTAP->STAP, default) or
 #'   `"steiner"` (minimum-spanning-tree approximation over the terminals, a
 #'   quality alternative at the cost of N^2 traces).
@@ -118,6 +133,18 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
                               background = NA, touches = TRUE)
   reseau_r[which(!is.na(terra::values(trace_r)))] <- 1
 
+  # Raster du reseau EXISTANT seul (routes creees exclues), pour `raccorde` : on
+  # veut savoir si les routes creees s'accrochent bien a l'existant, sans se
+  # laisser dominer par la fragmentation propre de l'existant (cf. `raccorde`).
+  existant_r <- terra::rast(grille)
+  terra::values(existant_r) <- 0
+  existant_r[ctx$net_cells1] <- 1
+  trace_ex <- terra::rasterize(
+    terra::vect(sf::st_geometry(desserte_existante)), grille,
+    field = 1, background = NA, touches = TRUE
+  )
+  existant_r[which(!is.na(terra::values(trace_ex)))] <- 1
+
   # Connexite (CA-16.5) et desserte de chaque parcelle (CA-16.1).
   structure(
     list(
@@ -128,6 +155,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
       heuristique = heuristique,
       mode = mode,
       connexe = .reseau_connexe(reseau_r),
+      raccorde = .reseau_raccorde(reseau_r, existant_r),
       desservies = .reseau_desservies(parcelles, reseau_r, grille, skidding_m),
       config = config
     ),
@@ -371,16 +399,34 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
   out[, c("ordre", "cout", "longueur", attr(out, "sf_column"))]
 }
 
-# Connexite (CA-16.5) : le reseau (existant + routes) forme-t-il une seule
-# composante connexe (voisinage 8) ? Sinon, une route est isolee.
-.reseau_connexe <- function(reseau_r) {
-  bin <- terra::ifel(reseau_r > 0, 1L, NA)
+# Nombre de composantes 8-connexes d'un raster de reseau (cellules > 0).
+.n_composantes <- function(r) {
+  bin <- terra::ifel(r > 0, 1L, NA)
   if (all(is.na(terra::values(bin)))) {
-    return(TRUE) # reseau vide : rien a raccorder
+    return(0L)
   }
   pat <- terra::patches(bin, directions = 8, zeroAsNA = TRUE)
-  ids <- unique(terra::values(pat))
-  length(ids[!is.na(ids)]) <= 1L
+  length(unique(stats::na.omit(terra::values(pat)[, 1])))
+}
+
+# Connexite (CA-16.5) : le reseau COMPLET (existant + routes creees) forme-t-il
+# une seule composante 8-connexe ? ATTENTION a la lecture (cf. `raccorde` et la
+# doc de reseau_desserte) : ce booleen est domine par la fragmentation propre du
+# reseau EXISTANT. Sur une desserte reelle (des milliers de troncons qui ne se
+# touchent pas a la resolution de la grille), il vaut presque toujours FALSE --
+# ce n'est PAS le signe qu'une route creee pend dans le vide.
+.reseau_connexe <- function(reseau_r) {
+  .n_composantes(reseau_r) <= 1L
+}
+
+# Raccordement (le booleen utile pour la conception d'acces) : les routes creees
+# ajoutent-elles zero nouvelle composante par rapport au reseau existant seul ?
+# Vrai <=> aucune route creee n'est isolee de l'existant (chacune s'y accroche,
+# directement ou via une autre route creee). Une route qui pendrait dans le vide
+# ferait AUGMENTER le compte de composantes. Insensible a la fragmentation de
+# l'existant, contrairement a `connexe`.
+.reseau_raccorde <- function(reseau_r, existant_r) {
+  .n_composantes(reseau_r) <= .n_composantes(existant_r)
 }
 
 # Desserte (CA-16.1) : chaque parcelle a-t-elle au moins une cellule sur le
@@ -409,7 +455,9 @@ print.foretaccess_reseau <- function(x, ...) {
   cli::cli_text("Heuristique : {.val {x$heuristique}}")
   cli::cli_text("Routes creees : {nrow(x$lignes)}")
   cli::cli_text("Parcelles desservies : {sum(x$desservies)}/{length(x$desservies)}")
-  cli::cli_text("Reseau connexe : {ifelse(x$connexe, 'oui', 'non')}")
+  cli::cli_text("Routes creees raccordees : {ifelse(x$raccorde %||% NA, 'oui', 'non')}")
+  cli::cli_text("Reseau global connexe : {ifelse(x$connexe, 'oui', 'non')} \\
+                 {.dim (souvent 'non' : existant fragmente -- voir ?reseau_desserte)}")
   cli::cli_text("Cout total : {round(x$cout, 1)}")
   invisible(x)
 }
