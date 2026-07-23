@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-23--v1191--qualifier_desserte-ne-segfaulte-plus-pré-filtre-de-couverture">2026-07-23 — <code>v1.19.1</code> : <code>qualifier_desserte()</code> ne segfaulte plus (pré-filtre de couverture)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1191--qualifier_desserte-ne-segfaulte-plus-pr%C3%A9-filtre-de-couverture"></a></h3>
+<p>Brief <code>~/brief-foretaccess-segfault-qualifier.md</code> (nemetonshiny, foretaccess 1.19.0). Sur une desserte de projet complète (806 km / 4 dalles), <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> <strong>segfaultait</strong> (~1 h puis crash mémoire C++, non rattrapable → tue le worker <code>future</code> de l’app). Cause : après le fix géométrie 1.19.0, <code>measure_road</code> était appelé sur les <strong>milliers de tronçons hors couverture</strong> (desserte ≫ emprise dalles) ; lidR/ALSroads dérape sur cette masse de régions sans points. <strong>Fix</strong> : <code>.couverture_dalles()</code> (union des empreintes du catalogue) + <code>.troncons_couverts()</code> écartent les tronçons hors couverture <strong>avant</strong> tout appel ALSroads → <code>NA</code> propre, plus de crash, temps effondré. <code>bilan</code> gagne <code>hors_couverture</code>. Validé sur donnée réelle (44/256 couverts, 0,02 s). Règle celui-ci les 3 premières demandes du brief (crash / mémoire / perf) d’un coup.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-23--v1190--desserte-lidar-sur-desserte-de-projet-réelle--domaine-glouton-brief-app">2026-07-23 — <code>v1.19.0</code> : desserte LiDAR sur desserte de projet réelle + domaine glouton (brief app)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1190--desserte-lidar-sur-desserte-de-projet-r%C3%A9elle--domaine-glouton-brief-app"></a></h3>
 <p>Brief <code>~/brief-foretaccess.md</code> (v3, émis par nemetonshiny sur foretaccess 1.18.0). <strong>Chantier B (débloque le câble)</strong> : <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> mesurait <strong>0/3 299</strong> sur une desserte de projet complète (vs 22/22 sur 6 routes triées à la main en 1.16). Trois causes confirmées <strong>sur donnée réelle</strong> (test décisif MULTI/LINESTRING) : 1. <strong>Géométrie</strong> — BD TOPO = <code>MULTILINESTRING</code>, <code>measure_road</code> <strong>échoue</strong> dessus (« Expecting LINESTRING »). Le 22/22 castait ; l’app passait le MULTI brut. → <code>.troncon_linestring()</code> (fusion parties contiguës, sinon la plus longue). 2. <strong>Tronçons courts</strong> — des milliers &lt; 40 m, instables. → param <code>long_min_m</code> (40). 3. <strong>Couverture partielle</strong> — une desserte de projet déborde les dalles : l’essentiel reste NA, seuls les tronçons longs+sous dalle se mesurent. → attribut <code>bilan</code>. <strong>B2 mismatch colonnes</strong> : <code>.largeur_desserte</code> reconnaît <code>largeur_carrossable_m</code> en priorité + <code>places_depot(largeur_champ=)</code>. <code>qualifier_desserte</code>/<code>acquire_desserte_lidar</code> et <code>places_depot</code> <strong>composent</strong> désormais.</p>

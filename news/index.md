@@ -1,5 +1,31 @@
 # Changelog
 
+## foretaccess 1.19.1 (2026-07-23)
+
+### `qualifier_desserte()` ne segfaulte plus sur une desserte de projet (fix bloquant)
+
+Sur une desserte de projet complète (Chastel-Nouvel, 806 km / 3 299
+tronçons) pour seulement 4 dalles LiDAR HD,
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+**segfaultait** (~1 h de calcul puis crash mémoire C++, **non
+rattrapable par `tryCatch`** — il tuait le worker `future` de l’app).
+Cause : après le fix géométrie de 1.19.0, `measure_road` était
+réellement appelé sur les **milliers de tronçons hors couverture**
+(desserte 806 km ≫ emprise des dalles) ; lidR/ALSroads finit par déraper
+sur cette masse de régions sans points.
+
+- **Pré-filtre de couverture (le fix).** L’emprise des dalles (union des
+  empreintes du `LAScatalog`) est calculée **une fois** ; tout tronçon
+  **hors couverture** retourne `NA` **sans jamais appeler
+  `measure_road`**. Plus de crash, et le temps s’effondre (seuls les
+  tronçons **sous une dalle** sont mesurés). Validé sur donnée réelle :
+  44/256 tronçons couverts attaqués, 212 écartés proprement, en 0,02 s.
+- **Bilan enrichi.** L’attribut `bilan` distingue désormais
+  **`hors_couverture`** de `echec` (ALSroads) : `mesure` / `trop_court`
+  / `hors_couverture` / `geometrie` / `echec` / `total`. L’app peut
+  afficher honnêtement « N/3 299 mesurés » (dont la part hors
+  couverture), comme le badge `raccorde`.
+
 ## foretaccess 1.19.0 (2026-07-23)
 
 ### Desserte LiDAR sur une desserte de projet réelle (débloque la chaîne câble)

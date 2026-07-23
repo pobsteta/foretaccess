@@ -103,13 +103,17 @@ on sensitive sites.
 **Geometry and coverage.** ALSroads requires a **single `LINESTRING`**
 centerline and errors on the `MULTILINESTRING` of BD TOPO
 `troncon_de_route`; each tronçon is therefore recast to one `LINESTRING`
-(contiguous parts merged, else the longest part kept). A full project
-desserte (hundreds of km) usually overruns the supplied tiles: tronçons
-**outside tile coverage**, or **shorter than `long_min_m`**, return `NA`
-– expect **most of a full desserte to be `NA`** and only the long
-tronçons lying under a tile to carry a width. The `bilan` attribute of
-the result breaks the outcome down (measured / too short / geometry /
-not measured).
+(contiguous parts merged, else the longest part kept). Tronçons
+**outside the tiles' footprint** are dropped to `NA` **before** any
+`measure_road` call: this is not just an optimisation but a **safety
+guard** – calling ALSroads on the thousands of point-less tronçons of a
+full project desserte (hundreds of km for a handful of tiles) makes
+lidR/ALSroads **segfault** (an uncatchable C++ crash). Tronçons
+**shorter than `long_min_m`** are likewise skipped. Expect **most of a
+full desserte to be `NA`** and only the long tronçons lying under a tile
+to carry a width. The `bilan` attribute of the result breaks the outcome
+down: `mesure`, `trop_court`, `hors_couverture`, `geometrie`, `echec`,
+`total`.
 
 ## See also
 

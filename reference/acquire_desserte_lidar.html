@@ -19,7 +19,7 @@ selectivite section); a measured width turns that criterion on."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -151,12 +151,15 @@ experimental and cross-check against an orthophoto on sensitive sites.</p>
 <p><strong>Geometry and coverage.</strong> ALSroads requires a <strong>single <code>LINESTRING</code></strong> centerline
 and errors on the <code>MULTILINESTRING</code> of BD TOPO <code>troncon_de_route</code>; each tronçon
 is therefore recast to one <code>LINESTRING</code> (contiguous parts merged, else the
-longest part kept). A full project desserte (hundreds of km) usually overruns
-the supplied tiles: tronçons <strong>outside tile coverage</strong>, or <strong>shorter than
-<code>long_min_m</code></strong>, return <code>NA</code> – expect <strong>most of a full desserte to be <code>NA</code></strong> and
-only the long tronçons lying under a tile to carry a width. The <code>bilan</code>
-attribute of the result breaks the outcome down (measured / too short /
-geometry / not measured).</p>
+longest part kept). Tronçons <strong>outside the tiles' footprint</strong> are dropped to
+<code>NA</code> <strong>before</strong> any <code>measure_road</code> call: this is not just an optimisation but a
+<strong>safety guard</strong> – calling ALSroads on the thousands of point-less tronçons of a
+full project desserte (hundreds of km for a handful of tiles) makes lidR/ALSroads
+<strong>segfault</strong> (an uncatchable C++ crash). Tronçons <strong>shorter than <code>long_min_m</code></strong>
+are likewise skipped. Expect <strong>most of a full desserte to be <code>NA</code></strong> and only the
+long tronçons lying under a tile to carry a width. The <code>bilan</code> attribute of the
+result breaks the outcome down: <code>mesure</code>, <code>trop_court</code>, <code>hors_couverture</code>,
+<code>geometrie</code>, <code>echec</code>, <code>total</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

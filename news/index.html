@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,18 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.19.1" id="foretaccess-1191-2026-07-23">foretaccess 1.19.1 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1191-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="qualifier_desserte-ne-segfaulte-plus-sur-une-desserte-de-projet-fix-bloquant-1-19-1">
+<code>qualifier_desserte()</code> ne segfaulte plus sur une desserte de projet (fix bloquant)<a class="anchor" aria-label="anchor" href="#qualifier_desserte-ne-segfaulte-plus-sur-une-desserte-de-projet-fix-bloquant-1-19-1"></a></h3>
+<p>Sur une desserte de projet complète (Chastel-Nouvel, 806 km / 3 299 tronçons) pour seulement 4 dalles LiDAR HD, <code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code> <strong>segfaultait</strong> (~1 h de calcul puis crash mémoire C++, <strong>non rattrapable par <code>tryCatch</code></strong> — il tuait le worker <code>future</code> de l’app). Cause : après le fix géométrie de 1.19.0, <code>measure_road</code> était réellement appelé sur les <strong>milliers de tronçons hors couverture</strong> (desserte 806 km ≫ emprise des dalles) ; lidR/ALSroads finit par déraper sur cette masse de régions sans points.</p>
+<ul><li>
+<strong>Pré-filtre de couverture (le fix).</strong> L’emprise des dalles (union des empreintes du <code>LAScatalog</code>) est calculée <strong>une fois</strong> ; tout tronçon <strong>hors couverture</strong> retourne <code>NA</code> <strong>sans jamais appeler <code>measure_road</code></strong>. Plus de crash, et le temps s’effondre (seuls les tronçons <strong>sous une dalle</strong> sont mesurés). Validé sur donnée réelle : 44/256 tronçons couverts attaqués, 212 écartés proprement, en 0,02 s.</li>
+<li>
+<strong>Bilan enrichi.</strong> L’attribut <code>bilan</code> distingue désormais <strong><code>hors_couverture</code></strong> de <code>echec</code> (ALSroads) : <code>mesure</code> / <code>trop_court</code> / <code>hors_couverture</code> / <code>geometrie</code> / <code>echec</code> / <code>total</code>. L’app peut afficher honnêtement « N/3 299 mesurés » (dont la part hors couverture), comme le badge <code>raccorde</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.19.0" id="foretaccess-1190-2026-07-23">foretaccess 1.19.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1190-2026-07-23"></a></h2>
 <div class="section level3">
