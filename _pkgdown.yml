@@ -99,6 +99,7 @@ reference:
   - acquire_inputs
   - acquire_mnt
   - acquire_desserte
+  - acquire_desserte_lidar
   - acquire_foret
   - acquire_cadastre
   - acquire_obstacles
