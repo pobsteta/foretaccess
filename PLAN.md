@@ -392,6 +392,32 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-23 — `v1.15.0` : bornage de `solve` + chantier 4 Phase B (validation FR négative)
+
+**Bornage `solve`** (single-cible) : le couloir de recherche de 1.12.0 (glouton)
+étendu à chaque segment de `solve` → `tracer_desserte` et tracés parcelle↔parcelle
+de Steiner. Bit-identique. Steiner **~860 → ~650 s** (4 parcelles) — gain modeste :
+ses segments relient des parcelles éloignées → fenêtres larges, reste O(N²).
+Le bornage brille pour extrémités proches (glouton, waypoints rapprochés).
+
+**Chantier 4 Phase B — validation française exécutée, résultat NÉGATIF.** Dalle
+LiDAR HD IGN téléchargée pour Chastel-Nouvel (260 Mo, classes ASPRS standard),
+`acquire_desserte_lidar()` lancée sur 6 routes forestières **longues (398-911 m),
+entières dans la dalle** : **0/6 mesurées**. Le pipeline tourne (CRS 2154 OK,
+catalogue lu, `measure_road` ~95 s/tronçon) mais ALSroads (calibré Québec) ne
+détecte pas les routes françaises. L'exemple **québécois** du paquet, lui, se
+mesure sans peine (8,2 m, CLASS 1) → la différence est la **donnée**, pas le code.
+Deux faux départs corrigés au passage (mauvaise emprise de dalle — le nom `_6385` =
+bord haut ; `st_crop` fragmentant les routes sous les 40 m d'ALSroads). **Verdict :
+no-go production sans recalibrage** de `alsroads_default_parameters` sur des routes
+françaises — recherche hors lot. `acquire_desserte_lidar()` reste livrée (utile
+sur donnée québécoise / après recalibrage). Protocole : `data-raw/validation_desserte_lidar.R`,
+spec 020 §6bis. Chemin NDP 1 marqué `# nocov` (validé hors CI).
+
+**Brief desserte : entièrement traité et bouclé** (1 perf + volet 2, 2 connexité,
+3 places_depot, 4 LiDAR Phase A+B, 5 résolu de fait). `solve` borné = le dernier
+optionnel. Seul reliquat = recalibrage ALSroads FR (recherche, hors périmètre).
+
 ### 2026-07-22 — `v1.14.0` : chantier 4 — desserte corrigée LiDAR (ALSroads, NDP 1)
 
 Dernier chantier du brief desserte. Étude de faisabilité (`specs/020`) **puis**

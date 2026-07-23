@@ -1,3 +1,34 @@
+# foretaccess 1.15.0 (2026-07-23)
+
+## Performance
+
+- **Tracé A\* borné au couloir aussi pour `solve` (single-cible).** Le bornage
+  introduit en 1.12.0 pour le glouton s'applique désormais à chaque **segment**
+  de [tracer_desserte()] et aux tracés parcelle↔parcelle de Steiner : la recherche
+  est restreinte à la boîte entre les deux extrémités du segment (marge
+  proportionnelle), avec repli plein-emprise. **Résultat bit-identique** (suite
+  inchangée). Gain net quand les extrémités sont proches ; Steiner reste ~`N²`
+  (mesuré **~650 s pour 4 parcelles**, contre ~860 s) car ses segments traversent
+  toute l'emprise — toujours réservé aux petits nombres de parcelles.
+
+## Documentation
+
+- **Chantier 4 Phase B — validation française d'ALSroads : résultat NÉGATIF.**
+  `acquire_desserte_lidar()` a été exécutée sur donnée réelle (Chastel-Nouvel,
+  dalle LiDAR HD IGN, 6 routes forestières longues et bien couvertes) :
+  **0/6 mesurées**. Le pipeline tourne (CRS, catalogue, `measure_road`), mais
+  ALSroads — calibré Québec — **ne détecte pas** les routes françaises avec ses
+  paramètres par défaut (l'exemple québécois, lui, se mesure sans peine). **No-go
+  production sans recalibrage.** `acquire_desserte_lidar()` reste livrée et utile
+  sur donnée québécoise / après recalibrage. Détail et protocole reproductible :
+  `specs/020` §6bis, `data-raw/validation_desserte_lidar.R`.
+
+## Interne
+
+- Chemin NDP 1 d'`acquire_desserte_lidar()` (code ALSroads-only, non exécutable en
+  CI) marqué `# nocov` — il est validé hors CI (exemple ALSroads + donnée réelle),
+  pas non testé.
+
 # foretaccess 1.14.0 (2026-07-22)
 
 ## Nouveautés
