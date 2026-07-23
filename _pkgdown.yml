@@ -132,6 +132,14 @@ reference:
   - desserte_reseau_multistart
   - desserte_reseau_recuit
   - desserte_reseau_riprute
+- title: Qualification de desserte LiDAR (spec 021)
+  desc: >
+    Qualification d'une desserte déclarée par LiDAR HD : canaux de micro-relief
+    RVT (sky-view factor, openness ±) portés en Rust (J3). Voir aussi
+    `qualifier_desserte()` dans la section Acquisition.
+  contents:
+  - micro_relief
+  - rvt_svf_opns
 - title: Non-régression
   contents:
   - compare_to_oracle

@@ -2,9 +2,10 @@
 
 > **Statut** : **Étape 1 implémentée** (`qualifier_desserte()`, v1.17.0) — correction
 > géométrique déterministe (relocalisation + largeur mesurée) sur le socle
-> `acquire_desserte_lidar()` (spec 020). **Étape 2 (détection IA) et le portage RVT
-> en Rust restent des jalons de recherche** (J3–J5, §5–7), conditionnés à la vérité
-> terrain DESSOPT et à des contacts institutionnels (§9).
+> `acquire_desserte_lidar()` (spec 020). **Portage RVT en Rust démarré (J3, v1.18.0)** :
+> SVF + openness ± (`rvt_svf_opns()` / `micro_relief()`), validés pixel à pixel contre
+> RVT_py. **Étape 2 (détection IA, CNN) reste un jalon de recherche** (J4–J5, §5–6),
+> conditionné à la vérité terrain DESSOPT et à des contacts institutionnels (§9).
 > **Type** : lot autonome, optionnel, en amont du pipeline
 > **Dépendances** : aucune sur les moteurs existants (skidder, porteur, DFCI, câble)
 > **Produit** : une couche `desserte` enrichie, conforme au contrat d'entrée actuel de `preprocess()`
@@ -142,6 +143,18 @@ Un modèle 6–8 canaux (MNT + nuage) bat largement un modèle mono-canal MNT.
 
 ## 7. Portage RVT en Rust — recommandé et peu coûteux
 
+> **SVF + openness ± : PORTÉS ET VALIDÉS (v1.18.0).** Noyau Rust
+> `rvt_svf_opns()` (`src/rust/src/rvt/mod.rs`) + enveloppe terra `micro_relief()`,
+> translittérés au mot près de `horizon_shift_vector` + `sky_view_factor_compute`
+> de `rvt/vis.py`. Balayage `roll`+`fmax` parallélisé par pixel (**Rayon**),
+> sémantique NoData reproduite (réflexion de bord = `np.pad(reflect)`, `f64::max`
+> = `np.fmax`). **Non-régression pixel à pixel contre RVT_py** (oracle gelé,
+> `data-raw/oracle_rvt.R`) : écart **~2·10⁻⁶ (SVF), ~2·10⁻⁴ ° (openness)** — le
+> résiduel float32 de RVT. openness négative = calcul sur `-MNT`.
+> **Restent** : LRM (DEM − moyenne glissante), pente (déjà via `terra::terrain`),
+> et la **gestion des halos** au raccord de tuiles (moteur du lot 7) — à faire
+> quand le prétraitement du CNN sera câblé (J4).
+
 ### Pourquoi maison plutôt qu'appel externe
 Le SVF/openness a une **distance de recherche** → exige un **halo** de `radius_max` pixels à chaque bord de tuile. Sans lui, artefacts linéaires sur les raccords = exactement le motif que le CNN doit ignorer. Le moteur de tuilage du lot 7 sait déjà gérer les halos ; un binaire externe non. C'est l'argument décisif.
 
@@ -208,7 +221,7 @@ Levier institutionnel : convention-cadre INRAE–CNPF de coopération signée en
 ## 11. Critères d'acceptation
 
 - [x] **`qualifier_desserte()` produit une couche conforme au contrat d'entrée actuel de `preprocess()`** (moteurs et non-régression Sylvaccess **inchangés**) — *implémenté v1.17.0 (étape 1)* : enveloppe déterministe sur `acquire_desserte_lidar()`, géométrie relocalisée par ALSroads, `largeur` renseignée depuis la largeur carrossable mesurée, qualification d'existence en option (`retirer_disparues`, désactivée par défaut faute de vérité terrain FR). Repli NDP 0 gracieux (desserte inchangée) testé en CI.
-- [ ] Noyaux RVT (SVF, openness ±, LRM, pente) portés en Rust, **non-régression pixel à pixel** contre RVT_py sous tolérance définie, halos gérés par le moteur de tuilage (identité tuilé = mono-bloc, cf. lot 7).
+- [~] Noyaux RVT portés en Rust, **non-régression pixel à pixel** contre RVT_py sous tolérance définie — *SVF + openness ± livrés v1.18.0* (`rvt_svf_opns()` / `micro_relief()`, écart ~2·10⁻⁶ SVF / ~2·10⁻⁴ ° openness vs RVT_py). **Restent** LRM, pente (déjà via `terra::terrain`) et les **halos** au raccord de tuiles (lot 7), à câbler avec le prétraitement du CNN (J4).
 - [ ] Sur le massif pilote : comparaison des surfaces par classe entre desserte BD Topo brute et desserte qualifiée (apport mesurable).
 - [ ] Test d'agrégation contre les cibles ACCESSFOR (Morvan / Bauges) comme second oracle indépendant.
 - [ ] Première livraison ciblée sur le **cas DFCI** (gain le plus évident, chantier déjà ouvert côté institutionnel).
