@@ -90,6 +90,29 @@ test_that("seule une largeur mesuree et insuffisante rejette", {
   expect_true(all(etroite$acces == "largeur"))
 })
 
+test_that("places_depot compose avec la largeur LiDAR (largeur_carrossable_m)", {
+  # qualifier_desserte()/acquire_desserte_lidar() sortent `largeur_carrossable_m` ;
+  # places_depot doit la reconnaitre comme largeur mesuree (B2, brief foretaccess).
+  etroite <- places_serrees(
+    desserte_depot(classe = "route", largeur_carrossable_m = c(2, 6, 6, 6)),
+    largeur_min_m = 4
+  )
+  expect_false(1L %in% etroite$troncon) # 2 m < 4 m -> rejete
+  expect_true(all(etroite$acces == "largeur"))
+})
+
+test_that("largeur_champ force la colonne de largeur", {
+  # Une colonne au nom non standard n'est lue que si on la nomme explicitement.
+  des <- desserte_depot(classe = "route", ma_largeur = c(2, 6, 6, 6))
+  # Sans largeur_champ : aucune largeur mesuree -> rien n'est rejete sur l'acces.
+  sans <- suppressMessages(places_serrees(des, largeur_min_m = 4))
+  expect_true(all(sans$acces != "largeur"))
+  # Avec largeur_champ : le troncon etroit (2 m) est ecarte.
+  avec <- places_serrees(des, largeur_min_m = 4, largeur_champ = "ma_largeur")
+  expect_false(1L %in% avec$troncon)
+  expect_true(all(avec$acces == "largeur"))
+})
+
 test_that("une desserte sans largeur mesuree ne se fait pas filtrer sur l'acces", {
   expect_message(
     places <- places_depot(desserte_depot(), mnt_doux(), espacement_min_m = 10),

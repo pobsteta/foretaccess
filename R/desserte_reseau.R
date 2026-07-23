@@ -38,7 +38,9 @@
 #' @param graine Optional integer seed for the `"aleatoire"` ordering.
 #' @return A `foretaccess_reseau` object: `lignes` (an `sf` LINESTRING of the
 #'   created roads, one feature per road, with creation `ordre`, `cout` and
-#'   planimetric `longueur` in m), `reseau` (a `SpatRaster` of the whole
+#'   planimetric `longueur` in m -- these follow the grid step by step; use
+#'   [contracter_lignes()] for a tidy vector rendering), `reseau` (a `SpatRaster`
+#'   of the whole
 #'   network, for Lot 17), `desserte` (the existing network, kept for the Lot 17
 #'   graph), `cout` (total), `connexe` and `raccorde` (two connectivity flags,
 #'   see *Connectivity* below), `desservies` (a logical, one per parcel, CA-16.1)
@@ -85,6 +87,25 @@
 #' Steiner (`mode = "steiner"`) traces parcel-to-parcel across the whole extent, so
 #' its windows are large and it stays roughly `N^2` (measured ~650 s for 4 parcels,
 #' down from ~860 s) -- still reserved for small parcel counts.
+#'
+#' **Validity domain of the speed-up (read this before expecting seconds).** The
+#' "tens of seconds" figure is **conditional**, and the two levers compound:
+#' * **`skidding_m` is the dominant one.** At `skidding_m = 0` *every* parcel cell
+#'   off a road spawns its own A\* trace -- hundreds per hectare-scale parcel. That
+#'   count, not the per-trace cost, then dominates, and no windowing can offset it.
+#'   Measured on Chastel-Nouvel (30 parcels, ~302k cells) at `skidding_m = 0`: the
+#'   greedy runs in **~17 min**, i.e. it does **not** beat the pre-1.12 baseline --
+#'   the 1.12 "~11.5 min -> tens of seconds" figure was obtained *with a realistic*
+#'   `skidding_m`, not at `0`. **Set `skidding_m` to your real skidding/forwarding
+#'   distance**; it is not optional tuning.
+#' * **Proximity to the existing network.** The corridor bound only shrinks the
+#'   search when a parcel is *close* to the network (small box). Parcels far from
+#'   any road give large boxes and little gain, on top of the per-cell trace count.
+#'
+#' So: `skidding_m` > 0 **and** parcels not all far from the network -> seconds to
+#' tens of seconds. `skidding_m = 0` with scattered, distant parcels -> minutes,
+#' regardless of the windowing. Persist the returned network (do not recompute a
+#' long greedy on every view).
 #' @param mode Construction mode: `"glouton"` (greedy MTAP->STAP, default) or
 #'   `"steiner"` (minimum-spanning-tree approximation over the terminals, a
 #'   quality alternative at the cost of N^2 traces).

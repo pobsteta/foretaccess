@@ -40,8 +40,9 @@
 #' @section Criteres:
 #' A road segment yields candidate landings when it passes, in order:
 #' 1. **Truck access** -- a segment is rejected only on **hard evidence**: a
-#'    *measured* carriageway width (`largeur`, `largeur_de_chaussee`) below
-#'    `largeur_min_m`. The `dfci` flag of [flag_dfci()] and the `classe` are
+#'    *measured* carriageway width (LiDAR `largeur_carrossable_m`, else BD TOPO
+#'    `largeur` / `largeur_de_chaussee`) below `largeur_min_m`. The `dfci` flag of
+#'    [flag_dfci()] and the `classe` are
 #'    recorded in the `acces` column but never reject: on the only oracle
 #'    available they do not discriminate (see *Validation*).
 #' 2. **Turn-around** -- only when `retournements` is supplied: the segment is
@@ -122,6 +123,11 @@
 #'   (criterion 2 off).
 #' @param largeur_min_m Minimum carriageway width for a log truck (m). Only ever
 #'   applied to a *measured* width; see criterion 1.
+#' @param largeur_champ Optional name of the column holding the measured width. By
+#'   default the LiDAR carriageway `largeur_carrossable_m` (from
+#'   [acquire_desserte_lidar()] / [qualifier_desserte()]) is used when present,
+#'   then the BD TOPO `largeur` / `largeur_de_chaussee`. Set this to compose with a
+#'   custom width column.
 #' @param pente_max_pct Maximum **longitudinal grade** of the road at the
 #'   platform (%), not terrain slope -- see criterion 3.
 #' @param fenetre_plateforme_m Length of road over which that grade is measured,
@@ -159,6 +165,7 @@ places_depot <- function(desserte,
                          foret = NULL,
                          retournements = NULL,
                          largeur_min_m = 4,
+                         largeur_champ = NULL,
                          pente_max_pct = 6,
                          fenetre_plateforme_m = 50,
                          distance_foret_max_m = 100,
@@ -178,7 +185,7 @@ places_depot <- function(desserte,
   n_troncons <- length(unique(des$troncon))
 
   # --- 1. Acces camion ------------------------------------------------------
-  acces <- .acces_camion(des, largeur_min_m)
+  acces <- .acces_camion(des, largeur_min_m, largeur_champ)
   des$acces <- acces$acces
   des$largeur_m <- acces$largeur_m
   des <- des[acces$apte, ]
@@ -311,9 +318,9 @@ places_depot <- function(desserte,
 # Confrontation a ColduPre : l'une des deux vraies places de depot est une piste
 # forestiere a `CL_DFCI = 0` -- rejeter sur ces attributs elimine une vraie place
 # sur deux. Ils informent, ils ne tranchent pas.
-.acces_camion <- function(des, largeur_min_m) {
+.acces_camion <- function(des, largeur_min_m, largeur_champ = NULL) {
   n <- nrow(des)
-  larg <- .largeur_desserte(des)
+  larg <- .largeur_desserte(des, largeur_champ)
   dfci <- if (!is.null(des[["dfci"]])) as.integer(des$dfci) else rep(NA_integer_, n)
   classe <- if (!is.null(des[["classe"]])) as.character(des$classe) else rep(NA_character_, n)
 
@@ -327,8 +334,8 @@ places_depot <- function(desserte,
 
   if (!any(mesuree)) {
     cli::cli_inform(c(
-      "!" = "Aucune largeur mesuree ({.field largeur} / {.field largeur_de_chaussee})
-             : le critere d'acces camion ne rejette rien.",
+      "!" = "Aucune largeur mesuree ({.field largeur_carrossable_m} / {.field largeur}
+             / {.field largeur_de_chaussee}) : le critere d'acces camion ne rejette rien.",
       "i" = "Les colonnes {.field dfci} et {.field classe} sont rapportees dans
              {.field acces} mais ne tranchent pas -- sur l'oracle ColduPre elles
              ecartent une vraie place de depot sur deux."
