@@ -1,3 +1,20 @@
+# foretaccess 1.16.0 (2026-07-23)
+
+## Desserte LiDAR (spec 020, chantier 4) — Phase B validée sur donnée française
+
+- **ALSroads mesure bien les pistes forestières françaises** — le 0/6 de la
+  v1.15.0 était un **faux négatif** dû à un MNT trop grossier (grille
+  d'accessibilité à 5 m), pas à un défaut de calibrage Québec. Le guide utilisateur
+  d'ALSroads exige un **MNT ≥ 1 m** (profils à 0,5 m). Sur Chastel-Nouvel, avec un
+  MNT 1 m : **22/22 pistes mesurées** (largeurs carrossables 2,7–8,1 m, classes
+  d'état 1–2). Verdict spec 020 : **NÉGATIF → POSITIF**, GO expérimental.
+- **`acquire_desserte_lidar()` garantit la condition MNT.** Quand le MNT fourni est
+  plus grossier que 1,5 m, la fonction **dérive un MNT à `dtm_res` m** (nouveau
+  paramètre, défaut 1) depuis les points sol (classe ASPRS 2) de la dalle
+  (`lidR::rasterize_terrain(tin())`). Elle **décime** aussi le nuage au-delà de
+  ~15 pts/m² vers ~10 (recommandation du guide) : mesure stable, forte
+  accélération. Fournir le MNT LiDAR HD IGN à 0,5 m évite la dérivation.
+
 # foretaccess 1.15.0 (2026-07-23)
 
 ## Performance

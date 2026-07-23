@@ -6,9 +6,10 @@
 # BD TOPO inchangee, colonnes LiDAR a NA). Voir specs/020-desserte-lidar-alsroads.md.
 #
 # STATUT DE VALIDATION : le repli NDP 0 et l'orchestration sont testes (CI, sans
-# LiDAR). Le chemin ALSroads (mesure reelle) est calibre Quebec (MFFP) et n'est PAS
-# encore valide sur donnee francaise -- Phase B de la spec 020, CA-20.5. A traiter
-# en "experimental" tant que cette validation n'est pas faite.
+# LiDAR). Le chemin ALSroads (mesure reelle) est calibre Quebec (MFFP) mais mesure
+# BIEN les routes forestieres francaises A CONDITION d'un MNT >= 1 m -- Phase B de
+# la spec 020 (Chastel-Nouvel) : le 0/6 initial venait d'un MNT a 5 m, pas d'un
+# defaut de calibrage. Reste "experimental" (largeurs a recouper sur site).
 
 # Colonnes ajoutees par l'enrichissement LiDAR (presentes meme en repli NDP 0).
 # Noms verifies sur la sortie reelle d'ALSroads (donnees d'exemple du paquet) :
@@ -52,10 +53,17 @@
 #' unchanged, the LiDAR columns set to `NA`, and a message says so. It **never**
 #' errors on a missing point cloud.
 #'
-#' **Calibration caveat.** ALSroads is calibrated on Quebec (MFFP) forest roads.
-#' Its widths are **not yet validated on French data** (spec 020, Phase B). Treat
-#' the output as experimental until validated on a local site; do not base a firm
-#' decision on its widths before then.
+#' **DTM resolution is critical.** ALSroads builds its edge-detection profiles at
+#' `profile_resolution = 0.5 m`; a DTM coarser than 1 m yields `NA` widths (this
+#' was the cause of the initial 0/6 in spec 020 Phase B, fed a 5 m accessibility
+#' grid). When the supplied `mnt` is coarser than 1.5 m, a `dtm_res`-metre DTM is
+#' derived here from the tile's ground points -- prefer passing IGN's 0.5 m LiDAR
+#' HD DTM directly.
+#'
+#' **Calibration.** ALSroads is calibrated on Quebec (MFFP) forest roads, but with
+#' a >= 1 m DTM it **does** measure French BD TOPO forest roads (spec 020 Phase B,
+#' Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
+#' experimental and cross-check against an orthophoto on sensitive sites.
 #'
 #' @param desserte Road network: path to a vector file or an `sf` of lines (the
 #'   output of [acquire_desserte()]).
@@ -68,6 +76,9 @@
 #' @param crs Target EPSG code. Default 2154.
 #' @param cache_dir Directory for the per-segment measurement cache. Default
 #'   `tempdir()`.
+#' @param dtm_res Resolution (m) of the DTM derived from ground points when `mnt`
+#'   is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
+#'   ALSroads' internal profile but needs a denser ground return.
 #' @return An `sf` in the format of [acquire_desserte()] **plus** the columns
 #'   `largeur_carrossable_m` (ALSroads `DRIVABLEWIDTH`), `largeur_plateforme_m`
 #'   (`ROADWIDTH`), `pente_pct` (computed here from the realigned geometry),
@@ -84,7 +95,7 @@
 #' places <- places_depot(des_lidar, mnt, largeur_min_m = 4) # acces camion discriminant
 #' }
 acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
-                                   cache_dir = tempdir()) {
+                                   cache_dir = tempdir(), dtm_res = 1) {
   des <- .as_vector(desserte, "desserte")
   des <- sf::st_zm(sf::st_as_sf(des), drop = TRUE)
   if (nrow(des) == 0) {
@@ -115,13 +126,21 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
 
   ctg <- .lidar_catalogue(las_source)
-  mesures <- .desserte_lidar_mesurer(des, ctg, mnt, cache_dir)
+  # MNT >= 1 m EXIGE par ALSroads (profils a profile_resolution = 0.5 m ; un MNT
+  # plus grossier -- p.ex. la grille d'accessibilite a 5 m -- rend des largeurs
+  # NA : c'etait la cause du 0/6 initial en Phase B). Si le MNT fourni est plus
+  # grossier, on en derive un a 1 m depuis les points sol de la dalle.
+  dtm_fin <- .mnt_alsroads(mnt, ctg, cache_dir, dtm_res)
+  # Densite IGN LiDAR HD ~ 10-45 pts/m2 ; ALSroads est cale sur 5-10, on decime
+  # au-dela (recommandation du guide ALSroads) -- gain de vitesse, mesure stable.
+  ctg <- .decimer_ctg(ctg)
+  mesures <- .desserte_lidar_mesurer(des, ctg, dtm_fin, mnt, cache_dir)
 
   cli::cli_inform(c(
     "v" = "Desserte enrichie LiDAR ({.strong NDP 1}) : {sum(!is.na(mesures$largeur_carrossable_m))}/{nrow(des)}
            troncon{?s} mesure{?s}.",
-    "!" = "ALSroads est calibre Quebec, non encore valide sur donnee francaise
-           (spec 020 Phase B) : largeurs a considerer comme experimentales."
+    "i" = "ALSroads valide sur donnee francaise avec un MNT >= 1 m (spec 020
+           Phase B) ; largeurs a recouper avec une orthophoto sur site sensible."
   ))
   mesures
   # nocov end
@@ -150,15 +169,51 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   read_ctg(las_source)
 }
 
+# MNT >= 1 m pour ALSroads. Si le MNT fourni est deja assez fin (<= 1,5 m --
+# p.ex. le MNT LiDAR HD officiel de l'IGN a 0,5 m, ou RGE ALTI a 1 m), on le
+# garde. Sinon (grille d'accessibilite a 5 m) on en derive un a `dtm_res` m par
+# triangulation des points sol (classe ASPRS 2) de la dalle, mis en cache.
+.mnt_alsroads <- function(mnt, ctg, cache_dir, dtm_res = 1) {
+  en_raster <- if (requireNamespace(.PKG_RASTER, quietly = TRUE)) {
+    getExportedValue(.PKG_RASTER, "raster")
+  } else {
+    identity
+  }
+  res_max <- max(terra::res(mnt))
+  if (res_max <= 1.5) {
+    return(en_raster(mnt))
+  }
+  cli::cli_inform(c("!" = "MNT a {round(res_max, 1)} m > 1 m : ALSroads exige >= 1 m
+    (profils a 0,5 m). Derivation d'un MNT a {dtm_res} m depuis les points sol
+    de la dalle -- fournir le MNT LiDAR HD IGN (0,5 m) pour l'eviter."))
+  f <- file.path(cache_dir, sprintf("dtm_alsroads_%gm.tif", dtm_res))
+  if (!file.exists(f)) {
+    read_las <- getExportedValue(.PKG_LIDR, "readLAS")
+    rasterize_terrain <- getExportedValue(.PKG_LIDR, "rasterize_terrain")
+    tin <- getExportedValue(.PKG_LIDR, "tin")
+    sol <- read_las(ctg$filename, filter = "-keep_class 2") # sol seul
+    d <- rasterize_terrain(sol, res = dtm_res, algorithm = tin())
+    terra::writeRaster(d, f, overwrite = TRUE)
+  }
+  en_raster(terra::rast(f))
+}
+
+# IGN LiDAR HD ~ 10-45 pts/m2 ; ALSroads est cale sur 5-10 (guide ALSroads). On
+# decime au-dela de 15 (marge) vers ~10 : mesure stable, forte accelaration.
+.decimer_ctg <- function(ctg, cible = 10) {
+  dens <- try(getExportedValue(.PKG_LIDR, "density")(ctg), silent = TRUE)
+  if (inherits(dens, "try-error") || !is.finite(dens) || dens <= 1.5 * cible) {
+    return(ctg)
+  }
+  set_filter <- getExportedValue(.PKG_LIDR, "opt_filter<-")
+  set_filter(ctg, value = sprintf("-keep_random_fraction %.3f", cible / dens))
+}
+
 # Mesure ALSroads tronçon par tronçon, avec cache par identifiant. `measure_road`
 # traite UNE route a la fois (cf. spec 020 sec.2) ; on boucle et on assemble.
-.desserte_lidar_mesurer <- function(des, ctg, mnt, cache_dir) {
+.desserte_lidar_mesurer <- function(des, ctg, dtm_fin, mnt, cache_dir) {
   measure_road <- getExportedValue(.PKG_ALSROADS, "measure_road")
-  ras <- if (requireNamespace(.PKG_RASTER, quietly = TRUE)) {
-    getExportedValue(.PKG_RASTER, "raster")(mnt) # ALSroads attend un RasterLayer
-  } else {
-    mnt
-  }
+  ras <- dtm_fin # MNT >= 1 m deja au format RasterLayer (cf. .mnt_alsroads)
   # Cle de cache : hachage de la geometrie (stable par troncon).
   cache_f <- file.path(cache_dir, "desserte_lidar.rds")
   cache <- if (file.exists(cache_f)) readRDS(cache_f) else list()

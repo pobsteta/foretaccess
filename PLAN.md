@@ -178,8 +178,9 @@
 - **`v1.14.0` posée** (2026-07-22) : **chantier 4** — `acquire_desserte_lidar()` (ALSroads, NDP 1,
   spec 020). Enveloppe fine, lidR/ALSroads dynamiques (repli NDP 0 testé), chemin NDP 1 **validé
   bout-en-bout** sur les données d'exemple d'ALSroads (colonnes réelles : `DRIVABLEWIDTH`, `CLASS`=état
-  4 classes). Reste Phase B (validation française). **Brief desserte : 5 chantiers traités**
-  (1, 2, 3 livrés ; 4 Phase A ; 5 résolu de fait). Reste optionnel : borner `solve` (Steiner rapide).
+  4 classes). **Phase B validée en `v1.16.0`** (Chastel-Nouvel, MNT ≥ 1 m → 22/22 pistes mesurées ;
+  le 0/6 de v1.15.0 était un faux négatif dû à un MNT à 5 m). **Brief desserte : 5 chantiers bouclés**
+  (1, 2, 3 livrés ; 4 Phases A+B ; 5 résolu de fait). Chantier 4 : **GO expérimental**.
 - **`v1.7.0` posée** (2026-07-22) : **`volume_depuis_p1()`**, pont entre l'indicateur **P1** de
   Nemeton (volume sur pied m³/ha, inventaire ou MNH LiDAR) et le raster `pre$volume` que somment le
   câble et la sélection (→ volume de ligne, IPC). Rasterise un `sf` d'unités sur la grille du MNT ;
@@ -392,7 +393,30 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
-### 2026-07-23 — `v1.15.0` : bornage de `solve` + chantier 4 Phase B (validation FR négative)
+### 2026-07-23 — `v1.16.0` : chantier 4 Phase B **renversée en POSITIF** (MNT ≥ 1 m)
+
+**Le 0/6 de la v1.15.0 était un FAUX NÉGATIF.** Piste donnée par l'utilisateur : le
+guide utilisateur d'ALSroads (`ilythiamorley.github.io/ALSroads_Guide`) exige un
+**MNT « at least 1 m »** — ALSroads construit ses profils de détection de bord à
+`profile_resolution = 0.5 m`. Or je passais la **grille d'accessibilité à 5 m**,
+10× trop grossière → largeurs `NA`. Ce n'était ni la donnée ni le calibrage Québec,
+c'était **ma résolution de MNT**. Rejoué avec un MNT **1 m** dérivé des points sol
+(classe ASPRS 2) de la dalle (`lidR::rasterize_terrain(tin())`) + nuage décimé à
+~10 pts/m² : **22/22 pistes mesurées** (carrossable 1,1–8,1 m, classes 1–4). Réserve
+« calibrage Québec → France » **levée**, verdict spec 020 **NÉGATIF → POSITIF**, GO
+expérimental.
+
+**Correctif** : `acquire_desserte_lidar()` détecte un MNT > 1,5 m et en dérive un à
+`dtm_res` m (nouveau paramètre, défaut 1) depuis les points sol ; décime aussi le
+nuage au-delà de ~15 pts/m². Fournir le MNT LiDAR HD IGN à 0,5 m évite la dérivation.
+Confondants confirmés innocents avant de trouver la vraie cause : géométrie
+`MULTILINESTRING` vs `LINESTRING` (testée, toujours 0/6). **Leçon (mémoire)** : avant
+de conclure à un échec de calibrage d'un outil tiers, vérifier que **mes entrées
+respectent ses exigences documentées** (ici la résolution du MNT). Sur-conclure au
+négatif — ce que j'avais failli faire deux fois — aurait enterré une fonction qui
+marche. Spec 020 §6bis, `data-raw/validation_desserte_lidar.R`.
+
+### 2026-07-23 — `v1.15.0` : bornage de `solve` + chantier 4 Phase B (0/6 — faux négatif, cf. v1.16.0)
 
 **Bornage `solve`** (single-cible) : le couloir de recherche de 1.12.0 (glouton)
 étendu à chaque segment de `solve` → `tracer_desserte` et tracés parcelle↔parcelle
@@ -413,6 +437,8 @@ no-go production sans recalibrage** de `alsroads_default_parameters` sur des rou
 françaises — recherche hors lot. `acquire_desserte_lidar()` reste livrée (utile
 sur donnée québécoise / après recalibrage). Protocole : `data-raw/validation_desserte_lidar.R`,
 spec 020 §6bis. Chemin NDP 1 marqué `# nocov` (validé hors CI).
+**⚠ Verdict renversé en v1.16.0 : le 0/6 venait d'un MNT à 5 m, pas d'un défaut de
+calibrage. Avec un MNT ≥ 1 m → 22/22. Voir l'entrée v1.16.0 ci-dessus.**
 
 **Brief desserte : entièrement traité et bouclé** (1 perf + volet 2, 2 connexité,
 3 places_depot, 4 LiDAR Phase A+B, 5 résolu de fait). `solve` borné = le dernier

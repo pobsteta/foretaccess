@@ -35,9 +35,9 @@ Marks the road segments that make up the fire-defence network (DFCI), the
 source of the DFCI truck engine (spec 006). The flag is orthogonal to the
 \code{route}/\code{piste}/\code{reseau_public} classes. Two strategies, in order:
 \itemize{
-\item \strong{Route A (dedicated OSM source)} — a segment is flagged when it coincides
+\item \strong{Route A (dedicated OSM source)} -- a segment is flagged when it coincides
 (within \code{tol_appariement_m}) with an OSM DFCI track (\code{ref:FR:DFCI}).
-\item \strong{Route B (geometric fallback)} — when \code{dfci_lignes} is empty/\code{NULL}, keep
+\item \strong{Route B (geometric fallback)} -- when \code{dfci_lignes} is empty/\code{NULL}, keep
 the tracks that are either \emph{through-routes} wider than \code{emprise_min_m}, or
 \emph{dead-ends fitted with a turning area} (within \code{rayon_retournement_m} of the
 dangling end). This is an explicitly heuristic guess (false positives

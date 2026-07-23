@@ -10,8 +10,8 @@ authors:
   - family-names: Obstetar
     given-names: Pascal
     email: pascal.obstetar@gmail.com
-version: 1.15.0
-date-released: "2026-07-22"
+version: 1.16.0
+date-released: "2026-07-23"
 license: GPL-3.0
 repository-code: "https://github.com/pobsteta/foretaccess"
 references:
