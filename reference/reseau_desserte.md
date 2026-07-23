@@ -65,7 +65,15 @@ reseau_desserte(
 - volume_champ:
 
   Optional name of the parcel volume column (for `"plus_gros_volume"`);
-  each cell inherits its parcel volume.
+  the column is **rasterised onto the grid**, so each cell inherits the
+  parcel value and cells are then ordered by it. Pass a **density
+  (m3/ha)**, *not* a total: a per-parcel total rasterised onto every
+  cell would mis-rank parcels by area. When fed from nemeton's
+  `volume_mobilisable()`, use `unite = "m3_ha"` here – the **opposite**
+  unit to
+  [`calculer_flux()`](https://pobsteta.github.io/foretaccess/reference/calculer_flux.md),
+  which wants a per-parcel total (m3). Do not reuse the same column for
+  both.
 
 - pondere_cout:
 

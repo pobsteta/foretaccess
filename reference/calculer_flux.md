@@ -26,7 +26,15 @@ calculer_flux(graphe, parcelles, volume_champ = "volume", densite_sources = 5)
 
 - volume_champ:
 
-  Name of the parcel volume column (default `"volume"`).
+  Name of the parcel volume column (default `"volume"`). It must hold a
+  **total volume per parcel** (m3), *not* a density: the value is split
+  equally across the parcel's source points and accumulated down the
+  tree, so a density (m3/ha) would under-estimate the flux by roughly
+  the parcel area – silently, no error. When fed from nemeton's
+  `volume_mobilisable()`, use `unite = "m3_total"`. This is the
+  **opposite** unit to
+  [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)'s
+  `volume_champ` (a per-cell density).
 
 - densite_sources:
 

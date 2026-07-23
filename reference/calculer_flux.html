@@ -79,7 +79,13 @@ is unique and the accumulation is a subtree sum.</p>
 
 
 <dt id="arg-volume-champ">volume_champ<a class="anchor" aria-label="anchor" href="#arg-volume-champ"></a></dt>
-<dd><p>Name of the parcel volume column (default <code>"volume"</code>).</p></dd>
+<dd><p>Name of the parcel volume column (default <code>"volume"</code>). It
+must hold a <strong>total volume per parcel</strong> (m3), <em>not</em> a density: the value is
+split equally across the parcel's source points and accumulated down the
+tree, so a density (m3/ha) would under-estimate the flux by roughly the
+parcel area – silently, no error. When fed from nemeton's
+<code>volume_mobilisable()</code>, use <code>unite = "m3_total"</code>. This is the <strong>opposite</strong>
+unit to <code><a href="reseau_desserte.html">reseau_desserte()</a></code>'s <code>volume_champ</code> (a per-cell density).</p></dd>
 
 
 <dt id="arg-densite-sources">densite_sources<a class="anchor" aria-label="anchor" href="#arg-densite-sources"></a></dt>

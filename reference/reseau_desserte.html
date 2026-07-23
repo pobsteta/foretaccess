@@ -116,7 +116,13 @@ its own trace, which is both slow and over-connected.</p></dd>
 
 <dt id="arg-volume-champ">volume_champ<a class="anchor" aria-label="anchor" href="#arg-volume-champ"></a></dt>
 <dd><p>Optional name of the parcel volume column (for
-<code>"plus_gros_volume"</code>); each cell inherits its parcel volume.</p></dd>
+<code>"plus_gros_volume"</code>); the column is <strong>rasterised onto the grid</strong>, so each
+cell inherits the parcel value and cells are then ordered by it. Pass a
+<strong>density (m3/ha)</strong>, <em>not</em> a total: a per-parcel total rasterised onto every
+cell would mis-rank parcels by area. When fed from nemeton's
+<code>volume_mobilisable()</code>, use <code>unite = "m3_ha"</code> here – the <strong>opposite</strong> unit
+to <code><a href="calculer_flux.html">calculer_flux()</a></code>, which wants a per-parcel total (m3). Do not reuse the
+same column for both.</p></dd>
 
 
 <dt id="arg-pondere-cout">pondere_cout<a class="anchor" aria-label="anchor" href="#arg-pondere-cout"></a></dt>
