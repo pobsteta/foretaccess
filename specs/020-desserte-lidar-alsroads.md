@@ -228,6 +228,17 @@ Le mismatch de colonnes (`largeur_carrossable_m` vs `largeur`/`largeur_de_chauss
 lu par `places_depot()`) est aussi levé : `.largeur_desserte` reconnaît la largeur
 LiDAR, et `places_depot(largeur_champ=)` nomme la colonne. **Chaîne câble débloquée.**
 
+### 6quater. Segfault sur desserte de projet (v1.19.1) — pré-filtre de couverture
+
+Après le fix géométrie de 1.19.0, `measure_road` était **réellement** appelé sur les
+milliers de tronçons **hors couverture** d'une desserte de projet (806 km pour
+4 dalles). lidR/ALSroads **segfaulte** sur cette masse de régions sans points (~1 h
+puis crash mémoire C++, **non rattrapable** — il tue le worker `future` de l'app).
+**Fix** : l'emprise des dalles (union des empreintes du `LAScatalog`, `.couverture_dalles()`)
+est calculée une fois ; `.troncons_couverts()` écarte les tronçons hors couverture
+**avant** tout appel ALSroads → `NA` propre, jamais de crash, temps effondré. Le
+`bilan` gagne `hors_couverture`. Validé : 44/256 couverts, 212 écartés, 0,02 s.
+
 ---
 
 ## 7. Décision à prendre (go/no-go) — §7 du brief

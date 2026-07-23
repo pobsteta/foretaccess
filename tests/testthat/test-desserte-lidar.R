@@ -113,6 +113,25 @@ test_that(".troncon_linestring ramene une MULTILINESTRING a une LINESTRING uniqu
   expect_null(foretaccess:::.troncon_linestring(pt))
 })
 
+test_that(".troncons_couverts n'attaque QUE les troncons sous une dalle (anti-segfault)", {
+  # Sur une desserte de projet (806 km) pour quelques dalles, appeler measure_road
+  # sur les milliers de troncons hors couverture fait segfaulter lidR/ALSroads.
+  # Ce filtre les ecarte AVANT l'appel. Une dalle = carre [0,100] x [0,100].
+  couv <- sf::st_sfc(sf::st_polygon(list(rbind(
+    c(0, 0), c(100, 0), c(100, 100), c(0, 100), c(0, 0)
+  ))), crs = 2154)
+  geoms <- sf::st_sfc(
+    sf::st_linestring(rbind(c(10, 10), c(90, 90))),   # dans la dalle
+    sf::st_linestring(rbind(c(50, 50), c(150, 150))), # a cheval (touche)
+    sf::st_linestring(rbind(c(200, 200), c(300, 300))), # HORS couverture
+    crs = 2154
+  )
+  cvt <- foretaccess:::.troncons_couverts(geoms, couv)
+  expect_equal(cvt, c(TRUE, TRUE, FALSE)) # seul le 3e est ecarte
+  # Sans couverture connue (NULL) : on n'exclut rien (repli conservateur).
+  expect_true(all(foretaccess:::.troncons_couverts(geoms, NULL)))
+})
+
 test_that("la pente en long d'une geometrie est calculee sur le MNT", {
   # Helper interne : sur un MNT plat, pente nulle ; verifie le calcul.
   g <- sf::st_geometry(sf::st_sf(geometry = sf::st_sfc(

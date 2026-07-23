@@ -393,6 +393,19 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-23 — `v1.19.1` : `qualifier_desserte()` ne segfaulte plus (pré-filtre de couverture)
+
+Brief `~/brief-foretaccess-segfault-qualifier.md` (nemetonshiny, foretaccess 1.19.0).
+Sur une desserte de projet complète (806 km / 4 dalles), `qualifier_desserte()`
+**segfaultait** (~1 h puis crash mémoire C++, non rattrapable → tue le worker `future`
+de l'app). Cause : après le fix géométrie 1.19.0, `measure_road` était appelé sur les
+**milliers de tronçons hors couverture** (desserte ≫ emprise dalles) ; lidR/ALSroads
+dérape sur cette masse de régions sans points. **Fix** : `.couverture_dalles()` (union
+des empreintes du catalogue) + `.troncons_couverts()` écartent les tronçons hors
+couverture **avant** tout appel ALSroads → `NA` propre, plus de crash, temps effondré.
+`bilan` gagne `hors_couverture`. Validé sur donnée réelle (44/256 couverts, 0,02 s).
+Règle celui-ci les 3 premières demandes du brief (crash / mémoire / perf) d'un coup.
+
 ### 2026-07-23 — `v1.19.0` : desserte LiDAR sur desserte de projet réelle + domaine glouton (brief app)
 
 Brief `~/brief-foretaccess.md` (v3, émis par nemetonshiny sur foretaccess 1.18.0).
