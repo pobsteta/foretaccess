@@ -254,62 +254,97 @@ pub fn solve(
             };
         }
 
-        // La frontiere seme le depart avec la distance a la cible FINALE (fidele a
-        // `frontier.put(idcel, Dist_to_End[yS,xS], ...)`), quel que soit l'etat
-        // herite du segment precedent.
-        let seed = nan_inf(d2e[cs]);
-        let mut heap = BinaryHeap::new();
-        let mut key_frontier: HashSet<(i32, i64, i64)> = HashSet::new();
-        heap.push(QEntry {
-            theo_d: seed,
-            dtocp: seed,
-            id: id_start as i32,
-        });
-        // File secondaire : cellules a portee de `bufgoal` de la cible.
-        let mut close: BinaryHeap<QEntry> = BinaryHeap::new();
-        let mut reached = false;
+        // Fenetre de recherche : boite englobant depart et cible (les deux bouts
+        // du segment sont connus), elargie d'une marge proportionnelle a la
+        // distance directe. L'optimum d'un segment vit dans ce couloir. Repli sur
+        // l'emprise entiere si la cible n'est pas atteinte dans la fenetre
+        // (faisabilite preservee). Meme technique que `solve_network` ; ici la
+        // cible est unique (un waypoint), pas de recherche de plus proche.
+        let (sr, sc) = (cs / nc, cs % nc);
+        let (tr, tc) = (ce / nc, ce % nc);
+        let dref = sr.max(tr).saturating_sub(sr.min(tr)).max(sc.max(tc).saturating_sub(sc.min(tc)));
+        let neigh_cells = (p.d_neighborhood / p.csize).ceil() as usize;
+        let pad = (neigh_cells + 5).max(dref);
+        let wr0 = sr.min(tr).saturating_sub(pad);
+        let wr1 = (sr.max(tr) + pad).min(nr - 1);
+        let wc0 = sc.min(tc).saturating_sub(pad);
+        let wc1 = (sc.max(tc) + pad).min(nc - 1);
+        let deja_pleine = wr0 == 0 && wc0 == 0 && wr1 == nr - 1 && wc1 == nc - 1;
 
-        while let Some(QEntry { id: idcur, .. }) = heap.pop() {
-            let idcur = idcur as usize;
-            if idcur == id_end {
-                reached = true;
-                break;
-            }
-            let add: Vec<usize> = if best[idcur].nbptbef == 0 {
-                calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, take_dtoend, ye, xe, cg, p)
+        // La frontiere seme le depart avec la distance a la cible FINALE (fidele a
+        // `frontier.put(idcel, Dist_to_End[yS,xS], ...)`).
+        let seed = nan_inf(d2e[cs]);
+
+        // attempt 0 : fenetre bornee ; attempt 1 : emprise entiere (repli). `best`
+        // est PARTAGE (continuite du cout/azimut au raccord des segments) ; la
+        // relaxation etant monotone, le repli plein-emprise retrouve l'optimum.
+        let mut goal_id: Option<usize> = None;
+        for attempt in 0..2 {
+            let (ar0, ar1, ac0, ac1) = if attempt == 0 {
+                (wr0, wr1, wc0, wc1)
             } else {
-                // Finition a proximite de la cible (dernier segment).
-                if seg_bufgoal > 0.0 {
-                    let (yc, xc) = table.corresp[idcur];
-                    let dcg = distplan(yc as f64, xc as f64, ye as f64, xe as f64) * p.csize;
-                    if dcg <= seg_bufgoal {
-                        push_close(&mut close, idcur, dcg, &best, p);
+                (0, nr - 1, 0, nc - 1)
+            };
+            let mut heap = BinaryHeap::new();
+            let mut key_frontier: HashSet<(i32, i64, i64)> = HashSet::new();
+            heap.push(QEntry {
+                theo_d: seed,
+                dtocp: seed,
+                id: id_start as i32,
+            });
+            let mut close: BinaryHeap<QEntry> = BinaryHeap::new();
+            let mut reached = false;
+
+            while let Some(QEntry { id: idcur, .. }) = heap.pop() {
+                let idcur = idcur as usize;
+                if idcur == id_end {
+                    reached = true;
+                    break;
+                }
+                let add: Vec<usize> = if best[idcur].nbptbef == 0 {
+                    calc_init(idcur, &mut best, table, obs, obs2, dtm, &d2e, nc, take_dtoend, ye, xe, cg, p)
+                } else {
+                    // Finition a proximite de la cible (dernier segment).
+                    if seg_bufgoal > 0.0 {
+                        let (yc, xc) = table.corresp[idcur];
+                        let dcg = distplan(yc as f64, xc as f64, ye as f64, xe as f64) * p.csize;
+                        if dcg <= seg_bufgoal {
+                            push_close(&mut close, idcur, dcg, &best, p);
+                        }
+                    }
+                    basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, take_dtoend, ye, xe, cg, p)
+                };
+                for &idv in &add {
+                    // Hors de la fenetre de recherche : non developpe.
+                    let (rv, cv) = table.corresp[idv];
+                    if rv < ar0 || rv > ar1 || cv < ac0 || cv > ac1 {
+                        continue;
+                    }
+                    let theo = round1(best[idv].cost + best[idv].dtocp);
+                    let dto = round1(best[idv].dtocp);
+                    let key = (idv as i32, deci(theo), deci(dto));
+                    if key_frontier.insert(key) {
+                        heap.push(QEntry {
+                            theo_d: theo,
+                            dtocp: dto,
+                            id: idv as i32,
+                        });
                     }
                 }
-                basic_calc(idcur, &mut best, table, obs, obs2, dtm, local_slope, &d2e, nc, take_dtoend, ye, xe, cg, p)
+            }
+
+            // Cible atteinte, sinon meilleure approche (`close`).
+            goal_id = if reached {
+                Some(id_end)
+            } else if let Some(QEntry { id, .. }) = close.pop() {
+                Some(id as usize)
+            } else {
+                None
             };
-            for &idv in &add {
-                let theo = round1(best[idv].cost + best[idv].dtocp);
-                let dto = round1(best[idv].dtocp);
-                let key = (idv as i32, deci(theo), deci(dto));
-                if key_frontier.insert(key) {
-                    heap.push(QEntry {
-                        theo_d: theo,
-                        dtocp: dto,
-                        id: idv as i32,
-                    });
-                }
+            if goal_id.is_some() || deja_pleine {
+                break;
             }
         }
-
-        // Reconstruction : cible atteinte, sinon meilleure approche (`close`).
-        let goal_id = if reached {
-            Some(id_end)
-        } else if let Some(QEntry { id, .. }) = close.pop() {
-            Some(id as usize)
-        } else {
-            None
-        };
         match goal_id {
             Some(gid) => {
                 let seg = reconstruct(gid, id_start, &best, table, nc);

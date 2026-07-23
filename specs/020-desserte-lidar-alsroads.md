@@ -1,9 +1,10 @@
 # specs/020 — Desserte corrigée LiDAR (ALSroads, NDP 1) — étude de faisabilité
 
-> **Statut** : **Phase A implémentée** (`acquire_desserte_lidar()`, v1.14.0,
-> 2026-07-22) — enveloppe fine + repli NDP 0, **validée bout-en-bout** sur les
-> données d'exemple d'ALSroads (§2). **Phase B** (validation sur donnée française,
-> CA-20.5) reste à faire avant tout usage de production.
+> **Statut** : **Phase A implémentée** (`acquire_desserte_lidar()`, v1.14.0) —
+> enveloppe fine + repli NDP 0, validée bout-en-bout sur l'exemple d'ALSroads (§2).
+> **Phase B exécutée (v1.15.0)** sur donnée française réelle (Chastel-Nouvel, LiDAR
+> HD IGN) : **résultat NÉGATIF** — ALSroads (calibré Québec) ne mesure **aucune**
+> route française (0/6). **No-go production sans recalibrage** (§7). Cf. §6.
 > **Type** : acquisition/enrichissement, en amont du prétraitement. Complète le
 > Lot Acquisition (`specs/010`) et le chantier 3 (`places_depot` aveugle sans
 > largeur mesurée).
@@ -147,9 +148,44 @@ plausible-mais-faux. Reste la validation **française** (Phase B).
 
 ---
 
+## 6bis. Phase B — validation française exécutée (v1.15.0) : **NÉGATIVE**
+
+Protocole : dalle LiDAR HD IGN `LHD_FXX_0737_6385` (Chastel-Nouvel, Lambert-93,
+260 Mo, ~40 M points, classes ASPRS standard 1/2/3/4/5/6) + desserte BD TOPO du
+secteur + MNT. `acquire_desserte_lidar()` lancé sur des tronçons **entièrement dans
+la dalle** et **longs** (398 à 911 m — au-dessus du minimum ALSroads de 40 m).
+
+Résultat : **0 / 6 tronçons mesurés** (largeurs, plateforme, score tous à `NA`),
+sans avertissement « trop court » ni « hors emprise ». Le pipeline **tourne**
+(CRS 2154 correct, catalogue lu, `measure_road` exécuté ~95 s/tronçon), mais
+ALSroads **ne détecte pas** les routes forestières françaises avec ses paramètres
+par défaut. À comparer à l'exemple **québécois** du paquet, mesuré sans peine
+(carrossable 8,2 m, `CLASS` 1). La différence est la **donnée**, pas le code.
+
+Pièges écartés en route (chacun a d'abord faussé un essai) : mauvaise emprise de
+dalle (le nom `_6385` = bord **haut**, ymin = 6384000) ; `st_crop` fragmentant les
+routes sous les 40 m d'ALSroads. L'essai final (routes entières, longues) est
+propre : le 0/6 est réel.
+
+**Conclusion** : la **réserve de calibrage Québec → France du §4.1 est confirmée**.
+En l'état, `acquire_desserte_lidar()` est **inopérant sur la donnée française**
+(équivalent NDP 0 : colonnes `NA`). Rendre ALSroads opérant exigerait un
+**recalibrage** de ses paramètres de détection (`alsroads_default_parameters`) sur
+des routes françaises — travail de recherche hors de ce lot, à mener avec un relevé
+de largeurs de référence. Script reproductible : `data-raw/validation_desserte_lidar.R`.
+
+---
+
 ## 7. Décision à prendre (go/no-go) — §7 du brief
 
-**Recommandation : GO conditionnel, en deux temps.**
+**Décision (après Phase B, v1.15.0) : NO-GO production, la fonction reste un
+utilitaire expérimental.** La validation française (§6bis) est négative : ALSroads
+ne mesure aucune route française sans recalibrage. `acquire_desserte_lidar()` reste
+livrée (Phase A) — utile telle quelle sur donnée québécoise ou après recalibrage —
+mais l'app **ne doit pas** s'appuyer sur ses largeurs en France. La recommandation
+initiale ci-dessous tient pour la démarche ; son verdict Phase B est tombé.
+
+**Recommandation initiale : GO conditionnel, en deux temps.**
 
 1. **Phase A (bas risque, réversible)** — livrer `acquire_desserte_lidar()` comme
    **enveloppe fine** d'`ALSroads::measure_road`, lidR + ALSroads en **Suggests**,

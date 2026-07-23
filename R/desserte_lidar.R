@@ -106,6 +106,10 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
     return(.desserte_lidar_ndp0(des))
   }
 
+  # nocov start
+  # Chemin NDP 1 : ne s'exerce qu'avec lidR + ALSroads installes (absent en CI, ou
+  # seul le repli NDP 0 tourne). VALIDE hors CI de bout en bout : exemple ALSroads
+  # (spec 020 sec.2) et donnee reelle Chastel-Nouvel (Phase B) -- pas du code non teste.
   mnt <- .as_raster(mnt, "mnt")
   .verifier_crs(des, mnt, "desserte")
   dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
@@ -120,6 +124,7 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
            (spec 020 Phase B) : largeurs a considerer comme experimentales."
   ))
   mesures
+  # nocov end
 }
 
 # --- Repli NDP 0 : la desserte, augmentee des colonnes LiDAR a NA -------------
@@ -134,6 +139,7 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
 }
 
 # --- Chemin NDP 1 (ALSroads) : isole, calibre Quebec, valide en Phase B -------
+# nocov start : ne tourne qu'avec ALSroads installe (hors CI ; valide manuellement).
 
 # LAScatalog lidR depuis un chemin de dalles ou un catalogue deja construit.
 .lidar_catalogue <- function(las_source) {
@@ -206,6 +212,7 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   att$score_lidar <- score
   sf::st_sf(att, geometry = geom)
 }
+# nocov end
 
 # Pente en long (%) d'une geometrie sur le MNT : denivele entre extremites /
 # longueur parcourue. Notre calcul, pas celui d'ALSroads.
