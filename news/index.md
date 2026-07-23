@@ -1,5 +1,69 @@
 # Changelog
 
+## foretaccess 1.19.0 (2026-07-23)
+
+### Desserte LiDAR sur une desserte de projet réelle (débloque la chaîne câble)
+
+Mesuré côté app (nemetonshiny) sur une desserte de projet complète
+(Chastel-Nouvel, 806 km / 3 299 tronçons, 4 dalles LiDAR HD),
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+mesurait **0/3 299** largeurs — alors que la Phase B (1.16) donnait
+22/22 sur des routes **triées à la main**. Trois causes, corrigées :
+
+- **Géométrie (la cause du 0/N).** `measure_road` **exige une
+  `LINESTRING`** et *échoue* sur la `MULTILINESTRING` de BD TOPO
+  `troncon_de_route` (« Expecting LINESTRING geometry… »). Chaque
+  tronçon est désormais **ramené à une `LINESTRING` unique** (parties
+  contiguës fusionnées, sinon la plus longue) avant mesure. Le 22/22
+  marchait parce qu’il castait en LINESTRING ; l’app passait le MULTI
+  brut.
+- **Tronçons trop courts.** Nouveau paramètre `long_min_m` (défaut 40) :
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  **saute** sans appeler ALSroads les tronçons plus courts (instables
+  sous son buffer). Une desserte BD TOPO en compte des milliers.
+- **Bilan et attentes.** Le message et l’attribut `bilan` du résultat
+  décomposent l’issue (mesuré / trop court / hors couverture des dalles
+  / géométrie). **Sur une desserte de projet complète, l’essentiel reste
+  `NA`** : seuls les tronçons longs **et** sous une dalle se mesurent —
+  comportement désormais documenté.
+
+### Composition `qualifier_desserte()` → `places_depot()` (mismatch de colonnes)
+
+- [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+  lit la largeur via `.largeur_desserte`, qui ne connaissait que
+  `largeur` / `largeur_de_chaussee`, alors que la mesure LiDAR sort
+  **`largeur_carrossable_m`** — les deux ne composaient pas.
+  `.largeur_desserte` **reconnaît désormais `largeur_carrossable_m` en
+  priorité**, et
+  [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+  gagne un paramètre **`largeur_champ`** pour nommer explicitement la
+  colonne.
+
+### Sortie vecteur propre du réseau conçu (`contracter_lignes()`)
+
+- [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+  renvoie `$lignes` au **pas de la grille** (des milliers de
+  micro-segments en escalier), lourd à afficher.
+  **`contracter_lignes(reseau)`** applique la **même contraction
+  topologique** que
+  [`vectoriser_reseau()`](https://pobsteta.github.io/foretaccess/reference/vectoriser_reseau.md)
+  (chaînes de degré 2 fusionnées en tronçons entre
+  jonctions/feuilles/exutoires) et rend un `sf` LINESTRING **propre**,
+  sans monter le graphe de flux complet. Prêt à afficher ou à passer au
+  typage.
+
+### Performance du glouton — domaine de validité clarifié
+
+- Le speedup annoncé en 1.12 (« ~11,5 min → dizaines de secondes ») est
+  **conditionnel** : il suppose un `skidding_m` **réaliste** (\> 0). À
+  `skidding_m = 0` avec des parcelles éloignées du réseau, chaque
+  cellule de parcelle engendre son propre tracé A\* et le glouton reste
+  en **minutes** (~17 min mesurées sur Chastel-Nouvel) — le bornage au
+  couloir n’y change rien. Domaine de validité documenté dans la section
+  *Performance* de
+  [`?reseau_desserte`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md).
+  `skidding_m` n’est pas un réglage optionnel.
+
 ## foretaccess 1.18.0 (2026-07-23)
 
 ### Micro-relief LiDAR — portage RVT en Rust (spec 021, J3)

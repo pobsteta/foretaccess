@@ -17,7 +17,7 @@ checkable on the available data."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,6 +69,7 @@ checkable on the available data.</p>
 <span>  foret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  retournements <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  largeur_min_m <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  largeur_champ <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pente_max_pct <span class="op">=</span> <span class="fl">6</span>,</span>
 <span>  fenetre_plateforme_m <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  distance_foret_max_m <span class="op">=</span> <span class="fl">100</span>,</span>
@@ -103,6 +104,14 @@ checkable on the available data.</p>
 <dt id="arg-largeur-min-m">largeur_min_m<a class="anchor" aria-label="anchor" href="#arg-largeur-min-m"></a></dt>
 <dd><p>Minimum carriageway width for a log truck (m). Only ever
 applied to a <em>measured</em> width; see criterion 1.</p></dd>
+
+
+<dt id="arg-largeur-champ">largeur_champ<a class="anchor" aria-label="anchor" href="#arg-largeur-champ"></a></dt>
+<dd><p>Optional name of the column holding the measured width. By
+default the LiDAR carriageway <code>largeur_carrossable_m</code> (from
+<code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> / <code><a href="qualifier_desserte.html">qualifier_desserte()</a></code>) is used when present,
+then the BD TOPO <code>largeur</code> / <code>largeur_de_chaussee</code>. Set this to compose with a
+custom width column.</p></dd>
 
 
 <dt id="arg-pente-max-pct">pente_max_pct<a class="anchor" aria-label="anchor" href="#arg-pente-max-pct"></a></dt>
@@ -154,8 +163,9 @@ for the road segments that carry them.</p></dd>
 
 
 <p>A road segment yields candidate landings when it passes, in order:</p><ol><li><p><strong>Truck access</strong> – a segment is rejected only on <strong>hard evidence</strong>: a
-<em>measured</em> carriageway width (<code>largeur</code>, <code>largeur_de_chaussee</code>) below
-<code>largeur_min_m</code>. The <code>dfci</code> flag of <code><a href="flag_dfci.html">flag_dfci()</a></code> and the <code>classe</code> are
+<em>measured</em> carriageway width (LiDAR <code>largeur_carrossable_m</code>, else BD TOPO
+<code>largeur</code> / <code>largeur_de_chaussee</code>) below <code>largeur_min_m</code>. The <code>dfci</code> flag of
+<code><a href="flag_dfci.html">flag_dfci()</a></code> and the <code>classe</code> are
 recorded in the <code>acces</code> column but never reject: on the only oracle
 available they do not discriminate (see <em>Validation</em>).</p></li>
 <li><p><strong>Turn-around</strong> – only when <code>retournements</code> is supplied: the segment is
@@ -234,8 +244,8 @@ pass, not to feed the cable engine blind at interactive speed.</p>
 <span class="r-in"><span>  foret <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">toy</span>, <span class="st">"foret.gpkg"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  espacement_min_m <span class="op">=</span> <span class="fl">100</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Aucune largeur mesuree (<span style="color: #00BB00;">largeur</span> / <span style="color: #00BB00;">largeur_de_chaussee</span>) : le critere d'acces</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   camion ne rejette rien.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Aucune largeur mesuree (<span style="color: #00BB00;">largeur_carrossable_m</span> / <span style="color: #00BB00;">largeur</span> /</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #00BB00;">largeur_de_chaussee</span>) : le critere d'acces camion ne rejette rien.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Les colonnes <span style="color: #00BB00;">dfci</span> et <span style="color: #00BB00;">classe</span> sont rapportees dans <span style="color: #00BB00;">acces</span> mais ne tranchent pas</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   -- sur l'oracle ColduPre elles ecartent une vraie place de depot sur deux.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Aucune couche `retournements` : le critere de demi-tour n'est pas applique.</span>

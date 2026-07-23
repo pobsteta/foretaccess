@@ -538,6 +538,42 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-23 — `v1.19.0` : desserte LiDAR sur desserte de projet réelle + domaine glouton (brief app)
+
+Brief `~/brief-foretaccess.md` (v3, émis par nemetonshiny sur
+foretaccess 1.18.0). **Chantier B (débloque le câble)** :
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+mesurait **0/3 299** sur une desserte de projet complète (vs 22/22 sur 6
+routes triées à la main en 1.16). Trois causes confirmées **sur donnée
+réelle** (test décisif MULTI/LINESTRING) : 1. **Géométrie** — BD TOPO =
+`MULTILINESTRING`, `measure_road` **échoue** dessus (« Expecting
+LINESTRING »). Le 22/22 castait ; l’app passait le MULTI brut. →
+`.troncon_linestring()` (fusion parties contiguës, sinon la plus
+longue). 2. **Tronçons courts** — des milliers \< 40 m, instables. →
+param `long_min_m` (40). 3. **Couverture partielle** — une desserte de
+projet déborde les dalles : l’essentiel reste NA, seuls les tronçons
+longs+sous dalle se mesurent. → attribut `bilan`. **B2 mismatch
+colonnes** : `.largeur_desserte` reconnaît `largeur_carrossable_m` en
+priorité + `places_depot(largeur_champ=)`.
+`qualifier_desserte`/`acquire_desserte_lidar` et `places_depot`
+**composent** désormais.
+
+**Chantier A (perf glouton)** : le speedup 1.12 ne se reproduit pas à
+`skidding_m=0` (17 min mesurées, pire que 1.9). Cause : à `skidding_m=0`
+chaque cellule de parcelle engendre son propre tracé A\* ; le bornage au
+couloir n’aide que si les extrémités sont proches. **Domaine de validité
+documenté** (section *Performance* de
+[`?reseau_desserte`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md))
+: « dizaines de secondes » suppose `skidding_m` \> 0 **et** parcelles
+pas toutes éloignées. Pas de re-profil complet (coûteux) — la mécanique
+est concluante depuis le code.
+
+**Chantier C (bundlé)** : `contracter_lignes(reseau)` — sortie vecteur
+propre du réseau conçu (contraction topologique partagée avec
+`vectoriser_reseau` via `.troncons_contractes_sf`), sans monter le
+graphe de flux. Remplace le contournement raster `$reseau` de l’app pour
+l’affichage.
+
 ### 2026-07-23 — `docs` (cycle dev) : contrat d’unité du volume desserte (brief nemeton spec 040)
 
 Brief `040-volume-mobilisable-desserte` (émis par la session nemeton,

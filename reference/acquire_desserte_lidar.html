@@ -19,7 +19,7 @@ selectivite section); a measured width turns that criterion on."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,8 @@ selectivite</em> section); a measured width turns that criterion on.</p>
 <span>  <span class="va">mnt</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  dtm_res <span class="op">=</span> <span class="fl">1</span></span>
+<span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  long_min_m <span class="op">=</span> <span class="fl">40</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -111,6 +112,13 @@ downloaded here – the caller provides it (e.g. the app's
 is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
 ALSroads' internal profile but needs a denser ground return.</p></dd>
 
+
+<dt id="arg-long-min-m">long_min_m<a class="anchor" aria-label="anchor" href="#arg-long-min-m"></a></dt>
+<dd><p>Minimum tronçon length (m) below which measurement is skipped
+(returned <code>NA</code>) without calling ALSroads – shorter roads are unstable under
+its search buffer. Default 40. A full BD TOPO desserte has many short
+segments; only long tronçons under a tile get a width.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -140,6 +148,15 @@ HD DTM directly.</p>
 a &gt;= 1 m DTM it <strong>does</strong> measure French BD TOPO forest roads (spec 020 Phase B,
 Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
 experimental and cross-check against an orthophoto on sensitive sites.</p>
+<p><strong>Geometry and coverage.</strong> ALSroads requires a <strong>single <code>LINESTRING</code></strong> centerline
+and errors on the <code>MULTILINESTRING</code> of BD TOPO <code>troncon_de_route</code>; each tronçon
+is therefore recast to one <code>LINESTRING</code> (contiguous parts merged, else the
+longest part kept). A full project desserte (hundreds of km) usually overruns
+the supplied tiles: tronçons <strong>outside tile coverage</strong>, or <strong>shorter than
+<code>long_min_m</code></strong>, return <code>NA</code> – expect <strong>most of a full desserte to be <code>NA</code></strong> and
+only the long tronçons lying under a tile to carry a width. The <code>bilan</code>
+attribute of the result breaks the outcome down (measured / too short /
+geometry / not measured).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

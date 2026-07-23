@@ -16,6 +16,7 @@ places_depot(
   foret = NULL,
   retournements = NULL,
   largeur_min_m = 4,
+  largeur_champ = NULL,
   pente_max_pct = 6,
   fenetre_plateforme_m = 50,
   distance_foret_max_m = 100,
@@ -48,6 +49,16 @@ places_depot(
 
   Minimum carriageway width for a log truck (m). Only ever applied to a
   *measured* width; see criterion 1.
+
+- largeur_champ:
+
+  Optional name of the column holding the measured width. By default the
+  LiDAR carriageway `largeur_carrossable_m` (from
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  /
+  [`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md))
+  is used when present, then the BD TOPO `largeur` /
+  `largeur_de_chaussee`. Set this to compose with a custom width column.
 
 - pente_max_pct:
 
@@ -100,8 +111,9 @@ or written with
 A road segment yields candidate landings when it passes, in order:
 
 1.  **Truck access** – a segment is rejected only on **hard evidence**:
-    a *measured* carriageway width (`largeur`, `largeur_de_chaussee`)
-    below `largeur_min_m`. The `dfci` flag of
+    a *measured* carriageway width (LiDAR `largeur_carrossable_m`, else
+    BD TOPO `largeur` / `largeur_de_chaussee`) below `largeur_min_m`.
+    The `dfci` flag of
     [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
     and the `classe` are recorded in the `acces` column but never
     reject: on the only oracle available they do not discriminate (see
@@ -209,8 +221,8 @@ places <- places_depot(
   foret = file.path(toy, "foret.gpkg"),
   espacement_min_m = 100
 )
-#> ! Aucune largeur mesuree (largeur / largeur_de_chaussee) : le critere d'acces
-#>   camion ne rejette rien.
+#> ! Aucune largeur mesuree (largeur_carrossable_m / largeur /
+#>   largeur_de_chaussee) : le critere d'acces camion ne rejette rien.
 #> ℹ Les colonnes dfci et classe sont rapportees dans acces mais ne tranchent pas
 #>   -- sur l'oracle ColduPre elles ecartent une vraie place de depot sur deux.
 #> ℹ Aucune couche `retournements` : le critere de demi-tour n'est pas applique.

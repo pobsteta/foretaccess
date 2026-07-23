@@ -15,7 +15,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,7 +144,9 @@ trace then minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behavi
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>foretaccess_reseau</code> object: <code>lignes</code> (an <code>sf</code> LINESTRING of the
 created roads, one feature per road, with creation <code>ordre</code>, <code>cout</code> and
-planimetric <code>longueur</code> in m), <code>reseau</code> (a <code>SpatRaster</code> of the whole
+planimetric <code>longueur</code> in m – these follow the grid step by step; use
+<code><a href="contracter_lignes.html">contracter_lignes()</a></code> for a tidy vector rendering), <code>reseau</code> (a <code>SpatRaster</code>
+of the whole
 network, for Lot 17), <code>desserte</code> (the existing network, kept for the Lot 17
 graph), <code>cout</code> (total), <code>connexe</code> and <code>raccorde</code> (two connectivity flags,
 see <em>Connectivity</em> below), <code>desservies</code> (a logical, one per parcel, CA-16.1)
@@ -194,6 +196,22 @@ the box). The window shrinks the search only when the two endpoints are close:
 Steiner (<code>mode = "steiner"</code>) traces parcel-to-parcel across the whole extent, so
 its windows are large and it stays roughly <code>N^2</code> (measured ~650 s for 4 parcels,
 down from ~860 s) – still reserved for small parcel counts.</p>
+<p><strong>Validity domain of the speed-up (read this before expecting seconds).</strong> The
+"tens of seconds" figure is <strong>conditional</strong>, and the two levers compound:</p><ul><li><p><strong><code>skidding_m</code> is the dominant one.</strong> At <code>skidding_m = 0</code> <em>every</em> parcel cell
+off a road spawns its own A\* trace – hundreds per hectare-scale parcel. That
+count, not the per-trace cost, then dominates, and no windowing can offset it.
+Measured on Chastel-Nouvel (30 parcels, ~302k cells) at <code>skidding_m = 0</code>: the
+greedy runs in <strong>~17 min</strong>, i.e. it does <strong>not</strong> beat the pre-1.12 baseline –
+the 1.12 "~11.5 min -&gt; tens of seconds" figure was obtained <em>with a realistic</em>
+<code>skidding_m</code>, not at <code>0</code>. <strong>Set <code>skidding_m</code> to your real skidding/forwarding
+distance</strong>; it is not optional tuning.</p></li>
+<li><p><strong>Proximity to the existing network.</strong> The corridor bound only shrinks the
+search when a parcel is <em>close</em> to the network (small box). Parcels far from
+any road give large boxes and little gain, on top of the per-cell trace count.</p></li>
+</ul><p>So: <code>skidding_m</code> &gt; 0 <strong>and</strong> parcels not all far from the network -&gt; seconds to
+tens of seconds. <code>skidding_m = 0</code> with scattered, distant parcels -&gt; minutes,
+regardless of the windowing. Persist the returned network (do not recompute a
+long greedy on every view).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

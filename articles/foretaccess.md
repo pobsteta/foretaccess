@@ -136,8 +136,8 @@ places <- places_depot(
   foret    = file.path(toy, "foret.gpkg"),
   espacement_min_m = 100
 )
-#> ! Aucune largeur mesuree (largeur / largeur_de_chaussee) : le critere d'acces
-#>   camion ne rejette rien.
+#> ! Aucune largeur mesuree (largeur_carrossable_m / largeur /
+#>   largeur_de_chaussee) : le critere d'acces camion ne rejette rien.
 #> ℹ Les colonnes dfci et classe sont rapportees dans acces mais ne tranchent pas
 #>   -- sur l'oracle ColduPre elles ecartent une vraie place de depot sur deux.
 #> ℹ Aucune couche `retournements` : le critere de demi-tour n'est pas applique.

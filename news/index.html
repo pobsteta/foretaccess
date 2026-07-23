@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,33 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.19.0" id="foretaccess-1190-2026-07-23">foretaccess 1.19.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1190-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="desserte-lidar-sur-une-desserte-de-projet-réelle-débloque-la-chaîne-câble-1-19-0">Desserte LiDAR sur une desserte de projet réelle (débloque la chaîne câble)<a class="anchor" aria-label="anchor" href="#desserte-lidar-sur-une-desserte-de-projet-r%C3%A9elle-d%C3%A9bloque-la-cha%C3%AEne-c%C3%A2ble-1-19-0"></a></h3>
+<p>Mesuré côté app (nemetonshiny) sur une desserte de projet complète (Chastel-Nouvel, 806 km / 3 299 tronçons, 4 dalles LiDAR HD), <code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code> mesurait <strong>0/3 299</strong> largeurs — alors que la Phase B (1.16) donnait 22/22 sur des routes <strong>triées à la main</strong>. Trois causes, corrigées :</p>
+<ul><li>
+<strong>Géométrie (la cause du 0/N).</strong> <code>measure_road</code> <strong>exige une <code>LINESTRING</code></strong> et <em>échoue</em> sur la <code>MULTILINESTRING</code> de BD TOPO <code>troncon_de_route</code> (« Expecting LINESTRING geometry… »). Chaque tronçon est désormais <strong>ramené à une <code>LINESTRING</code> unique</strong> (parties contiguës fusionnées, sinon la plus longue) avant mesure. Le 22/22 marchait parce qu’il castait en LINESTRING ; l’app passait le MULTI brut.</li>
+<li>
+<strong>Tronçons trop courts.</strong> Nouveau paramètre <code>long_min_m</code> (défaut 40) : <code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> <strong>saute</strong> sans appeler ALSroads les tronçons plus courts (instables sous son buffer). Une desserte BD TOPO en compte des milliers.</li>
+<li>
+<strong>Bilan et attentes.</strong> Le message et l’attribut <code>bilan</code> du résultat décomposent l’issue (mesuré / trop court / hors couverture des dalles / géométrie). <strong>Sur une desserte de projet complète, l’essentiel reste <code>NA</code></strong> : seuls les tronçons longs <strong>et</strong> sous une dalle se mesurent — comportement désormais documenté.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="composition-qualifier_desserte--places_depot-mismatch-de-colonnes-1-19-0">Composition <code>qualifier_desserte()</code> → <code>places_depot()</code> (mismatch de colonnes)<a class="anchor" aria-label="anchor" href="#composition-qualifier_desserte--places_depot-mismatch-de-colonnes-1-19-0"></a></h3>
+<ul><li>
+<code><a href="../reference/places_depot.html">places_depot()</a></code> lit la largeur via <code>.largeur_desserte</code>, qui ne connaissait que <code>largeur</code> / <code>largeur_de_chaussee</code>, alors que la mesure LiDAR sort <strong><code>largeur_carrossable_m</code></strong> — les deux ne composaient pas. <code>.largeur_desserte</code> <strong>reconnaît désormais <code>largeur_carrossable_m</code> en priorité</strong>, et <code><a href="../reference/places_depot.html">places_depot()</a></code> gagne un paramètre <strong><code>largeur_champ</code></strong> pour nommer explicitement la colonne.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="sortie-vecteur-propre-du-réseau-conçu-contracter_lignes-1-19-0">Sortie vecteur propre du réseau conçu (<code>contracter_lignes()</code>)<a class="anchor" aria-label="anchor" href="#sortie-vecteur-propre-du-r%C3%A9seau-con%C3%A7u-contracter_lignes-1-19-0"></a></h3>
+<ul><li>
+<code><a href="../reference/reseau_desserte.html">reseau_desserte()</a></code> renvoie <code>$lignes</code> au <strong>pas de la grille</strong> (des milliers de micro-segments en escalier), lourd à afficher. <strong><code>contracter_lignes(reseau)</code></strong> applique la <strong>même contraction topologique</strong> que <code><a href="../reference/vectoriser_reseau.html">vectoriser_reseau()</a></code> (chaînes de degré 2 fusionnées en tronçons entre jonctions/feuilles/exutoires) et rend un <code>sf</code> LINESTRING <strong>propre</strong>, sans monter le graphe de flux complet. Prêt à afficher ou à passer au typage.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="performance-du-glouton--domaine-de-validité-clarifié-1-19-0">Performance du glouton — domaine de validité clarifié<a class="anchor" aria-label="anchor" href="#performance-du-glouton--domaine-de-validit%C3%A9-clarifi%C3%A9-1-19-0"></a></h3>
+<ul><li>Le speedup annoncé en 1.12 (« ~11,5 min → dizaines de secondes ») est <strong>conditionnel</strong> : il suppose un <code>skidding_m</code> <strong>réaliste</strong> (&gt; 0). À <code>skidding_m = 0</code> avec des parcelles éloignées du réseau, chaque cellule de parcelle engendre son propre tracé A* et le glouton reste en <strong>minutes</strong> (~17 min mesurées sur Chastel-Nouvel) — le bornage au couloir n’y change rien. Domaine de validité documenté dans la section <em>Performance</em> de <code><a href="../reference/reseau_desserte.html">?reseau_desserte</a></code>. <code>skidding_m</code> n’est pas un réglage optionnel.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.18.0" id="foretaccess-1180-2026-07-23">foretaccess 1.18.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1180-2026-07-23"></a></h2>
 <div class="section level3">

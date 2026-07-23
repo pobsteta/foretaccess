@@ -417,6 +417,8 @@ typage des routes (Lot 17), optimisation multi-start (Lot 18).
   : Design the optimal route of a new forest road
 - [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
   : Design a forest-road network serving several parcels
+- [`contracter_lignes()`](https://pobsteta.github.io/foretaccess/reference/contracter_lignes.md)
+  : Contract a designed network's grid polylines into clean tronçons
 - [`vectoriser_reseau()`](https://pobsteta.github.io/foretaccess/reference/vectoriser_reseau.md)
   : Vectorise a forest-road network into a topological graph
 - [`calculer_flux()`](https://pobsteta.github.io/foretaccess/reference/calculer_flux.md)
