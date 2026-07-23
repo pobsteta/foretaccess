@@ -1,6 +1,6 @@
 # specs/016 — Lot 16 : Réseau de desserte multi-cibles (MTAP, approximation de Steiner)
 
-> **Statut** : **proposé** — en attente de validation.
+> **Statut** : **implémenté** — `reseau_desserte()` (glouton/Steiner MTAP, noyau Rust). Cf. `PLAN.md` et `NEWS.md`.
 > **Lot** : 16 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 14 (coût), Lot 15 (solveur de tracé A\*), Lot 7 (tuilage).
 > **Prépare** : Lot 17 (flux & types), Lot 18 (optimisation multi-start).

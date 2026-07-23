@@ -1,6 +1,6 @@
 # specs/018 — Lot 18 : Optimisation du réseau (multi-start & amélioration locale)
 
-> **Statut** : **proposé** — en attente de validation. **Post-MVP desserte.**
+> **Statut** : **implémenté** — `optimiser_reseau()` / `vectoriser_reseau()` (optimisation multi-start). Cf. `PLAN.md` et `NEWS.md`. **Post-MVP desserte.**
 > **Lot** : 18 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 16 (réseau MTAP), Lot 15 (solveur de tracé).
 > **ADR liés** : ADR-001 (Rust — `rayon`), ADR-006 (non-régression).

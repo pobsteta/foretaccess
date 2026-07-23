@@ -1,6 +1,6 @@
 # specs/017 — Lot 17 : Flux de bois & typage des routes
 
-> **Statut** : **proposé** — en attente de validation.
+> **Statut** : **implémenté** — `calculer_flux()` / `typer_desserte()` (flux et typage sur graphe base-R). Cf. `PLAN.md`.
 > **Lot** : 17 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 16 (réseau de desserte), Lot 8 (base spatiale & agrégation).
 > **Prépare** : Lot 18 (optimisation — le flux peut nourrir le critère volume).

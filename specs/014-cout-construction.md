@@ -1,6 +1,6 @@
 # specs/014 — Lot 14 : Surface de coût de construction de desserte
 
-> **Statut** : **proposé** — en attente de validation.
+> **Statut** : **implémenté** — `surface_cout_construction()` (épic conception de desserte). Cf. `PLAN.md` et `NEWS.md`.
 > **Lot** : 14 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Épic desserte** : conception de nouvelles dessertes (au-delà de l'accessibilité).
 > **Dépend de** : Lot 1 (`preprocess()` : MNT aligné, pente/exposition, masques d'obstacles),

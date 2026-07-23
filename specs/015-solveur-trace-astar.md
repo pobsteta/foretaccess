@@ -1,6 +1,6 @@
 # specs/015 — Lot 15 : Solveur de tracé (A\* sur graphe étendu, noyau Rust)
 
-> **Statut** : **proposé** — en attente de validation.
+> **Statut** : **implémenté** — `tracer_desserte()` (tracé A\*, noyau Rust `solve`). Cf. `PLAN.md` et `NEWS.md`.
 > **Lot** : 15 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 14 (surface de coût + franchissabilité), Lot 0 (chaîne `extendr`),
 > Lot 7 (tuilage — le solveur en héritera pour l'échelle).
