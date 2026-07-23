@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.17.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.18.0" id="foretaccess-1180-2026-07-23">foretaccess 1.18.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1180-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="micro-relief-lidar--portage-rvt-en-rust-spec-j3-1-18-0">Micro-relief LiDAR — portage RVT en Rust (spec 021, J3)<a class="anchor" aria-label="anchor" href="#micro-relief-lidar--portage-rvt-en-rust-spec-j3-1-18-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/rvt_svf_opns.html">rvt_svf_opns()</a></code> (noyau Rust) et <code><a href="../reference/micro_relief.html">micro_relief()</a></code> (enveloppe terra)</strong> — portent les canaux de micro-relief de la <strong>Relief Visualization Toolbox</strong> (RVT, Apache 2.0) : <strong>sky-view factor</strong> et <strong>openness</strong> (positive et négative). Ces canaux révèlent la plateforme et les talus d’une piste sous couvert bien mieux que le MNT brut — entrées de la qualification de desserte (spec 021) et utiles à tous les moteurs (places de retournement DFCI, filtrage des ancrages câble).</li>
+<li>
+<strong>Translittéré au mot près</strong> de <code>horizon_shift_vector</code> + <code>sky_view_factor_compute</code> de <code>rvt/vis.py</code> (pas réimplémenté depuis les articles) : balayage d’horizon <code>roll</code>+<code>fmax</code> parallélisé par pixel (<strong>Rayon</strong>), sémantique NoData reproduite (réflexion de bord = <code>np.pad(reflect)</code>, <code>f64::max</code> = <code>np.fmax</code>). SVF (hémisphère) et openness (sphère) sortent du <strong>même</strong> balayage ; l’openness négative est l’openness du MNT inversé.</li>
+<li>
+<strong>Non-régression pixel à pixel contre RVT_py</strong> (oracle gelé, <code>data-raw/oracle_rvt.R</code>) : écart <strong>~2·10⁻⁶ (SVF), ~2·10⁻⁴ ° (openness)</strong> — le résiduel du float32 interne de RVT. Le test tourne en CI <strong>sans Python</strong>.</li>
+<li>Portée : SVF + openness ± seulement. LRM, pente (déjà via <code><a href="https://rspatial.github.io/terra/reference/terrain.html" class="external-link">terra::terrain</a></code>) et la gestion des <strong>halos</strong> au raccord de tuiles restent à câbler avec le prétraitement du CNN (spec 021, J4) — jalon de recherche conditionné à la vérité terrain DESSOPT.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.17.0" id="foretaccess-1170-2026-07-23">foretaccess 1.17.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1170-2026-07-23"></a></h2>
 <div class="section level3">

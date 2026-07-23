@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.17.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.18.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,11 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-23--v1180--portage-rvt-en-rust-spec-021-j3-micro-relief">2026-07-23 — <code>v1.18.0</code> : portage RVT en Rust (spec 021 J3, micro-relief)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1180--portage-rvt-en-rust-spec-021-j3-micro-relief"></a></h3>
+<p><strong>Canaux de micro-relief RVT portés en Rust.</strong> <code><a href="reference/rvt_svf_opns.html">rvt_svf_opns()</a></code> (noyau <code>src/rust/src/rvt/mod.rs</code>) + <code><a href="reference/micro_relief.html">micro_relief()</a></code> (enveloppe terra) : <strong>sky-view factor</strong> et <strong>openness ±</strong>, translittérés au mot près de <code>horizon_shift_vector</code> + <code>sky_view_factor_compute</code> de <code>rvt/vis.py</code> (pas réimplémentés). Balayage <code>roll</code>+<code>fmax</code> parallélisé par pixel (Rayon), NoData reproduit (réflexion de bord = <code>np.pad(reflect)</code>, <code>f64::max</code> = <code>np.fmax</code>). SVF (hémisphère) + openness (sphère) du même balayage ; openness négative = calcul sur <code>-MNT</code>. <strong>Non-régression pixel à pixel contre RVT_py</strong> (oracle gelé <code>data-raw/oracle_rvt.R</code>, fixture) : écart <strong>~2·10⁻⁶ SVF / ~2·10⁻⁴ ° openness</strong> (résiduel float32 de RVT). 6 tests cargo + 14 tests R, en CI sans Python.</p>
+<p><strong>Portée honnête.</strong> SVF + openness ± seulement. LRM, pente (déjà via <code><a href="https://rspatial.github.io/terra/reference/terrain.html" class="external-link">terra::terrain</a></code>) et les <strong>halos</strong> au raccord de tuiles restent à câbler avec le prétraitement du CNN (J4) — jalon de recherche suspendu à la vérité terrain DESSOPT (pas de CNN fabriqué sans données). Ces canaux serviront aussi les moteurs (places de retournement DFCI, filtrage des ancrages câble). Licence : conserver l’attribution RVT (Kokalj, Zaksek, Ostir, Coz et al.), Apache 2.0 → GPL v3 OK.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-23--v1170--qualifier_desserte-spec-021-lot-19-étape-1">2026-07-23 — <code>v1.17.0</code> : <code>qualifier_desserte()</code> (spec 021 Lot 19, étape 1)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1170--qualifier_desserte-spec-021-lot-19-%C3%A9tape-1"></a></h3>
 <p><strong>Correction géométrique déterministe de la desserte.</strong> La desserte n’est jamais calculée : elle est <strong>déclarée</strong> (BD TOPO), et ses erreurs de position (pluri-métriques au GPS/tablette) + largeur vide se propagent aux 4 moteurs sans être vues par la non-régression (qui valide la fidélité à Sylvaccess, pas la justesse terrain). <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> = enveloppe déterministe sur <code><a href="reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (spec 020) : géométrie <strong>relocalisée</strong> sur l’axe ALSroads + <strong><code>largeur</code> renseignée</strong> depuis la largeur carrossable mesurée. Sortie <strong>conforme au contrat de <code><a href="reference/preprocess.html">preprocess()</a></code></strong> → moteurs et non-régression <strong>inchangés</strong>. Repli NDP 0 gracieux testé en CI. Retrait des « disparus » en <strong>option OFF par défaut</strong> (sur données FR, classes basses = pistes dégradées réelles, sémantique non recoupée à une vérité terrain — rôle DESSOPT).</p>

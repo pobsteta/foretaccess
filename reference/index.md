@@ -320,6 +320,21 @@ typage des routes (Lot 17), optimisation multi-start (Lot 18).
 - [`desserte_reseau_riprute()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_riprute.md)
   : Optimise a road network by rip-up & reroute local search (Lot 18c).
 
+## Qualification de desserte LiDAR (spec 021)
+
+Qualification d’une desserte déclarée par LiDAR HD : canaux de
+micro-relief RVT (sky-view factor, openness ±) portés en Rust (J3). Voir
+aussi
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+dans la section Acquisition.
+
+- [`micro_relief()`](https://pobsteta.github.io/foretaccess/reference/micro_relief.md)
+  : Micro-relief channels from a DEM (RVT sky-view factor & openness,
+  spec 021)
+- [`rvt_svf_opns()`](https://pobsteta.github.io/foretaccess/reference/rvt_svf_opns.md)
+  : Sky-view factor and openness (RVT micro-relief channels, spec 021
+  J3).
+
 ## Non-régression
 
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)
