@@ -11,7 +11,13 @@ calculer_flux(graphe, parcelles, volume_champ = "volume", densite_sources = 5)
 
 \item{parcelles}{An \code{sf} POLYGON of the harvested parcels, carrying a volume.}
 
-\item{volume_champ}{Name of the parcel volume column (default \code{"volume"}).}
+\item{volume_champ}{Name of the parcel volume column (default \code{"volume"}). It
+must hold a \strong{total volume per parcel} (m3), \emph{not} a density: the value is
+split equally across the parcel's source points and accumulated down the
+tree, so a density (m3/ha) would under-estimate the flux by roughly the
+parcel area -- silently, no error. When fed from nemeton's
+\code{volume_mobilisable()}, use \code{unite = "m3_total"}. This is the \strong{opposite}
+unit to \code{\link[=reseau_desserte]{reseau_desserte()}}'s \code{volume_champ} (a per-cell density).}
 
 \item{densite_sources}{Source points per hectare (default 5); at least one
 point is seeded per parcel regardless.}

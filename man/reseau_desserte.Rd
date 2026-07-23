@@ -41,7 +41,13 @@ distance of your operation} -- it is the dominant performance lever (see
 its own trace, which is both slow and over-connected.}
 
 \item{volume_champ}{Optional name of the parcel volume column (for
-\code{"plus_gros_volume"}); each cell inherits its parcel volume.}
+\code{"plus_gros_volume"}); the column is \strong{rasterised onto the grid}, so each
+cell inherits the parcel value and cells are then ordered by it. Pass a
+\strong{density (m3/ha)}, \emph{not} a total: a per-parcel total rasterised onto every
+cell would mis-rank parcels by area. When fed from nemeton's
+\code{volume_mobilisable()}, use \code{unite = "m3_ha"} here -- the \strong{opposite} unit
+to \code{\link[=calculer_flux]{calculer_flux()}}, which wants a per-parcel total (m3). Do not reuse the
+same column for both.}
 
 \item{pondere_cout}{If \code{TRUE}, weights the trace by the Lot 14 construction
 cost surface (\code{cout$cout}, euros/m) instead of pure geometric distance; the

@@ -23,7 +23,13 @@
 #'   *Performance*). Left at `0`, every parcel cell that is not *on* a road spawns
 #'   its own trace, which is both slow and over-connected.
 #' @param volume_champ Optional name of the parcel volume column (for
-#'   `"plus_gros_volume"`); each cell inherits its parcel volume.
+#'   `"plus_gros_volume"`); the column is **rasterised onto the grid**, so each
+#'   cell inherits the parcel value and cells are then ordered by it. Pass a
+#'   **density (m3/ha)**, *not* a total: a per-parcel total rasterised onto every
+#'   cell would mis-rank parcels by area. When fed from nemeton's
+#'   `volume_mobilisable()`, use `unite = "m3_ha"` here -- the **opposite** unit
+#'   to [calculer_flux()], which wants a per-parcel total (m3). Do not reuse the
+#'   same column for both.
 #' @param pondere_cout If `TRUE`, weights the trace by the Lot 14 construction
 #'   cost surface (`cout$cout`, euros/m) instead of pure geometric distance; the
 #'   trace then minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
