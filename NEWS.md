@@ -1,3 +1,26 @@
+# foretaccess 1.18.0 (2026-07-23)
+
+## Micro-relief LiDAR — portage RVT en Rust (spec 021, J3)
+
+- **`rvt_svf_opns()` (noyau Rust) et `micro_relief()` (enveloppe terra)** — portent
+  les canaux de micro-relief de la **Relief Visualization Toolbox** (RVT, Apache
+  2.0) : **sky-view factor** et **openness** (positive et négative). Ces canaux
+  révèlent la plateforme et les talus d'une piste sous couvert bien mieux que le
+  MNT brut — entrées de la qualification de desserte (spec 021) et utiles à tous
+  les moteurs (places de retournement DFCI, filtrage des ancrages câble).
+- **Translittéré au mot près** de `horizon_shift_vector` + `sky_view_factor_compute`
+  de `rvt/vis.py` (pas réimplémenté depuis les articles) : balayage d'horizon
+  `roll`+`fmax` parallélisé par pixel (**Rayon**), sémantique NoData reproduite
+  (réflexion de bord = `np.pad(reflect)`, `f64::max` = `np.fmax`). SVF (hémisphère)
+  et openness (sphère) sortent du **même** balayage ; l'openness négative est
+  l'openness du MNT inversé.
+- **Non-régression pixel à pixel contre RVT_py** (oracle gelé,
+  `data-raw/oracle_rvt.R`) : écart **~2·10⁻⁶ (SVF), ~2·10⁻⁴ ° (openness)** — le
+  résiduel du float32 interne de RVT. Le test tourne en CI **sans Python**.
+- Portée : SVF + openness ± seulement. LRM, pente (déjà via `terra::terrain`) et la
+  gestion des **halos** au raccord de tuiles restent à câbler avec le prétraitement
+  du CNN (spec 021, J4) — jalon de recherche conditionné à la vérité terrain DESSOPT.
+
 # foretaccess 1.17.0 (2026-07-23)
 
 ## Qualification de la desserte par LiDAR (spec 021, Lot 19 — étape 1)

@@ -393,6 +393,26 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-23 — `v1.18.0` : portage RVT en Rust (spec 021 J3, micro-relief)
+
+**Canaux de micro-relief RVT portés en Rust.** `rvt_svf_opns()` (noyau
+`src/rust/src/rvt/mod.rs`) + `micro_relief()` (enveloppe terra) : **sky-view
+factor** et **openness ±**, translittérés au mot près de `horizon_shift_vector` +
+`sky_view_factor_compute` de `rvt/vis.py` (pas réimplémentés). Balayage
+`roll`+`fmax` parallélisé par pixel (Rayon), NoData reproduit (réflexion de bord =
+`np.pad(reflect)`, `f64::max` = `np.fmax`). SVF (hémisphère) + openness (sphère) du
+même balayage ; openness négative = calcul sur `-MNT`. **Non-régression pixel à
+pixel contre RVT_py** (oracle gelé `data-raw/oracle_rvt.R`, fixture) : écart
+**~2·10⁻⁶ SVF / ~2·10⁻⁴ ° openness** (résiduel float32 de RVT). 6 tests cargo + 14
+tests R, en CI sans Python.
+
+**Portée honnête.** SVF + openness ± seulement. LRM, pente (déjà via
+`terra::terrain`) et les **halos** au raccord de tuiles restent à câbler avec le
+prétraitement du CNN (J4) — jalon de recherche suspendu à la vérité terrain DESSOPT
+(pas de CNN fabriqué sans données). Ces canaux serviront aussi les moteurs
+(places de retournement DFCI, filtrage des ancrages câble). Licence : conserver
+l'attribution RVT (Kokalj, Zaksek, Ostir, Coz et al.), Apache 2.0 → GPL v3 OK.
+
 ### 2026-07-23 — `v1.17.0` : `qualifier_desserte()` (spec 021 Lot 19, étape 1)
 
 **Correction géométrique déterministe de la desserte.** La desserte n'est jamais
