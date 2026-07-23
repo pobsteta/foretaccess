@@ -5,11 +5,11 @@ the source of the DFCI truck engine (spec 006). The flag is orthogonal
 to the `route`/`piste`/`reseau_public` classes. Two strategies, in
 order:
 
-- **Route A (dedicated OSM source)** — a segment is flagged when it
+- **Route A (dedicated OSM source)** – a segment is flagged when it
   coincides (within `tol_appariement_m`) with an OSM DFCI track
   (`ref:FR:DFCI`).
 
-- **Route B (geometric fallback)** — when `dfci_lignes` is empty/`NULL`,
+- **Route B (geometric fallback)** – when `dfci_lignes` is empty/`NULL`,
   keep the tracks that are either *through-routes* wider than
   `emprise_min_m`, or *dead-ends fitted with a turning area* (within
   `rayon_retournement_m` of the dangling end). This is an explicitly

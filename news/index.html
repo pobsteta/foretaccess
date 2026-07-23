@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.15.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.16.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,16 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.16.0" id="foretaccess-1160-2026-07-23">foretaccess 1.16.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1160-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="desserte-lidar-spec-chantier--phase-b-validée-sur-donnée-française-1-16-0">Desserte LiDAR (spec 020, chantier 4) — Phase B validée sur donnée française<a class="anchor" aria-label="anchor" href="#desserte-lidar-spec-chantier--phase-b-valid%C3%A9e-sur-donn%C3%A9e-fran%C3%A7aise-1-16-0"></a></h3>
+<ul><li>
+<strong>ALSroads mesure bien les pistes forestières françaises</strong> — le 0/6 de la v1.15.0 était un <strong>faux négatif</strong> dû à un MNT trop grossier (grille d’accessibilité à 5 m), pas à un défaut de calibrage Québec. Le guide utilisateur d’ALSroads exige un <strong>MNT ≥ 1 m</strong> (profils à 0,5 m). Sur Chastel-Nouvel, avec un MNT 1 m : <strong>22/22 pistes mesurées</strong> (largeurs carrossables 2,7–8,1 m, classes d’état 1–2). Verdict spec 020 : <strong>NÉGATIF → POSITIF</strong>, GO expérimental.</li>
+<li>
+<strong><code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> garantit la condition MNT.</strong> Quand le MNT fourni est plus grossier que 1,5 m, la fonction <strong>dérive un MNT à <code>dtm_res</code> m</strong> (nouveau paramètre, défaut 1) depuis les points sol (classe ASPRS 2) de la dalle (<code>lidR::rasterize_terrain(tin())</code>). Elle <strong>décime</strong> aussi le nuage au-delà de ~15 pts/m² vers ~10 (recommandation du guide) : mesure stable, forte accélération. Fournir le MNT LiDAR HD IGN à 0,5 m évite la dérivation.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.15.0" id="foretaccess-1150-2026-07-23">foretaccess 1.15.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1150-2026-07-23"></a></h2>
 <div class="section level3">

@@ -18,7 +18,8 @@ acquire_desserte_lidar(
   las_source,
   mnt,
   crs = 2154,
-  cache_dir = tempdir()
+  cache_dir = tempdir(),
+  dtm_res = 1
 )
 ```
 
@@ -50,6 +51,12 @@ acquire_desserte_lidar(
   Directory for the per-segment measurement cache. Default
   [`tempdir()`](https://rdrr.io/r/base/tempfile.html).
 
+- dtm_res:
+
+  Resolution (m) of the DTM derived from ground points when `mnt` is
+  coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
+  ALSroads' internal profile but needs a denser ground return.
+
 ## Value
 
 An `sf` in the format of
@@ -72,10 +79,18 @@ function falls back to **NDP 0**: the road network is returned
 unchanged, the LiDAR columns set to `NA`, and a message says so. It
 **never** errors on a missing point cloud.
 
-**Calibration caveat.** ALSroads is calibrated on Quebec (MFFP) forest
-roads. Its widths are **not yet validated on French data** (spec 020,
-Phase B). Treat the output as experimental until validated on a local
-site; do not base a firm decision on its widths before then.
+**DTM resolution is critical.** ALSroads builds its edge-detection
+profiles at `profile_resolution = 0.5 m`; a DTM coarser than 1 m yields
+`NA` widths (this was the cause of the initial 0/6 in spec 020 Phase B,
+fed a 5 m accessibility grid). When the supplied `mnt` is coarser than
+1.5 m, a `dtm_res`-metre DTM is derived here from the tile's ground
+points – prefer passing IGN's 0.5 m LiDAR HD DTM directly.
+
+**Calibration.** ALSroads is calibrated on Quebec (MFFP) forest roads,
+but with a \>= 1 m DTM it **does** measure French BD TOPO forest roads
+(spec 020 Phase B, Chastel-Nouvel: Class-1 pistes measured at ~7 m).
+Still treat widths as experimental and cross-check against an orthophoto
+on sensitive sites.
 
 ## See also
 
