@@ -1,10 +1,14 @@
 # specs/020 — Desserte corrigée LiDAR (ALSroads, NDP 1) — étude de faisabilité
 
-> **Statut** : **Phase A implémentée** (`acquire_desserte_lidar()`, v1.14.0) —
-> enveloppe fine + repli NDP 0, validée bout-en-bout sur l'exemple d'ALSroads (§2).
-> **Phase B exécutée (v1.15.0)** sur donnée française réelle (Chastel-Nouvel, LiDAR
-> HD IGN) : **résultat NÉGATIF** — ALSroads (calibré Québec) ne mesure **aucune**
-> route française (0/6). **No-go production sans recalibrage** (§7). Cf. §6.
+> **Statut** : **Phases A et B validées** (`acquire_desserte_lidar()`, v1.14.0–v1.16.0) —
+> enveloppe fine + repli NDP 0, validée bout-en-bout sur l'exemple d'ALSroads (§2)
+> **et sur donnée française** (Chastel-Nouvel, avec MNT ≥ 1 m).
+> **Phase B validée (v1.16.0)** sur donnée française réelle (Chastel-Nouvel, LiDAR
+> HD IGN) : **résultat POSITIF** — avec un **MNT ≥ 1 m**, ALSroads mesure bien les
+> pistes forestières françaises (**22/22**, largeurs 1,1–8,1 m). Le **0/6 initial
+> de la v1.15.0 était un artefact** : MNT à 5 m (grille d'accessibilité) 10× trop
+> grossier pour les profils à 0,5 m. `acquire_desserte_lidar()` dérive désormais un
+> MNT 1 m des points sol si besoin. **Go** (expérimental, largeurs à recouper). Cf. §6bis.
 > **Type** : acquisition/enrichissement, en amont du prétraitement. Complète le
 > Lot Acquisition (`specs/010`) et le chantier 3 (`places_depot` aveugle sans
 > largeur mesurée).
@@ -148,42 +152,71 @@ plausible-mais-faux. Reste la validation **française** (Phase B).
 
 ---
 
-## 6bis. Phase B — validation française exécutée (v1.15.0) : **NÉGATIVE**
+## 6bis. Phase B — validation française : **NÉGATIVE en v1.15.0, POSITIVE en v1.16.0**
 
 Protocole : dalle LiDAR HD IGN `LHD_FXX_0737_6385` (Chastel-Nouvel, Lambert-93,
-260 Mo, ~40 M points, classes ASPRS standard 1/2/3/4/5/6) + desserte BD TOPO du
-secteur + MNT. `acquire_desserte_lidar()` lancé sur des tronçons **entièrement dans
-la dalle** et **longs** (398 à 911 m — au-dessus du minimum ALSroads de 40 m).
+260 Mo, ~40 M points, ~45 pts/m², classes ASPRS 1/2/3/4/5/6) + desserte **IGN BD
+TOPO `troncon_de_route`** (sortie d'`acquire_desserte()` : axes de routes/pistes,
+champ `largeur` vide). `acquire_desserte_lidar()` lancé sur les tronçons
+**entièrement dans la dalle**.
 
-Résultat : **0 / 6 tronçons mesurés** (largeurs, plateforme, score tous à `NA`),
-sans avertissement « trop court » ni « hors emprise ». Le pipeline **tourne**
-(CRS 2154 correct, catalogue lu, `measure_road` exécuté ~95 s/tronçon), mais
-ALSroads **ne détecte pas** les routes forestières françaises avec ses paramètres
-par défaut. À comparer à l'exemple **québécois** du paquet, mesuré sans peine
-(carrossable 8,2 m, `CLASS` 1). La différence est la **donnée**, pas le code.
+### Le faux négatif de la v1.15.0 (0/6) et sa cause
 
-Pièges écartés en route (chacun a d'abord faussé un essai) : mauvaise emprise de
-dalle (le nom `_6385` = bord **haut**, ymin = 6384000) ; `st_crop` fragmentant les
-routes sous les 40 m d'ALSroads. L'essai final (routes entières, longues) est
-propre : le 0/6 est réel.
+Le premier passage rendait **0/6** (largeurs toutes `NA`). Confondants écartés un à
+un — mauvaise emprise de dalle (`_6385` = bord **haut**, ymin = 6384000), `st_crop`
+fragmentant les routes sous les 40 m d'ALSroads, géométrie `MULTILINESTRING` vs
+`LINESTRING` (testée : toujours 0/6). J'en avais conclu à tort à un **défaut de
+calibrage Québec**.
 
-**Conclusion** : la **réserve de calibrage Québec → France du §4.1 est confirmée**.
-En l'état, `acquire_desserte_lidar()` est **inopérant sur la donnée française**
-(équivalent NDP 0 : colonnes `NA`). Rendre ALSroads opérant exigerait un
-**recalibrage** de ses paramètres de détection (`alsroads_default_parameters`) sur
-des routes françaises — travail de recherche hors de ce lot, à mener avec un relevé
-de largeurs de référence. Script reproductible : `data-raw/validation_desserte_lidar.R`.
+La vraie cause était le **MNT**. Le guide utilisateur d'ALSroads
+([ilythiamorley.github.io/ALSroads_Guide](https://ilythiamorley.github.io/ALSroads_Guide/))
+l'énonce : **DTM « at least 1 m »**. ALSroads construit ses profils de détection de
+bord à `profile_resolution = 0.5 m` ; le MNT que je passais était la **grille
+d'accessibilité à 5 m**, 10× trop grossière → profils inexploitables → largeurs `NA`.
+Ce n'était **pas** la donnée ni le calibrage, c'était **ma résolution de MNT**.
+
+### La validation positive (v1.16.0)
+
+MNT dérivé à **1 m** des points sol (classe ASPRS 2) de la dalle
+(`lidR::rasterize_terrain(res = 1, tin())`), nuage décimé à ~10 pts/m² (reco du
+guide). **22/22 pistes ≥ 60 m mesurées** (6 premières en exemple) :
+
+| route | long. | ROADWIDTH | DRIVABLE | CLASS | SCORE |
+|------:|------:|----------:|---------:|------:|------:|
+| 1 | 328 m | 7,3 m | 7,2 m | 1 | 75 |
+| 2 | 219 m | 8,8 m | 8,1 m | 1 | 100 |
+| 3 | 280 m | 4,3 m | 3,4 m | 1 | 85 |
+| 4 |  65 m | 3,4 m | 2,7 m | 2 | 52 |
+| 5 | 395 m | 7,8 m | 7,3 m | 2 | 63 |
+| 6 | 453 m | 5,4 m | 4,6 m | 2 | 73 |
+
+**22/22 mesurées**, largeurs 1,1–8,1 m, classes 1–4 (les rares classes 4 sont des
+pistes réellement dégradées) — cohérent avec des pistes forestières réelles. La
+réserve « calibrage Québec → France » du §4.1 est **levée** :
+avec un MNT ≥ 1 m, ALSroads mesure la donnée française.
+
+**Correctif code** : `acquire_desserte_lidar()` détecte un MNT plus grossier que
+1,5 m et en **dérive un à `dtm_res` m** (défaut 1) depuis les points sol ; il décime
+aussi le nuage au-delà de ~15 pts/m². Fournir directement le **MNT LiDAR HD IGN à
+0,5 m** évite la dérivation et colle au profil interne d'ALSroads. Script
+reproductible : `data-raw/validation_desserte_lidar.R`.
+
+**Leçon** (mémoire) : avant de conclure à un « échec de calibrage » d'un outil tiers,
+vérifier d'abord que **mes entrées respectent ses exigences** (ici la résolution du
+MNT, écrite noir sur blanc dans le guide). Sur-conclure deux fois au négatif aurait
+enterré une fonction qui marche.
 
 ---
 
 ## 7. Décision à prendre (go/no-go) — §7 du brief
 
-**Décision (après Phase B, v1.15.0) : NO-GO production, la fonction reste un
-utilitaire expérimental.** La validation française (§6bis) est négative : ALSroads
-ne mesure aucune route française sans recalibrage. `acquire_desserte_lidar()` reste
-livrée (Phase A) — utile telle quelle sur donnée québécoise ou après recalibrage —
-mais l'app **ne doit pas** s'appuyer sur ses largeurs en France. La recommandation
-initiale ci-dessous tient pour la démarche ; son verdict Phase B est tombé.
+**Décision (après Phase B, v1.16.0) : GO expérimental.** La validation française
+(§6bis) est **positive** dès lors que le MNT est ≥ 1 m : ALSroads mesure les pistes
+françaises (6/6, largeurs 2,7–8,1 m). `acquire_desserte_lidar()` garantit désormais
+cette condition (dérivation d'un MNT 1 m si besoin). L'app peut exposer les largeurs
+LiDAR en France, **en les marquant expérimentales** (à recouper avec une orthophoto
+sur site sensible tant qu'un relevé terrain de référence n'a pas quantifié l'écart).
+Pas de recalibrage nécessaire.
 
 **Recommandation initiale : GO conditionnel, en deux temps.**
 

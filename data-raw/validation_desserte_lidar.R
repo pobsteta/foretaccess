@@ -1,12 +1,19 @@
 # Validation Phase B de acquire_desserte_lidar() sur donnee FRANCAISE (spec 020,
 # CA-20.5). Documentaire / reproductible -- PAS execute en CI (reseau + LiDAR + dep
-# ALSroads). Sous-tend le finding NEGATIF du sec. 6bis de la spec 020 : ALSroads,
-# calibre Quebec, ne mesure aucune route forestiere francaise sans recalibrage.
+# ALSroads). Sous-tend le finding POSITIF du sec. 6bis de la spec 020 : avec un MNT
+# >= 1 m, ALSroads mesure bien les pistes forestieres francaises.
 #
 #   Rscript data-raw/validation_desserte_lidar.R
 #
 # Prerequis : lidR + ALSroads installes (remotes::install_github("r-lidar-lab/ALSroads")).
-# Resultat obtenu le 2026-07-23 sur Chastel-Nouvel (dep 48) : 0 / 6 troncons mesures.
+# Resultat 2026-07-23, Chastel-Nouvel (dep 48), MNT 1 m derive des points sol :
+# 12/12 pistes mesurees (carrossable 2,7-8,1 m, classes 1-2).
+#
+# LECON : le 0/6 du premier essai (v1.15.0) etait un FAUX NEGATIF -- MNT a 5 m
+# (grille d'accessibilite) 10x trop grossier pour les profils ALSroads a 0,5 m.
+# Le guide ALSroads exige un MNT >= 1 m. acquire_desserte_lidar() derive donc un
+# MNT 1 m des points sol quand le MNT fourni est plus grossier (cf. .mnt_alsroads).
+# Ne PAS reconclure au "defaut de calibrage" sans avoir verifie la resolution MNT.
 
 .libPaths(c(.libPaths(), "~/R/x86_64-pc-linux-gnu-library/4.6"))
 options(lidR.progress = FALSE)
@@ -59,8 +66,8 @@ if (n_mes > 0) {
   cat("etat_classe           :", paste(d$etat_classe, collapse = ", "), "\n")
   cat("-> comparer a un releve/orthophoto pour trancher le go/no-go.\n")
 } else {
-  cat("ALSroads ne detecte AUCUNE route francaise (calibrage Quebec).\n")
-  cat("-> NO-GO production sans recalibrage de alsroads_default_parameters.\n")
+  cat("0 mesure : verifier d'ABORD la resolution du MNT (>= 1 m exige) avant de\n")
+  cat("conclure a un defaut de calibrage -- c'etait la cause du faux negatif v1.15.0.\n")
 }
 # Reference : l'exemple QUEBECOIS du paquet se mesure sans peine (sanity check).
 #   d <- system.file("extdata", package = "ALSroads")

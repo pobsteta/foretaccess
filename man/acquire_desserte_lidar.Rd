@@ -9,7 +9,8 @@ acquire_desserte_lidar(
   las_source,
   mnt,
   crs = 2154,
-  cache_dir = tempdir()
+  cache_dir = tempdir(),
+  dtm_res = 1
 )
 }
 \arguments{
@@ -28,6 +29,10 @@ downloaded here -- the caller provides it (e.g. the app's
 
 \item{cache_dir}{Directory for the per-segment measurement cache. Default
 \code{tempdir()}.}
+
+\item{dtm_res}{Resolution (m) of the DTM derived from ground points when \code{mnt}
+is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
+ALSroads' internal profile but needs a denser ground return.}
 }
 \value{
 An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the columns
@@ -55,10 +60,17 @@ Without them, the function falls back to \strong{NDP 0}: the road network is ret
 unchanged, the LiDAR columns set to \code{NA}, and a message says so. It \strong{never}
 errors on a missing point cloud.
 
-\strong{Calibration caveat.} ALSroads is calibrated on Quebec (MFFP) forest roads.
-Its widths are \strong{not yet validated on French data} (spec 020, Phase B). Treat
-the output as experimental until validated on a local site; do not base a firm
-decision on its widths before then.
+\strong{DTM resolution is critical.} ALSroads builds its edge-detection profiles at
+\verb{profile_resolution = 0.5 m}; a DTM coarser than 1 m yields \code{NA} widths (this
+was the cause of the initial 0/6 in spec 020 Phase B, fed a 5 m accessibility
+grid). When the supplied \code{mnt} is coarser than 1.5 m, a \code{dtm_res}-metre DTM is
+derived here from the tile's ground points -- prefer passing IGN's 0.5 m LiDAR
+HD DTM directly.
+
+\strong{Calibration.} ALSroads is calibrated on Quebec (MFFP) forest roads, but with
+a >= 1 m DTM it \strong{does} measure French BD TOPO forest roads (spec 020 Phase B,
+Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
+experimental and cross-check against an orthophoto on sensitive sites.
 }
 \examples{
 \dontrun{
