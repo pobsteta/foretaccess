@@ -110,7 +110,11 @@ turns a full-extent search into a local one.
 
 Net effect on a departmental-scale run: a per-parcel trace drops from minutes
 to milliseconds, and with a realistic \code{skidding_m} the whole greedy runs in
-seconds to tens of seconds rather than minutes. Steiner (\code{mode = "steiner"})
-still pays \code{N^2} traces and stays reserved for small parcel counts.
+seconds to tens of seconds rather than minutes. The single-target trace of
+\code{\link[=tracer_desserte]{tracer_desserte()}} is corridor-bounded the same way (its two waypoints define
+the box). The window shrinks the search only when the two endpoints are close:
+Steiner (\code{mode = "steiner"}) traces parcel-to-parcel across the whole extent, so
+its windows are large and it stays roughly \code{N^2} (measured ~650 s for 4 parcels,
+down from ~860 s) -- still reserved for small parcel counts.
 }
 
