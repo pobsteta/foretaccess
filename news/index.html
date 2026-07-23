@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.14.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.15.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,25 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.15.0" id="foretaccess-1150-2026-07-23">foretaccess 1.15.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1150-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="performance-1-15-0">Performance<a class="anchor" aria-label="anchor" href="#performance-1-15-0"></a></h3>
+<ul><li>
+<strong>Tracé A* borné au couloir aussi pour <code>solve</code> (single-cible).</strong> Le bornage introduit en 1.12.0 pour le glouton s’applique désormais à chaque <strong>segment</strong> de [tracer_desserte()] et aux tracés parcelle↔︎parcelle de Steiner : la recherche est restreinte à la boîte entre les deux extrémités du segment (marge proportionnelle), avec repli plein-emprise. <strong>Résultat bit-identique</strong> (suite inchangée). Gain net quand les extrémités sont proches ; Steiner reste ~<code>N²</code> (mesuré <strong>~650 s pour 4 parcelles</strong>, contre ~860 s) car ses segments traversent toute l’emprise — toujours réservé aux petits nombres de parcelles.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-1-15-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-1-15-0"></a></h3>
+<ul><li>
+<strong>Chantier 4 Phase B — validation française d’ALSroads : résultat NÉGATIF.</strong> <code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> a été exécutée sur donnée réelle (Chastel-Nouvel, dalle LiDAR HD IGN, 6 routes forestières longues et bien couvertes) : <strong>0/6 mesurées</strong>. Le pipeline tourne (CRS, catalogue, <code>measure_road</code>), mais ALSroads — calibré Québec — <strong>ne détecte pas</strong> les routes françaises avec ses paramètres par défaut (l’exemple québécois, lui, se mesure sans peine). <strong>No-go production sans recalibrage.</strong> <code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> reste livrée et utile sur donnée québécoise / après recalibrage. Détail et protocole reproductible : <code>specs/020</code> §6bis, <code>data-raw/validation_desserte_lidar.R</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="interne-1-15-0">Interne<a class="anchor" aria-label="anchor" href="#interne-1-15-0"></a></h3>
+<ul><li>Chemin NDP 1 d’<code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (code ALSroads-only, non exécutable en
+<ol start="101" style="list-style-type: upper-roman"><li>marqué <code># nocov</code> — il est validé hors CI (exemple ALSroads + donnée réelle), pas non testé.</li>
+</ol></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.14.0" id="foretaccess-1140-2026-07-22">foretaccess 1.14.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1140-2026-07-22"></a></h2>
 <div class="section level3">

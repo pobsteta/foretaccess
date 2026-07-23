@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.14.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.15.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,12 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-23--v1150--bornage-de-solve--chantier-4-phase-b-validation-fr-négative">2026-07-23 — <code>v1.15.0</code> : bornage de <code>solve</code> + chantier 4 Phase B (validation FR négative)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1150--bornage-de-solve--chantier-4-phase-b-validation-fr-n%C3%A9gative"></a></h3>
+<p><strong>Bornage <code>solve</code></strong> (single-cible) : le couloir de recherche de 1.12.0 (glouton) étendu à chaque segment de <code>solve</code> → <code>tracer_desserte</code> et tracés parcelle↔︎parcelle de Steiner. Bit-identique. Steiner <strong>~860 → ~650 s</strong> (4 parcelles) — gain modeste : ses segments relient des parcelles éloignées → fenêtres larges, reste O(N²). Le bornage brille pour extrémités proches (glouton, waypoints rapprochés).</p>
+<p><strong>Chantier 4 Phase B — validation française exécutée, résultat NÉGATIF.</strong> Dalle LiDAR HD IGN téléchargée pour Chastel-Nouvel (260 Mo, classes ASPRS standard), <code><a href="reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> lancée sur 6 routes forestières <strong>longues (398-911 m), entières dans la dalle</strong> : <strong>0/6 mesurées</strong>. Le pipeline tourne (CRS 2154 OK, catalogue lu, <code>measure_road</code> ~95 s/tronçon) mais ALSroads (calibré Québec) ne détecte pas les routes françaises. L’exemple <strong>québécois</strong> du paquet, lui, se mesure sans peine (8,2 m, CLASS 1) → la différence est la <strong>donnée</strong>, pas le code. Deux faux départs corrigés au passage (mauvaise emprise de dalle — le nom <code>_6385</code> = bord haut ; <code>st_crop</code> fragmentant les routes sous les 40 m d’ALSroads). <strong>Verdict : no-go production sans recalibrage</strong> de <code>alsroads_default_parameters</code> sur des routes françaises — recherche hors lot. <code><a href="reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> reste livrée (utile sur donnée québécoise / après recalibrage). Protocole : <code>data-raw/validation_desserte_lidar.R</code>, spec 020 §6bis. Chemin NDP 1 marqué <code># nocov</code> (validé hors CI).</p>
+<p><strong>Brief desserte : entièrement traité et bouclé</strong> (1 perf + volet 2, 2 connexité, 3 places_depot, 4 LiDAR Phase A+B, 5 résolu de fait). <code>solve</code> borné = le dernier optionnel. Seul reliquat = recalibrage ALSroads FR (recherche, hors périmètre).</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-22--v1140--chantier-4--desserte-corrigée-lidar-alsroads-ndp-1">2026-07-22 — <code>v1.14.0</code> : chantier 4 — desserte corrigée LiDAR (ALSroads, NDP 1)<a class="anchor" aria-label="anchor" href="#id_2026-07-22--v1140--chantier-4--desserte-corrig%C3%A9e-lidar-alsroads-ndp-1"></a></h3>
 <p>Dernier chantier du brief desserte. Étude de faisabilité (<code>specs/020</code>) <strong>puis</strong> Phase A implémentée.</p>

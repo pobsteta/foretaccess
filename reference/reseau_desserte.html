@@ -15,7 +15,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.14.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.15.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -182,8 +182,12 @@ in that corridor: the bound preserves the result for the realistic case and
 turns a full-extent search into a local one.</p></li>
 </ul><p>Net effect on a departmental-scale run: a per-parcel trace drops from minutes
 to milliseconds, and with a realistic <code>skidding_m</code> the whole greedy runs in
-seconds to tens of seconds rather than minutes. Steiner (<code>mode = "steiner"</code>)
-still pays <code>N^2</code> traces and stays reserved for small parcel counts.</p>
+seconds to tens of seconds rather than minutes. The single-target trace of
+<code><a href="tracer_desserte.html">tracer_desserte()</a></code> is corridor-bounded the same way (its two waypoints define
+the box). The window shrinks the search only when the two endpoints are close:
+Steiner (<code>mode = "steiner"</code>) traces parcel-to-parcel across the whole extent, so
+its windows are large and it stays roughly <code>N^2</code> (measured ~650 s for 4 parcels,
+down from ~860 s) – still reserved for small parcel counts.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

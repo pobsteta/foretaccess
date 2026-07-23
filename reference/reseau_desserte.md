@@ -136,6 +136,11 @@ things govern it:
 
 Net effect on a departmental-scale run: a per-parcel trace drops from
 minutes to milliseconds, and with a realistic `skidding_m` the whole
-greedy runs in seconds to tens of seconds rather than minutes. Steiner
-(`mode = "steiner"`) still pays `N^2` traces and stays reserved for
-small parcel counts.
+greedy runs in seconds to tens of seconds rather than minutes. The
+single-target trace of
+[`tracer_desserte()`](https://pobsteta.github.io/foretaccess/reference/tracer_desserte.md)
+is corridor-bounded the same way (its two waypoints define the box). The
+window shrinks the search only when the two endpoints are close: Steiner
+(`mode = "steiner"`) traces parcel-to-parcel across the whole extent, so
+its windows are large and it stays roughly `N^2` (measured ~650 s for 4
+parcels, down from ~860 s) – still reserved for small parcel counts.
