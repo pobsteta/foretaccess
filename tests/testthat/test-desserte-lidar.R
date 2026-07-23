@@ -77,6 +77,42 @@ test_that(".alsroads_dispo est FALSE quand les paquets manquent", {
   expect_false(foretaccess:::.alsroads_dispo())
 })
 
+test_that(".troncon_linestring ramene une MULTILINESTRING a une LINESTRING unique", {
+  # measure_road ERREUR sur une MULTILINESTRING (BD TOPO troncon_de_route) : c'est
+  # la cause du 0/N sur une desserte reelle. Ce helper la ramene a une LINESTRING.
+  ls <- function(m) sf::st_linestring(m)
+  # Parties CONTIGUES -> fusionnees en une seule LINESTRING.
+  contigu <- sf::st_sf(
+    classe = "piste",
+    geometry = sf::st_sfc(sf::st_multilinestring(list(
+      rbind(c(0, 0), c(10, 0)), rbind(c(10, 0), c(20, 0))
+    )), crs = 2154)
+  )
+  r <- foretaccess:::.troncon_linestring(contigu)
+  expect_equal(as.character(sf::st_geometry_type(r)), "LINESTRING")
+  expect_equal(as.numeric(sf::st_length(r)), 20)
+
+  # Parties DISJOINTES -> on garde la plus longue.
+  disjoint <- sf::st_sf(
+    classe = "piste",
+    geometry = sf::st_sfc(sf::st_multilinestring(list(
+      rbind(c(0, 0), c(5, 0)), rbind(c(0, 50), c(0, 90))
+    )), crs = 2154)
+  )
+  r2 <- foretaccess:::.troncon_linestring(disjoint)
+  expect_equal(as.character(sf::st_geometry_type(r2)), "LINESTRING")
+  expect_equal(as.numeric(sf::st_length(r2)), 40) # la branche de 40 m
+
+  # Une LINESTRING passe telle quelle ; un point -> NULL (inexploitable).
+  lin <- sf::st_sf(classe = "route",
+                   geometry = sf::st_sfc(ls(rbind(c(0, 0), c(30, 0))), crs = 2154))
+  expect_equal(as.character(sf::st_geometry_type(
+    foretaccess:::.troncon_linestring(lin))), "LINESTRING")
+  pt <- sf::st_sf(classe = "route",
+                  geometry = sf::st_sfc(sf::st_point(c(1, 1)), crs = 2154))
+  expect_null(foretaccess:::.troncon_linestring(pt))
+})
+
 test_that("la pente en long d'une geometrie est calculee sur le MNT", {
   # Helper interne : sur un MNT plat, pente nulle ; verifie le calcul.
   g <- sf::st_geometry(sf::st_sf(geometry = sf::st_sfc(

@@ -61,20 +61,7 @@ vectoriser_reseau <- function(reseau) {
   )
 
   # Table des troncons -> sf LINESTRING (geometrie complete via cellules).
-  geoms <- lapply(g$troncons, function(t) {
-    p <- terra::xyFromCell(grille, t$cells)
-    if (nrow(p) == 1L) p <- rbind(p, p)
-    sf::st_linestring(p)
-  })
-  de <- vapply(g$troncons, function(t) t$cells[1], numeric(1))
-  vers <- vapply(g$troncons, function(t) t$cells[length(t$cells)], numeric(1))
-  troncons <- sf::st_sf(
-    id = seq_along(g$troncons),
-    de = unname(node_id[as.character(de)]),
-    vers = unname(node_id[as.character(vers)]),
-    longueur = vapply(g$troncons, function(t) t$longueur, numeric(1)),
-    geometry = sf::st_sfc(geoms, crs = crs)
-  )
+  troncons <- .troncons_contractes_sf(g, grille, crs, node_id)
 
   structure(
     list(
@@ -87,7 +74,67 @@ vectoriser_reseau <- function(reseau) {
   )
 }
 
+#' Contract a designed network's grid polylines into clean tronçons
+#'
+#' [reseau_desserte()]'s `$lignes` follow the raster grid step by step (thousands
+#' of tiny segments), which is heavy and staircase-like to display. This applies
+#' the **same topological contraction** as [vectoriser_reseau()] -- degree-2
+#' chains merged into `troncons` between junctions (degree >= 3), leaves and
+#' outlets -- returning a **tidy vector** of the created network, without building
+#' the full flux graph. The result is ready to feed [vectoriser_reseau()] /
+#' [typer_desserte()] or to display directly instead of the `$reseau` raster.
+#'
+#' @param reseau A `foretaccess_reseau` object (Lot 16).
+#' @return An `sf` LINESTRING, one feature per contracted tronçon, with `id`,
+#'   `de` / `vers` (node cell ids) and `longueur` (m). Empty roads abort.
+#' @seealso [reseau_desserte()] (produces the fine `$lignes`),
+#'   [vectoriser_reseau()] (the typing entry point that contracts likewise).
+#' @export
+#' @examples
+#' \dontrun{
+#' res <- reseau_desserte(pre, cout, parcelles, desserte_existante)
+#' lignes_propres <- contracter_lignes(res) # affichage vecteur net
+#' }
+contracter_lignes <- function(reseau) {
+  checkmate::assert_class(reseau, "foretaccess_reseau")
+  grille <- reseau$reseau
+  crs <- sf::st_crs(reseau$lignes)
+
+  # Cellules du reseau existant : noeuds remarquables (raccords au principal).
+  net_r <- terra::rasterize(terra::vect(reseau$desserte), grille, field = 1,
+                            background = NA, touches = TRUE)
+  exutoire_cells <- which(!is.na(terra::values(net_r)))
+
+  fines <- .graphe_aretes_fines(reseau$lignes, grille)
+  if (nrow(fines) == 0) {
+    cli::cli_abort("Le reseau ne contient aucune route a contracter.")
+  }
+  g <- .graphe_contracter(fines, exutoire_cells)
+  node_id <- stats::setNames(seq_along(g$noeuds), g$noeuds)
+  .troncons_contractes_sf(g, grille, crs, node_id)
+}
+
 # --- Helpers 17a -------------------------------------------------------------
+
+# Construit l'`sf` LINESTRING des troncons contractes depuis le graphe `g`
+# (partage par vectoriser_reseau et contracter_lignes) : geometrie complete via
+# les cellules, extremites `de`/`vers` traduites en ids de noeud.
+.troncons_contractes_sf <- function(g, grille, crs, node_id) {
+  geoms <- lapply(g$troncons, function(t) {
+    p <- terra::xyFromCell(grille, t$cells)
+    if (nrow(p) == 1L) p <- rbind(p, p)
+    sf::st_linestring(p)
+  })
+  de <- vapply(g$troncons, function(t) t$cells[1], numeric(1))
+  vers <- vapply(g$troncons, function(t) t$cells[length(t$cells)], numeric(1))
+  sf::st_sf(
+    id = seq_along(g$troncons),
+    de = unname(node_id[as.character(de)]),
+    vers = unname(node_id[as.character(vers)]),
+    longueur = vapply(g$troncons, function(t) t$longueur, numeric(1)),
+    geometry = sf::st_sfc(geoms, crs = crs)
+  )
+}
 
 # Aretes fines uniques (indices de cellule, a < b) + longueur planimetrique du
 # segment entre les centres des deux cellules.

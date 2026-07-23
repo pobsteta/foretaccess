@@ -65,6 +65,16 @@
 #' Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
 #' experimental and cross-check against an orthophoto on sensitive sites.
 #'
+#' **Geometry and coverage.** ALSroads requires a **single `LINESTRING`** centerline
+#' and errors on the `MULTILINESTRING` of BD TOPO `troncon_de_route`; each tronçon
+#' is therefore recast to one `LINESTRING` (contiguous parts merged, else the
+#' longest part kept). A full project desserte (hundreds of km) usually overruns
+#' the supplied tiles: tronçons **outside tile coverage**, or **shorter than
+#' `long_min_m`**, return `NA` -- expect **most of a full desserte to be `NA`** and
+#' only the long tronçons lying under a tile to carry a width. The `bilan`
+#' attribute of the result breaks the outcome down (measured / too short /
+#' geometry / not measured).
+#'
 #' @param desserte Road network: path to a vector file or an `sf` of lines (the
 #'   output of [acquire_desserte()]).
 #' @param las_source Airborne LiDAR: a directory/vector of `.las`/`.laz`/`.copc.laz`
@@ -79,6 +89,10 @@
 #' @param dtm_res Resolution (m) of the DTM derived from ground points when `mnt`
 #'   is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
 #'   ALSroads' internal profile but needs a denser ground return.
+#' @param long_min_m Minimum tronçon length (m) below which measurement is skipped
+#'   (returned `NA`) without calling ALSroads -- shorter roads are unstable under
+#'   its search buffer. Default 40. A full BD TOPO desserte has many short
+#'   segments; only long tronçons under a tile get a width.
 #' @return An `sf` in the format of [acquire_desserte()] **plus** the columns
 #'   `largeur_carrossable_m` (ALSroads `DRIVABLEWIDTH`), `largeur_plateforme_m`
 #'   (`ROADWIDTH`), `pente_pct` (computed here from the realigned geometry),
@@ -95,7 +109,8 @@
 #' places <- places_depot(des_lidar, mnt, largeur_min_m = 4) # acces camion discriminant
 #' }
 acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
-                                   cache_dir = tempdir(), dtm_res = 1) {
+                                   cache_dir = tempdir(), dtm_res = 1,
+                                   long_min_m = 40) {
   des <- .as_vector(desserte, "desserte")
   des <- sf::st_zm(sf::st_as_sf(des), drop = TRUE)
   if (nrow(des) == 0) {
@@ -134,13 +149,18 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   # Densite IGN LiDAR HD ~ 10-45 pts/m2 ; ALSroads est cale sur 5-10, on decime
   # au-dela (recommandation du guide ALSroads) -- gain de vitesse, mesure stable.
   ctg <- .decimer_ctg(ctg)
-  mesures <- .desserte_lidar_mesurer(des, ctg, dtm_fin, mnt, cache_dir)
+  mesures <- .desserte_lidar_mesurer(des, ctg, dtm_fin, mnt, cache_dir, long_min_m)
 
+  b <- attr(mesures, "bilan")
   cli::cli_inform(c(
-    "v" = "Desserte enrichie LiDAR ({.strong NDP 1}) : {sum(!is.na(mesures$largeur_carrossable_m))}/{nrow(des)}
+    "v" = "Desserte enrichie LiDAR ({.strong NDP 1}) : {b[['mesure']]}/{b[['total']]}
            troncon{?s} mesure{?s}.",
-    "i" = "ALSroads valide sur donnee francaise avec un MNT >= 1 m (spec 020
-           Phase B) ; largeurs a recouper avec une orthophoto sur site sensible."
+    "i" = "{b[['trop_court']]} trop court{?s} (< {long_min_m} m), {b[['echec']]} non
+           mesure{?s} (hors couverture des dalles ou echec ALSroads),
+           {b[['geometrie']]} geometrie inexploitable.",
+    "i" = "Une desserte de projet complete depasse souvent l'emprise des dalles
+           fournies : seuls les troncons {.strong longs et sous une dalle} se
+           mesurent. Largeurs a recouper avec une orthophoto sur site sensible."
   ))
   mesures
   # nocov end
@@ -211,30 +231,53 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
 
 # Mesure ALSroads tronçon par tronçon, avec cache par identifiant. `measure_road`
 # traite UNE route a la fois (cf. spec 020 sec.2) ; on boucle et on assemble.
-.desserte_lidar_mesurer <- function(des, ctg, dtm_fin, mnt, cache_dir) {
+# Chaque troncon est d'abord ramene a une LINESTRING unique (BD TOPO =
+# MULTILINESTRING), et les troncons plus courts que `long_min_m` sont sautes
+# (mesure impossible / instable sous le buffer d'ALSroads) sans appeler la mesure.
+# L'attribut `bilan` decompose l'issue (mesure / trop court / geometrie / echec).
+.desserte_lidar_mesurer <- function(des, ctg, dtm_fin, mnt, cache_dir,
+                                    long_min_m = 40) {
   measure_road <- getExportedValue(.PKG_ALSROADS, "measure_road")
   ras <- dtm_fin # MNT >= 1 m deja au format RasterLayer (cf. .mnt_alsroads)
-  # Cle de cache : hachage de la geometrie (stable par troncon).
   cache_f <- file.path(cache_dir, "desserte_lidar.rds")
   cache <- if (file.exists(cache_f)) readRDS(cache_f) else list()
 
+  n_mesure <- 0L
+  n_court <- 0L
+  n_geom <- 0L
+  n_echec <- 0L
   lignes <- vector("list", nrow(des))
   for (i in seq_len(nrow(des))) {
     road_i <- des[i, ]
-    # Cle de cache : WKT de la geometrie (stable par troncon, sans dependance).
-    cle <- as.character(sf::st_as_text(sf::st_geometry(road_i)))
-    res <- cache[[cle]]
-    if (is.null(res)) {
-      res <- tryCatch(measure_road(ctg, road_i, ras), error = function(e) NULL)
-      cache[[cle]] <- list(res = res) # memoise meme un echec (NULL)
-    } else {
-      res <- res$res
+    road_l <- .troncon_linestring(road_i)
+    if (is.null(road_l)) {
+      n_geom <- n_geom + 1L
+      lignes[[i]] <- .fusionner_mesure(road_i, NULL, mnt)
+      next
     }
-    lignes[[i]] <- .fusionner_mesure(road_i, res, mnt)
+    if (as.numeric(sf::st_length(sf::st_geometry(road_l))) < long_min_m) {
+      n_court <- n_court + 1L
+      lignes[[i]] <- .fusionner_mesure(road_l, NULL, mnt)
+      next
+    }
+    # Cle de cache : WKT de la LINESTRING (stable par troncon, sans dependance).
+    cle <- as.character(sf::st_as_text(sf::st_geometry(road_l)))
+    if (!is.null(cache[[cle]])) {
+      res <- cache[[cle]]$res
+    } else {
+      res <- tryCatch(measure_road(ctg, road_l, ras), error = function(e) NULL)
+      cache[[cle]] <- list(res = res) # memoise meme un echec (NULL)
+    }
+    if (is.null(res)) n_echec <- n_echec + 1L else n_mesure <- n_mesure + 1L
+    lignes[[i]] <- .fusionner_mesure(road_l, res, mnt)
   }
   saveRDS(cache, cache_f)
   out <- do.call(rbind, lignes)
   attr(out, "ndp") <- 1L
+  attr(out, "bilan") <- c(
+    mesure = n_mesure, trop_court = n_court, geometrie = n_geom,
+    echec = n_echec, total = nrow(des)
+  )
   out
 }
 
@@ -268,6 +311,31 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   sf::st_sf(att, geometry = geom)
 }
 # nocov end
+
+# Ramene la geometrie d'un troncon a une LINESTRING UNIQUE. `measure_road` exige
+# une centerline LINESTRING et ERREUR sur une MULTILINESTRING ("Expecting
+# LINESTRING geometry ...") -- c'est la cause du 0/N sur une desserte BD TOPO
+# reelle (troncon_de_route est en MULTILINESTRING). On fusionne les parties
+# contigues ; si elles restent disjointes, on garde la plus longue. Renvoie le
+# troncon (sf, 1 ligne) recale sur cette LINESTRING, ou NULL si inexploitable.
+# Hors nocov : geometrie pure, testable sans LiDAR.
+.troncon_linestring <- function(road_i) {
+  g <- sf::st_geometry(road_i)
+  if (as.character(sf::st_geometry_type(g)) == "MULTILINESTRING") {
+    g <- sf::st_line_merge(g) # recolle les parties contigues
+    if (as.character(sf::st_geometry_type(g)) == "MULTILINESTRING") {
+      parts <- suppressWarnings(sf::st_cast(g, "LINESTRING"))
+      if (length(parts) == 0) {
+        return(NULL)
+      }
+      g <- parts[which.max(as.numeric(sf::st_length(parts)))]
+    }
+  }
+  if (as.character(sf::st_geometry_type(g)) != "LINESTRING") {
+    return(NULL)
+  }
+  sf::st_set_geometry(road_i, g)
+}
 
 # Pente en long (%) d'une geometrie sur le MNT : denivele entre extremites /
 # longueur parcourue. Notre calcul, pas celui d'ALSroads.

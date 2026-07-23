@@ -10,7 +10,8 @@ acquire_desserte_lidar(
   mnt,
   crs = 2154,
   cache_dir = tempdir(),
-  dtm_res = 1
+  dtm_res = 1,
+  long_min_m = 40
 )
 }
 \arguments{
@@ -33,6 +34,11 @@ downloaded here -- the caller provides it (e.g. the app's
 \item{dtm_res}{Resolution (m) of the DTM derived from ground points when \code{mnt}
 is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
 ALSroads' internal profile but needs a denser ground return.}
+
+\item{long_min_m}{Minimum tronçon length (m) below which measurement is skipped
+(returned \code{NA}) without calling ALSroads -- shorter roads are unstable under
+its search buffer. Default 40. A full BD TOPO desserte has many short
+segments; only long tronçons under a tile get a width.}
 }
 \value{
 An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the columns
@@ -71,6 +77,16 @@ HD DTM directly.
 a >= 1 m DTM it \strong{does} measure French BD TOPO forest roads (spec 020 Phase B,
 Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
 experimental and cross-check against an orthophoto on sensitive sites.
+
+\strong{Geometry and coverage.} ALSroads requires a \strong{single \code{LINESTRING}} centerline
+and errors on the \code{MULTILINESTRING} of BD TOPO \code{troncon_de_route}; each tronçon
+is therefore recast to one \code{LINESTRING} (contiguous parts merged, else the
+longest part kept). A full project desserte (hundreds of km) usually overruns
+the supplied tiles: tronçons \strong{outside tile coverage}, or \strong{shorter than
+\code{long_min_m}}, return \code{NA} -- expect \strong{most of a full desserte to be \code{NA}} and
+only the long tronçons lying under a tile to carry a width. The \code{bilan}
+attribute of the result breaks the outcome down (measured / too short /
+geometry / not measured).
 }
 \examples{
 \dontrun{

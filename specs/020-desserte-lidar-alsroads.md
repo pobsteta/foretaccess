@@ -206,6 +206,28 @@ vérifier d'abord que **mes entrées respectent ses exigences** (ici la résolut
 MNT, écrite noir sur blanc dans le guide). Sur-conclure deux fois au négatif aurait
 enterré une fonction qui marche.
 
+### 6ter. Desserte de projet COMPLÈTE (v1.19.0) : géométrie, couverture, tronçons courts
+
+Le 22/22 portait sur **6 routes triées à la main** (longues, sous une dalle bien
+couverte), castées en LINESTRING. Sur une **desserte de projet complète** (Chastel-
+Nouvel, 806 km / 3 299 tronçons, 4 dalles), l'app mesurait **0/3 299**. Trois causes,
+corrigées en 1.19.0 :
+
+1. **Géométrie** (la cause du 0/N) : BD TOPO `troncon_de_route` est en
+   **`MULTILINESTRING`**, et `measure_road` **échoue** dessus (« Expecting LINESTRING
+   geometry »). Le 22/22 castait en LINESTRING ; l'app passait le MULTI brut. →
+   `.troncon_linestring()` ramène chaque tronçon à une LINESTRING unique.
+2. **Tronçons courts** : une desserte BD TOPO compte des milliers de segments <
+   40 m, instables sous le buffer d'ALSroads. → paramètre `long_min_m` (défaut 40),
+   sautés sans appel.
+3. **Couverture partielle** : une desserte de projet déborde l'emprise des dalles
+   fournies. → attendu que **l'essentiel reste `NA`** ; seuls les tronçons **longs et
+   sous une dalle** se mesurent. L'attribut `bilan` décompose l'issue.
+
+Le mismatch de colonnes (`largeur_carrossable_m` vs `largeur`/`largeur_de_chaussee`
+lu par `places_depot()`) est aussi levé : `.largeur_desserte` reconnaît la largeur
+LiDAR, et `places_depot(largeur_champ=)` nomme la colonne. **Chaîne câble débloquée.**
+
 ---
 
 ## 7. Décision à prendre (go/no-go) — §7 du brief

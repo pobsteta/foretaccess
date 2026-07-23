@@ -55,6 +55,23 @@ flux_setup <- function() {
   which(!is.na(terra::values(r)))
 }
 
+test_that("contracter_lignes rend des troncons propres (Chantier C)", {
+  s <- flux_setup()
+  lc <- contracter_lignes(s$reseau)
+  expect_s3_class(lc, "sf")
+  expect_true(all(c("id", "de", "vers", "longueur") %in% names(lc)))
+  expect_true(all(sf::st_geometry_type(lc) == "LINESTRING"))
+  # Meme contraction que vectoriser_reseau : memes troncons, meme longueur totale.
+  g <- vectoriser_reseau(s$reseau)
+  expect_equal(nrow(lc), nrow(g$troncons))
+  expect_equal(sum(lc$longueur), sum(g$troncons$longueur))
+  # Contraction effective : moins de features que le reseau fin ($lignes) n'a de
+  # segments elementaires (somme des sommets - 1 par ligne).
+  n_seg_fins <- sum(vapply(sf::st_geometry(s$reseau$lignes),
+                           function(g) nrow(sf::st_coordinates(g)) - 1L, integer(1)))
+  expect_lt(nrow(lc), n_seg_fins)
+})
+
 test_that("vectoriser_reseau produit un graphe noeuds/troncons coherent", {
   s <- flux_setup()
   g <- vectoriser_reseau(s$reseau)

@@ -129,11 +129,16 @@ flag_dfci <- function(desserte, dfci_lignes = NULL, retournements = NULL,
   )
 }
 
-# Emprise/largeur disponible (m) : colonne `largeur`, sinon `largeur_de_chaussee`
-# (attribut BD TOPO). Absente -> NA (critere d'emprise indeterminable, la piste ne
-# peut alors etre retenue que par la branche cul-de-sac + retournement).
-.largeur_desserte <- function(x) {
-  col <- intersect(c("largeur", "largeur_de_chaussee", "LARGEUR"), names(x))
+# Emprise/largeur disponible (m). Priorite a la largeur carrossable MESUREE au
+# LiDAR (`largeur_carrossable_m`, sortie d'acquire_desserte_lidar/qualifier_desserte)
+# puis aux attributs BD TOPO (`largeur`, `largeur_de_chaussee`). `champ` force une
+# colonne explicite (place en tete). Absente -> NA (emprise indeterminable, la piste
+# ne peut alors etre retenue que par la branche cul-de-sac + retournement).
+.largeur_desserte <- function(x, champ = NULL) {
+  noms <- c(
+    champ, "largeur_carrossable_m", "largeur", "largeur_de_chaussee", "LARGEUR"
+  )
+  col <- intersect(noms, names(x))
   if (!length(col)) {
     return(rep(NA_real_, nrow(x)))
   }

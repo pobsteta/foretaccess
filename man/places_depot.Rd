@@ -10,6 +10,7 @@ places_depot(
   foret = NULL,
   retournements = NULL,
   largeur_min_m = 4,
+  largeur_champ = NULL,
   pente_max_pct = 6,
   fenetre_plateforme_m = 50,
   distance_foret_max_m = 100,
@@ -31,6 +32,12 @@ places_depot(
 
 \item{largeur_min_m}{Minimum carriageway width for a log truck (m). Only ever
 applied to a \emph{measured} width; see criterion 1.}
+
+\item{largeur_champ}{Optional name of the column holding the measured width. By
+default the LiDAR carriageway \code{largeur_carrossable_m} (from
+\code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}} / \code{\link[=qualifier_desserte]{qualifier_desserte()}}) is used when present,
+then the BD TOPO \code{largeur} / \code{largeur_de_chaussee}. Set this to compose with a
+custom width column.}
 
 \item{pente_max_pct}{Maximum \strong{longitudinal grade} of the road at the
 platform (\%), not terrain slope -- see criterion 3.}
@@ -75,8 +82,9 @@ The result is an \code{sf} carrying a \code{cable} field, ready to be passed str
 A road segment yields candidate landings when it passes, in order:
 \enumerate{
 \item \strong{Truck access} -- a segment is rejected only on \strong{hard evidence}: a
-\emph{measured} carriageway width (\code{largeur}, \code{largeur_de_chaussee}) below
-\code{largeur_min_m}. The \code{dfci} flag of \code{\link[=flag_dfci]{flag_dfci()}} and the \code{classe} are
+\emph{measured} carriageway width (LiDAR \code{largeur_carrossable_m}, else BD TOPO
+\code{largeur} / \code{largeur_de_chaussee}) below \code{largeur_min_m}. The \code{dfci} flag of
+\code{\link[=flag_dfci]{flag_dfci()}} and the \code{classe} are
 recorded in the \code{acces} column but never reject: on the only oracle
 available they do not discriminate (see \emph{Validation}).
 \item \strong{Turn-around} -- only when \code{retournements} is supplied: the segment is

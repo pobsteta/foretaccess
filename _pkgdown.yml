@@ -122,6 +122,7 @@ reference:
   - surface_cout_construction
   - tracer_desserte
   - reseau_desserte
+  - contracter_lignes
   - vectoriser_reseau
   - calculer_flux
   - typer_desserte

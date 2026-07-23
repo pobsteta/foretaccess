@@ -61,7 +61,9 @@ trace then minimises monetary cost. Default \code{FALSE} (SylvaRoad behaviour).}
 \value{
 A \code{foretaccess_reseau} object: \code{lignes} (an \code{sf} LINESTRING of the
 created roads, one feature per road, with creation \code{ordre}, \code{cout} and
-planimetric \code{longueur} in m), \code{reseau} (a \code{SpatRaster} of the whole
+planimetric \code{longueur} in m -- these follow the grid step by step; use
+\code{\link[=contracter_lignes]{contracter_lignes()}} for a tidy vector rendering), \code{reseau} (a \code{SpatRaster}
+of the whole
 network, for Lot 17), \code{desserte} (the existing network, kept for the Lot 17
 graph), \code{cout} (total), \code{connexe} and \code{raccorde} (two connectivity flags,
 see \emph{Connectivity} below), \code{desservies} (a logical, one per parcel, CA-16.1)
@@ -122,5 +124,26 @@ the box). The window shrinks the search only when the two endpoints are close:
 Steiner (\code{mode = "steiner"}) traces parcel-to-parcel across the whole extent, so
 its windows are large and it stays roughly \code{N^2} (measured ~650 s for 4 parcels,
 down from ~860 s) -- still reserved for small parcel counts.
+
+\strong{Validity domain of the speed-up (read this before expecting seconds).} The
+"tens of seconds" figure is \strong{conditional}, and the two levers compound:
+\itemize{
+\item \strong{\code{skidding_m} is the dominant one.} At \code{skidding_m = 0} \emph{every} parcel cell
+off a road spawns its own A\* trace -- hundreds per hectare-scale parcel. That
+count, not the per-trace cost, then dominates, and no windowing can offset it.
+Measured on Chastel-Nouvel (30 parcels, ~302k cells) at \code{skidding_m = 0}: the
+greedy runs in \strong{~17 min}, i.e. it does \strong{not} beat the pre-1.12 baseline --
+the 1.12 "~11.5 min -> tens of seconds" figure was obtained \emph{with a realistic}
+\code{skidding_m}, not at \code{0}. \strong{Set \code{skidding_m} to your real skidding/forwarding
+distance}; it is not optional tuning.
+\item \strong{Proximity to the existing network.} The corridor bound only shrinks the
+search when a parcel is \emph{close} to the network (small box). Parcels far from
+any road give large boxes and little gain, on top of the per-cell trace count.
+}
+
+So: \code{skidding_m} > 0 \strong{and} parcels not all far from the network -> seconds to
+tens of seconds. \code{skidding_m = 0} with scattered, distant parcels -> minutes,
+regardless of the windowing. Persist the returned network (do not recompute a
+long greedy on every view).
 }
 
