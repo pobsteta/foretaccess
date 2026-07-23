@@ -183,8 +183,9 @@ richer inputs, in order of effect:
   single biggest cut on a real network;
 
 - a **measured width** (`largeur` / `largeur_de_chaussee`, or
-  LiDAR-derived, see `acquire_desserte_lidar()` roadmap) – turns
-  criterion 1 into a real truck-access filter;
+  LiDAR-derived, see
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  roadmap) – turns criterion 1 into a real truck-access filter;
 
 - a tighter **`espacement_min_m`** and lower **`pente_max_pct`**.
 

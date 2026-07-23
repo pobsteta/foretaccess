@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,20 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.14.0" id="foretaccess-1140-2026-07-22">foretaccess 1.14.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1140-2026-07-22"></a></h2>
+<div class="section level3">
+<h3 id="nouveautés-1-14-0">Nouveautés<a class="anchor" aria-label="anchor" href="#nouveaut%C3%A9s-1-14-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> — desserte enrichie/corrigée par LiDAR aérien (chantier 4 du brief, NDP 1, spec 020).</strong> Enveloppe fine d’<strong>ALSroads</strong> (<code>measure_road</code>) : depuis un nuage LiDAR HD, recalcule une <strong>géométrie recalée</strong> et, par tronçon, la <strong>largeur carrossable</strong> (<code>largeur_carrossable_m</code>), la largeur de plateforme, la pente en long et l’<strong>état en 4 classes</strong> (<code>etat_classe</code>). La largeur carrossable est le discriminant d’accès camion qui manque à [places_depot()] sur la BD TOPO brute (sans largeur mesurée, son critère d’accès ne rejette rien). Sortie au format d’[acquire_desserte()] + ces colonnes, directement consommable par <code><a href="../reference/places_depot.html">places_depot()</a></code>/<code><a href="../reference/preprocess.html">preprocess()</a></code>.
+<ul><li>
+<strong>Optionnel, expérimental.</strong> lidR + ALSroads sont accédés <strong>dynamiquement</strong> (POC hors CRAN, non déclarés en dépendance) : sans eux, <strong>repli NDP 0</strong> — la desserte est rendue inchangée, colonnes LiDAR à <code>NA</code>, jamais d’échec.</li>
+<li>
+<strong>Réserve de calibrage.</strong> ALSroads est calibré Québec (MFFP), <strong>pas encore validé sur donnée française</strong> (spec 020, Phase B) : largeurs expérimentales jusqu’à validation locale.</li>
+<li>Le chemin NDP 1 a été <strong>exécuté de bout en bout</strong> sur les données d’exemple d’ALSroads (mapping des colonnes vérifié sur la sortie réelle). Voir <code>specs/020-desserte-lidar-alsroads.md</code>.</li>
+</ul></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.13.0" id="foretaccess-1130-2026-07-22">foretaccess 1.13.0 (2026-07-22)<a class="anchor" aria-label="anchor" href="#foretaccess-1130-2026-07-22"></a></h2>
 <div class="section level3">

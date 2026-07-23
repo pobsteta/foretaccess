@@ -262,8 +262,15 @@
   tractables (multistart n_start=16 → 10,5 s), bornes documentées ;
   **crash latent de Steiner corrigé** (garde `came_from` dans
   `basic_calc`, jamais vu car Steiner jamais exécuté à l’échelle).
-  Steiner tourne mais reste O(N²). Reste : borner `solve` (Steiner
-  rapide, user-facing), chantiers 4 (LiDAR) et 5.
+  Steiner tourne mais reste O(N²).
+- **`v1.14.0` posée** (2026-07-22) : **chantier 4** —
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  (ALSroads, NDP 1, spec 020). Enveloppe fine, lidR/ALSroads dynamiques
+  (repli NDP 0 testé), chemin NDP 1 **validé bout-en-bout** sur les
+  données d’exemple d’ALSroads (colonnes réelles : `DRIVABLEWIDTH`,
+  `CLASS`=état 4 classes). Reste Phase B (validation française). **Brief
+  desserte : 5 chantiers traités** (1, 2, 3 livrés ; 4 Phase A ; 5
+  résolu de fait). Reste optionnel : borner `solve` (Steiner rapide).
 - **`v1.7.0` posée** (2026-07-22) :
   **[`volume_depuis_p1()`](https://pobsteta.github.io/foretaccess/reference/volume_depuis_p1.md)**,
   pont entre l’indicateur **P1** de Nemeton (volume sur pied m³/ha,
@@ -528,6 +535,36 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-07-22 — `v1.14.0` : chantier 4 — desserte corrigée LiDAR (ALSroads, NDP 1)
+
+Dernier chantier du brief desserte. Étude de faisabilité (`specs/020`)
+**puis** Phase A implémentée.
+
+**Faisabilité** : l’infra LiDAR existe déjà (nemetonshiny télécharge le
+nuage `product="nuage"`, nemeton Suggests lidR + lasR, lit du COPC).
+ALSroads = `measure_road(ctg, centerline, dtm)` → géométrie recalée +
+largeurs + état. Risques : calibrage **Québec → France non validé**, POC
+expérimental non maintenu.
+
+**Phase A livrée** :
+`acquire_desserte_lidar(desserte, las_source, mnt, ...)`
+(`R/desserte_lidar.R`), enveloppe fine. lidR + ALSroads accédés
+**dynamiquement** (`getExportedValue`), **non déclarés** en Suggests
+(POC hors CRAN, dép lourde → CI protégée) ; **repli NDP 0** (desserte
+inchangée, colonnes NA) = cœur testé.
+
+**Validation anti-« plausible-mais-faux »** : ALSroads étant installé
+localement, le chemin NDP 1 a été **exécuté de bout en bout** sur les
+données d’exemple du paquet. Correction clé trouvée ainsi : la sortie
+réelle n’a **pas** de champ `STATE` (mon 1er jet), l’état est dans
+**`CLASS`** (« state in four classes »). Colonnes réelles vérifiées :
+`ROADWIDTH`, `DRIVABLEWIDTH`, `SCORE`, `CLASS`. Sortie mesurée : largeur
+carrossable 8,2 m, plateforme 8,5 m, etat_classe 1, score 100, géométrie
+recalée. Mapping figé sur cette vérité terrain.
+
+**Reste** : Phase B (valider les largeurs sur un site français, CA-20.5)
+avant usage de production ; la fonction est « expérimentale » d’ici là.
 
 ### 2026-07-22 — `v1.13.0` : chantier 1 volet 2 — bornes optimiseurs + crash Steiner corrigé
 

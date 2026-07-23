@@ -1,5 +1,32 @@
 # Changelog
 
+## foretaccess 1.14.0 (2026-07-22)
+
+### Nouveautés
+
+- **[`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  — desserte enrichie/corrigée par LiDAR aérien (chantier 4 du brief,
+  NDP 1, spec 020).** Enveloppe fine d’**ALSroads** (`measure_road`) :
+  depuis un nuage LiDAR HD, recalcule une **géométrie recalée** et, par
+  tronçon, la **largeur carrossable** (`largeur_carrossable_m`), la
+  largeur de plateforme, la pente en long et l’**état en 4 classes**
+  (`etat_classe`). La largeur carrossable est le discriminant d’accès
+  camion qui manque à \[places_depot()\] sur la BD TOPO brute (sans
+  largeur mesurée, son critère d’accès ne rejette rien). Sortie au
+  format d’\[acquire_desserte()\] + ces colonnes, directement
+  consommable par
+  [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)/[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
+  - **Optionnel, expérimental.** lidR + ALSroads sont accédés
+    **dynamiquement** (POC hors CRAN, non déclarés en dépendance) : sans
+    eux, **repli NDP 0** — la desserte est rendue inchangée, colonnes
+    LiDAR à `NA`, jamais d’échec.
+  - **Réserve de calibrage.** ALSroads est calibré Québec (MFFP), **pas
+    encore validé sur donnée française** (spec 020, Phase B) : largeurs
+    expérimentales jusqu’à validation locale.
+  - Le chemin NDP 1 a été **exécuté de bout en bout** sur les données
+    d’exemple d’ALSroads (mapping des colonnes vérifié sur la sortie
+    réelle). Voir `specs/020-desserte-lidar-alsroads.md`.
+
 ## foretaccess 1.13.0 (2026-07-22)
 
 ### Corrections

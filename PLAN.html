@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,7 +108,9 @@
 <li>
 <strong><code>v1.12.0</code> posée</strong> (2026-07-22) : <strong>perf du glouton de desserte</strong> (chantier 1). A* borné au couloir de raccordement (<code>solver.rs</code>) : <strong>200 s → 20 ms/tracé</strong>, bit-identique ; <code>skidding_m</code> documenté comme le levier du nombre de tracés (6 parcelles en 7,7 s réglé sur le débardage). Glouton <strong>~11,5 min → dizaines de s</strong>.</li>
 <li>
-<strong><code>v1.13.0</code> posée</strong> (2026-07-22) : <strong>chantier 1 volet 2</strong>. Optimiseurs tractables (multistart n_start=16 → 10,5 s), bornes documentées ; <strong>crash latent de Steiner corrigé</strong> (garde <code>came_from</code> dans <code>basic_calc</code>, jamais vu car Steiner jamais exécuté à l’échelle). Steiner tourne mais reste O(N²). Reste : borner <code>solve</code> (Steiner rapide, user-facing), chantiers 4 (LiDAR) et 5.</li>
+<strong><code>v1.13.0</code> posée</strong> (2026-07-22) : <strong>chantier 1 volet 2</strong>. Optimiseurs tractables (multistart n_start=16 → 10,5 s), bornes documentées ; <strong>crash latent de Steiner corrigé</strong> (garde <code>came_from</code> dans <code>basic_calc</code>, jamais vu car Steiner jamais exécuté à l’échelle). Steiner tourne mais reste O(N²).</li>
+<li>
+<strong><code>v1.14.0</code> posée</strong> (2026-07-22) : <strong>chantier 4</strong> — <code><a href="reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (ALSroads, NDP 1, spec 020). Enveloppe fine, lidR/ALSroads dynamiques (repli NDP 0 testé), chemin NDP 1 <strong>validé bout-en-bout</strong> sur les données d’exemple d’ALSroads (colonnes réelles : <code>DRIVABLEWIDTH</code>, <code>CLASS</code>=état 4 classes). Reste Phase B (validation française). <strong>Brief desserte : 5 chantiers traités</strong> (1, 2, 3 livrés ; 4 Phase A ; 5 résolu de fait). Reste optionnel : borner <code>solve</code> (Steiner rapide).</li>
 <li>
 <strong><code>v1.7.0</code> posée</strong> (2026-07-22) : <strong><code><a href="reference/volume_depuis_p1.html">volume_depuis_p1()</a></code></strong>, pont entre l’indicateur <strong>P1</strong> de Nemeton (volume sur pied m³/ha, inventaire ou MNH LiDAR) et le raster <code>pre$volume</code> que somment le câble et la sélection (→ volume de ligne, IPC). Rasterise un <code>sf</code> d’unités sur la grille du MNT ; <strong>aucune dépendance à Nemeton</strong> (consomme la sortie déjà calculée) → règle stricte 1 respectée, aucune écriture dans le repo frère (règle 6).</li>
 <li>
@@ -340,6 +342,14 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-22--v1140--chantier-4--desserte-corrigée-lidar-alsroads-ndp-1">2026-07-22 — <code>v1.14.0</code> : chantier 4 — desserte corrigée LiDAR (ALSroads, NDP 1)<a class="anchor" aria-label="anchor" href="#id_2026-07-22--v1140--chantier-4--desserte-corrig%C3%A9e-lidar-alsroads-ndp-1"></a></h3>
+<p>Dernier chantier du brief desserte. Étude de faisabilité (<code>specs/020</code>) <strong>puis</strong> Phase A implémentée.</p>
+<p><strong>Faisabilité</strong> : l’infra LiDAR existe déjà (nemetonshiny télécharge le nuage <code>product="nuage"</code>, nemeton Suggests lidR + lasR, lit du COPC). ALSroads = <code>measure_road(ctg, centerline, dtm)</code> → géométrie recalée + largeurs + état. Risques : calibrage <strong>Québec → France non validé</strong>, POC expérimental non maintenu.</p>
+<p><strong>Phase A livrée</strong> : <code>acquire_desserte_lidar(desserte, las_source, mnt, ...)</code> (<code>R/desserte_lidar.R</code>), enveloppe fine. lidR + ALSroads accédés <strong>dynamiquement</strong> (<code>getExportedValue</code>), <strong>non déclarés</strong> en Suggests (POC hors CRAN, dép lourde → CI protégée) ; <strong>repli NDP 0</strong> (desserte inchangée, colonnes NA) = cœur testé.</p>
+<p><strong>Validation anti-« plausible-mais-faux »</strong> : ALSroads étant installé localement, le chemin NDP 1 a été <strong>exécuté de bout en bout</strong> sur les données d’exemple du paquet. Correction clé trouvée ainsi : la sortie réelle n’a <strong>pas</strong> de champ <code>STATE</code> (mon 1er jet), l’état est dans <strong><code>CLASS</code></strong> (« state in four classes »). Colonnes réelles vérifiées : <code>ROADWIDTH</code>, <code>DRIVABLEWIDTH</code>, <code>SCORE</code>, <code>CLASS</code>. Sortie mesurée : largeur carrossable 8,2 m, plateforme 8,5 m, etat_classe 1, score 100, géométrie recalée. Mapping figé sur cette vérité terrain.</p>
+<p><strong>Reste</strong> : Phase B (valider les largeurs sur un site français, CA-20.5) avant usage de production ; la fonction est « expérimentale » d’ici là.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-22--v1130--chantier-1-volet-2--bornes-optimiseurs--crash-steiner-corrigé">2026-07-22 — <code>v1.13.0</code> : chantier 1 volet 2 — bornes optimiseurs + crash Steiner corrigé<a class="anchor" aria-label="anchor" href="#id_2026-07-22--v1130--chantier-1-volet-2--bornes-optimiseurs--crash-steiner-corrig%C3%A9"></a></h3>
 <p>Suite du chantier 1. Benchmark sur Chastel-Nouvel (après le bornage du glouton en 1.12.0) : - <strong>Optimiseurs tractables</strong> : glouton 8 parcelles 7,2 s ; multistart <strong>n_start=4 → 7,0 s</strong>, <strong>n_start=16 → 10,5 s</strong> (table réutilisée + <code>rayon</code> parallèle). Défauts exposables : n_start 8-32, n_iter 100-300, sans cap dur. Section <em>Performance</em> de <code>optimiser_reseau</code>. - <strong>Steiner : crash latent trouvé et corrigé.</strong> En exécutant enfin Steiner à l’échelle réelle (jamais fait — brief : « estimé &gt; 5 h »), plantage <code>index out of bounds ... usize::MAX</code> : le lookback des épingles / anti-croisement de <code>basic_calc</code> remontait <code>came_from</code> jusqu’à la source (<code>-1</code>) et indexait hors bornes. Gardes <code>came_from &gt;= 0</code> ajoutés (<code>solver.rs</code>) — près de la source la double-épingle et l’anti-croisement s’arrêtent proprement. Bit-identique ailleurs (suite verte), test de non-régression ajouté. Steiner tourne (4 parcelles = 859 s) mais reste <strong>O(N²)</strong> (tracés parcelle↔︎parcelle via <code>solve</code>, non borné) → réservé aux petits N.</p>
