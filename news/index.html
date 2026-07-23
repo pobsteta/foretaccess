@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.16.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.17.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,21 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.17.0" id="foretaccess-1170-2026-07-23">foretaccess 1.17.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1170-2026-07-23"></a></h2>
+<div class="section level3">
+<h3 id="qualification-de-la-desserte-par-lidar-spec-lot--étape-1-17-0">Qualification de la desserte par LiDAR (spec 021, Lot 19 — étape 1)<a class="anchor" aria-label="anchor" href="#qualification-de-la-desserte-par-lidar-spec-lot--%C3%A9tape-1-17-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code></strong> — transforme une desserte <strong>déclarée</strong> (BD TOPO, dont les erreurs de position pluri-métriques et la largeur vide se propagent aux quatre moteurs) en desserte <strong>qualifiée</strong> : géométrie <strong>relocalisée</strong> sur l’axe détecté par ALSroads et <strong><code>largeur</code> renseignée</strong> depuis la largeur carrossable mesurée. Enveloppe déterministe sur [acquire_desserte_lidar()] (spec 020) ; sortie conforme au contrat d’entrée de <code><a href="../reference/preprocess.html">preprocess()</a></code> → <strong>moteurs et non-régression Sylvaccess inchangés</strong>. Repli <strong>NDP 0</strong> gracieux (desserte rendue telle quelle) sans lidR/ ALSroads, testé en CI.</li>
+<li>La <strong>qualification d’existence</strong> (retrait des tronçons « disparus », option <code>retirer_disparues</code>) est <strong>désactivée par défaut</strong> : sur la donnée française les classes d’état les plus basses correspondent à des pistes <strong>dégradées mais réelles</strong>, la sémantique n’étant pas encore recoupée à une vérité terrain (rôle du projet DESSOPT). Un tronçon non mesuré n’est jamais retiré.</li>
+<li>
+<strong>Étape 1 seulement.</strong> La détection IA des pistes absentes de la BD TOPO (CNN) et le portage des canaux de micro-relief RVT en Rust restent des <strong>jalons de recherche</strong> (spec 021 §5–7, J3–J5), conditionnés à la vérité terrain DESSOPT.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-1-17-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-1-17-0"></a></h3>
+<ul><li>Statuts des specs 014–018 (épic conception de desserte) rafraîchis de « proposé » à <strong>« implémenté »</strong> (fonctions livrées et testées).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.16.0" id="foretaccess-1160-2026-07-23">foretaccess 1.16.0 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1160-2026-07-23"></a></h2>
 <div class="section level3">

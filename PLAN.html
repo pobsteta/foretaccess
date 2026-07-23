@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.16.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.17.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,12 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-23--v1170--qualifier_desserte-spec-021-lot-19-étape-1">2026-07-23 — <code>v1.17.0</code> : <code>qualifier_desserte()</code> (spec 021 Lot 19, étape 1)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1170--qualifier_desserte-spec-021-lot-19-%C3%A9tape-1"></a></h3>
+<p><strong>Correction géométrique déterministe de la desserte.</strong> La desserte n’est jamais calculée : elle est <strong>déclarée</strong> (BD TOPO), et ses erreurs de position (pluri-métriques au GPS/tablette) + largeur vide se propagent aux 4 moteurs sans être vues par la non-régression (qui valide la fidélité à Sylvaccess, pas la justesse terrain). <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> = enveloppe déterministe sur <code><a href="reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (spec 020) : géométrie <strong>relocalisée</strong> sur l’axe ALSroads + <strong><code>largeur</code> renseignée</strong> depuis la largeur carrossable mesurée. Sortie <strong>conforme au contrat de <code><a href="reference/preprocess.html">preprocess()</a></code></strong> → moteurs et non-régression <strong>inchangés</strong>. Repli NDP 0 gracieux testé en CI. Retrait des « disparus » en <strong>option OFF par défaut</strong> (sur données FR, classes basses = pistes dégradées réelles, sémantique non recoupée à une vérité terrain — rôle DESSOPT).</p>
+<p><strong>Scope honnête de la spec 021.</strong> Seule l’<strong>étape 1</strong> est livrée (la spec la chiffre à « ~80 % du problème d’intrant réglé »). Les <strong>étapes 2+</strong> (portage RVT en Rust J3, CNN de détection des pistes absentes J4, vectorisation topologique, validation DESSOPT J5) restent des <strong>jalons de recherche</strong> : ils exigent la vérité terrain DESSOPT (non publique) et des arbitrages amont (contacts §9). <strong>Portage RVT en Rust démarré à part</strong> (autonome, testable contre RVT_py, sans dépendance DESSOPT).</p>
+<p><strong>Doc.</strong> Statuts specs 014–018 (épic desserte) rafraîchis « proposé » → « implémenté ».</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-23--v1160--chantier-4-phase-b-renversée-en-positif-mnt--1-m">2026-07-23 — <code>v1.16.0</code> : chantier 4 Phase B <strong>renversée en POSITIF</strong> (MNT ≥ 1 m)<a class="anchor" aria-label="anchor" href="#id_2026-07-23--v1160--chantier-4-phase-b-renvers%C3%A9e-en-positif-mnt--1-m"></a></h3>
 <p><strong>Le 0/6 de la v1.15.0 était un FAUX NÉGATIF.</strong> Piste donnée par l’utilisateur : le guide utilisateur d’ALSroads (<code>ilythiamorley.github.io/ALSroads_Guide</code>) exige un <strong>MNT « at least 1 m »</strong> — ALSroads construit ses profils de détection de bord à <code>profile_resolution = 0.5 m</code>. Or je passais la <strong>grille d’accessibilité à 5 m</strong>, 10× trop grossière → largeurs <code>NA</code>. Ce n’était ni la donnée ni le calibrage Québec, c’était <strong>ma résolution de MNT</strong>. Rejoué avec un MNT <strong>1 m</strong> dérivé des points sol (classe ASPRS 2) de la dalle (<code>lidR::rasterize_terrain(tin())</code>) + nuage décimé à ~10 pts/m² : <strong>22/22 pistes mesurées</strong> (carrossable 1,1–8,1 m, classes 1–4). Réserve « calibrage Québec → France » <strong>levée</strong>, verdict spec 020 <strong>NÉGATIF → POSITIF</strong>, GO expérimental.</p>

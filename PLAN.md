@@ -538,6 +538,36 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-23 — `v1.17.0` : `qualifier_desserte()` (spec 021 Lot 19, étape 1)
+
+**Correction géométrique déterministe de la desserte.** La desserte
+n’est jamais calculée : elle est **déclarée** (BD TOPO), et ses erreurs
+de position (pluri-métriques au GPS/tablette) + largeur vide se
+propagent aux 4 moteurs sans être vues par la non-régression (qui valide
+la fidélité à Sylvaccess, pas la justesse terrain).
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+= enveloppe déterministe sur
+[`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+(spec 020) : géométrie **relocalisée** sur l’axe ALSroads + **`largeur`
+renseignée** depuis la largeur carrossable mesurée. Sortie **conforme au
+contrat de
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)**
+→ moteurs et non-régression **inchangés**. Repli NDP 0 gracieux testé en
+CI. Retrait des « disparus » en **option OFF par défaut** (sur données
+FR, classes basses = pistes dégradées réelles, sémantique non recoupée à
+une vérité terrain — rôle DESSOPT).
+
+**Scope honnête de la spec 021.** Seule l’**étape 1** est livrée (la
+spec la chiffre à « ~80 % du problème d’intrant réglé »). Les **étapes
+2+** (portage RVT en Rust J3, CNN de détection des pistes absentes J4,
+vectorisation topologique, validation DESSOPT J5) restent des **jalons
+de recherche** : ils exigent la vérité terrain DESSOPT (non publique) et
+des arbitrages amont (contacts §9). **Portage RVT en Rust démarré à
+part** (autonome, testable contre RVT_py, sans dépendance DESSOPT).
+
+**Doc.** Statuts specs 014–018 (épic desserte) rafraîchis « proposé » →
+« implémenté ».
+
 ### 2026-07-23 — `v1.16.0` : chantier 4 Phase B **renversée en POSITIF** (MNT ≥ 1 m)
 
 **Le 0/6 de la v1.15.0 était un FAUX NÉGATIF.** Piste donnée par

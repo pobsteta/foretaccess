@@ -1,5 +1,37 @@
 # Changelog
 
+## foretaccess 1.17.0 (2026-07-23)
+
+### Qualification de la desserte par LiDAR (spec 021, Lot 19 — étape 1)
+
+- **[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)**
+  — transforme une desserte **déclarée** (BD TOPO, dont les erreurs de
+  position pluri-métriques et la largeur vide se propagent aux quatre
+  moteurs) en desserte **qualifiée** : géométrie **relocalisée** sur
+  l’axe détecté par ALSroads et **`largeur` renseignée** depuis la
+  largeur carrossable mesurée. Enveloppe déterministe sur
+  \[acquire_desserte_lidar()\] (spec 020) ; sortie conforme au contrat
+  d’entrée de
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  → **moteurs et non-régression Sylvaccess inchangés**. Repli **NDP 0**
+  gracieux (desserte rendue telle quelle) sans lidR/ ALSroads, testé en
+  CI.
+- La **qualification d’existence** (retrait des tronçons « disparus »,
+  option `retirer_disparues`) est **désactivée par défaut** : sur la
+  donnée française les classes d’état les plus basses correspondent à
+  des pistes **dégradées mais réelles**, la sémantique n’étant pas
+  encore recoupée à une vérité terrain (rôle du projet DESSOPT). Un
+  tronçon non mesuré n’est jamais retiré.
+- **Étape 1 seulement.** La détection IA des pistes absentes de la BD
+  TOPO (CNN) et le portage des canaux de micro-relief RVT en Rust
+  restent des **jalons de recherche** (spec 021 §5–7, J3–J5),
+  conditionnés à la vérité terrain DESSOPT.
+
+### Documentation
+
+- Statuts des specs 014–018 (épic conception de desserte) rafraîchis de
+  « proposé » à **« implémenté »** (fonctions livrées et testées).
+
 ## foretaccess 1.16.0 (2026-07-23)
 
 ### Desserte LiDAR (spec 020, chantier 4) — Phase B validée sur donnée française
