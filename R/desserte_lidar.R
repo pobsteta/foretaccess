@@ -68,12 +68,15 @@
 #' **Geometry and coverage.** ALSroads requires a **single `LINESTRING`** centerline
 #' and errors on the `MULTILINESTRING` of BD TOPO `troncon_de_route`; each tronçon
 #' is therefore recast to one `LINESTRING` (contiguous parts merged, else the
-#' longest part kept). A full project desserte (hundreds of km) usually overruns
-#' the supplied tiles: tronçons **outside tile coverage**, or **shorter than
-#' `long_min_m`**, return `NA` -- expect **most of a full desserte to be `NA`** and
-#' only the long tronçons lying under a tile to carry a width. The `bilan`
-#' attribute of the result breaks the outcome down (measured / too short /
-#' geometry / not measured).
+#' longest part kept). Tronçons **outside the tiles' footprint** are dropped to
+#' `NA` **before** any `measure_road` call: this is not just an optimisation but a
+#' **safety guard** -- calling ALSroads on the thousands of point-less tronçons of a
+#' full project desserte (hundreds of km for a handful of tiles) makes lidR/ALSroads
+#' **segfault** (an uncatchable C++ crash). Tronçons **shorter than `long_min_m`**
+#' are likewise skipped. Expect **most of a full desserte to be `NA`** and only the
+#' long tronçons lying under a tile to carry a width. The `bilan` attribute of the
+#' result breaks the outcome down: `mesure`, `trop_court`, `hors_couverture`,
+#' `geometrie`, `echec`, `total`.
 #'
 #' @param desserte Road network: path to a vector file or an `sf` of lines (the
 #'   output of [acquire_desserte()]).
@@ -155,9 +158,9 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   cli::cli_inform(c(
     "v" = "Desserte enrichie LiDAR ({.strong NDP 1}) : {b[['mesure']]}/{b[['total']]}
            troncon{?s} mesure{?s}.",
-    "i" = "{b[['trop_court']]} trop court{?s} (< {long_min_m} m), {b[['echec']]} non
-           mesure{?s} (hors couverture des dalles ou echec ALSroads),
-           {b[['geometrie']]} geometrie inexploitable.",
+    "i" = "{b[['hors_couverture']]} hors couverture des dalles (non mesures, sans
+           appel ALSroads), {b[['trop_court']]} trop court{?s} (< {long_min_m} m),
+           {b[['echec']]} echec{?s} ALSroads, {b[['geometrie']]} geometrie inexploitable.",
     "i" = "Une desserte de projet complete depasse souvent l'emprise des dalles
            fournies : seuls les troncons {.strong longs et sous une dalle} se
            mesurent. Largeurs a recouper avec une orthophoto sur site sensible."
@@ -229,12 +232,25 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   set_filter(ctg, value = sprintf("-keep_random_fraction %.3f", cible / dens))
 }
 
+# Emprise couverte par le nuage : union des empreintes des dalles du catalogue
+# (repli sur la bbox globale). Sert a NE PAS appeler measure_road hors couverture.
+.couverture_dalles <- function(ctg) {
+  g <- try(sf::st_geometry(ctg), silent = TRUE) # empreintes par dalle (lidR)
+  if (inherits(g, "try-error") || length(g) == 0L) {
+    g <- sf::st_as_sfc(sf::st_bbox(ctg)) # repli : emprise globale du catalogue
+  }
+  sf::st_make_valid(sf::st_union(g))
+}
+
 # Mesure ALSroads tronçon par tronçon, avec cache par identifiant. `measure_road`
 # traite UNE route a la fois (cf. spec 020 sec.2) ; on boucle et on assemble.
 # Chaque troncon est d'abord ramene a une LINESTRING unique (BD TOPO =
-# MULTILINESTRING), et les troncons plus courts que `long_min_m` sont sautes
-# (mesure impossible / instable sous le buffer d'ALSroads) sans appeler la mesure.
-# L'attribut `bilan` decompose l'issue (mesure / trop court / geometrie / echec).
+# MULTILINESTRING), les troncons HORS COUVERTURE des dalles ou plus courts que
+# `long_min_m` sont sautes SANS appeler la mesure. Le filtre de couverture est
+# VITAL : sur une desserte de projet (806 km) pour quelques dalles, appeler
+# measure_road sur les milliers de troncons sans points fait segfaulter lidR/
+# ALSroads (crash C++ non rattrapable) -- cf. brief segfault. L'attribut `bilan`
+# decompose l'issue (mesure / trop court / hors couverture / geometrie / echec).
 .desserte_lidar_mesurer <- function(des, ctg, dtm_fin, mnt, cache_dir,
                                     long_min_m = 40) {
   measure_road <- getExportedValue(.PKG_ALSROADS, "measure_road")
@@ -242,10 +258,17 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   cache_f <- file.path(cache_dir, "desserte_lidar.rds")
   cache <- if (file.exists(cache_f)) readRDS(cache_f) else list()
 
+  # Couverture des dalles, calculee UNE fois. `couverts[i]` = le troncon i
+  # touche-t-il au moins une dalle ? (test sur la geometrie d'origine, robuste au
+  # type). Hors couverture -> NA propre, jamais de measure_road (anti-segfault).
+  couv <- tryCatch(.couverture_dalles(ctg), error = function(e) NULL)
+  couverts <- .troncons_couverts(sf::st_geometry(des), couv)
+
   n_mesure <- 0L
   n_court <- 0L
   n_geom <- 0L
   n_echec <- 0L
+  n_hors_couv <- 0L
   lignes <- vector("list", nrow(des))
   for (i in seq_len(nrow(des))) {
     road_i <- des[i, ]
@@ -253,6 +276,12 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
     if (is.null(road_l)) {
       n_geom <- n_geom + 1L
       lignes[[i]] <- .fusionner_mesure(road_i, NULL, mnt)
+      next
+    }
+    if (!isTRUE(couverts[i])) {
+      # Hors emprise des dalles : NA sans appeler measure_road (evite le segfault).
+      n_hors_couv <- n_hors_couv + 1L
+      lignes[[i]] <- .fusionner_mesure(road_l, NULL, mnt)
       next
     }
     if (as.numeric(sf::st_length(sf::st_geometry(road_l))) < long_min_m) {
@@ -275,8 +304,8 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   out <- do.call(rbind, lignes)
   attr(out, "ndp") <- 1L
   attr(out, "bilan") <- c(
-    mesure = n_mesure, trop_court = n_court, geometrie = n_geom,
-    echec = n_echec, total = nrow(des)
+    mesure = n_mesure, trop_court = n_court, hors_couverture = n_hors_couv,
+    geometrie = n_geom, echec = n_echec, total = nrow(des)
   )
   out
 }
@@ -311,6 +340,16 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, crs = 2154,
   sf::st_sf(att, geometry = geom)
 }
 # nocov end
+
+# Quels troncons touchent la couverture des dalles ? (`couv` = polygone d'union,
+# ou NULL si indeterminable -> on n'exclut rien). Hors couverture, on NE mesure PAS
+# (anti-segfault). Geometrie pure, testable sans LiDAR.
+.troncons_couverts <- function(geoms, couv) {
+  if (is.null(couv) || length(couv) == 0L) {
+    return(rep(TRUE, length(geoms)))
+  }
+  suppressWarnings(lengths(sf::st_intersects(geoms, couv)) > 0L)
+}
 
 # Ramene la geometrie d'un troncon a une LINESTRING UNIQUE. `measure_road` exige
 # une centerline LINESTRING et ERREUR sur une MULTILINESTRING ("Expecting

@@ -81,12 +81,15 @@ experimental and cross-check against an orthophoto on sensitive sites.
 \strong{Geometry and coverage.} ALSroads requires a \strong{single \code{LINESTRING}} centerline
 and errors on the \code{MULTILINESTRING} of BD TOPO \code{troncon_de_route}; each tronçon
 is therefore recast to one \code{LINESTRING} (contiguous parts merged, else the
-longest part kept). A full project desserte (hundreds of km) usually overruns
-the supplied tiles: tronçons \strong{outside tile coverage}, or \strong{shorter than
-\code{long_min_m}}, return \code{NA} -- expect \strong{most of a full desserte to be \code{NA}} and
-only the long tronçons lying under a tile to carry a width. The \code{bilan}
-attribute of the result breaks the outcome down (measured / too short /
-geometry / not measured).
+longest part kept). Tronçons \strong{outside the tiles' footprint} are dropped to
+\code{NA} \strong{before} any \code{measure_road} call: this is not just an optimisation but a
+\strong{safety guard} -- calling ALSroads on the thousands of point-less tronçons of a
+full project desserte (hundreds of km for a handful of tiles) makes lidR/ALSroads
+\strong{segfault} (an uncatchable C++ crash). Tronçons \strong{shorter than \code{long_min_m}}
+are likewise skipped. Expect \strong{most of a full desserte to be \code{NA}} and only the
+long tronçons lying under a tile to carry a width. The \code{bilan} attribute of the
+result breaks the outcome down: \code{mesure}, \code{trop_court}, \code{hors_couverture},
+\code{geometrie}, \code{echec}, \code{total}.
 }
 \examples{
 \dontrun{
