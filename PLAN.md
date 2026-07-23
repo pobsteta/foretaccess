@@ -393,6 +393,19 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-23 — `docs` (cycle dev) : contrat d'unité du volume desserte (brief nemeton spec 040)
+
+Brief `040-volume-mobilisable-desserte` (émis par la session nemeton, adressé à
+l'app nemetonshiny) : câbler `nemeton::volume_mobilisable()` dans le typage de
+desserte. **Côté foretaccess, rien à coder** — les consommateurs existent, marchent
+et sont testés (`calculer_flux` CA-17.3 conservation ; `reseau_desserte` heuristique
+`plus_gros_volume`). Le seul manque était le **piège d'unité (§3)** : `calculer_flux`
+veut un **total m³/parcelle** (réparti puis accumulé), `reseau_desserte` une
+**densité m³/ha** (rasterisée par cellule) — unités **opposées**, erreur silencieuse
+si inversées. Documenté sur les deux fonctions (roxygen, renvoi croisé + valeurs
+`unite` de nemeton) et dans `specs/017` §3. L'orchestration (2 appels de package)
+vit dans **nemetonshiny** (règle 6, non touché) : diff fourni à la session app.
+
 ### 2026-07-23 — `v1.18.0` : portage RVT en Rust (spec 021 J3, micro-relief)
 
 **Canaux de micro-relief RVT portés en Rust.** `rvt_svf_opns()` (noyau

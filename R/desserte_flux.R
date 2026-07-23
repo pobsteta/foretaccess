@@ -196,7 +196,13 @@ print.foretaccess_reseau_graphe <- function(x, ...) {
 #'
 #' @param graphe A `foretaccess_reseau_graphe` (Lot 17a).
 #' @param parcelles An `sf` POLYGON of the harvested parcels, carrying a volume.
-#' @param volume_champ Name of the parcel volume column (default `"volume"`).
+#' @param volume_champ Name of the parcel volume column (default `"volume"`). It
+#'   must hold a **total volume per parcel** (m3), *not* a density: the value is
+#'   split equally across the parcel's source points and accumulated down the
+#'   tree, so a density (m3/ha) would under-estimate the flux by roughly the
+#'   parcel area -- silently, no error. When fed from nemeton's
+#'   `volume_mobilisable()`, use `unite = "m3_total"`. This is the **opposite**
+#'   unit to [reseau_desserte()]'s `volume_champ` (a per-cell density).
 #' @param densite_sources Source points per hectare (default 5); at least one
 #'   point is seeded per parcel regardless.
 #' @return The `graphe` with a `flux` column added to `troncons` (accumulated

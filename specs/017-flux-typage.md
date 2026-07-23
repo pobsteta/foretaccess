@@ -53,7 +53,14 @@ faut d'abord vectoriser proprement le réseau. C'est du graphe simple → **R pu
 ### Entrées
 
 - `reseau` : `foretaccess_reseau` (Lot 16) — réseau créé + raster.
-- `parcelles` : `sf` POLYGON récoltées, avec **volume** (ou densité de volume).
+- `parcelles` : `sf` POLYGON récoltées, avec **volume**. **Contrat d'unité (piège
+  silencieux)** : `calculer_flux(volume_champ=)` exige un **total m³ par parcelle**
+  (la valeur est répartie sur les sources puis accumulée) — une densité m³/ha y
+  sous-estimerait le flux d'un facteur ≈ la surface, sans erreur. C'est l'unité
+  **opposée** à `reseau_desserte(volume_champ=)` (Lot 16), qui rasterise la colonne
+  par cellule et veut donc une **densité m³/ha**. Depuis `nemeton::volume_mobilisable()` :
+  `unite = "m3_total"` pour le typage, `unite = "m3_ha"` pour le glouton — ne pas
+  réutiliser la même colonne pour les deux (brief nemeton spec 040 §3).
 - `exutoires` : points de raccordement au réseau principal (déduits du Lot 16 ou fournis).
 - `densite_sources` : points/ha pour l'échantillonnage des sources.
 - `seuils_flux` : bornes de classes de type de route.
