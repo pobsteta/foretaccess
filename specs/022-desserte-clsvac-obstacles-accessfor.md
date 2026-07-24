@@ -128,26 +128,40 @@ mémoire : valider sur ColduPre/ACCESSFOR avant de conclure).
 | Voies ferrées | `BDTOPO_V3:troncon_de_voie_ferree` | 0 (aucune) |
 | Bâtis | `BDTOPO_V3:batiment` | à ajouter |
 | Routes principales / autoroutes | `BDTOPO_V3:troncon_de_route` (filtré `importance`) | déjà acquis |
-| Zonages réglementaires | `BDTOPO_V3:parc_ou_reserve` **+ INPN** | 2 obj (à filtrer) |
+| Zonages réglementaires | famille **Patrinat** (INPN/MNHN) — voir §4.2 | ✅ identifiées |
 
-`happign` est installé et wrappe ces couches (`happign::get_wfs()`) — alternative à
-l'appel `httr2` direct.
+`happign` (installé) wrappe ces couches : `happign::get_wfs(aoi, "<couche>")`.
 
-### 4.2. Filtrage des zonages (crucial)
+### 4.2. Zonages réglementaires : les couches EXACTES (famille Patrinat, via happign)
 
-`parc_ou_reserve` renvoie ici **« Parc national »** et **« Réserve de biosphère »** —
-qui **ne sont PAS** des exclusions ACCESSFOR. Le rapport ne liste que : **réserve
-intégrale** de parc national, **réserves biologiques** intégrales/dirigées, **arrêté
-de protection de biotope (APB)**, **réserves naturelles** nationales/régionales.
-→ **Filtrer par `nature`/`nature_detaillee`** ; compléter par l'**INPN espaces
-protégés** (typologie fine, `inpn.mnhn.fr/programme/espaces-proteges`, WFS
-`download_inpn_wfs` côté app). **Ne PAS exclure tout un parc national** (sur-blocage).
+La source INPN du rapport ACCESSFOR correspond à la famille **Patrinat** de la
+Géoplateforme (identifiée via `happign::get_layers_metadata("wfs")`). Correspondance
+**exclusion ACCESSFOR → couche**, et champ de filtrage (`get_wfs_attributes()`) :
+
+| Exclusion ACCESSFOR (rapport §2.3.4) | Couche happign | Filtre |
+|---|---|---|
+| Arrêté de protection de biotope | `patrinat_apb:apb` | tout |
+| Réserve naturelle nationale | `patrinat_rnn:rnn` | tout |
+| Réserve naturelle régionale | `patrinat_rnr:rnr` | tout |
+| Réserves biologiques (intégrales + dirigées) | `patrinat_rb:reserve_biologique` | tout (champ `zone` = intégrale/dirigée, les deux exclues) |
+| Réserve intégrale de parc national | `patrinat_pn:parc_national` | **`zone` == « réserve intégrale »** uniquement |
+
+⚠ **Piège à éviter** : `patrinat_pn` couvre TOUT le parc national (cœur + aire
+d'adhésion). ACCESSFOR n'exclut que la **réserve intégrale** → filtrer sur `zone`.
+Ne **jamais** exclure le parc entier (sur-blocage massif). De même, **ne PAS**
+inclure les couches Patrinat hors liste ACCESSFOR : `patrinat_pnr` (PNR),
+`patrinat_znieff1/2` (inventaire, non réglementaire), `patrinat_zps`/`sic`
+(Natura 2000), `patrinat_rncfs` (chasse), `patrinat_cen`/`cdl`.
+
+`BDTOPO_V3:parc_ou_reserve` est **insuffisant** (renvoie « Parc national » / « Réserve
+de biosphère », typologie trop grossière) — préférer Patrinat.
 
 ### 4.3. Proposé
 
 - **`acquire_obstacles_bdtopo(aoi, ...)`** (nouvelle fonction, ou variante
-  `source = "bdtopo"` d'`acquire_obstacles()`) : agrège les couches ci-dessus en un
-  `sf` d'obstacles (lignes/polygones), filtrage des zonages inclus.
+  `source = "bdtopo"` d'`acquire_obstacles()`) : agrège les obstacles BD Topo (§4.1)
+  **+ les zonages Patrinat filtrés** (§4.2, `happign::get_wfs()`) en un `sf`
+  d'obstacles (lignes/polygones).
 - Câblage : `preprocess(obstacles_complets = <obstacles>)` — le masque existe déjà
   (`obstacles_complets_mask`), rien à changer aux moteurs.
 - `acquire_inputs(sources = c(..., "obstacles"))` : brancher la source BD Topo.
@@ -201,7 +215,11 @@ protégés** (typologie fine, `inpn.mnhn.fr/programme/espaces-proteges`, WFS
 - *Cartographie de l'accessibilité des forêts. Projet ACCESSFOR* — Rapport final,
   INRAE-LESSEM + IGN, févr. 2025 (HAL `hal-04988956`). §2.2 (paramètres), §2.3.2
   (desserte CL_SVAC), §2.3.4 (obstacles/zonages).
-- WFS IGN `data.geopf.fr` : `BDTOPO_V3:{cours_d_eau, surface_hydrographique,
-  troncon_de_voie_ferree, batiment, troncon_de_route, parc_ou_reserve}`.
-- INPN espaces protégés : `inpn.mnhn.fr/programme/espaces-proteges`.
+- WFS IGN `data.geopf.fr` : obstacles `BDTOPO_V3:{cours_d_eau,
+  surface_hydrographique, troncon_de_voie_ferree, batiment, troncon_de_route}`.
+- Zonages réglementaires INPN/MNHN (famille **Patrinat**, via `happign::get_wfs()`) :
+  `patrinat_apb:apb`, `patrinat_rnn:rnn`, `patrinat_rnr:rnr`,
+  `patrinat_rb:reserve_biologique`, `patrinat_pn:parc_national` (filtré `zone`).
+  Catalogue complet via `happign::get_layers_metadata("wfs")` ; attributs via
+  `happign::get_wfs_attributes()`.
 - `happign` (wrapper R WFS/WMS Géoplateforme) — installé.
