@@ -393,6 +393,24 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-24 — `docs` : spec 022 (desserte CL_SVAC + obstacles conformes ACCESSFOR)
+
+Diagnostic de la divergence `classes_debardage()` vs la couche **ACCESSFOR** de
+l'IGN (édition 2025, `hal-04988956`), sur Chastel-Nouvel. Accord 81 % agrégé / 31 %
+9-classes, biais systématique **+1,26 bande** (nous plus loin). **Écarté, preuves à
+l'appui** : paramètres skidder **identiques** (rapport §2.2 = notre `config`), MNT
+**identique** (RGE Alti 5 m ; test 1 m→5 m négligeable, +0,11 bande). **Driver
+confirmé** : la couche desserte — `acquire_desserte()` classe **82 % du linéaire en
+piste** et **n'assigne jamais `reseau_public`** (0 km), alors que Sylvaccess/ACCESSFOR
+utilise 3 classes CL_SVAC (piste=1 / route forestière=2 / réseau public=3, terminus
+du traînage). Le traînage-piste-jusqu'à-route gonfle donc nos distances. Secondaire :
+obstacles + zonages réglementaires (rapport §2.3.4) absents de notre run (→ flips
+accessible↔inaccessible). **Sources obstacles/zonages confirmées récupérables** (WFS
+`BDTOPO_V3:{cours_d_eau, surface_hydrographique, troncon_de_voie_ferree, batiment,
+parc_ou_reserve}` + INPN ; happign dispo) — avec filtrage des zonages (ne pas exclure
+tout un parc national). **Spec 022 posée** (2 volets : desserte CL_SVAC + obstacles),
+CA-22.5 = l'accord ACCESSFOR doit remonter. Non implémenté (proposé).
+
 ### 2026-07-23 — `v1.19.1` : `qualifier_desserte()` ne segfaulte plus (pré-filtre de couverture)
 
 Brief `~/brief-foretaccess-segfault-qualifier.md` (nemetonshiny, foretaccess 1.19.0).
