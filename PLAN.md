@@ -393,6 +393,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-24 — `v1.22.0` : porteur iso-paramètre ACCESSFOR (pente descente 40 → 25)
+
+Dernière divergence de paramètre machine vs ACCESSFOR corrigée : `pente_descente_max_pct`
+du porteur passe de 40 à **25 %**. Diagnostic : le 40 venait du `def_value` de
+`dic_AllParam.json`, mais les DEUX références réelles retiennent 25 — le scénario de
+test officiel ColduPre (`Tab_Param_test.csv`, notre oracle de non-régression, qui
+utilise déjà 25 explicitement — donc la non-régression 99,72 % est INCHANGÉE) ET
+ACCESSFOR (rapport 2025 §2.2). Corrige aussi une incohérence : le roxygen documentait
+déjà 25. Divergence de dic_AllParam **assumée et justifiée en commentaire** (mémoire
+`params-sylvaccess-fait-foi`). Surchargeable. **Résultat : tous les paramètres machine
+(skidder + porteur) sont désormais identiques à ACCESSFOR.**
+
 ### 2026-07-24 — `v1.21.0` : obstacles conformes ACCESSFOR (spec 022 volet B)
 
 `acquire_obstacles_bdtopo()` : assemble la couche obstacles ACCESSFOR (rapport §2.3.4)

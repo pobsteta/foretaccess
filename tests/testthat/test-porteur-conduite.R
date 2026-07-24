@@ -47,18 +47,19 @@ test_that("le devers depend de l'azimut : nul dans le sens de la pente, max en t
 
 test_that("le sens amont/aval distingue montee et descente (CA-3.3)", {
   # Le porteur ramene le bois charge vers la route. Une cellule *plus haute* que la
-  # route -> trajet charge en DESCENTE (seuil 40 %) ; plus basse -> MONTEE (seuil 30 %).
-  # La descente est le sens PERMISSIF : c'est charge, en descente, que l'engin passe
-  # la plus forte pente. Sur un plan montant vers l'est a 35 % : est plus haut
-  # (35 < 40, passe), ouest plus bas (35 > 30, casse).
-  pre <- pre_plan(pente = 0.35)
+  # route -> trajet charge en DESCENTE (seuil 25 %) ; plus basse -> MONTEE (seuil 30 %).
+  # Iso-ACCESSFOR/ColduPre : la DESCENTE est le sens le plus CONTRAINT (25 < 30) --
+  # chargee, une descente trop raide fait glisser l'engin. Sur un plan montant vers
+  # l'est a 27 % : est plus haut = descente (27 > 25, CASSE), ouest plus bas = montee
+  # (27 < 30, passe).
+  pre <- pre_plan(pente = 0.27)
   cd <- conduire(pre, foretaccess_config(), zone_conduite(pre))
 
-  est <- dist_le_long(cd, pre, dx = 1, dy = 0) # plus haut : contrainte descente
-  ouest <- dist_le_long(cd, pre, dx = -1, dy = 0) # plus bas : contrainte montee
+  est <- dist_le_long(cd, pre, dx = 1, dy = 0) # plus haut : contrainte descente (25 %)
+  ouest <- dist_le_long(cd, pre, dx = -1, dy = 0) # plus bas : contrainte montee (30 %)
 
-  expect_true(all(!is.na(est)))
-  expect_true(all(is.na(ouest)))
+  expect_true(all(is.na(est))) # descente 27 % > 25 % -> casse
+  expect_true(all(!is.na(ouest))) # montee 27 % < 30 % -> passe
 })
 
 test_that("l'accumulateur de pente forte plafonne la conduite (CA-3.4)", {
