@@ -1,9 +1,11 @@
 # specs/022 — Desserte CL_SVAC + obstacles conformes ACCESSFOR
 
-> **Statut** : **Volet A implémenté (v1.20.0)** — `acquire_desserte(classification =
-> "clsvac")`, défaut. **Résultat mesuré** : accord 9-classes ACCESSFOR **30 % → 77 %**,
-> biais de distance **+1,26 → +0,02 bande** (essentiellement supprimé) sur
-> Chastel-Nouvel. **Volet B (obstacles/zonages) : proposé**, non implémenté.
+> **Statut** : **Volets A et B implémentés** (A v1.20.0, B v1.21.0). A —
+> `acquire_desserte(classification = "clsvac")` : accord 9-classes ACCESSFOR
+> **30 % → 77 %**, biais **+1,26 → +0,02 bande**. B — `acquire_obstacles_bdtopo()`
+> (BD Topo + Patrinat filtrés) : accord **agrégé +1,6 pt** (81,5 % → 83,1 %) sur
+> Chastel-Nouvel où les zonages sont vides ; apport plus fort sur un massif à
+> réserves.
 > **Type** : acquisition/prétraitement (amont des moteurs). Étend `specs/010`
 > (acquisition) et le prétraitement `specs/001`.
 > **Origine** : diagnostic de divergence `classes_debardage()` vs la couche
@@ -179,11 +181,12 @@ de biosphère », typologie trop grossière) — préférer Patrinat.
   en `piste` ; les grands axes (`importance ≤ 3`, autoroutes) en `reseau_public`.
 - [x] **CA-22.2** — Rétro-compat : `classification = "heuristique"` reproduit
   bit-pour-bit l'ancienne sortie. *Testé (`test-acquire-ign.R`).*
-- [ ] **CA-22.3** — `acquire_obstacles_bdtopo()` récupère cours d'eau + hydro +
+- [x] **CA-22.3** — `acquire_obstacles_bdtopo()` récupère cours d'eau + hydro +
   voies ferrées + bâtis + routes principales sur l'AOI, et les zonages réglementaires
-  **filtrés** (pas le parc national entier).
-- [ ] **CA-22.4** — `preprocess(obstacles_complets=)` consomme la couche sans erreur ;
-  le masque d'obstacles est non vide là où la donnée l'est.
+  **Patrinat filtrés** (parc national **seulement** sa réserve intégrale). *Implémenté
+  v1.21.0, testé (mock).*
+- [x] **CA-22.4** — `preprocess(obstacles_complets=)` consomme la couche sans erreur.
+  *Validé bout-en-bout sur l'AOI réelle (5 751 cellules obstacle).*
 - [x] **CA-22.5 (le juge de paix) — Volet A validé** : sur Chastel-Nouvel,
   reclassification `clsvac` seule → accord **9-classes 30,3 % → 77,1 %**, biais de
   distance **+1,26 → +0,02 bande** (nous « plus loin » : 60 % → 11 %), accord agrégé
