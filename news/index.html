@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.20.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.20.0" id="foretaccess-1200-2026-07-24">foretaccess 1.20.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1200-2026-07-24"></a></h2>
+<div class="section level3">
+<h3 id="desserte--classification-cl_svac-alignée-accessfor-spec-volet-a-1-20-0">Desserte : classification CL_SVAC alignée ACCESSFOR (spec 022 volet A)<a class="anchor" aria-label="anchor" href="#desserte--classification-cl_svac-align%C3%A9e-accessfor-spec-volet-a-1-20-0"></a></h3>
+<p>Diagnostic de la divergence <code><a href="../reference/classes_debardage.html">classes_debardage()</a></code> vs la couche <strong>ACCESSFOR</strong> de l’IGN (rapport final 2025) : paramètres skidder <strong>identiques</strong>, MNT <strong>identique</strong> (RGE Alti 5 m) — le driver était <strong>la classification de la desserte</strong>.</p>
+<ul><li>
+<strong><code>acquire_desserte(classification = "clsvac")</code></strong> (nouveau défaut) classe la BD Topo <code>troncon_de_route</code> en trois catégories façon Sylvaccess CL_SVAC : <code>piste</code> (chemins/sentiers, on y traîne), <code>route</code> (route forestière <strong>carrossable = terminus</strong> du traînage) et <code>reseau_public</code> (grands axes, barrière). L’ancienne heuristique rangeait à tort la <strong>« Route empierrée »</strong> (carrossable) en <code>piste</code>, ce qui forçait le traînage le long et <strong>gonflait la distance de débardage</strong>.</li>
+<li>
+<strong>Effet mesuré (Chastel-Nouvel)</strong> : accord 9-classes ACCESSFOR <strong>30 % → 77 %</strong>, biais de distance <strong>+1,26 → +0,02 bande</strong> (supprimé). Le débardage colle désormais à ACCESSFOR sans biais systématique.</li>
+<li>Rétro-compat : <code>classification = "heuristique"</code> reproduit bit-pour-bit l’ancienne sortie deux classes.</li>
+</ul><p>Suite (spec 022 volet B, non implémenté) : couche <strong>obstacles + zonages réglementaires</strong> conforme ACCESSFOR (BD Topo + Patrinat via happign), pour les flips accessible↔︎inaccessible résiduels.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.19.1" id="foretaccess-1191-2026-07-23">foretaccess 1.19.1 (2026-07-23)<a class="anchor" aria-label="anchor" href="#foretaccess-1191-2026-07-23"></a></h2>
 <div class="section level3">

@@ -1,5 +1,33 @@
 # Changelog
 
+## foretaccess 1.20.0 (2026-07-24)
+
+### Desserte : classification CL_SVAC alignée ACCESSFOR (spec 022 volet A)
+
+Diagnostic de la divergence
+[`classes_debardage()`](https://pobsteta.github.io/foretaccess/reference/classes_debardage.md)
+vs la couche **ACCESSFOR** de l’IGN (rapport final 2025) : paramètres
+skidder **identiques**, MNT **identique** (RGE Alti 5 m) — le driver
+était **la classification de la desserte**.
+
+- **`acquire_desserte(classification = "clsvac")`** (nouveau défaut)
+  classe la BD Topo `troncon_de_route` en trois catégories façon
+  Sylvaccess CL_SVAC : `piste` (chemins/sentiers, on y traîne), `route`
+  (route forestière **carrossable = terminus** du traînage) et
+  `reseau_public` (grands axes, barrière). L’ancienne heuristique
+  rangeait à tort la **« Route empierrée »** (carrossable) en `piste`,
+  ce qui forçait le traînage le long et **gonflait la distance de
+  débardage**.
+- **Effet mesuré (Chastel-Nouvel)** : accord 9-classes ACCESSFOR **30 %
+  → 77 %**, biais de distance **+1,26 → +0,02 bande** (supprimé). Le
+  débardage colle désormais à ACCESSFOR sans biais systématique.
+- Rétro-compat : `classification = "heuristique"` reproduit bit-pour-bit
+  l’ancienne sortie deux classes.
+
+Suite (spec 022 volet B, non implémenté) : couche **obstacles + zonages
+réglementaires** conforme ACCESSFOR (BD Topo + Patrinat via happign),
+pour les flips accessible↔︎inaccessible résiduels.
+
 ## foretaccess 1.19.1 (2026-07-23)
 
 ### `qualifier_desserte()` ne segfaulte plus sur une desserte de projet (fix bloquant)

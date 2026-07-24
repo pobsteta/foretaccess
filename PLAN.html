@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.19.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.20.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-24--v1200--desserte-cl_svac-alignée-accessfor-spec-022-volet-a">2026-07-24 — <code>v1.20.0</code> : desserte CL_SVAC alignée ACCESSFOR (spec 022 volet A)<a class="anchor" aria-label="anchor" href="#id_2026-07-24--v1200--desserte-cl_svac-align%C3%A9e-accessfor-spec-022-volet-a"></a></h3>
+<p>Implémentation du volet A de la spec 022, <strong>validé empiriquement</strong> (le juge de paix). <code>acquire_desserte(classification = "clsvac")</code> (nouveau défaut) : la BD Topo est classée en piste / route forestière (terminus) / réseau public, au lieu de l’ancienne heuristique 2-classes qui rangeait la <strong>Route empierrée carrossable en piste</strong> (→ traînage le long → distances gonflées). <strong>Résultat mesuré sur Chastel-Nouvel : accord 9-classes ACCESSFOR 30 % → 77 %, biais +1,26 → +0,02 bande</strong> (supprimé). Confirme définitivement que la classification desserte était LE driver de la divergence (params + MNT déjà prouvés identiques via le rapport ACCESSFOR 2025). Rétro-compat <code>"heuristique"</code> bit-pour-bit. Volet B (obstacles/zonages Patrinat) laissé en suite.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-24--docs--spec-022-desserte-cl_svac--obstacles-conformes-accessfor">2026-07-24 — <code>docs</code> : spec 022 (desserte CL_SVAC + obstacles conformes ACCESSFOR)<a class="anchor" aria-label="anchor" href="#id_2026-07-24--docs--spec-022-desserte-cl_svac--obstacles-conformes-accessfor"></a></h3>
 <p>Diagnostic de la divergence <code><a href="reference/classes_debardage.html">classes_debardage()</a></code> vs la couche <strong>ACCESSFOR</strong> de l’IGN (édition 2025, <code>hal-04988956</code>), sur Chastel-Nouvel. Accord 81 % agrégé / 31 % 9-classes, biais systématique <strong>+1,26 bande</strong> (nous plus loin). <strong>Écarté, preuves à l’appui</strong> : paramètres skidder <strong>identiques</strong> (rapport §2.2 = notre <code>config</code>), MNT <strong>identique</strong> (RGE Alti 5 m ; test 1 m→5 m négligeable, +0,11 bande). <strong>Driver confirmé</strong> : la couche desserte — <code><a href="reference/acquire_desserte.html">acquire_desserte()</a></code> classe <strong>82 % du linéaire en piste</strong> et <strong>n’assigne jamais <code>reseau_public</code></strong> (0 km), alors que Sylvaccess/ACCESSFOR utilise 3 classes CL_SVAC (piste=1 / route forestière=2 / réseau public=3, terminus du traînage). Le traînage-piste-jusqu’à-route gonfle donc nos distances. Secondaire : obstacles + zonages réglementaires (rapport §2.3.4) absents de notre run (→ flips accessible↔︎inaccessible). <strong>Sources obstacles/zonages confirmées récupérables</strong> (WFS <code>BDTOPO_V3:{cours_d_eau, surface_hydrographique, troncon_de_voie_ferree, batiment, parc_ou_reserve}</code> + INPN ; happign dispo) — avec filtrage des zonages (ne pas exclure tout un parc national). <strong>Spec 022 posée</strong> (2 volets : desserte CL_SVAC + obstacles), CA-22.5 = l’accord ACCESSFOR doit remonter. Non implémenté (proposé).</p>
