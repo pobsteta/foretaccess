@@ -48,22 +48,54 @@
   inter[!sf::st_is_empty(inter), , drop = FALSE]
 }
 
-# Mapping de la classe de desserte depuis l'attribut `nature` de BD TOPO
-# (troncon_de_route). Route par defaut ; piste pour les natures non carrossables
-# en dur. La classe `dfci` reste vide en phase 1 (peu distinguable dans BD TOPO,
-# a alimenter via une source dediee) -- spec 010 Q2. Comparaison en ASCII replie
-# (les valeurs BD TOPO sont accentuees ; les litteraux R restent ASCII).
-.mapper_classe_desserte <- function(x) {
+# Mapping de la classe de desserte depuis les attributs BD TOPO `troncon_de_route`.
+# Comparaison en ASCII replie (les valeurs BD TOPO sont accentuees ; litteraux R
+# ASCII). La classe `dfci` reste vide en phase 1 (spec 010 Q2), alimentee a part.
+#
+# Deux classifications :
+#  * "heuristique" (historique, bit-pour-bit) : piste si `nature` contient
+#    chemin/sentier/empierree/escalier/piste cyclable, sinon route. BUG : la
+#    "Route empierree" (carrossable, route forestiere) y tombe en PISTE, ce qui
+#    force le trainage le long et gonfle la distance de debardage.
+#  * "clsvac" (defaut, spec 022) : trois classes facon Sylvaccess CL_SVAC --
+#    piste (chemins/sentiers, on y traine), route forestiere = terminus du
+#    trainage (routes carrossables, y compris empierrees) et reseau public =
+#    grands axes (barriere : le skidder n'y va pas). Rapproche d'ACCESSFOR.
+.mapper_classe_desserte <- function(x, classification = c("clsvac", "heuristique")) {
+  classification <- match.arg(classification)
   nat <- if ("nature" %in% names(x)) as.character(x$nature) else rep(NA_character_, nrow(x))
   nat_ascii <- tolower(iconv(nat, to = "ASCII//TRANSLIT"))
-  motifs_piste <- c("chemin", "sentier", "empierree", "escalier", "piste cyclable")
-  est_piste <- Reduce(`|`, lapply(motifs_piste, function(p) {
-    r <- grepl(p, nat_ascii, fixed = TRUE)
-    r[is.na(r)] <- FALSE
-    r
-  }))
+
+  if (classification == "heuristique") {
+    motifs_piste <- c("chemin", "sentier", "empierree", "escalier", "piste cyclable")
+    est_piste <- Reduce(`|`, lapply(motifs_piste, function(p) {
+      r <- grepl(p, nat_ascii, fixed = TRUE)
+      r[is.na(r)] <- FALSE
+      r
+    }))
+    classe <- rep("route", length(nat_ascii))
+    classe[est_piste] <- "piste"
+    return(classe)
+  }
+
+  # --- CL_SVAC (defaut) ------------------------------------------------------
+  imp <- if ("importance" %in% names(x)) {
+    suppressWarnings(as.integer(as.character(x$importance)))
+  } else {
+    rep(NA_integer_, nrow(x))
+  }
+  # piste (CL_SVAC=1) : voies non carrossables camion, on y traine le bois.
+  est_piste <- grepl("chemin|sentier|escalier|piste cyclable|bac", nat_ascii)
+  est_piste[is.na(est_piste)] <- FALSE
+  # reseau public (CL_SVAC=3, barriere) : grands axes (autoroute, ou importance
+  # elevee <= 3 : nationales/departementales structurantes). Le skidder n'y va pas.
+  est_public <- grepl("autorout", nat_ascii) | (!is.na(imp) & imp <= 3L)
+  est_public[is.na(est_public)] <- FALSE
+  # Defaut : route forestiere (CL_SVAC=2) = terminus du trainage (Route empierree,
+  # Route a 1/2 chaussees d'importance 4-6).
   classe <- rep("route", length(nat_ascii))
   classe[est_piste] <- "piste"
+  classe[est_public] <- "reseau_public"
   classe
 }
 
@@ -159,13 +191,21 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
 #' Acquiert la desserte depuis BD TOPO (IGN WFS)
 #'
 #' Récupère `troncon_de_route`, reprojette, découpe sur l'AOI et dérive le champ
-#' `classe` (`route`/`piste`) attendu par [preprocess()].
+#' `classe` attendu par [preprocess()].
 #'
 #' @inheritParams acquire_mnt
+#' @param classification Comment classer la BD TOPO en desserte Sylvaccess.
+#'   `"clsvac"` (défaut, spec 022) : trois classes `piste` / `route` (forestière,
+#'   terminus du traînage) / `reseau_public` (grands axes, barrière), aligné sur
+#'   ACCESSFOR — les routes empierrées carrossables deviennent `route`, pas
+#'   `piste`. `"heuristique"` : ancien mapping deux classes `route`/`piste`
+#'   (bit-pour-bit ; la route empierrée y tombe en `piste`).
 #' @return Un objet `sf` de lignes avec un champ `classe`.
 #' @export
 acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
-                             overwrite = FALSE, country = "FR") {
+                             overwrite = FALSE, country = "FR",
+                             classification = c("clsvac", "heuristique")) {
+  classification <- match.arg(classification)
   chemin <- .chemin_cache(cache_dir, "desserte", "gpkg")
   if (file.exists(chemin) && !overwrite) {
     return(sf::st_read(chemin, quiet = TRUE))
@@ -176,7 +216,7 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   brut <- .fetch_wfs(aoi, info$typename)
   d <- .reprojeter_clip(brut, aoi, crs)
-  d$classe <- .mapper_classe_desserte(d)
+  d$classe <- .mapper_classe_desserte(d, classification)
   # On conserve la largeur BD TOPO (emprise) : critere du repli geometrique DFCI
   # (`.flag_dfci_repli`). Absente du flux -> NA (colonne quand meme presente).
   d$largeur <- .largeur_desserte(d)

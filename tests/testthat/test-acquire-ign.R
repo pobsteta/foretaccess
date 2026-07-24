@@ -3,8 +3,32 @@
 
 test_that("le mapping de classe derive route/piste depuis la nature BD TOPO", {
   d <- roads_fixture()
-  cl <- .mapper_classe_desserte(d)
+  cl <- .mapper_classe_desserte(d) # defaut clsvac
   expect_equal(cl, c("route", "piste")) # "Route a 1 chaussee" -> route ; "Chemin" -> piste
+})
+
+# Jeu couvrant les cas discriminants entre les deux classifications.
+roads_clsvac_fixture <- function() {
+  seg <- function(o) sf::st_linestring(rbind(c(700200 + o, 6600200), c(700800 + o, 6600800)))
+  sf::st_sf(
+    nature = c("Chemin", "Sentier", "Route empierrée", "Route à 1 chaussée",
+               "Type autoroutier"),
+    importance = c(5L, 6L, 5L, 4L, 2L),
+    geometry = sf::st_sfc(seg(0), seg(10), seg(20), seg(30), seg(40), crs = 2154)
+  )
+}
+
+test_that("classification CL_SVAC : la route empierree devient route (terminus), pas piste", {
+  cl <- .mapper_classe_desserte(roads_clsvac_fixture(), "clsvac")
+  # Chemin/Sentier -> piste ; Route empierree + Route a 1 chaussee -> route ;
+  # Type autoroutier (importance 2) -> reseau public (barriere).
+  expect_equal(cl, c("piste", "piste", "route", "route", "reseau_public"))
+})
+
+test_that("classification heuristique : retro-compat bit-pour-bit (empierree -> piste)", {
+  cl <- .mapper_classe_desserte(roads_clsvac_fixture(), "heuristique")
+  # L'ancien mapping range la Route empierree en PISTE (le bug corrige par clsvac).
+  expect_equal(cl, c("piste", "piste", "piste", "route", "route"))
 })
 
 test_that("acquire_desserte reprojette, decoupe et pose le champ classe", {
