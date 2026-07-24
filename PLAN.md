@@ -393,6 +393,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-24 — `v1.21.0` : obstacles conformes ACCESSFOR (spec 022 volet B)
+
+`acquire_obstacles_bdtopo()` : assemble la couche obstacles ACCESSFOR (rapport §2.3.4)
+— obstacles BD Topo (cours d'eau, hydro, voies ferrées, bâtis, routes principales) +
+zonages réglementaires INPN/Patrinat (APB, RNN, RNR, réserves biologiques, et parc
+national **seulement sa réserve intégrale** via filtre `zone`, jamais le parc entier)
+— en un `sf` pour `preprocess(obstacles_complets=)`. Lignes tamponnées. Effet mesuré
+(validé) sur Chastel-Nouvel : accord agrégé ACCESSFOR **+1,6 pt** (81,5 → 83,1 %), le
+flip dominant réduit ; ici les zonages sont vides (Lozère), l'apport viendra surtout
+d'un massif à réserves. Validé bout-en-bout (5 751 cellules obstacle) + 16 tests
+mockés. `acquire_desserte(clsvac)` (v1.20.0) + obstacles = spec 022 close.
+
 ### 2026-07-24 — `v1.20.0` : desserte CL_SVAC alignée ACCESSFOR (spec 022 volet A)
 
 Implémentation du volet A de la spec 022, **validé empiriquement** (le juge de paix).

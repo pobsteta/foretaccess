@@ -104,6 +104,7 @@ reference:
   - acquire_foret
   - acquire_cadastre
   - acquire_obstacles
+  - acquire_obstacles_bdtopo
   - acquire_dfci
   - flag_dfci
   - datasources
