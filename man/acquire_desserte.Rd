@@ -9,7 +9,8 @@ acquire_desserte(
   crs = 2154,
   cache_dir = tempdir(),
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  classification = c("clsvac", "heuristique")
 )
 }
 \arguments{
@@ -22,11 +23,18 @@ acquire_desserte(
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
 
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
+
+\item{classification}{Comment classer la BD TOPO en desserte Sylvaccess.
+\code{"clsvac"} (défaut, spec 022) : trois classes \code{piste} / \code{route} (forestière,
+terminus du traînage) / \code{reseau_public} (grands axes, barrière), aligné sur
+ACCESSFOR — les routes empierrées carrossables deviennent \code{route}, pas
+\code{piste}. \code{"heuristique"} : ancien mapping deux classes \code{route}/\code{piste}
+(bit-pour-bit ; la route empierrée y tombe en \code{piste}).}
 }
 \value{
 Un objet \code{sf} de lignes avec un champ \code{classe}.
 }
 \description{
 Récupère \code{troncon_de_route}, reprojette, découpe sur l'AOI et dérive le champ
-\code{classe} (\code{route}/\code{piste}) attendu par \code{\link[=preprocess]{preprocess()}}.
+\code{classe} attendu par \code{\link[=preprocess]{preprocess()}}.
 }

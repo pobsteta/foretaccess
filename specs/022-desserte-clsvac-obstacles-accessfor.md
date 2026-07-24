@@ -1,6 +1,9 @@
 # specs/022 — Desserte CL_SVAC + obstacles conformes ACCESSFOR
 
-> **Statut** : **proposé** — en attente de validation.
+> **Statut** : **Volet A implémenté (v1.20.0)** — `acquire_desserte(classification =
+> "clsvac")`, défaut. **Résultat mesuré** : accord 9-classes ACCESSFOR **30 % → 77 %**,
+> biais de distance **+1,26 → +0,02 bande** (essentiellement supprimé) sur
+> Chastel-Nouvel. **Volet B (obstacles/zonages) : proposé**, non implémenté.
 > **Type** : acquisition/prétraitement (amont des moteurs). Étend `specs/010`
 > (acquisition) et le prétraitement `specs/001`.
 > **Origine** : diagnostic de divergence `classes_debardage()` vs la couche
@@ -170,21 +173,23 @@ de biosphère », typologie trop grossière) — préférer Patrinat.
 
 ## 5. Critères d'acceptation
 
-- [ ] **CA-22.1** — `acquire_desserte(classification = "clsvac")` produit un champ
-  `classe` à **trois valeurs présentes** (`piste`/`route`/`reseau_public`) sur une
-  AOI où la BD Topo contient des routes principales ; `reseau_public` non vide.
-- [ ] **CA-22.2** — Rétro-compat : `classification = "heuristique"` reproduit
-  exactement l'ancienne sortie (bit-identique).
+- [x] **CA-22.1** — `acquire_desserte(classification = "clsvac")` (défaut) produit
+  `piste`/`route`/`reseau_public` selon `nature`×`importance` BD Topo. *Implémenté
+  v1.20.0* : la **Route empierrée** (carrossable) passe en `route` (terminus), plus
+  en `piste` ; les grands axes (`importance ≤ 3`, autoroutes) en `reseau_public`.
+- [x] **CA-22.2** — Rétro-compat : `classification = "heuristique"` reproduit
+  bit-pour-bit l'ancienne sortie. *Testé (`test-acquire-ign.R`).*
 - [ ] **CA-22.3** — `acquire_obstacles_bdtopo()` récupère cours d'eau + hydro +
   voies ferrées + bâtis + routes principales sur l'AOI, et les zonages réglementaires
   **filtrés** (pas le parc national entier).
 - [ ] **CA-22.4** — `preprocess(obstacles_complets=)` consomme la couche sans erreur ;
   le masque d'obstacles est non vide là où la donnée l'est.
-- [ ] **CA-22.5 (le juge de paix)** — Sur Chastel-Nouvel, l'accord vs ACCESSFOR
-  **remonte** : le Δ moyen (+1,26 bande) **diminue** et l'accord 9-classes (31 %)
-  **augmente**, après reclassification CL_SVAC (volet A) puis + obstacles (volet B).
-  Mesuré par `comparer_accessfor()` / `data-raw/accessfor_compare.R`. Documenter le
-  gain de chaque volet séparément.
+- [x] **CA-22.5 (le juge de paix) — Volet A validé** : sur Chastel-Nouvel,
+  reclassification `clsvac` seule → accord **9-classes 30,3 % → 77,1 %**, biais de
+  distance **+1,26 → +0,02 bande** (nous « plus loin » : 60 % → 11 %), accord agrégé
+  stable (~81 %). Le driver du +1,3 bande était bien la classification desserte.
+  Reste à mesurer le gain du **Volet B** (obstacles/zonages) sur les flips
+  accessible↔inaccessible résiduels.
 
 ---
 

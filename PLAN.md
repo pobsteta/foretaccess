@@ -393,6 +393,18 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-24 — `v1.20.0` : desserte CL_SVAC alignée ACCESSFOR (spec 022 volet A)
+
+Implémentation du volet A de la spec 022, **validé empiriquement** (le juge de paix).
+`acquire_desserte(classification = "clsvac")` (nouveau défaut) : la BD Topo est classée
+en piste / route forestière (terminus) / réseau public, au lieu de l'ancienne
+heuristique 2-classes qui rangeait la **Route empierrée carrossable en piste** (→
+traînage le long → distances gonflées). **Résultat mesuré sur Chastel-Nouvel : accord
+9-classes ACCESSFOR 30 % → 77 %, biais +1,26 → +0,02 bande** (supprimé). Confirme
+définitivement que la classification desserte était LE driver de la divergence (params
++ MNT déjà prouvés identiques via le rapport ACCESSFOR 2025). Rétro-compat
+`"heuristique"` bit-pour-bit. Volet B (obstacles/zonages Patrinat) laissé en suite.
+
 ### 2026-07-24 — `docs` : spec 022 (desserte CL_SVAC + obstacles conformes ACCESSFOR)
 
 Diagnostic de la divergence `classes_debardage()` vs la couche **ACCESSFOR** de
