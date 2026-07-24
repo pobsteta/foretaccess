@@ -1,5 +1,25 @@
 # Changelog
 
+## foretaccess 1.22.0 (2026-07-24)
+
+### Porteur : iso-paramètre avec ACCESSFOR (`pente_descente_max_pct` 40 → 25)
+
+- Le seul paramètre machine qui divergeait d’ACCESSFOR est aligné : la
+  **pente max en descente chargée** du porteur passe de **40 % à 25 %**.
+  C’est la valeur que retiennent les **deux références réelles** — le
+  scénario de test officiel ColduPre (`Tab_Param_test.csv`) **et** le
+  produit national ACCESSFOR (rapport final 2025 §2.2) ; le 40 n’était
+  que le `def_value` théorique de `dic_AllParam.json`, que ces deux
+  références surchargent. Corrige aussi une incohérence code/doc (le
+  roxygen documentait déjà 25). Divergence assumée de
+  `dic_AllParam.json`, justifiée en commentaire (`config$porteur`).
+- **Effet** : le porteur devient (légèrement) plus restrictif sur les
+  fortes pentes en descente, comme ACCESSFOR. Surchargeable :
+  `foretaccess_config(porteur = list(pente_descente_max_pct = 40))`
+  retrouve l’ancien comportement.
+- Avec les skidder (déjà iso) et cette correction, **tous les paramètres
+  machine sont désormais identiques à ACCESSFOR** (skidder + porteur).
+
 ## foretaccess 1.21.0 (2026-07-24)
 
 ### Obstacles conformes ACCESSFOR (spec 022 volet B)

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.21.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.22.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,16 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.22.0" id="foretaccess-1220-2026-07-24">foretaccess 1.22.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1220-2026-07-24"></a></h2>
+<div class="section level3">
+<h3 id="porteur--iso-paramètre-avec-accessfor-pente_descente_max_pct--1-22-0">Porteur : iso-paramètre avec ACCESSFOR (<code>pente_descente_max_pct</code> 40 → 25)<a class="anchor" aria-label="anchor" href="#porteur--iso-param%C3%A8tre-avec-accessfor-pente_descente_max_pct--1-22-0"></a></h3>
+<ul><li>Le seul paramètre machine qui divergeait d’ACCESSFOR est aligné : la <strong>pente max en descente chargée</strong> du porteur passe de <strong>40 % à 25 %</strong>. C’est la valeur que retiennent les <strong>deux références réelles</strong> — le scénario de test officiel ColduPre (<code>Tab_Param_test.csv</code>) <strong>et</strong> le produit national ACCESSFOR (rapport final 2025 §2.2) ; le 40 n’était que le <code>def_value</code> théorique de <code>dic_AllParam.json</code>, que ces deux références surchargent. Corrige aussi une incohérence code/doc (le roxygen documentait déjà 25). Divergence assumée de <code>dic_AllParam.json</code>, justifiée en commentaire (<code>config$porteur</code>).</li>
+<li>
+<strong>Effet</strong> : le porteur devient (légèrement) plus restrictif sur les fortes pentes en descente, comme ACCESSFOR. Surchargeable : <code>foretaccess_config(porteur = list(pente_descente_max_pct = 40))</code> retrouve l’ancien comportement.</li>
+<li>Avec les skidder (déjà iso) et cette correction, <strong>tous les paramètres machine sont désormais identiques à ACCESSFOR</strong> (skidder + porteur).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.21.0" id="foretaccess-1210-2026-07-24">foretaccess 1.21.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1210-2026-07-24"></a></h2>
 <div class="section level3">

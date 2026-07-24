@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.21.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.22.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-24--v1220--porteur-iso-paramètre-accessfor-pente-descente-40--25">2026-07-24 — <code>v1.22.0</code> : porteur iso-paramètre ACCESSFOR (pente descente 40 → 25)<a class="anchor" aria-label="anchor" href="#id_2026-07-24--v1220--porteur-iso-param%C3%A8tre-accessfor-pente-descente-40--25"></a></h3>
+<p>Dernière divergence de paramètre machine vs ACCESSFOR corrigée : <code>pente_descente_max_pct</code> du porteur passe de 40 à <strong>25 %</strong>. Diagnostic : le 40 venait du <code>def_value</code> de <code>dic_AllParam.json</code>, mais les DEUX références réelles retiennent 25 — le scénario de test officiel ColduPre (<code>Tab_Param_test.csv</code>, notre oracle de non-régression, qui utilise déjà 25 explicitement — donc la non-régression 99,72 % est INCHANGÉE) ET ACCESSFOR (rapport 2025 §2.2). Corrige aussi une incohérence : le roxygen documentait déjà 25. Divergence de dic_AllParam <strong>assumée et justifiée en commentaire</strong> (mémoire <code>params-sylvaccess-fait-foi</code>). Surchargeable. <strong>Résultat : tous les paramètres machine (skidder + porteur) sont désormais identiques à ACCESSFOR.</strong></p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-24--v1210--obstacles-conformes-accessfor-spec-022-volet-b">2026-07-24 — <code>v1.21.0</code> : obstacles conformes ACCESSFOR (spec 022 volet B)<a class="anchor" aria-label="anchor" href="#id_2026-07-24--v1210--obstacles-conformes-accessfor-spec-022-volet-b"></a></h3>
 <p><code><a href="reference/acquire_obstacles_bdtopo.html">acquire_obstacles_bdtopo()</a></code> : assemble la couche obstacles ACCESSFOR (rapport §2.3.4) — obstacles BD Topo (cours d’eau, hydro, voies ferrées, bâtis, routes principales) + zonages réglementaires INPN/Patrinat (APB, RNN, RNR, réserves biologiques, et parc national <strong>seulement sa réserve intégrale</strong> via filtre <code>zone</code>, jamais le parc entier) — en un <code>sf</code> pour <code>preprocess(obstacles_complets=)</code>. Lignes tamponnées. Effet mesuré (validé) sur Chastel-Nouvel : accord agrégé ACCESSFOR <strong>+1,6 pt</strong> (81,5 → 83,1 %), le flip dominant réduit ; ici les zonages sont vides (Lozère), l’apport viendra surtout d’un massif à réserves. Validé bout-en-bout (5 751 cellules obstacle) + 16 tests mockés. <code>acquire_desserte(clsvac)</code> (v1.20.0) + obstacles = spec 022 close.</p>
