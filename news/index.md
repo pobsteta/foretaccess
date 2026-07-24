@@ -1,5 +1,27 @@
 # Changelog
 
+## foretaccess 1.21.0 (2026-07-24)
+
+### Obstacles conformes ACCESSFOR (spec 022 volet B)
+
+- **[`acquire_obstacles_bdtopo()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles_bdtopo.md)**
+  assemble la **couche obstacles qu’utilise ACCESSFOR** (rapport 2025
+  §2.3.4) en un `sf` prêt pour `preprocess(obstacles_complets = )` :
+  obstacles **BD Topo** (cours d’eau, surfaces hydro, voies ferrées,
+  bâtis, routes principales) **plus** les exclusions réglementaires
+  **INPN/MNHN** (famille Patrinat via happign) — arrêtés de protection
+  de biotope, réserves naturelles nationales/régionales, réserves
+  biologiques, et la **réserve intégrale** des parcs nationaux (filtrée
+  sur `zone` — jamais le parc entier). Les lignes sont tamponnées, les
+  couches vides ignorées. Distincte
+  d’[`acquire_obstacles()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles.md)
+  (source OpenStreetMap).
+- **Effet mesuré (Chastel-Nouvel)** : accord agrégé ACCESSFOR **+1,6
+  pt** (81,5 % → 83,1 %), le flip dominant « nous accessible / eux
+  inaccessible » réduit. Ici les zonages réglementaires sont absents
+  (Lozère rurale) : l’apport vient des cours d’eau/bâtis et serait plus
+  fort sur un massif à réserves (Bauges, Morvan).
+
 ## foretaccess 1.20.0 (2026-07-24)
 
 ### Desserte : classification CL_SVAC alignée ACCESSFOR (spec 022 volet A)

@@ -387,6 +387,9 @@ OpenStreetMap).
   : Acquiert le parcellaire cadastral (IGN WFS, optionnel)
 - [`acquire_obstacles()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles.md)
   : Acquiert les obstacles depuis OpenStreetMap
+- [`acquire_obstacles_bdtopo()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles_bdtopo.md)
+  : Acquire ACCESSFOR-conformant obstacles from BD TOPO and INPN (spec
+  022 volet B)
 - [`acquire_dfci()`](https://pobsteta.github.io/foretaccess/reference/acquire_dfci.md)
   : Acquiert le réseau DFCI depuis OpenStreetMap
 - [`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)

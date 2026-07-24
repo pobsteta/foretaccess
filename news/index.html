@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.20.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.21.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,16 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.21.0" id="foretaccess-1210-2026-07-24">foretaccess 1.21.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1210-2026-07-24"></a></h2>
+<div class="section level3">
+<h3 id="obstacles-conformes-accessfor-spec-volet-b-1-21-0">Obstacles conformes ACCESSFOR (spec 022 volet B)<a class="anchor" aria-label="anchor" href="#obstacles-conformes-accessfor-spec-volet-b-1-21-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/acquire_obstacles_bdtopo.html">acquire_obstacles_bdtopo()</a></code></strong> assemble la <strong>couche obstacles qu’utilise ACCESSFOR</strong> (rapport 2025 §2.3.4) en un <code>sf</code> prêt pour <code>preprocess(obstacles_complets = )</code> : obstacles <strong>BD Topo</strong> (cours d’eau, surfaces hydro, voies ferrées, bâtis, routes principales) <strong>plus</strong> les exclusions réglementaires <strong>INPN/MNHN</strong> (famille Patrinat via happign) — arrêtés de protection de biotope, réserves naturelles nationales/régionales, réserves biologiques, et la <strong>réserve intégrale</strong> des parcs nationaux (filtrée sur <code>zone</code> — jamais le parc entier). Les lignes sont tamponnées, les couches vides ignorées. Distincte d’<code><a href="../reference/acquire_obstacles.html">acquire_obstacles()</a></code> (source OpenStreetMap).</li>
+<li>
+<strong>Effet mesuré (Chastel-Nouvel)</strong> : accord agrégé ACCESSFOR <strong>+1,6 pt</strong> (81,5 % → 83,1 %), le flip dominant « nous accessible / eux inaccessible » réduit. Ici les zonages réglementaires sont absents (Lozère rurale) : l’apport vient des cours d’eau/bâtis et serait plus fort sur un massif à réserves (Bauges, Morvan).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.20.0" id="foretaccess-1200-2026-07-24">foretaccess 1.20.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1200-2026-07-24"></a></h2>
 <div class="section level3">
