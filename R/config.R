@@ -101,9 +101,13 @@ foretaccess_config <- function(skidder = list(),
     porteur = list(
       pente_travers_max_pct        = 15,  # f_slope_lat
       pente_montee_max_pct         = 30,  # f_slope_up
-      # f_slope_down : le defaut v3.6 vaut 40, pas 25. Le 25 vient du *scenario* de
-      # test ColduPre (`Tab_Param_test.csv`), que nous avions pris pour le defaut.
-      pente_descente_max_pct       = 40,  # f_slope_down
+      # f_slope_down : divergence ASSUMEE de dic_AllParam.json (def_value = 40).
+      # On retient 25 car c'est la valeur que retiennent les DEUX references
+      # reelles : le scenario de test officiel ColduPre (Tab_Param_test.csv) ET le
+      # produit national ACCESSFOR (rapport final 2025 sec.2.2, "pente max en
+      # descendant les bois : 25 %"). Le 40 de dic_AllParam n'est qu'une valeur
+      # theorique que ces deux references surchargent. Iso-ACCESSFOR (spec 022).
+      pente_descente_max_pct       = 25,  # f_slope_down
       portee_grue_m                = 8,   # f_reach
       distance_pente_forte_max_m   = 300, # f_slope_dmax
       distance_hors_desserte_max_m = 200, # f_dmax_outfor
