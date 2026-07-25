@@ -340,6 +340,21 @@ dans la section Acquisition.
   : Sky-view factor and openness (RVT micro-relief channels, spec 021
   J3).
 
+## Composite VAT archéo (spec 021)
+
+Visualization for Archaeological Topography (Kokalj & Somrak 2019) :
+fusion RVT de plusieurs canaux de relief (SVF, openness+, pente,
+ombrage) en une image de micro-relief unique, épinglée au preset
+`blender_VAT.json`.
+
+- [`vat_archeo()`](https://pobsteta.github.io/foretaccess/reference/vat_archeo.md)
+  : VAT composite (Visualization for Archaeological Topography) from a
+  DEM
+- [`blend_rvt()`](https://pobsteta.github.io/foretaccess/reference/blend_rvt.md)
+  : Layered RVT blend of a channel stack into a single composite
+- [`vat_default_layers()`](https://pobsteta.github.io/foretaccess/reference/vat_default_layers.md)
+  : Default RVT layer stack for the Archaeological (VAT) blend
+
 ## Non-régression
 
 - [`compare_to_oracle()`](https://pobsteta.github.io/foretaccess/reference/compare_to_oracle.md)

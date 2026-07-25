@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.22.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.23.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,20 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.23.0" id="foretaccess-1230-2026-07-25">foretaccess 1.23.0 (2026-07-25)<a class="anchor" aria-label="anchor" href="#foretaccess-1230-2026-07-25"></a></h2>
+<div class="section level3">
+<h3 id="composite-vat-archéo--fusion-rvt-en-r-spec-1-23-0">Composite VAT archéo — fusion RVT en R (spec 021)<a class="anchor" aria-label="anchor" href="#composite-vat-arch%C3%A9o--fusion-rvt-en-r-spec-1-23-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/vat_archeo.html">vat_archeo()</a></code>, <code><a href="../reference/blend_rvt.html">blend_rvt()</a></code> et <code><a href="../reference/vat_default_layers.html">vat_default_layers()</a></code></strong> — construisent le composite <strong>VAT</strong> (Visualization for Archaeological Topography, Kokalj &amp; Somrak
+<ol start="2019" style="list-style-type: decimal"><li>à partir d’un MNT : dérivation des 4 canaux (sky-view factor et openness+ via le noyau Rust <code><a href="../reference/micro_relief.html">micro_relief()</a></code>, pente et ombrage via <code>terra</code>) puis fusion en une image de micro-relief unique. Idéal sur le MNT LiDAR HD IGN à 0,5 m.</li>
+</ol></li>
+<li>
+<strong><code><a href="../reference/blend_rvt.html">blend_rvt()</a></code></strong> porte la mécanique de fusion de la Relief Visualization Toolbox (normalisation, modes <code>normal</code>/<code>multiply</code>/<code>screen</code>/<code>overlay</code>/<code>soft_light</code>/ <code>luminosity</code>, opacité, repli haut→bas) — transcrite <strong>au mot près</strong> de <code>rvt/blend_func.py</code>, <strong>y compris</strong> la neutralisation d’opacité d’<code>overlay</code>/ <code>soft_light</code> (mutation de <code>background</code> en place), pour un rendu identique à RVT.</li>
+<li>
+<strong>Défauts épinglés</strong> au preset livré <code>settings/blender_VAT.json</code> (« VAT - Archaeological ») et <strong>validés pixel à pixel</strong> contre RVT_py via un oracle (<code>data-raw/oracle_rvt.R</code> → <code>tests/testthat/fixtures/vat_oracle.rds</code>, écart ~1,6e-7).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.22.0" id="foretaccess-1220-2026-07-24">foretaccess 1.22.0 (2026-07-24)<a class="anchor" aria-label="anchor" href="#foretaccess-1220-2026-07-24"></a></h2>
 <div class="section level3">

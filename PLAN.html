@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.22.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.23.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-25--v1230--composite-vat-archéo-fusion-rvt-en-r-spec-021">2026-07-25 — <code>v1.23.0</code> : composite VAT archéo (fusion RVT en R, spec 021)<a class="anchor" aria-label="anchor" href="#id_2026-07-25--v1230--composite-vat-arch%C3%A9o-fusion-rvt-en-r-spec-021"></a></h3>
+<p>Prolonge le portage RVT (<code>v1.18.0</code>, noyau Rust SVF/openness) côté fusion : <code><a href="reference/vat_archeo.html">vat_archeo()</a></code> assemble le <strong>VAT</strong> (Visualization for Archaeological Topography, Kokalj &amp; Somrak 2019) à partir d’un MNT — 4 canaux (SVF + openness+ via <code><a href="reference/micro_relief.html">micro_relief()</a></code>, pente + ombrage via <code>terra</code>) fusionnés par <code><a href="reference/blend_rvt.html">blend_rvt()</a></code>. La fusion (<code>R/vat_archeo.R</code>) est transcrite <strong>au mot près</strong> de <code>rvt/blend_func.py</code> : normalisation <code>value</code> (+ inversion d’échelle pour la pente, comme <code>normalize_image</code>), modes <code>normal</code>/<code>multiply</code>/<code>screen</code>/<code>overlay</code>/<code>soft_light</code>/ <code>luminosity</code>, repli bas→haut de <code>render_all_images</code>. Point non trivial révélé par la transcription : <code>blend_overlay</code>/<code>blend_soft_light</code> <strong>mutent <code>background</code> en place</strong>, ce qui <strong>neutralise l’opacité</strong> de ces couches (l’Openness+ « Overlay 50 % » du preset vaut 100 %) — reproduit tel quel pour un rendu identique à RVT. Défauts épinglés au preset livré <code>settings/blender_VAT.json</code> et validés <strong>pixel à pixel</strong> contre RVT_py (oracle <code>data-raw/oracle_rvt.R</code> → <code>fixtures/vat_oracle.rds</code>, écart ~1,6e-7). Choix R (pas Rust) : compositing élément-par-élément, aucun gain de perf, frontière R↔︎Rust minimale (règle 3). Non encore câblé dans <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> ni côté nemetonshiny : export autonome.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-24--v1220--porteur-iso-paramètre-accessfor-pente-descente-40--25">2026-07-24 — <code>v1.22.0</code> : porteur iso-paramètre ACCESSFOR (pente descente 40 → 25)<a class="anchor" aria-label="anchor" href="#id_2026-07-24--v1220--porteur-iso-param%C3%A8tre-accessfor-pente-descente-40--25"></a></h3>
 <p>Dernière divergence de paramètre machine vs ACCESSFOR corrigée : <code>pente_descente_max_pct</code> du porteur passe de 40 à <strong>25 %</strong>. Diagnostic : le 40 venait du <code>def_value</code> de <code>dic_AllParam.json</code>, mais les DEUX références réelles retiennent 25 — le scénario de test officiel ColduPre (<code>Tab_Param_test.csv</code>, notre oracle de non-régression, qui utilise déjà 25 explicitement — donc la non-régression 99,72 % est INCHANGÉE) ET ACCESSFOR (rapport 2025 §2.2). Corrige aussi une incohérence : le roxygen documentait déjà 25. Divergence de dic_AllParam <strong>assumée et justifiée en commentaire</strong> (mémoire <code>params-sylvaccess-fait-foi</code>). Surchargeable. <strong>Résultat : tous les paramètres machine (skidder + porteur) sont désormais identiques à ACCESSFOR.</strong></p>
