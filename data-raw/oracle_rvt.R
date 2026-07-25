@@ -1,17 +1,23 @@
-# Oracle de non-regression RVT_py pour le noyau Rust rvt_svf_opns() (spec 021,
-# J3). Documentaire / reproductible -- PAS execute en CI (dependance Python).
-# Regenere la fixture tests/testthat/fixtures/rvt_oracle.rds : un petit MNT
-# synthetique + les SVF / openness (+/-) calcules par RVT_py, contre lesquels le
-# crate est valide pixel a pixel (test-micro-relief.R). Ecart mesure au portage :
-# ~2e-6 (SVF), ~2e-4 deg (openness) -- purement le float32 interne de RVT.
+# Oracles de non-regression RVT_py (spec 021, J3). Documentaire / reproductible
+# -- PAS execute en CI (dependance Python). Deux fixtures :
+#   * tests/testthat/fixtures/rvt_oracle.rds : MNT synthetique + SVF / openness
+#     (+/-) de RVT_py, contre lesquels le crate rvt_svf_opns() est valide pixel a
+#     pixel (test-micro-relief.R). Ecart ~2e-6 (SVF), ~2e-4 deg (openness).
+#   * tests/testthat/fixtures/vat_oracle.rds : 4 canaux synthetiques + le VAT
+#     ("VAT - Archaeological") calcule par le fold de rvt.blend, contre lequel
+#     blend_rvt() est valide (test-vat-archeo.R).
 #
 #   Rscript data-raw/oracle_rvt.R
 #
-# Prerequis : python3 + numpy, et le source RVT_py (Apache 2.0) :
-#   git clone https://github.com/EarthObservation/RVT_py
-# On n'importe PAS rvt.vis en entier (il tire scipy) : seules horizon_shift_vector,
-# sky_view_factor_compute et sky_view_factor (numpy pur) sont extraites dans un
-# module autonome. TRANSLITTERE au mot pres dans src/rust/src/rvt/mod.rs.
+# Prerequis : python3 + numpy (+ matplotlib pour rvt.blend_func), et le source
+# RVT_py (Apache 2.0) :  git clone https://github.com/EarthObservation/RVT_py
+# Section SVF : on n'importe PAS rvt.vis en entier (il tire scipy) ; seules
+# horizon_shift_vector, sky_view_factor_compute et sky_view_factor (numpy pur)
+# sont extraites. TRANSLITTERE au mot pres dans src/rust/src/rvt/mod.rs.
+# Section VAT : on IMPORTE rvt.blend_func (numpy + matplotlib, pas scipy) et on
+# reproduit le fold exact de BlenderCombination.render_all_images (normalize_image
+# -> blend_images -> render_images, du bas vers le haut). REPRODUIT au mot pres
+# dans R/vat_archeo.R (y compris la neutralisation d'opacite d'Overlay).
 
 # --- 1. Genere l'oracle via RVT_py (numpy seul) ------------------------------
 # Adapter RVT_SRC au clone local de RVT_py.
@@ -67,4 +73,77 @@ if (requireNamespace("pkgload", quietly = TRUE)) {
                     oracle$num_directions, TRUE, TRUE)
   cat(sprintf("Accord SVF  : max|delta| = %.2e\n", max(abs(r$svf - oracle$svf))))
   cat(sprintf("Accord OPNS : max|delta| = %.2e deg\n", max(abs(r$opns - oracle$opns))))
+}
+
+# --- 4. Oracle VAT : fold de la fusion RVT (rvt.blend) -----------------------
+# On importe rvt.blend_func et on reproduit render_all_images() : pour la couche
+# du bas (Hillshade) rendered = norm ; pour chaque couche au-dessus, top =
+# blend_images(mode, active=norm, background=rendered) puis rendered =
+# render_images(top, rendered, opacity). Les canaux sont SYNTHETIQUES (l'oracle
+# valide la fusion, pas la derivation des canaux -- deja couverte par SVF et par
+# terra). Racine du clone RVT_py = parent du dossier rvt/ (deduit de RVT_PY_SRC).
+rvt_root <- dirname(dirname(path.expand(rvt_src)))
+py_vat <- sprintf("
+import numpy as np, sys
+sys.path.insert(0, %s)
+import rvt.blend_func as bf
+ny, nx = 24, 20
+yy, xx = np.mgrid[0:ny, 0:nx].astype(np.float64)
+# Canaux dans leurs unites brutes, avec de la variete de part et d'autre des
+# seuils de normalisation (l'overlay branche a bg=0.5, le soft_light a top=0.5).
+svf   = 0.60 + 0.40 * (xx / (nx - 1))                       # 0.60 .. 1.00
+opns  = 60.0 + 35.0 * (yy / (ny - 1))                       # 60 .. 95 deg
+slope = 60.0 * (0.5 + 0.5 * np.sin(xx / 3.0) * np.cos(yy / 4.0))  # ~0 .. 60 deg
+hs    = 0.20 + 0.60 * (1.0 - yy / (ny - 1))                 # 0.20 .. 0.80
+# Pile HAUT -> BAS du preset settings/blender_VAT.json ('VAT - Archaeological').
+layers = [
+    ('Sky-View Factor',      svf,   0.7, 1.0, 'multiply',   25),
+    ('Openness - Positive',  opns,  68,  93,  'overlay',    50),
+    ('Slope gradient',       slope, 0,   50,  'luminosity', 50),
+    ('Hillshade',            hs,    0,   1,   'normal',     100),
+]
+rendered = None
+for (vis, img, mn, mx, mode, op) in reversed(layers):
+    norm = bf.normalize_image(vis, np.float32(img.copy()), mn, mx, 'value')
+    if rendered is None:
+        rendered = norm
+    else:
+        top = bf.blend_images(mode, norm, rendered)  # peut muter rendered (overlay)
+        rendered = bf.render_images(top, rendered, op)
+out = sys.argv[1]
+np.savetxt(out + '/vat_svf.txt',   svf.ravel())
+np.savetxt(out + '/vat_opns.txt',  opns.ravel())
+np.savetxt(out + '/vat_slope.txt', slope.ravel())
+np.savetxt(out + '/vat_hs.txt',    hs.ravel())
+np.savetxt(out + '/vat_out.txt',   np.asarray(rendered).ravel())
+", shQuote(paste0("r'", rvt_root, "'")))
+tmp2 <- tempfile("vat_oracle_")
+dir.create(tmp2)
+pyf2 <- file.path(tmp2, "gen_vat.py")
+writeLines(py_vat, pyf2)
+status2 <- system2("python3", c(pyf2, tmp2))
+if (status2 != 0) stop("RVT_py VAT oracle failed (verifier numpy+matplotlib, RVT_PY_SRC)")
+
+vat_oracle <- list(
+  svf          = scan(file.path(tmp2, "vat_svf.txt"), quiet = TRUE),
+  openness_pos = scan(file.path(tmp2, "vat_opns.txt"), quiet = TRUE),
+  slope        = scan(file.path(tmp2, "vat_slope.txt"), quiet = TRUE),
+  hillshade    = scan(file.path(tmp2, "vat_hs.txt"), quiet = TRUE),
+  vat          = scan(file.path(tmp2, "vat_out.txt"), quiet = TRUE),
+  nr = 24L, nc = 20L
+)
+saveRDS(vat_oracle, "tests/testthat/fixtures/vat_oracle.rds", version = 2)
+cat(sprintf("Fixture VAT ecrite : %d cellules.\n", length(vat_oracle$vat)))
+
+if (requireNamespace("pkgload", quietly = TRUE)) {
+  tmpl <- terra::rast(nrows = 24L, ncols = 20L, xmin = 0, xmax = 20, ymin = 0, ymax = 24)
+  mk <- function(v) {
+    rr <- terra::rast(tmpl)
+    terra::values(rr) <- v
+    rr
+  }
+  stack <- c(mk(vat_oracle$svf), mk(vat_oracle$openness_pos),
+             mk(vat_oracle$slope), mk(vat_oracle$hillshade))
+  got <- terra::values(blend_rvt(stack, vat_default_layers()))[, 1]
+  cat(sprintf("Accord VAT  : max|delta| = %.2e\n", max(abs(got - vat_oracle$vat))))
 }

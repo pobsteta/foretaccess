@@ -1,3 +1,22 @@
+# foretaccess 1.23.0 (2026-07-25)
+
+## Composite VAT archéo — fusion RVT en R (spec 021)
+
+- **`vat_archeo()`, `blend_rvt()` et `vat_default_layers()`** — construisent le
+  composite **VAT** (Visualization for Archaeological Topography, Kokalj & Somrak
+  2019) à partir d'un MNT : dérivation des 4 canaux (sky-view factor et openness+
+  via le noyau Rust `micro_relief()`, pente et ombrage via `terra`) puis fusion en
+  une image de micro-relief unique. Idéal sur le MNT LiDAR HD IGN à 0,5 m.
+- **`blend_rvt()`** porte la mécanique de fusion de la Relief Visualization Toolbox
+  (normalisation, modes `normal`/`multiply`/`screen`/`overlay`/`soft_light`/
+  `luminosity`, opacité, repli haut→bas) — transcrite **au mot près** de
+  `rvt/blend_func.py`, **y compris** la neutralisation d'opacité d'`overlay`/
+  `soft_light` (mutation de `background` en place), pour un rendu identique à RVT.
+- **Défauts épinglés** au preset livré `settings/blender_VAT.json`
+  (« VAT - Archaeological ») et **validés pixel à pixel** contre RVT_py via un
+  oracle (`data-raw/oracle_rvt.R` → `tests/testthat/fixtures/vat_oracle.rds`,
+  écart ~1,6e-7).
+
 # foretaccess 1.22.0 (2026-07-24)
 
 ## Porteur : iso-paramètre avec ACCESSFOR (`pente_descente_max_pct` 40 → 25)

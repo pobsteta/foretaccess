@@ -142,6 +142,15 @@ reference:
   contents:
   - micro_relief
   - rvt_svf_opns
+- title: Composite VAT archéo (spec 021)
+  desc: >
+    Visualization for Archaeological Topography (Kokalj & Somrak 2019) : fusion
+    RVT de plusieurs canaux de relief (SVF, openness+, pente, ombrage) en une
+    image de micro-relief unique, épinglée au preset `blender_VAT.json`.
+  contents:
+  - vat_archeo
+  - blend_rvt
+  - vat_default_layers
 - title: Non-régression
   contents:
   - compare_to_oracle
