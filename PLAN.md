@@ -393,6 +393,25 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-25 — `v1.24.0` : composite CVAT (VAT combiné du plugin QGIS RVT, spec 021)
+
+Suite de `v1.23.0` : porte le **CVAT** (Combined VAT), la combinaison **par défaut**
+du plugin QGIS RVT (fichier `*_CVAT_8bit.tif`). `vat_combined()` =
+`0,5·VAT_general + 0,5·VAT_flat`, deux VAT calculés avec les presets terrain
+`general`/`flat` (transcrits de `default_terrains_settings.json` : SVF r=10/noise 0
+vs r=20/noise 3, pentes [0,50] vs [0,15], openness [68,93] vs [85,93], soleil 35° vs
+15°), fusionnés puis `byte_scale`. SVF/openness du noyau Rust (rayons en pixels) ;
+**pente, ombrage, byte_scale portés au mot près** de `rvt/vis.py` (différences
+centrales 2-cellules + edge padding + `roll_fill_nans`, ≠ Horn de terra). Transcrit
+du wrapper CVAT de `qrvt.py`. Oracle depuis le PLUGIN `rvt-qgis` (fonctions
+numpy-pures extraites, section 5 de `data-raw/oracle_rvt.R` → `cvat_oracle.rds`) :
+**8 bits identique à 100 %** en synthétique. Confronté au produit réel du plugin sur
+un MNT LiDAR HD (Meisenthal, 4000×4000, 0,5 m) : **99,998 % de pixels strictement
+identiques**, \|Δ\| ≤ 1 sur 100 %, biais nul (résidu float32 RVT vs float64). Perf :
+~350 s (2 balayages SVF) vs 123 s pour le plugin — optimisable, sans effet sur le
+résultat. Export autonome ; câblage nemetonshiny (fond CVAT des onglets « Terrain
+accessible ») à faire dans une session du repo frère (règle 6).
+
 ### 2026-07-25 — `v1.23.0` : composite VAT archéo (fusion RVT en R, spec 021)
 
 Prolonge le portage RVT (`v1.18.0`, noyau Rust SVF/openness) côté fusion : `vat_archeo()`
