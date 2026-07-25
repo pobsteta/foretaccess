@@ -149,8 +149,10 @@ reference:
     image de micro-relief unique, épinglée au preset `blender_VAT.json`.
   contents:
   - vat_archeo
+  - vat_combined
   - blend_rvt
   - vat_default_layers
+  - cvat_terrain_params
 - title: Non-régression
   contents:
   - compare_to_oracle
