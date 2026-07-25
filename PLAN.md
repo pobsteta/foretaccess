@@ -393,6 +393,23 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-25 — `v1.23.0` : composite VAT archéo (fusion RVT en R, spec 021)
+
+Prolonge le portage RVT (`v1.18.0`, noyau Rust SVF/openness) côté fusion : `vat_archeo()`
+assemble le **VAT** (Visualization for Archaeological Topography, Kokalj & Somrak 2019) à
+partir d'un MNT — 4 canaux (SVF + openness+ via `micro_relief()`, pente + ombrage via
+`terra`) fusionnés par `blend_rvt()`. La fusion (`R/vat_archeo.R`) est transcrite **au mot
+près** de `rvt/blend_func.py` : normalisation `value` (+ inversion d'échelle pour la pente,
+comme `normalize_image`), modes `normal`/`multiply`/`screen`/`overlay`/`soft_light`/
+`luminosity`, repli bas→haut de `render_all_images`. Point non trivial révélé par la
+transcription : `blend_overlay`/`blend_soft_light` **mutent `background` en place**, ce qui
+**neutralise l'opacité** de ces couches (l'Openness+ « Overlay 50 % » du preset vaut 100 %) —
+reproduit tel quel pour un rendu identique à RVT. Défauts épinglés au preset livré
+`settings/blender_VAT.json` et validés **pixel à pixel** contre RVT_py (oracle
+`data-raw/oracle_rvt.R` → `fixtures/vat_oracle.rds`, écart ~1,6e-7). Choix R (pas Rust) :
+compositing élément-par-élément, aucun gain de perf, frontière R↔Rust minimale (règle 3).
+Non encore câblé dans `qualifier_desserte()` ni côté nemetonshiny : export autonome.
+
 ### 2026-07-24 — `v1.22.0` : porteur iso-paramètre ACCESSFOR (pente descente 40 → 25)
 
 Dernière divergence de paramètre machine vs ACCESSFOR corrigée : `pente_descente_max_pct`
