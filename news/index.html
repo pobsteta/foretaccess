@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.23.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.24.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,20 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.24.0" id="foretaccess-1240-2026-07-25">foretaccess 1.24.0 (2026-07-25)<a class="anchor" aria-label="anchor" href="#foretaccess-1240-2026-07-25"></a></h2>
+<div class="section level3">
+<h3 id="composite-cvat--vat-combiné-du-plugin-qgis-rvt-spec-1-24-0">Composite CVAT — VAT combiné du plugin QGIS RVT (spec 021)<a class="anchor" aria-label="anchor" href="#composite-cvat--vat-combin%C3%A9-du-plugin-qgis-rvt-spec-1-24-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/vat_combined.html">vat_combined()</a></code> et <code><a href="../reference/cvat_terrain_params.html">cvat_terrain_params()</a></code></strong> — reproduisent le <strong>CVAT</strong> (Combined Visualization for Archaeological Topography), la combinaison <strong>par défaut</strong> du plugin QGIS RVT (sortie <code>*_CVAT_8bit.tif</code>) : <code>CVAT = 0,5·VAT_general + 0,5·VAT_flat</code>, mélange terrain-adaptatif de deux [vat_archeo()]-VAT calculés avec les presets <code>general</code> (SVF r=10, soleil 35°) et <code>flat</code> (SVF r=20 bruité, pentes/openness serrés, soleil rasant 15°).</li>
+<li>
+<strong>Fidélité RVT</strong> : SVF/openness du noyau Rust validé (rayons en <strong>pixels</strong>) ; <strong>pente, ombrage et conversion 8 bits portés au mot près</strong> de <code>rvt/vis.py</code> (<code>slope_aspect</code>, <code>hillshade</code>, <code>byte_scale</code> — différences centrales 2-cellules
+<ul><li>edge padding, <code>roll_fill_nans</code> pour les bords NoData ; <strong>pas</strong> le Horn de <code>terra</code>). Transcrit du wrapper CVAT de <code>qrvt.py</code> + <code>default_terrains_settings.json</code>.</li>
+</ul></li>
+<li>
+<strong>Validé pixel à pixel</strong> contre le plugin RVT : oracle synthétique <strong>8 bits identique à 100 %</strong> (<code>data-raw/oracle_rvt.R</code> → <code>fixtures/cvat_oracle.rds</code>) ; sur un MNT LiDAR HD réel (4000×4000, 0,5 m), <strong>99,998 % de pixels identiques</strong>, |Δ| ≤ 1 sur 100 % (résidu float32 RVT vs float64, sans biais).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.23.0" id="foretaccess-1230-2026-07-25">foretaccess 1.23.0 (2026-07-25)<a class="anchor" aria-label="anchor" href="#foretaccess-1230-2026-07-25"></a></h2>
 <div class="section level3">

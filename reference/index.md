@@ -350,10 +350,14 @@ ombrage) en une image de micro-relief unique, épinglée au preset
 - [`vat_archeo()`](https://pobsteta.github.io/foretaccess/reference/vat_archeo.md)
   : VAT composite (Visualization for Archaeological Topography) from a
   DEM
+- [`vat_combined()`](https://pobsteta.github.io/foretaccess/reference/vat_combined.md)
+  : CVAT composite (Combined VAT) from a DEM – RVT QGIS default
 - [`blend_rvt()`](https://pobsteta.github.io/foretaccess/reference/blend_rvt.md)
   : Layered RVT blend of a channel stack into a single composite
 - [`vat_default_layers()`](https://pobsteta.github.io/foretaccess/reference/vat_default_layers.md)
   : Default RVT layer stack for the Archaeological (VAT) blend
+- [`cvat_terrain_params()`](https://pobsteta.github.io/foretaccess/reference/cvat_terrain_params.md)
+  : RVT terrain presets used by the CVAT combination
 
 ## Non-régression
 

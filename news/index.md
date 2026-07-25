@@ -1,5 +1,31 @@
 # Changelog
 
+## foretaccess 1.24.0 (2026-07-25)
+
+### Composite CVAT — VAT combiné du plugin QGIS RVT (spec 021)
+
+- **[`vat_combined()`](https://pobsteta.github.io/foretaccess/reference/vat_combined.md)
+  et
+  [`cvat_terrain_params()`](https://pobsteta.github.io/foretaccess/reference/cvat_terrain_params.md)**
+  — reproduisent le **CVAT** (Combined Visualization for Archaeological
+  Topography), la combinaison **par défaut** du plugin QGIS RVT (sortie
+  `*_CVAT_8bit.tif`) : `CVAT = 0,5·VAT_general + 0,5·VAT_flat`, mélange
+  terrain-adaptatif de deux \[vat_archeo()\]-VAT calculés avec les
+  presets `general` (SVF r=10, soleil 35°) et `flat` (SVF r=20 bruité,
+  pentes/openness serrés, soleil rasant 15°).
+- **Fidélité RVT** : SVF/openness du noyau Rust validé (rayons en
+  **pixels**) ; **pente, ombrage et conversion 8 bits portés au mot
+  près** de `rvt/vis.py` (`slope_aspect`, `hillshade`, `byte_scale` —
+  différences centrales 2-cellules
+  - edge padding, `roll_fill_nans` pour les bords NoData ; **pas** le
+    Horn de `terra`). Transcrit du wrapper CVAT de `qrvt.py` +
+    `default_terrains_settings.json`.
+- **Validé pixel à pixel** contre le plugin RVT : oracle synthétique **8
+  bits identique à 100 %** (`data-raw/oracle_rvt.R` →
+  `fixtures/cvat_oracle.rds`) ; sur un MNT LiDAR HD réel (4000×4000, 0,5
+  m), **99,998 % de pixels identiques**, \|Δ\| ≤ 1 sur 100 % (résidu
+  float32 RVT vs float64, sans biais).
+
 ## foretaccess 1.23.0 (2026-07-25)
 
 ### Composite VAT archéo — fusion RVT en R (spec 021)
