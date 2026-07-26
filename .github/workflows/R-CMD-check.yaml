@@ -16,6 +16,12 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      # Desactive la partie RESEAU de "checking CRAN incoming feasibility"
+      # (--as-cran) : acces a l'index Bioconductor + verification d'URL. BioC
+      # (R 4.6 -> 3.23) est injoignable ici et levait une WARNING reseau qui, avec
+      # error_on="warning", faisait echouer le check. Les checks de code (non-ASCII,
+      # etc.) restent actifs.
+      _R_CHECK_CRAN_INCOMING_REMOTE_: "false"
       # Base PostGIS jetable fournie par le service ci-dessous.
       FORETACCESS_DB_URL_TEST: "postgresql://postgres:postgres@localhost:5432/foretaccess_test"
     services:
@@ -59,10 +65,43 @@ jobs:
           cargo test --manifest-path src/rust/Cargo.toml
           cargo clippy --manifest-path src/rust/Cargo.toml --all-targets -- -D warnings
 
-      - uses: r-lib/actions/check-r-package@v2
-        with:
-          upload-snapshots: true
-          args: 'c("--no-manual", "--as-cran")'
+      # R CMD check via rcmdcheck() DIRECT plutot que check-r-package@v2, pour
+      # passer `repos=` SANS Bioconductor : le paquet n'a AUCUNE dependance BioC,
+      # mais "checking for unstated dependencies in tests" interroge l'index BioC
+      # (R 4.6 -> BioC 3.23), injoignable ici -> WARNING reseau qui, avec
+      # error_on="warning", fait echouer le check a tort. `rcmdcheck(repos=)`
+      # reinitialise les repos DANS le sous-processus de check. error_on reste
+      # "warning" : les vrais warnings de code (non-ASCII, etc.) echouent toujours.
+      - name: R CMD check (--as-cran ; ignore les warnings d'acces reseau BioC)
+        shell: Rscript {0}
+        run: |
+          repos <- getOption("repos")
+          repos <- repos[!grepl("bioconductor", repos, ignore.case = TRUE)]
+          if (!("CRAN" %in% names(repos)) || is.na(repos[["CRAN"]])) {
+            repos <- c(repos, CRAN = Sys.getenv("RSPM", "https://cloud.r-project.org"))
+          }
+          res <- rcmdcheck::rcmdcheck(
+            args = c("--no-manual", "--as-cran"),
+            build_args = "--no-manual",
+            error_on = "never",
+            check_dir = "check",
+            repos = repos)
+          # Le paquet n'a AUCUNE dependance Bioconductor, mais R CMD check
+          # interroge l'index BioC (R 4.6 -> BioC 3.23, injoignable ici) -> warning
+          # "unable to access index for repository". On IGNORE uniquement ces
+          # warnings d'acces reseau a un depot ; tout autre warning ou erreur
+          # (non-ASCII, code, etc.) fait echouer la CI.
+          reseau <- grepl("unable to access index for repository", res$warnings)
+          warns <- res$warnings[!reseau]
+          if (length(res$errors) || length(warns)) {
+            cat("== ERREURS ==\n"); print(res$errors)
+            cat("== WARNINGS (hors acces reseau) ==\n"); print(warns)
+            quit(save = "no", status = 1L)
+          }
+          if (any(reseau)) {
+            cat("Note: warnings d'acces reseau BioC ignores (aucune dep BioC).\n")
+          }
+          cat("R CMD check OK.\n")
 
   lint:
     runs-on: ubuntu-latest
