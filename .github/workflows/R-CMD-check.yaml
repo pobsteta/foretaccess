@@ -59,28 +59,27 @@ jobs:
           cargo test --manifest-path src/rust/Cargo.toml
           cargo clippy --manifest-path src/rust/Cargo.toml --all-targets -- -D warnings
 
-      # Retire Bioconductor des repos : le paquet n'a AUCUNE dependance BioC, mais
-      # R CMD check ("unstated dependencies in tests") interroge l'index BioC ;
-      # quand bioconductor.org est injoignable, cela leve une WARNING reseau qui,
-      # avec error_on="warning", fait echouer le check a tort. On filtre BioC via
-      # Rprofile.site (ajoute APRES la config RSPM, donc appliquee au demarrage de
-      # la session de check). error_on reste "warning" -> les vrais warnings de code
-      # (non-ASCII, etc.) continuent de faire echouer la CI.
-      - name: Repos sans Bioconductor (evite un warning reseau BioC flaky)
+      # R CMD check via rcmdcheck() DIRECT plutot que check-r-package@v2, pour
+      # passer `repos=` SANS Bioconductor : le paquet n'a AUCUNE dependance BioC,
+      # mais "checking for unstated dependencies in tests" interroge l'index BioC
+      # (R 4.6 -> BioC 3.23), injoignable ici -> WARNING reseau qui, avec
+      # error_on="warning", fait echouer le check a tort. `rcmdcheck(repos=)`
+      # reinitialise les repos DANS le sous-processus de check. error_on reste
+      # "warning" : les vrais warnings de code (non-ASCII, etc.) echouent toujours.
+      - name: R CMD check (--as-cran, repos sans Bioconductor)
         shell: Rscript {0}
         run: |
-          site <- file.path(R.home("etc"), "Rprofile.site")
-          cat(
-            '\nlocal({',
-            '  r <- getOption("repos")',
-            '  if (!is.null(r) && length(r)) options(repos = r[!grepl("bioconductor", r, ignore.case = TRUE)])',
-            '})\n',
-            sep = "\n", file = site, append = TRUE)
-
-      - uses: r-lib/actions/check-r-package@v2
-        with:
-          upload-snapshots: true
-          args: 'c("--no-manual", "--as-cran")'
+          repos <- getOption("repos")
+          repos <- repos[!grepl("bioconductor", repos, ignore.case = TRUE)]
+          if (!("CRAN" %in% names(repos)) || is.na(repos[["CRAN"]])) {
+            repos <- c(repos, CRAN = Sys.getenv("RSPM", "https://cloud.r-project.org"))
+          }
+          res <- rcmdcheck::rcmdcheck(
+            args = c("--no-manual", "--as-cran"),
+            build_args = "--no-manual",
+            error_on = "warning",
+            check_dir = "check",
+            repos = repos)
 
   lint:
     runs-on: ubuntu-latest
