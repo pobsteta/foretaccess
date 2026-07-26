@@ -72,7 +72,7 @@ jobs:
       # error_on="warning", fait echouer le check a tort. `rcmdcheck(repos=)`
       # reinitialise les repos DANS le sous-processus de check. error_on reste
       # "warning" : les vrais warnings de code (non-ASCII, etc.) echouent toujours.
-      - name: R CMD check (--as-cran, repos sans Bioconductor)
+      - name: R CMD check (--as-cran ; ignore les warnings d'acces reseau BioC)
         shell: Rscript {0}
         run: |
           repos <- getOption("repos")
@@ -83,9 +83,25 @@ jobs:
           res <- rcmdcheck::rcmdcheck(
             args = c("--no-manual", "--as-cran"),
             build_args = "--no-manual",
-            error_on = "warning",
+            error_on = "never",
             check_dir = "check",
             repos = repos)
+          # Le paquet n'a AUCUNE dependance Bioconductor, mais R CMD check
+          # interroge l'index BioC (R 4.6 -> BioC 3.23, injoignable ici) -> warning
+          # "unable to access index for repository". On IGNORE uniquement ces
+          # warnings d'acces reseau a un depot ; tout autre warning ou erreur
+          # (non-ASCII, code, etc.) fait echouer la CI.
+          reseau <- grepl("unable to access index for repository", res$warnings)
+          warns <- res$warnings[!reseau]
+          if (length(res$errors) || length(warns)) {
+            cat("== ERREURS ==\n"); print(res$errors)
+            cat("== WARNINGS (hors acces reseau) ==\n"); print(warns)
+            quit(save = "no", status = 1L)
+          }
+          if (any(reseau)) {
+            cat("Note: warnings d'acces reseau BioC ignores (aucune dep BioC).\n")
+          }
+          cat("R CMD check OK.\n")
 
   lint:
     runs-on: ubuntu-latest
