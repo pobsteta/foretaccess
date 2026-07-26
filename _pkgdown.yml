@@ -150,6 +150,7 @@ reference:
   contents:
   - vat_archeo
   - vat_combined
+  - build_cvat_precomputed
   - blend_rvt
   - vat_default_layers
   - cvat_terrain_params
