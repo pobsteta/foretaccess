@@ -16,6 +16,12 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      # Desactive la partie RESEAU de "checking CRAN incoming feasibility"
+      # (--as-cran) : acces a l'index Bioconductor + verification d'URL. BioC
+      # (R 4.6 -> 3.23) est injoignable ici et levait une WARNING reseau qui, avec
+      # error_on="warning", faisait echouer le check. Les checks de code (non-ASCII,
+      # etc.) restent actifs.
+      _R_CHECK_CRAN_INCOMING_REMOTE_: "false"
       # Base PostGIS jetable fournie par le service ci-dessous.
       FORETACCESS_DB_URL_TEST: "postgresql://postgres:postgres@localhost:5432/foretaccess_test"
     services:
