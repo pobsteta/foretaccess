@@ -59,6 +59,24 @@ jobs:
           cargo test --manifest-path src/rust/Cargo.toml
           cargo clippy --manifest-path src/rust/Cargo.toml --all-targets -- -D warnings
 
+      # Retire Bioconductor des repos : le paquet n'a AUCUNE dependance BioC, mais
+      # R CMD check ("unstated dependencies in tests") interroge l'index BioC ;
+      # quand bioconductor.org est injoignable, cela leve une WARNING reseau qui,
+      # avec error_on="warning", fait echouer le check a tort. On filtre BioC via
+      # Rprofile.site (ajoute APRES la config RSPM, donc appliquee au demarrage de
+      # la session de check). error_on reste "warning" -> les vrais warnings de code
+      # (non-ASCII, etc.) continuent de faire echouer la CI.
+      - name: Repos sans Bioconductor (evite un warning reseau BioC flaky)
+        shell: Rscript {0}
+        run: |
+          site <- file.path(R.home("etc"), "Rprofile.site")
+          cat(
+            '\nlocal({',
+            '  r <- getOption("repos")',
+            '  if (!is.null(r) && length(r)) options(repos = r[!grepl("bioconductor", r, ignore.case = TRUE)])',
+            '})\n',
+            sep = "\n", file = site, append = TRUE)
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
