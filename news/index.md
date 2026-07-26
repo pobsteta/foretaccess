@@ -1,5 +1,23 @@
 # Changelog
 
+## foretaccess 1.25.0 (2026-07-26)
+
+### Pré-calcul du CVAT sur emprise AOI + buffer (spec 021)
+
+- **[`build_cvat_precomputed()`](https://pobsteta.github.io/foretaccess/reference/build_cvat_precomputed.md)**
+  — matérialise le **CVAT** (\[vat_combined()\]) en GeoTIFF 8 bits
+  couvrant l’**emprise de travail (AOI élargie de `buffer_m`)**.
+  Garantit la couverture : si le MNT fourni (`mnt_existant`, p. ex. une
+  mosaïque LiDAR native) **couvre** l’emprise (étendue englobante **et**
+  ≥ `seuil` de cellules finies), il est réutilisé ; sinon (mosaïque trop
+  courte, dalles LiDAR HD manquantes) le MNT LiDAR HD est **ré-acquis
+  sur l’emprise** via \[acquire_mnt()\] (WMS, couvre la bbox demandée)
+  **puis le CVAT recalculé**.
+- Évite qu’un CVAT calculé sur une mosaïque partielle laisse des trous
+  ou un relief tronqué. foretaccess ne télécharge pas de dalles
+  `.copc.laz` (acquisition WMS) : la ré-acquisition couvre l’emprise par
+  construction.
+
 ## foretaccess 1.24.0 (2026-07-25)
 
 ### Composite CVAT — VAT combiné du plugin QGIS RVT (spec 021)

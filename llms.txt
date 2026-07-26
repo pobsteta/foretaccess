@@ -475,6 +475,9 @@ ombrage) en une image de micro-relief unique, épinglée au preset
   DEM
 - [`vat_combined()`](https://pobsteta.github.io/foretaccess/reference/vat_combined.md)
   : CVAT composite (Combined VAT) from a DEM – RVT QGIS default
+- [`build_cvat_precomputed()`](https://pobsteta.github.io/foretaccess/reference/build_cvat_precomputed.md)
+  : Precompute the CVAT relief over an AOI + buffer, guaranteeing
+  coverage
 - [`blend_rvt()`](https://pobsteta.github.io/foretaccess/reference/blend_rvt.md)
   : Layered RVT blend of a channel stack into a single composite
 - [`vat_default_layers()`](https://pobsteta.github.io/foretaccess/reference/vat_default_layers.md)

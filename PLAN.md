@@ -538,6 +538,24 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-26 — `v1.25.0` : pré-calcul CVAT sur emprise AOI + buffer (spec 021)
+
+`build_cvat_precomputed(aoi, cache_dir, buffer_m, mnt_existant, out, ...)`
+matérialise le CVAT 8 bits couvrant l’**emprise de travail** (AOI +
+buffer), avec **garantie de couverture** : `.emprise_couverte()` vérifie
+que le MNT fourni englobe l’emprise ET a ≥ `seuil` (0,9) de cellules
+finies ; sinon (mosaïque LiDAR trop courte / dalles manquantes)
+ré-acquisition via `acquire_mnt` (WMS, couvre la bbox) puis recalcul
+`vat_combined(as_byte=TRUE)`. Motivation : un CVAT sur mosaïque
+partielle laisserait des trous / bords tronqués dans le fond du
+comparateur de desserte (nemetonshiny). foretaccess ne télécharge pas de
+dalles `.copc.laz` (acquisition WMS) — la ré-acquisition couvre
+l’emprise par construction ; garder la mosaïque native (meilleure) si
+elle couvre, ne ré-acquérir que si trop courte. Câblage nemetonshiny
+(pré-calcul async au chargement de projet + notification bas-droite) :
+brief v3 dans `/home/pascal/cvat-nemetonshiny-handoff/` (session repo
+frère, règle 6).
+
 ### 2026-07-25 — `v1.24.0` : composite CVAT (VAT combiné du plugin QGIS RVT, spec 021)
 
 Suite de `v1.23.0` : porte le **CVAT** (Combined VAT), la combinaison

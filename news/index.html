@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.24.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.25.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,15 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.25.0" id="foretaccess-1250-2026-07-26">foretaccess 1.25.0 (2026-07-26)<a class="anchor" aria-label="anchor" href="#foretaccess-1250-2026-07-26"></a></h2>
+<div class="section level3">
+<h3 id="pré-calcul-du-cvat-sur-emprise-aoi--buffer-spec-1-25-0">Pré-calcul du CVAT sur emprise AOI + buffer (spec 021)<a class="anchor" aria-label="anchor" href="#pr%C3%A9-calcul-du-cvat-sur-emprise-aoi--buffer-spec-1-25-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/build_cvat_precomputed.html">build_cvat_precomputed()</a></code></strong> — matérialise le <strong>CVAT</strong> ([vat_combined()]) en GeoTIFF 8 bits couvrant l’<strong>emprise de travail (AOI élargie de <code>buffer_m</code>)</strong>. Garantit la couverture : si le MNT fourni (<code>mnt_existant</code>, p. ex. une mosaïque LiDAR native) <strong>couvre</strong> l’emprise (étendue englobante <strong>et</strong> ≥ <code>seuil</code> de cellules finies), il est réutilisé ; sinon (mosaïque trop courte, dalles LiDAR HD manquantes) le MNT LiDAR HD est <strong>ré-acquis sur l’emprise</strong> via [acquire_mnt()] (WMS, couvre la bbox demandée) <strong>puis le CVAT recalculé</strong>.</li>
+<li>Évite qu’un CVAT calculé sur une mosaïque partielle laisse des trous ou un relief tronqué. foretaccess ne télécharge pas de dalles <code>.copc.laz</code> (acquisition WMS) : la ré-acquisition couvre l’emprise par construction.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.24.0" id="foretaccess-1240-2026-07-25">foretaccess 1.24.0 (2026-07-25)<a class="anchor" aria-label="anchor" href="#foretaccess-1240-2026-07-25"></a></h2>
 <div class="section level3">
