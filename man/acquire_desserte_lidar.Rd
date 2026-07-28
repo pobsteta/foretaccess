@@ -2,16 +2,19 @@
 % Please edit documentation in R/desserte_lidar.R
 \name{acquire_desserte_lidar}
 \alias{acquire_desserte_lidar}
-\title{Enrich/correct a road network with airborne LiDAR (ALSroads, NDP 1)}
+\title{Enrich/correct a road network with airborne LiDAR (dessertR, NDP 1)}
 \usage{
 acquire_desserte_lidar(
   desserte,
   las_source,
   mnt,
+  mnh = NULL,
+  moteur = c("auto", "dessertr", "alsroads"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
-  long_min_m = 40
+  long_min_m = 40,
+  deviation_max = 10
 )
 }
 \arguments{
@@ -25,6 +28,12 @@ downloaded here -- the caller provides it (e.g. the app's
 
 \item{mnt}{Digital terrain model: \code{SpatRaster} or path. Must share the CRS of
 \code{desserte} (no implicit reprojection, ADR-004).}
+
+\item{mnh}{Canopy height model (\code{SpatRaster}/path) or \code{NULL}. Used by the
+dessertR surface channel (\code{sigma_surf}) and left \code{NULL} for ALSroads.}
+
+\item{moteur}{LiDAR engine: \code{"auto"} (default -- dessertR if installed, else
+ALSroads, else NDP 0), \code{"dessertr"} or \code{"alsroads"} (deprecated).}
 
 \item{crs}{Target EPSG code. Default 2154.}
 
@@ -41,30 +50,33 @@ its search buffer. Default 40. A full BD TOPO desserte has many short
 segments; only long tronçons under a tile get a width.}
 }
 \value{
-An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the columns
-\code{largeur_carrossable_m} (ALSroads \code{DRIVABLEWIDTH}), \code{largeur_plateforme_m}
-(\code{ROADWIDTH}), \code{pente_pct} (computed here from the realigned geometry),
-\code{etat_classe} (ALSroads \code{CLASS} -- road \strong{state in four classes}) and
-\code{score_lidar} (\code{SCORE}). In NDP 0 (no LiDAR/ALSroads) the geometry is
-unchanged and those columns are \code{NA}. The \code{ndp} attribute is \code{0L} or \code{1L}.
+An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the contract
+columns \code{largeur_carrossable_m}, \code{largeur_plateforme_m}, \code{pente_pct},
+\code{etat_classe} (state, 4 classes) and \code{score_lidar}. With the \strong{dessertR}
+engine, also the bonus columns \code{etat_dessertr} (state label), \code{devers}
+(cross-slope), \code{fosses} (ditches 0/1/2), \code{rayon_courbure_p05}, \code{apte_grumier}
+and \code{motif_inaptitude}. In NDP 0 all these are \code{NA}. Attributes: \code{ndp}
+(\code{0L}/\code{1L}) and \code{moteur} (\code{"dessertr"}/\code{"alsroads"}/\code{"ndp0"}).
 }
 \description{
-Wraps \strong{ALSroads} (\code{measure_road}) to recompute, from an airborne LiDAR point
-cloud, a \strong{realigned geometry} and per-segment attributes for a BD TOPO road
-network: \strong{drivable width}, platform width, longitudinal slope and \strong{state}
-(in use / decommissioned / gone). The drivable width is the discriminator
-\code{\link[=places_depot]{places_depot()}} lacks on raw BD TOPO (its truck-access criterion is blind
-without a measured width, hence loose departures -- see its \emph{Performance et
-selectivite} section); a measured width turns that criterion on.
+Recomputes, from an airborne LiDAR HD point cloud, a \strong{realigned geometry} and
+per-segment attributes for a BD TOPO road network: \strong{drivable width}, platform
+width, longitudinal slope, \strong{state} and (dessertR) cross-slope, ditches,
+curvature and \strong{timber-truck trafficability}. The drivable width is the
+discriminator \code{\link[=places_depot]{places_depot()}} lacks on raw BD TOPO (its truck-access criterion
+is blind without a measured width); a measured width turns that criterion on.
 }
 \details{
-\strong{Optional, experimental (NDP 1).} ALSroads and lidR are \strong{not} declared
-dependencies -- ALSroads is an unmaintained proof-of-concept
-(\code{r-lidar-lab/ALSroads}, v0.2.0). Install them yourself to use this:
-\code{install.packages("lidR")} and \code{remotes::install_github("r-lidar-lab/ALSroads")}.
-Without them, the function falls back to \strong{NDP 0}: the road network is returned
-unchanged, the LiDAR columns set to \code{NA}, and a message says so. It \strong{never}
-errors on a missing point cloud.
+\strong{Engine.} The default engine is \strong{dessertR} (\code{pobsteta/dessertR}, GPL-3, Rust
+core) -- a maintained \strong{French} reimplementation of the ALSroads method
+(Roussel et al. 2022), calibrated for BD TOPO / IGN LiDAR HD (specs 023 +
+ADR-009). \strong{ALSroads} (\code{r-lidar-lab/ALSroads}, unmaintained, Quebec-calibrated)
+is kept as a \strong{deprecated transition fallback} (\code{moteur = "alsroads"}). Both
+are \strong{optional, undeclared} dependencies accessed dynamically; install dessertR
+with \code{install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")}.
+Without any engine, the function falls back to \strong{NDP 0}: the road network is
+returned unchanged, the LiDAR columns set to \code{NA}. It \strong{never} errors on a
+missing point cloud.
 
 \strong{DTM resolution is critical.} ALSroads builds its edge-detection profiles at
 \verb{profile_resolution = 0.5 m}; a DTM coarser than 1 m yields \code{NA} widths (this

@@ -28,6 +28,7 @@ mnt_qualif_test <- function() {
 test_that("sans lidR/ALSroads : NDP 0, desserte declaree renvoyee telle quelle", {
   testthat::local_mocked_bindings(
     .alsroads_dispo = function() FALSE,
+    .dessertr_dispo = function() FALSE,
     .env = asNamespace("foretaccess")
   )
   des <- desserte_declaree_test()
@@ -61,6 +62,7 @@ test_that("une desserte vide ou non lineaire est refusee (delegue au socle LiDAR
 test_that("la sortie qualifiee est consommable par preprocess (classe presente)", {
   testthat::local_mocked_bindings(
     .alsroads_dispo = function() FALSE,
+    .dessertr_dispo = function() FALSE,
     .env = asNamespace("foretaccess")
   )
   out <- suppressMessages(

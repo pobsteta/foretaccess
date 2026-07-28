@@ -26,7 +26,7 @@ mnt_test <- function() {
 
 test_that("sans lidR/ALSroads : repli NDP 0 (desserte inchangee, colonnes NA)", {
   # Repli force par mock : deterministe, que lidR/ALSroads soient installes ou non.
-  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE)
+  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE, .dessertr_dispo = function() FALSE)
   des <- desserte_lignes_test()
   expect_message(
     out <- acquire_desserte_lidar(des, las_source = "peu_importe", mnt = mnt_test()),
@@ -37,19 +37,43 @@ test_that("sans lidR/ALSroads : repli NDP 0 (desserte inchangee, colonnes NA)", 
   expect_equal(nrow(out), nrow(des))
   expect_true(all(c("classe") %in% names(out)))
   expect_equal(sf::st_geometry(out), sf::st_geometry(des))
-  # Colonnes LiDAR presentes, a NA (noms verifies sur la sortie reelle d'ALSroads).
+  # Colonnes du CONTRAT presentes, a NA.
   expect_true(all(c("largeur_carrossable_m", "largeur_plateforme_m", "pente_pct",
                     "etat_classe", "score_lidar") %in% names(out)))
   expect_true(all(is.na(out$largeur_carrossable_m)))
   expect_true(all(is.na(out$etat_classe)))
+  # Colonnes BONUS (dessertR) egalement presentes, a NA, meme en NDP 0.
+  expect_true(all(c("etat_dessertr", "devers", "fosses", "rayon_courbure_p05",
+                    "apte_grumier", "motif_inaptitude") %in% names(out)))
+  expect_true(all(is.na(out$apte_grumier)))
+  expect_true(all(is.na(out$fosses)))
   expect_identical(attr(out, "ndp"), 0L)
+  expect_identical(attr(out, "moteur"), "ndp0")
+})
+
+test_that(".moteur_lidar : dispatch dessertR (defaut) > ALSroads > NDP 0", {
+  # auto : dessertR prioritaire s'il est dispo.
+  testthat::local_mocked_bindings(
+    .dessertr_dispo = function() TRUE, .alsroads_dispo = function() TRUE)
+  expect_identical(foretaccess:::.moteur_lidar("auto"), "dessertr")
+  # auto : repli ALSroads si dessertR absent.
+  testthat::local_mocked_bindings(
+    .dessertr_dispo = function() FALSE, .alsroads_dispo = function() TRUE)
+  expect_identical(foretaccess:::.moteur_lidar("auto"), "alsroads")
+  # auto : NDP 0 si aucun moteur.
+  testthat::local_mocked_bindings(
+    .dessertr_dispo = function() FALSE, .alsroads_dispo = function() FALSE)
+  expect_identical(foretaccess:::.moteur_lidar("auto"), "ndp0")
+  # explicite : "dessertr" force le moteur, NDP 0 s'il est absent.
+  testthat::local_mocked_bindings(.dessertr_dispo = function() FALSE)
+  expect_identical(foretaccess:::.moteur_lidar("dessertr"), "ndp0")
 })
 
 test_that("la sortie NDP 0 est consommable par places_depot (largeur presente mais NA)", {
   # Le champ largeur_carrossable_m existe : places_depot pourra s'en servir des
   # que le LiDAR le renseignera (ici NA -> critere largeur indeterminable, comme
   # une BD TOPO sans largeur, cf. places_depot).
-  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE)
+  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE, .dessertr_dispo = function() FALSE)
   des <- desserte_lignes_test()
   out <- suppressMessages(acquire_desserte_lidar(des, "x", mnt_test()))
   expect_true("largeur_carrossable_m" %in% names(out))

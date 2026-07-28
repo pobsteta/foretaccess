@@ -393,6 +393,24 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-28 — `v1.26.0` : desserte LiDAR — `dessertR` remplace `ALSroads` (spec 023, ADR-009)
+
+Swap du moteur LiDAR de desserte : `dessertR` (pobsteta, GPL-3, noyau Rust,
+réimplémentation **française maintenue** de la méthode Roussel 2022) devient le
+**moteur par défaut** ; ALSroads (POC non maintenu, calibré Québec) passe repli de
+transition déprécié. Phase A livrée : adaptateur `.desserte_lidar_dessertr()`
+(pipeline `dsr_catalog`→`dsr_conductivite`/`dsr_sigma_surf`→`dsr_etat`→
+`dsr_repositionner`→`dsr_measure`→`dsr_trafficability`), dispatch `.moteur_lidar()`
+(auto : dessertR > ALSroads > NDP 0), `acquire_desserte_lidar(mnh, moteur,
+deviation_max)`, **contrat de colonnes préservé** + colonnes bonus (etat_dessertr,
+devers, fosses, rayon_courbure_p05, apte_grumier, motif_inaptitude),
+`qualifier_desserte()` critère d'état par libellé (`etats_disparus`) +
+trafficabilité grumier (`retirer_inaptes_grumier`). Décisions utilisateur : GO
+**production** (§7 spec 023). Chemin dessertR en `# nocov` (comme ALSroads), CI sur
+repli NDP 0 ; **Phase B** (validation sur dalles réelles Meisenthal/Chastel-Nouvel)
+puis **Phase C** (retrait d'ALSroads) à suivre. dessertR = dépendance optionnelle
+non déclarée (r-universe), règle 1 respectée (on consomme, on n'inline pas).
+
 ### 2026-07-26 — `v1.25.0` : pré-calcul CVAT sur emprise AOI + buffer (spec 021)
 
 `build_cvat_precomputed(aoi, cache_dir, buffer_m, mnt_existant, out, ...)` matérialise

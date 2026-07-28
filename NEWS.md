@@ -1,3 +1,26 @@
+# foretaccess 1.26.0 (2026-07-28)
+
+## Desserte LiDAR : `dessertR` remplace `ALSroads` (spec 023, ADR-009)
+
+- **Moteur LiDAR par défaut : `dessertR`** (`pobsteta/dessertR`, GPL-3, noyau
+  Rust) — réimplémentation **française** **maintenue** de la méthode d'ALSroads
+  (Roussel et al. 2022), calibrée BD TOPO / IGN LiDAR HD. `ALSroads` (POC non
+  maintenu, calibré Québec) devient un **repli de transition déprécié**.
+- **`acquire_desserte_lidar()`** gagne les arguments `mnh` (canal de surface),
+  `moteur` (`"auto"`/`"dessertr"`/`"alsroads"`) et `deviation_max` (recalage
+  contraint, BD TOPO autoritaire). **Contrat de colonnes préservé**
+  (`largeur_carrossable_m`, `largeur_plateforme_m`, `pente_pct`, `etat_classe`,
+  `score_lidar`) + **colonnes bonus dessertR** : `etat_dessertr`, `devers`,
+  `fosses`, `rayon_courbure_p05`, `apte_grumier`, `motif_inaptitude`. Attribut
+  `moteur` sur la sortie ; repli NDP 0 inchangé (ne plante jamais).
+- **`qualifier_desserte()`** : critère de disparition par **libellé d'état
+  dessertR** (`etats_disparus = c("abandonnee", "hors_route")`, repli seuil entier
+  pour ALSroads), plus **branchement de la trafficabilité** grumier
+  (`retirer_inaptes_grumier`).
+- Dépendance **optionnelle non déclarée** (accès dynamique, comme ALSroads) :
+  `install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")`. La CI
+  n'exerce que le repli NDP 0 ; le chemin dessertR est validé hors CI (Phase B).
+
 # foretaccess 1.25.0 (2026-07-26)
 
 ## Pré-calcul du CVAT sur emprise AOI + buffer (spec 021)
