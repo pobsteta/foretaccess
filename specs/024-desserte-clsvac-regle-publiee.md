@@ -1,9 +1,13 @@
 # specs/024 — CL_SVAC sur la règle ACCESSFOR **publiée** (fin du calage empirique)
 
-> **Statut** : **PROPOSÉE** — décisions §6 à prendre. Fait suite à la spec
+> **Statut** : **VALIDÉE — IMPLÉMENTÉE** (décisions utilisateur du 2026-07-29 :
+> suivre la table publiée, ajouter la route forestière nommée ; MNT LiDAR HD et
+> zonages INPN **conservés** comme écarts assumés ; contraintes d'intégrité
+> renvoyées en [spec 025](025-integrite-reseau-desserte.md)). Version `1.28.0`
+> (mineure : `classification = "clsvac"` reste accessible, la rétro-compatibilité
+> est à un argument près). Fait suite à la spec
 > [022](022-desserte-clsvac-obstacles-accessfor.md), dont elle corrige
-> l'hypothèse fondatrice. Version cible : `1.28.0` (feat, changement de
-> classification) ou `2.0.0` si l'on juge la sortie `classe` rompue.
+> l'hypothèse fondatrice.
 > **Source** : rapport final ACCESSFOR (INRAE/IGN/ADEME, février 2025),
 > `docs/rapport_final_accessfor_vf_fev2025.pdf`, **annexe p. 51-52**.
 
@@ -87,8 +91,12 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
   l'intention*), qui devient le défaut. `"clsvac"` (calage empirique) et
   `"heuristique"` (historique) restent accessibles pour la rétro-compatibilité et
   la comparaison.
-- Nouvelle classe **`hors_desserte`** dans `.classes_desserte()`, exclue de la
-  desserte transmise à `preprocess()` — à distinguer d'une absence de tronçon.
+- Les tronçons CL_SVAC = 0 sont marqués `hors_desserte` puis **retirés** de la
+  couche rendue (`garder_hors_desserte = TRUE` pour les inspecter). Ils ne sont
+  **pas** ajoutés à `.classes_desserte()` : `.rasteriser_desserte()` code les
+  classes par leur **rang** et prend le `max` — la barrière l'emporte — donc une
+  5ᵉ classe passerait devant `reseau_public`. C'est aussi ce que fait ACCESSFOR,
+  dont la couche Sylvaccess ne contient que les classes 1/2/3.
 - Couche liée **`route_numerotee_ou_nommee`** interrogée pour récupérer les
   routes forestières nommées ; absente ou vide → pas de reclassement, sans échec.
 - Les deux contraintes d'intégrité : **vérifiées et rapportées** (combien de
@@ -96,27 +104,31 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
   corrigées automatiquement dans un premier temps — ACCESSFOR y a mis de la
   retouche manuelle, on ne va pas inventer une heuristique silencieuse.
 
-## 6. Décisions à prendre
+## 6. Décisions prises (2026-07-29)
 
-1. **`"accessfor"` par défaut ?** Oui à mon sens : c'est la règle de production
-   publiée, notre `clsvac` n'était qu'un proxy faute de mieux.
-2. **Bump** : `1.28.0` (feat) ou `2.0.0` ? La sortie `classe` d'`acquire_desserte()`
-   gagne une modalité et 42 % des tronçons changent de valeur — défendable en
-   majeur. **Demande confirmation** (règle CLAUDE.md).
-3. **Les contraintes d'intégrité** : rapportées seulement, ou appliquées ?
-4. **Les bancs oracle** : qui relance Sylvaccess ? Sans ça la validation §7 est
-   impossible.
+1. **`"accessfor"` est le défaut.** C'est la règle de production publiée.
+2. **Bump mineur `1.28.0`**, pas majeur : `classification = "clsvac"` et
+   `"heuristique"` restent accessibles, la rétro-compatibilité tient en un
+   argument. À rehausser en `2.0.0` sur simple demande.
+3. **Contraintes d'intégrité** : sorties de cette spec, traitées en
+   [spec 025](025-integrite-reseau-desserte.md) — automatisation par
+   élargissement adaptatif du buffer + `dsr_reseau()`.
+4. **Écarts assumés, non corrigés** : MNT LiDAR HD (au lieu du RGE Alti 5 m) et
+   zonages INPN/Patrinat avec APB + réserve intégrale de PN (au lieu de
+   `PARC_OU_RESERVE` filtré sur `NAT_DETAIL`). Décision utilisateur.
+5. **Les bancs oracle** : Sylvaccess se relance à la main
+   (`0_Lance_sylvaccess.py -file <banc>/param*.csv`), hors de portée d'ici.
 
 ## 7. Critères d'acceptation
 
-- [ ] **CA-24.1** — `acquire_desserte(classification = "accessfor")` reproduit la
+- [x] **CA-24.1** — `acquire_desserte(classification = "accessfor")` reproduit la
       table de l'annexe p. 51 à la lettre, y compris la classe 0.
-- [ ] **CA-24.2** — Rétro-compat : `"clsvac"` et `"heuristique"` inchangées,
+- [x] **CA-24.2** — Rétro-compat : `"clsvac"` et `"heuristique"` inchangées,
       bit-pour-bit.
-- [ ] **CA-24.3** — Les routes forestières nommées sont récupérées via la couche
+- [x] **CA-24.3** — Les routes forestières nommées sont récupérées via la couche
       liée ; absence de la couche = dégradation silencieuse, pas d'erreur.
 - [ ] **CA-24.4** — Les contraintes d'intégrité sont mesurées et publiées sur
-      l'AOI oracle.
+      l'AOI oracle. *Déplacé en spec 025.*
 - [ ] **CA-24.5 (juge de paix)** — accord 9 classes vs ACCESSFOR **supérieur** aux
       77,1 % de la v1.20.0, biais de distance non dégradé. Sinon, la règle
       publiée ne décrit pas la couche diffusée et il faut le documenter.
@@ -125,7 +137,7 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
 
 - Pas un changement des moteurs (règle 1) : seule la classification d'entrée bouge.
 - Pas la conformité des **obstacles** ni du **masque forêt** : écarts mécaniques
-  du même rapport, traités séparément (voir NEWS `1.27.1`).
+  du même rapport, corrigés séparément (PR #132, cycle dev).
 - Pas une reprise du LiDAR (specs 020/021/023) : `qualifier_desserte()` continue
   de corriger la desserte **après** classification.
 

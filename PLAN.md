@@ -393,6 +393,43 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-29 — `v1.28.0` : la classification suit la règle ACCESSFOR publiée (spec 024)
+
+Décisions utilisateur : suivre **absolument** la table publiée, ajouter la route
+forestière nommée, **conserver** le MNT LiDAR HD et les zonages INPN comme écarts
+assumés, et renvoyer les contraintes d'intégrité en spec dédiée.
+
+`classification = "accessfor"` devient le défaut. La table se lit sur `nature`
+**seul** — `importance` n'y figure pas, ce qui était l'erreur de fond de
+`clsvac`. Sur l'AOI oracle **108/256 tronçons (42 %) changent de classe** : les
+49 « Route à 1 chaussée » deviennent du **réseau public** (barrière/terminus) là
+où nous n'en avions aucun, et les 59 « Sentier » quittent la desserte.
+
+Deux points d'implémentation qui méritent d'être retenus :
+
+- **Appariement sur la modalité entière**, pas par mots-clés : un motif « route »
+  trop large attraperait « Route à 1 chaussée » et la rendrait forestière. La
+  leçon *Sylvaccess : la lettre, pas l'intention* s'applique mot pour mot.
+- **`hors_desserte` n'entre PAS dans `.classes_desserte()`.** La rasterisation
+  code les classes par leur **rang** et prend le `max` pour que la barrière
+  l'emporte ; une 5ᵉ classe passerait devant `reseau_public`. Les tronçons sont
+  donc retirés à l'acquisition — ce que fait aussi ACCESSFOR, dont la couche ne
+  contient que les classes 1/2/3.
+
+La route forestière nommée vient de la couche liée `route_numerotee_ou_nommee`
+(`type_de_route`), jointe par `liens_vers_route_nommee` — un `cleabs` simple,
+170/263 renseignés sur l'AOI. Vide sur cette emprise, donc sans effet ici.
+
+**Spec 025 ouverte** pour les contraintes d'intégrité, automatisées :
+`dsr_reseau()` de dessertR fait déjà collage de nœuds, composantes connexes et
+`connecte_public` (règle 1 : on consomme). Le levier du buffer est formalisé en
+**élargissement adaptatif** — mesurer la longueur en infraction *sur l'AOI
+stricte* pendant qu'on élargit l'emprise ; ce qui disparaît était un effet de
+bord, ce qui résiste est topologique ou réel. La remédiation est graduée en 4
+niveaux, avec le niveau 3 (suppression) explicitement **non** recommandé par
+défaut : c'est ce qu'ACCESSFOR a fait à la main, et l'automatiser retirerait de
+la desserte réelle dès que le diagnostic se trompe.
+
 ### 2026-07-29 — conformité ACCESSFOR : écarts mécaniques corrigés, spec 024 ouverte
 
 Le rapport final ACCESSFOR (`docs/rapport_final_accessfor_vf_fev2025.pdf`) a été

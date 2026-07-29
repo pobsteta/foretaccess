@@ -10,7 +10,8 @@ acquire_desserte(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  classification = c("clsvac", "heuristique")
+  classification = c("accessfor", "clsvac", "heuristique"),
+  garder_hors_desserte = FALSE
 )
 }
 \arguments{
@@ -25,11 +26,20 @@ acquire_desserte(
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
 
 \item{classification}{Comment classer la BD TOPO en desserte Sylvaccess.
-\code{"clsvac"} (défaut, spec 022) : trois classes \code{piste} / \code{route} (forestière,
-terminus du traînage) / \code{reseau_public} (grands axes, barrière), aligné sur
-ACCESSFOR — les routes empierrées carrossables deviennent \code{route}, pas
-\code{piste}. \code{"heuristique"} : ancien mapping deux classes \code{route}/\code{piste}
-(bit-pour-bit ; la route empierrée y tombe en \code{piste}).}
+\code{"accessfor"} (défaut, spec 024) applique la table \strong{publiée} du rapport
+ACCESSFOR (annexe p. 51), fondée sur \code{nature} \strong{seul} : « Route à 1 ou 2
+chaussées » → \code{reseau_public}, « Route empierrée » et route forestière
+nommée → \code{route}, « Chemin » → \code{piste}, \strong{tout le reste} (dont « Sentier »)
+→ hors desserte, donc retiré. \code{"clsvac"} (spec 022) est le calage empirique
+antérieur, qui utilisait \code{importance} ; \code{"heuristique"} l'historique deux
+classes. Sur l'AOI oracle, \code{"accessfor"} et \code{"clsvac"} divergent sur 42 \%
+des tronçons.}
+
+\item{garder_hors_desserte}{Conserver les tronçons \code{hors_desserte}
+(CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut \code{FALSE} —
+la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
+\code{TRUE} sert à inspecter ce qui a été écarté ; \strong{ne pas} passer une telle
+couche à \code{\link[=preprocess]{preprocess()}}.}
 }
 \value{
 Un objet \code{sf} de lignes avec un champ \code{classe}.

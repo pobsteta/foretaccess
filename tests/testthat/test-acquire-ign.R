@@ -1,10 +1,14 @@
 # Acquisition IGN (mockee, hors-ligne) : mapping classe, reproj/clip, cache
 # (spec 010 §4, CA-A.2/A.6).
 
-test_that("le mapping de classe derive route/piste depuis la nature BD TOPO", {
+test_that("le mapping de classe derive la classe depuis la nature BD TOPO", {
   d <- roads_fixture()
-  cl <- .mapper_classe_desserte(d) # defaut clsvac
-  expect_equal(cl, c("route", "piste")) # "Route a 1 chaussee" -> route ; "Chemin" -> piste
+  cl <- .mapper_classe_desserte(d) # defaut accessfor depuis la v1.28.0
+  # Table publiee (annexe p.51) : « Route a 1 chaussee » est du RESEAU PUBLIC,
+  # pas de la route forestiere -- c'est l'ecart majeur de la spec 024. Le defaut
+  # anterieur ("clsvac") en faisait une `route`.
+  expect_equal(cl, c("reseau_public", "piste"))
+  expect_equal(.mapper_classe_desserte(d, "clsvac"), c("route", "piste"))
 })
 
 # Jeu couvrant les cas discriminants entre les deux classifications.
@@ -38,7 +42,10 @@ test_that("acquire_desserte reprojette, decoupe et pose le champ classe", {
 
     expect_s3_class(d, "sf")
     expect_true("classe" %in% names(d))
-    expect_true(all(d$classe %in% c("route", "piste", "dfci")))
+    # `hors_desserte` (CL_SVAC = 0) est RETIRE de la sortie : la couche
+    # Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
+    expect_true(all(d$classe %in% .classes_desserte()))
+    expect_false("hors_desserte" %in% d$classe)
     expect_equal(sf::st_crs(d), sf::st_crs(2154))
     # Cache ecrit.
     expect_true(file.exists(file.path("cache", "layers", "desserte", "desserte.gpkg")))
@@ -135,4 +142,92 @@ test_that("acquire_foret et acquire_cadastre renvoient des polygones decoupes", 
 
 test_that("une dependance absente leve un message d'installation cible (CA-A.5)", {
   expect_error(.require_pkg("paquet.qui.n.existe.pas"), regexp = "install.packages")
+})
+
+test_that("classification accessfor : table publiee de l'annexe p.51", {
+  # `nature` SEUL decide -- `importance` n'entre pas dans la table publiee.
+  # Les importances ci-dessous sont celles observees sur l'AOI oracle : elles
+  # feraient diverger `clsvac`, qui pilote reseau_public sur importance <= 3.
+  x <- data.frame(
+    nature = c("Route à 2 chaussées", "Route à 1 chaussée",
+               "Route empierrée", "Chemin", "Sentier", "Rond-point"),
+    importance = c(4L, 5L, 5L, 5L, 6L, 5L)
+  )
+  cl <- foretaccess:::.mapper_classe_desserte(x, "accessfor")
+  expect_identical(cl, c("reseau_public", "reseau_public", "route", "piste",
+                         "hors_desserte", "hors_desserte"))
+
+  # `clsvac` sur les MEMES donnees : aucun reseau_public (importance 4-6), et le
+  # sentier devient une piste. C'est l'ecart de 42 % de la spec 024.
+  expect_identical(foretaccess:::.mapper_classe_desserte(x, "clsvac"),
+    c("route", "route", "route", "piste", "piste", "route"))
+})
+
+test_that("accessfor : appariement sur la modalite ENTIERE, pas par mots-cles", {
+  # « Route a 1 chaussee » ne doit pas etre attrapee par un motif « route » large,
+  # ni « Chemin rural » confondu avec « Chemin ».
+  x <- data.frame(nature = c("Route à 1 chaussée", "Chemin", "Escalier"))
+  cl <- foretaccess:::.mapper_classe_desserte(x, "accessfor")
+  expect_identical(cl, c("reseau_public", "piste", "hors_desserte"))
+})
+
+test_that("accessfor : la route forestiere nommee passe en route (couche liee)", {
+  x <- data.frame(
+    nature = c("Chemin", "Chemin", "Sentier"),
+    liens_vers_route_nommee = c("ROUTNOMM01", NA, "ROUTNOMM01")
+  )
+  # Sans la couche liee : classement par `nature` seul.
+  expect_identical(foretaccess:::.mapper_classe_desserte(x, "accessfor"),
+    c("piste", "piste", "hors_desserte"))
+  # Avec : le troncon lie a une route forestiere nommee devient `route`, et le
+  # reclassement l'emporte meme sur un `nature` qui l'excluait.
+  expect_identical(
+    foretaccess:::.mapper_classe_desserte(x, "accessfor", "ROUTNOMM01"),
+    c("route", "piste", "route"))
+})
+
+test_that("accessfor : retro-compat, clsvac et heuristique sont intactes", {
+  x <- data.frame(nature = c("Chemin", "Sentier", "Route empierrée",
+                             "Route à 1 chaussée"),
+                  importance = c(5L, 6L, 5L, 2L))
+  expect_identical(foretaccess:::.mapper_classe_desserte(x, "heuristique"),
+    c("piste", "piste", "piste", "route"))
+  expect_identical(foretaccess:::.mapper_classe_desserte(x, "clsvac"),
+    c("piste", "piste", "route", "reseau_public"))
+})
+
+test_that("acquire_desserte retire les troncons hors desserte, sauf demande", {
+  fixture <- function(aoi, typename) {
+    if (grepl("route_numerotee", typename)) return(NULL) # pas de couche liee
+    seg <- function(o) sf::st_linestring(rbind(
+      c(700200 + o, 6600200), c(700800 + o, 6600800)))
+    sf::st_sf(
+      nature = c("Chemin", "Sentier", "Route empierrée"),
+      geometry = sf::st_sfc(seg(0), seg(10), seg(20), crs = 2154)
+    )
+  }
+  withr::with_tempdir({
+    testthat::local_mocked_bindings(.fetch_wfs = fixture)
+    d <- suppressMessages(acquire_desserte(aoi_test(), cache_dir = "c1"))
+    expect_equal(nrow(d), 2L) # le Sentier est parti
+    expect_setequal(d$classe, c("piste", "route"))
+
+    # Inspection : on peut les garder pour voir ce qui a ete ecarte.
+    dg <- acquire_desserte(aoi_test(), cache_dir = "c2",
+      garder_hors_desserte = TRUE)
+    expect_equal(nrow(dg), 3L)
+    expect_true("hors_desserte" %in% dg$classe)
+  })
+})
+
+test_that(".cleabs_routes_forestieres : couche absente ou vide -> vecteur vide", {
+  testthat::local_mocked_bindings(.fetch_wfs = function(...) NULL)
+  expect_identical(foretaccess:::.cleabs_routes_forestieres(aoi_test()), character(0))
+
+  testthat::local_mocked_bindings(.fetch_wfs = function(...) sf::st_sf(
+    cleabs = c("R1", "R2", "R3"),
+    type_de_route = c("Route forestière nommée", "Départementale", NA),
+    geometry = sf::st_sfc(sf::st_point(c(0, 0)), sf::st_point(c(1, 1)),
+      sf::st_point(c(2, 2)), crs = 2154)))
+  expect_identical(foretaccess:::.cleabs_routes_forestieres(aoi_test()), "R1")
 })
