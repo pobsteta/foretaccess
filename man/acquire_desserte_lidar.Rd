@@ -48,6 +48,12 @@ ALSroads' internal profile but needs a denser ground return.}
 (returned \code{NA}) without calling ALSroads -- shorter roads are unstable under
 its search buffer. Default 40. A full BD TOPO desserte has many short
 segments; only long tronçons under a tile get a width.}
+
+\item{deviation_max}{Maximum lateral shift (m) allowed when dessertR
+re-registers a tronçon onto the LiDAR-detected roadbed
+(\code{dsr_repositionner()}). BD TOPO stays authoritative: beyond this budget the
+declared geometry is kept rather than snapped to a neighbouring track.
+Default 10. Ignored by the ALSroads engine, which has its own search buffer.}
 }
 \value{
 An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the contract
