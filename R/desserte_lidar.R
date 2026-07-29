@@ -162,12 +162,35 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
   # repli NDP 0 tourne). VALIDE hors CI (Phase B, dalle reelle, v1.26.1).
   mnt <- .as_raster(mnt, "mnt")
   .verifier_crs(des, mnt, "desserte")
+  .avertir_mnt_grossier(max(terra::res(mnt)))
   dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
 
   cli::cli_inform("Desserte LiDAR : moteur {.pkg dessertR} (NDP 1).")
   .desserte_lidar_dessertr(des, las_source, mnt, mnh, cache_dir,
     dtm_res, long_min_m, deviation_max)
   # nocov end
+}
+
+# Avertit si le MNT est trop grossier pour la mesure. L'exigence est "1 m ou plus
+# fin" ; le seuil a 1,5 m est une MARGE : il laisse passer le MNT LiDAR HD (0,5 m)
+# et RGE ALTI (1 m) meme quand une reprojection rend res() = 1.0000001. Au-dela on
+# est manifestement sur autre chose -- typiquement la grille d'accessibilite a 5 m,
+# qui etait la cause du faux negatif 0/6 de la v1.15.0 (spec 020 sec. 6bis).
+# Jusqu'a la v1.26.x, ALSroads derivait alors un MNT a 1 m depuis les points sol ;
+# ce rattrapage est parti avec lui en Phase C, l'echec est donc SILENCIEUX (des
+# largeurs NA indiscernables d'un "hors couverture" dans le bilan). D'ou ce garde.
+# Prend la resolution deja extraite : testable sans raster.
+.avertir_mnt_grossier <- function(res_max, seuil = 1.5) {
+  if (!is.finite(res_max) || res_max <= seuil) {
+    return(invisible(FALSE))
+  }
+  cli::cli_warn(c(
+    "!" = "MNT a {round(res_max, 1)} m : la mesure LiDAR exige {.strong 1 m ou plus
+           fin} -- attendez-vous a des largeurs a {.val NA} sur toute la desserte.",
+    "i" = "Fournir le MNT LiDAR HD IGN :
+           {.code acquire_mnt(aoi, res_m = 1, res_lidar_m = 1)}."
+  ))
+  invisible(TRUE)
 }
 
 # --- Repli NDP 0 : la desserte, augmentee des colonnes LiDAR a NA -------------

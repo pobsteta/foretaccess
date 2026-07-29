@@ -158,3 +158,19 @@ test_that("la pente en long d'une geometrie est calculee sur le MNT", {
   p <- foretaccess:::.pente_en_long_geom(g[1], mnt_test())
   expect_equal(p, 0)
 })
+
+test_that(".avertir_mnt_grossier previent au-dela de 1,5 m, se tait en deca", {
+  # Le rattrapage automatique (derivation d'un MNT 1 m depuis les points sol) est
+  # parti avec ALSroads en Phase C : sans ce garde, un MNT a 5 m rend des largeurs
+  # NA en SILENCE, indiscernables d'un "hors couverture" dans le bilan.
+  expect_warning(foretaccess:::.avertir_mnt_grossier(5), "1 m ou plus")
+  expect_true(suppressWarnings(foretaccess:::.avertir_mnt_grossier(5)))
+  # Marge : le LiDAR HD (0,5 m) et RGE ALTI (1 m) passent, y compris apres une
+  # reprojection qui rend res() legerement > 1.
+  expect_silent(foretaccess:::.avertir_mnt_grossier(0.5))
+  expect_silent(foretaccess:::.avertir_mnt_grossier(1))
+  expect_silent(foretaccess:::.avertir_mnt_grossier(1.0000001))
+  expect_false(foretaccess:::.avertir_mnt_grossier(1))
+  # Resolution indeterminable : on ne crie pas dans le vide.
+  expect_silent(foretaccess:::.avertir_mnt_grossier(NA_real_))
+})
