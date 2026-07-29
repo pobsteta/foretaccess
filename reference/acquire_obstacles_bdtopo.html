@@ -19,7 +19,7 @@ acquire_obstacles() (OpenStreetMap source)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,8 @@ reserve</strong> of national parks – not the whole park). Distinct from
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
-<span>  routes_importance_max <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  routes_importance_max <span class="op">=</span> <span class="cn">NA_integer_</span>,</span>
+<span>  classements_routes <span class="op">=</span> <span class="va">.CLASSEMENTS_ROUTES_ACCESSFOR</span>,</span>
 <span>  tampon_m <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  zonages <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -103,9 +104,18 @@ reserve</strong> of national parks – not the whole park). Distinct from
 
 
 <dt id="arg-routes-importance-max">routes_importance_max<a class="anchor" aria-label="anchor" href="#arg-routes-importance-max"></a></dt>
-<dd><p>Main roads with BD TOPO <code>importance</code> at most this
-are added as obstacles (autoroutes/nationales/départementales structurantes).
-Default 3. <code>NA</code> disables road obstacles.</p></dd>
+<dd><p>Fallback selection of main roads by BD TOPO
+<code>importance</code> (at most this value), used <strong>only</strong> when
+<code>cpx_classement_administratif</code> is absent from the WFS feed. Default <code>NA</code>
+(no fallback) – ACCESSFOR selects on the administrative class, not on
+<code>importance</code>, and the two do not coincide.</p></dd>
+
+
+<dt id="arg-classements-routes">classements_routes<a class="anchor" aria-label="anchor" href="#arg-classements-routes"></a></dt>
+<dd><p>Values of BD TOPO <code>cpx_classement_administratif</code>
+making a road an obstacle. Default: the ACCESSFOR list (annexe p. 52) –
+motorway, département, national, European and intercommunal roads. <code>NULL</code>
+disables the classement filter (then <code>routes_importance_max</code> applies).</p></dd>
 
 
 <dt id="arg-tampon-m">tampon_m<a class="anchor" aria-label="anchor" href="#arg-tampon-m"></a></dt>

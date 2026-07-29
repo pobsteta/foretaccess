@@ -19,7 +19,8 @@ acquire_obstacles_bdtopo(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  routes_importance_max = 3L,
+  routes_importance_max = NA_integer_,
+  classements_routes = .CLASSEMENTS_ROUTES_ACCESSFOR,
   tampon_m = 5,
   zonages = TRUE
 )
@@ -49,9 +50,18 @@ acquire_obstacles_bdtopo(
 
 - routes_importance_max:
 
-  Main roads with BD TOPO `importance` at most this are added as
-  obstacles (autoroutes/nationales/départementales structurantes).
-  Default 3. `NA` disables road obstacles.
+  Fallback selection of main roads by BD TOPO `importance` (at most this
+  value), used **only** when `cpx_classement_administratif` is absent
+  from the WFS feed. Default `NA` (no fallback) – ACCESSFOR selects on
+  the administrative class, not on `importance`, and the two do not
+  coincide.
+
+- classements_routes:
+
+  Values of BD TOPO `cpx_classement_administratif` making a road an
+  obstacle. Default: the ACCESSFOR list (annexe p. 52) – motorway,
+  département, national, European and intercommunal roads. `NULL`
+  disables the classement filter (then `routes_importance_max` applies).
 
 - tampon_m:
 

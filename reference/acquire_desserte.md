@@ -13,7 +13,8 @@ acquire_desserte(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  classification = c("clsvac", "heuristique")
+  classification = c("accessfor", "clsvac", "heuristique"),
+  garder_hors_desserte = FALSE
 )
 ```
 
@@ -41,12 +42,23 @@ acquire_desserte(
 
 - classification:
 
-  Comment classer la BD TOPO en desserte Sylvaccess. `"clsvac"` (défaut,
-  spec 022) : trois classes `piste` / `route` (forestière, terminus du
-  traînage) / `reseau_public` (grands axes, barrière), aligné sur
-  ACCESSFOR — les routes empierrées carrossables deviennent `route`, pas
-  `piste`. `"heuristique"` : ancien mapping deux classes `route`/`piste`
-  (bit-pour-bit ; la route empierrée y tombe en `piste`).
+  Comment classer la BD TOPO en desserte Sylvaccess. `"accessfor"`
+  (défaut, spec 024) applique la table **publiée** du rapport ACCESSFOR
+  (annexe p. 51), fondée sur `nature` **seul** : « Route à 1 ou 2
+  chaussées » → `reseau_public`, « Route empierrée » et route forestière
+  nommée → `route`, « Chemin » → `piste`, **tout le reste** (dont «
+  Sentier ») → hors desserte, donc retiré. `"clsvac"` (spec 022) est le
+  calage empirique antérieur, qui utilisait `importance` ;
+  `"heuristique"` l'historique deux classes. Sur l'AOI oracle,
+  `"accessfor"` et `"clsvac"` divergent sur 42 % des tronçons.
+
+- garder_hors_desserte:
+
+  Conserver les tronçons `hors_desserte` (CL_SVAC = 0) dans la sortie,
+  au lieu de les retirer ? Défaut `FALSE` — la couche Sylvaccess
+  d'ACCESSFOR ne contient que les classes 1/2/3. `TRUE` sert à inspecter
+  ce qui a été écarté ; **ne pas** passer une telle couche à
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
 
 ## Value
 

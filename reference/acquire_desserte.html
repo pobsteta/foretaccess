@@ -9,7 +9,7 @@ classe attendu par preprocess()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,8 @@ classe attendu par preprocess()."></head><body>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
-<span>  classification <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clsvac"</span>, <span class="st">"heuristique"</span><span class="op">)</span></span>
+<span>  classification <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"accessfor"</span>, <span class="st">"clsvac"</span>, <span class="st">"heuristique"</span><span class="op">)</span>,</span>
+<span>  garder_hors_desserte <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -87,11 +88,22 @@ classe attendu par preprocess()."></head><body>
 
 <dt id="arg-classification">classification<a class="anchor" aria-label="anchor" href="#arg-classification"></a></dt>
 <dd><p>Comment classer la BD TOPO en desserte Sylvaccess.
-<code>"clsvac"</code> (défaut, spec 022) : trois classes <code>piste</code> / <code>route</code> (forestière,
-terminus du traînage) / <code>reseau_public</code> (grands axes, barrière), aligné sur
-ACCESSFOR — les routes empierrées carrossables deviennent <code>route</code>, pas
-<code>piste</code>. <code>"heuristique"</code> : ancien mapping deux classes <code>route</code>/<code>piste</code>
-(bit-pour-bit ; la route empierrée y tombe en <code>piste</code>).</p></dd>
+<code>"accessfor"</code> (défaut, spec 024) applique la table <strong>publiée</strong> du rapport
+ACCESSFOR (annexe p. 51), fondée sur <code>nature</code> <strong>seul</strong> : « Route à 1 ou 2
+chaussées » → <code>reseau_public</code>, « Route empierrée » et route forestière
+nommée → <code>route</code>, « Chemin » → <code>piste</code>, <strong>tout le reste</strong> (dont « Sentier »)
+→ hors desserte, donc retiré. <code>"clsvac"</code> (spec 022) est le calage empirique
+antérieur, qui utilisait <code>importance</code> ; <code>"heuristique"</code> l'historique deux
+classes. Sur l'AOI oracle, <code>"accessfor"</code> et <code>"clsvac"</code> divergent sur 42 %
+des tronçons.</p></dd>
+
+
+<dt id="arg-garder-hors-desserte">garder_hors_desserte<a class="anchor" aria-label="anchor" href="#arg-garder-hors-desserte"></a></dt>
+<dd><p>Conserver les tronçons <code>hors_desserte</code>
+(CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut <code>FALSE</code> —
+la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
+<code>TRUE</code> sert à inspecter ce qui a été écarté ; <strong>ne pas</strong> passer une telle
+couche à <code><a href="preprocess.html">preprocess()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,8 @@
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  country <span class="op">=</span> <span class="st">"FR"</span></span>
+<span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
+<span>  exclure_landes <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -80,10 +81,24 @@
 <dt id="arg-country">country<a class="anchor" aria-label="anchor" href="#arg-country"></a></dt>
 <dd><p>Code pays ISO. Défaut <code>"FR"</code>.</p></dd>
 
+
+<dt id="arg-exclure-landes">exclure_landes<a class="anchor" aria-label="anchor" href="#arg-exclure-landes"></a></dt>
+<dd><p>Exclure les landes (<code>code_tfv</code> dans <code>LA4</code>/<code>LA6</code>) du
+masque forêt, comme ACCESSFOR ? Défaut <code>TRUE</code>. Sans colonne <code>code_tfv</code> dans
+le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Un objet <code>sf</code> de polygones de forêt.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Conforme au masque forêt d'ACCESSFOR (rapport février 2025, annexe p. 50) :
+les <strong>landes</strong> (<code>code_tfv</code> <code>LA4</code> ligneuses, <code>LA6</code> herbacées) sont <strong>exclues</strong>
+du masque – elles portent <code>FORET = 0</code> chez ACCESSFOR, donc n'entrent pas dans
+le calcul d'accessibilité. Passer <code>exclure_landes = FALSE</code> pour l'ancien
+comportement (tous les polygones BD Forêt retenus).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

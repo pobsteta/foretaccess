@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,25 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.28.0" id="foretaccess-1280-2026-07-29">foretaccess 1.28.0 (2026-07-29)<a class="anchor" aria-label="anchor" href="#foretaccess-1280-2026-07-29"></a></h2>
+<div class="section level3">
+<h3 id="desserte--la-classification-suit-la-règle-accessfor-publiée-spec-1-28-0">Desserte : la classification suit la règle ACCESSFOR <strong>publiée</strong> (spec 024)<a class="anchor" aria-label="anchor" href="#desserte--la-classification-suit-la-r%C3%A8gle-accessfor-publi%C3%A9e-spec-1-28-0"></a></h3>
+<p>Le rapport final ACCESSFOR (<code>docs/rapport_final_accessfor_vf_fev2025.pdf</code>) a été versé au dépôt. Son <strong>annexe p. 51</strong> publie la table <code>NATURE</code> → CL_SVAC que la spec 022 §3.4 croyait non publiée et avait calée empiriquement.</p>
+<ul><li>
+<strong><code>acquire_desserte(classification = "accessfor")</code> est le nouveau défaut</strong> : « Route à 1 ou 2 chaussées » → <strong><code>reseau_public</code></strong> (barrière/terminus), « Route empierrée » → <code>route</code>, « Chemin » → <code>piste</code>, <strong>tout le reste</strong> (dont « Sentier », « Rond-point ») → <strong>hors desserte</strong>. La table se lit sur <code>nature</code> <strong>seul</strong> : <code>importance</code> n’y figure pas.</li>
+<li>
+<strong>Sur l’AOI oracle, 108 tronçons sur 256 (42 %) changent de classe.</strong> Les 49 « Route à 1 chaussée » passent de route forestière à <strong>réseau public</strong> — notre ancien <code>reseau_public</code> piloté par <code>importance ≤ 3</code> n’en attrapait aucun (importances 4 et 5). Les 59 « Sentier » quittent la desserte.</li>
+<li>
+<strong>Routes forestières nommées</strong> : récupérées sur la couche liée <code>route_numerotee_ou_nommee</code> (attribut <code>type_de_route</code>), jointe via <code>liens_vers_route_nommee</code>. Couche absente ou vide → aucun reclassement, sans erreur.</li>
+<li>
+<strong>Les tronçons hors desserte sont retirés</strong> de la couche rendue, comme dans la couche Sylvaccess d’ACCESSFOR qui ne contient que les classes 1/2/3. <code>garder_hors_desserte = TRUE</code> pour inspecter ce qui a été écarté — ne pas passer une telle couche à <code><a href="../reference/preprocess.html">preprocess()</a></code>.</li>
+<li>
+<strong>Rétro-compatibilité</strong> : <code>classification = "clsvac"</code> (calage empirique de la v1.20.0) et <code>"heuristique"</code> (historique) restent accessibles, inchangées. D’où un bump <strong>mineur</strong> et non majeur.</li>
+</ul><p><strong>Écarts assumés, non corrigés</strong> (décision) : le MNT reste le <strong>LiDAR HD</strong> (et non le RGE Alti 5 m d’ACCESSFOR — le rapport p. 16 annonce lui-même ce remplacement), et les zonages réglementaires restent lus sur l’<strong>INPN/Patrinat</strong> avec APB et réserve intégrale de parc national, conformément au corps §2.3.4 du rapport plutôt qu’à son annexe.</p>
+<p><strong>Non couvert</strong> : les deux contraintes d’intégrité du réseau (classe 1 connectée à 2 ou 3, classe 2 connectée à 3) font l’objet de la <strong>spec 025</strong>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.27.0" id="foretaccess-1270-2026-07-29">foretaccess 1.27.0 (2026-07-29)<a class="anchor" aria-label="anchor" href="#foretaccess-1270-2026-07-29"></a></h2>
 <div class="section level3">

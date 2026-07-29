@@ -538,6 +538,104 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-29 — `v1.28.0` : la classification suit la règle ACCESSFOR publiée (spec 024)
+
+Décisions utilisateur : suivre **absolument** la table publiée, ajouter
+la route forestière nommée, **conserver** le MNT LiDAR HD et les zonages
+INPN comme écarts assumés, et renvoyer les contraintes d’intégrité en
+spec dédiée.
+
+`classification = "accessfor"` devient le défaut. La table se lit sur
+`nature` **seul** — `importance` n’y figure pas, ce qui était l’erreur
+de fond de `clsvac`. Sur l’AOI oracle **108/256 tronçons (42 %) changent
+de classe** : les 49 « Route à 1 chaussée » deviennent du **réseau
+public** (barrière/terminus) là où nous n’en avions aucun, et les 59 «
+Sentier » quittent la desserte.
+
+Deux points d’implémentation qui méritent d’être retenus :
+
+- **Appariement sur la modalité entière**, pas par mots-clés : un motif
+  « route » trop large attraperait « Route à 1 chaussée » et la rendrait
+  forestière. La leçon *Sylvaccess : la lettre, pas l’intention*
+  s’applique mot pour mot.
+- **`hors_desserte` n’entre PAS dans `.classes_desserte()`.** La
+  rasterisation code les classes par leur **rang** et prend le `max`
+  pour que la barrière l’emporte ; une 5ᵉ classe passerait devant
+  `reseau_public`. Les tronçons sont donc retirés à l’acquisition — ce
+  que fait aussi ACCESSFOR, dont la couche ne contient que les classes
+  1/2/3.
+
+La route forestière nommée vient de la couche liée
+`route_numerotee_ou_nommee` (`type_de_route`), jointe par
+`liens_vers_route_nommee` — un `cleabs` simple, 170/263 renseignés sur
+l’AOI. Vide sur cette emprise, donc sans effet ici.
+
+**Spec 025 ouverte** pour les contraintes d’intégrité, automatisées :
+`dsr_reseau()` de dessertR fait déjà collage de nœuds, composantes
+connexes et `connecte_public` (règle 1 : on consomme). Le levier du
+buffer est formalisé en **élargissement adaptatif** — mesurer la
+longueur en infraction *sur l’AOI stricte* pendant qu’on élargit
+l’emprise ; ce qui disparaît était un effet de bord, ce qui résiste est
+topologique ou réel. La remédiation est graduée en 4 niveaux, avec le
+niveau 3 (suppression) explicitement **non** recommandé par défaut :
+c’est ce qu’ACCESSFOR a fait à la main, et l’automatiser retirerait de
+la desserte réelle dès que le diagnostic se trompe.
+
+### 2026-07-29 — conformité ACCESSFOR : écarts mécaniques corrigés, spec 024 ouverte
+
+Le rapport final ACCESSFOR
+(`docs/rapport_final_accessfor_vf_fev2025.pdf`) a été versé au dépôt.
+Son **annexe p. 50-52** est la notice opérationnelle de préparation des
+données — elle publie ce que la spec 022 §3.4 croyait non publié.
+Confrontation complète de nos entrées à cette notice.
+
+**Conforme** : MNT (5 m ; nous sommes sur LiDAR HD, que le rapport
+lui-même p. 16 annonce comme futur référentiel national en remplacement
+du RGE Alti).
+
+**Écarts mécaniques corrigés** (cycle dev, pas de bump) :
+
+- **Masque forêt** — ACCESSFOR pose `FORET = 0` pour `CODE_TFV` ∈ {LA4
+  landes ligneuses, LA6 landes herbacées}. Nous comptions **tous** les
+  polygones BD Forêt : 13 polygones de lande sur l’AOI comptés à tort en
+  forêt. `acquire_foret(exclure_landes = TRUE)` par défaut.
+- **Obstacles — 4 couches sur 9 manquaient** : `piste_d_aerodrome`,
+  `cimetiere`, `reservoir`, `terrain_de_sport`. Ajoutées.
+- **Obstacles — filtres attributaires absents** :
+  `PERSISTANC = "Permanent"` sur l’hydro (nous bloquions les cours d’eau
+  **intermittents**), `POS_SOL >= 0` sur routes et voies ferrées (nous
+  traitions les **tunnels** en obstacles), `NATURE != "sans objet"` sur
+  les voies ferrées. Et la couche hydro était `cours_d_eau` au lieu de
+  `troncon_hydrographique`.
+- **Routes principales** — ACCESSFOR filtre
+  `cpx_classement_administratif` ∈ {Autoroute, Départementale,
+  Nationale, Route européenne, Route intercommunale}. Nous filtrions
+  `importance <= 3`. **Les deux ne coïncident pas** : sur l’AOI oracle
+  notre règle retenait **0** tronçon, la leur en retient **11** (des
+  départementales d’importance 4). `importance` devient un repli,
+  utilisé seulement si la colonne de classement manque du flux.
+
+**Ambiguïté du rapport laissée en l’état** : le corps §2.3.4 cite les
+APB et la réserve intégrale de parc national parmi les zonages ;
+l’annexe ne retient que `PARC_OU_RESERVE` filtré sur `NAT_DETAIL` ∈
+{RBI, RBD, RNN, RNR}. Nous suivons le corps (APB + PN inclus, via
+l’INPN). À trancher, ce n’est pas un bug.
+
+**Écart majeur renvoyé en spec** : `specs/024` — la table `NATURE` →
+CL_SVAC de l’annexe p. 51 diverge de notre `clsvac` sur **108 / 256
+tronçons (42 %)** de l’AOI. Les « Route à 1 chaussée » sont du **réseau
+public (3)**, pas de la route forestière ; les « Sentier » sont **hors
+desserte (0)**, pas des pistes. Notre `reseau_public` piloté par
+`importance <= 3` n’attrape rien ici. Trop structurant pour un correctif
+mécanique : décisions §6 de la spec à prendre (dont le bump).
+
+**Piste incidente** : la BD TOPO expose des attributs DFCI natifs
+(`piste_dfci`, `aire_de_retournement_dfci`, `gabarit_dfci`…),
+potentiellement bien meilleurs qu’OSM pour
+[`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md).
+**Tous vides sur l’AOI** — à vérifier sur un département méditerranéen
+avant d’y investir.
+
 ### 2026-07-29 — cycle dev : garde-fou MNT, banc Phase B paramétré, banc `aoi-ugf` réparé
 
 Trois suites de la Phase C, sans bump (cycle dev `1.27.0.9000` ;
