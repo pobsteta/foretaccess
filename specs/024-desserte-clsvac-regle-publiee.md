@@ -130,9 +130,37 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
       liée ; absence de la couche = dégradation silencieuse, pas d'erreur.
 - [ ] **CA-24.4** — Les contraintes d'intégrité sont mesurées et publiées sur
       l'AOI oracle. *Déplacé en spec 025.*
-- [ ] **CA-24.5 (juge de paix)** — accord 9 classes vs ACCESSFOR **supérieur** aux
-      77,1 % de la v1.20.0, biais de distance non dégradé. Sinon, la règle
-      publiée ne décrit pas la couche diffusée et il faut le documenter.
+- [x] **CA-24.5 (juge de paix) — ATTEINT** (2026-07-29, AOI Chastel-Nouvel,
+      608,5 ha comparés) :
+
+      | | v1.20.0 `clsvac` | v1.28.0 `accessfor` | |
+      |---|---|---|---|
+      | skidder, 9 classes | 77,1 % | **81,5 %** | +4,4 pts |
+      | skidder, agrégé | ~81 % | **88,3 %** | **+7,3 pts** |
+      | porteur, 9 classes | — | 89,3 % | |
+      | porteur, agrégé | — | 92,0 % | |
+
+      Le gain est plus fort sur l'**agrégé** que sur les 9 classes : cohérent,
+      faire de 49 tronçons une barrière change d'abord la décision
+      accessible/inaccessible, pas le rangement en bandes.
+
+      **L'artefact de masque est écarté** : entre les variantes `défaut` et
+      `MASQUE-FORETV3`, l'accord ne bouge que de 0,3 pt (skidder) et 0,1 pt
+      (porteur), alors que l'emprise change beaucoup (« ACCESSFOR hors notre
+      forêt » : 3,9 → 28,0 ha). Les désaccords résiduels ne viennent pas du
+      masque forêt.
+
+      **Résidu skidder** : biais « nous plus loin » persistant — 31,0 ha dans une
+      bande plus lointaine qu'ACCESSFOR contre 8,6 ha plus proche (rapport 3,6:1,
+      ~3,7 % de la surface). La plus grosse cellule hors diagonale est
+      **22,3 ha** où nous disons *inaccessible* et ACCESSFOR *500-1000 m* —
+      hypothèse : composantes orphelines chez nous, reconnectées à la main par
+      ACCESSFOR (annexe p. 51). Instruit en spec 025.
+
+      **Résidu porteur, sens inverse** : nous plus conservateurs (29,7 ha
+      inaccessibles chez nous / accessibles chez eux, contre 18,9 ha en sens
+      inverse). Piste : effet de pente, notre MNT LiDAR HD contre leur RGE Alti
+      (écart n° 4, assumé).
 
 ## 8. Ce que ça n'est PAS
 

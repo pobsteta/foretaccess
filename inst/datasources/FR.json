@@ -19,11 +19,8 @@
     "dem": {
       "service": "ign_wms",
       "layer": "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93",
-      "fallback_layers": [
-        "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",
-        "ELEVATION.ELEVATIONGRIDCOVERAGE"
-      ],
-      "description": "MNT LIDAR HD (Lambert-93 natif) ; repli HIGHRES puis RGE ALTI",
+      "fallback_layers": [],
+      "description": "MNT LIDAR HD (Lambert-93 natif). AUCUN repli WMS : les couches RGE ALTI servies par WMS (ELEVATION.ELEVATIONGRIDCOVERAGE[.HIGHRES]) rendent un MNT blocky a fausses pentes (jusqu'a 382 %). Pour du RGE ALTI, utiliser acquire_mnt_rgealti() (dalles departementales).",
       "resolution_m": 5
     },
     "roads": {

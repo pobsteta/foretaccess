@@ -150,6 +150,143 @@
   unique(as.character(rn$cleabs)[est_f])
 }
 
+#' Acquiert un MNT RGE ALTI depuis les **dalles départementales** (Géoservices)
+#'
+#' Alternative saine au RGE ALTI servi par WMS, qui rend un MNT **blocky** (blocs
+#' plats à marches) dont la pente est fausse. C'est le produit que prescrit la
+#' notice ACCESSFOR (rapport février 2025, annexe p. 50) : *« Livraison d'un MNT
+#' provenant du RGE Alti 5m converti en 32bit »*, téléchargé par département.
+#'
+#' @details
+#' L'archive départementale (~450 Mo en `.7z` pour le 5 m) est téléchargée une
+#' fois et mise en cache ; seules les **dalles couvrant l'AOI** en sont extraites,
+#' puis mosaïquées et découpées. L'extraction requiert `py7zr` (Python) ou un
+#' binaire `7z` sur le `PATH` -- l'archive Géoservices n'est pas lisible autrement.
+#'
+#' Sur la même AOI, ce produit donne une distribution de pente quasi identique au
+#' MNT LiDAR HD (médiane 39,96 % contre 40,99 %), là où la variante WMS donnait
+#' une médiane de 18,89 % et un maximum de 382 %.
+#'
+#' @inheritParams acquire_mnt
+#' @param dep Code du département sur deux caractères (ex. `"48"`).
+#' @param res_m Résolution du produit RGE ALTI : 5 ou 1. Défaut 5.
+#' @return Le chemin du raster `mnt_rgealti.tif` écrit en cache.
+#' @seealso [acquire_mnt()] (LIDAR HD, source par défaut).
+#' @export
+acquire_mnt_rgealti <- function(aoi, dep, res_m = 5, crs = 2154,
+                                cache_dir = tempdir(), overwrite = FALSE) {
+  checkmate::assert_string(dep, min.chars = 2, max.chars = 3)
+  checkmate::assert_choice(as.integer(res_m), c(1L, 5L))
+  chemin <- .chemin_cache(cache_dir, "mnt_rgealti", "tif")
+  if (file.exists(chemin) && !overwrite) {
+    return(chemin)
+  }
+  # nocov start : reseau + archive lourde, hors CI (valide sur le dep 48).
+  d <- file.path(cache_dir, "rgealti")
+  dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  arch <- .rgealti_archive(dep, res_m, d)
+  asc <- .rgealti_extraire(arch, aoi, crs, d)
+  if (!length(asc)) {
+    cli::cli_abort("Aucune dalle RGE ALTI ne couvre l'emprise (dep {.val {dep}}).")
+  }
+  tuiles <- lapply(asc, function(f) {
+    r <- terra::rast(f)
+    terra::crs(r) <- paste0("EPSG:", crs) # l'ASC ne porte pas le CRS
+    r
+  })
+  mos <- if (length(tuiles) == 1L) tuiles[[1]] else do.call(terra::merge, tuiles)
+  aoi_c <- sf::st_transform(sf::st_geometry(sf::st_as_sf(aoi)), crs)
+  mos <- terra::crop(mos, terra::vect(aoi_c), snap = "out")
+  terra::writeRaster(mos, chemin, overwrite = TRUE)
+  chemin
+  # nocov end
+}
+
+# Telecharge (une fois) l'archive departementale RGE ALTI depuis la Geoplateforme.
+# L'identifiant de livraison porte une DATE qui varie par departement : on la
+# resout via le flux Atom de la ressource plutot que de la coder en dur.
+.rgealti_archive <- function(dep, res_m, dir_cache) { # nocov start
+  f <- file.path(dir_cache, sprintf("RGEALTI_D%s_%dM.7z", dep, res_m))
+  if (file.exists(f) && file.size(f) > 1e6) {
+    return(f)
+  }
+  motif <- sprintf("RGEALTI[A-Za-z0-9_.-]*%dM_ASC_LAMB93[A-Za-z0-9_.-]*D0*%s_[0-9-]+",
+    res_m, dep)
+  id <- NULL
+  for (p in seq_len(30)) {
+    u <- sprintf("https://data.geopf.fr/telechargement/resource/RGEALTI?page=%d", p)
+    txt <- tryCatch(paste(readLines(u, warn = FALSE), collapse = "\n"),
+      error = function(e) "")
+    hit <- regmatches(txt, regexpr(motif, txt))
+    if (length(hit) && nzchar(hit)) {
+      id <- hit
+      break
+    }
+  }
+  if (is.null(id)) {
+    cli::cli_abort("Livraison RGE ALTI {.val {res_m}} m introuvable pour le
+                    departement {.val {dep}}.")
+  }
+  url <- sprintf("https://data.geopf.fr/telechargement/download/RGEALTI/%s/%s.7z",
+    id, id)
+  cli::cli_inform("RGE ALTI {.val {dep}} : telechargement de {.val {id}} (~450 Mo).")
+  utils::download.file(url, f, mode = "wb", quiet = TRUE)
+  f
+}
+
+# Extrait les seules dalles couvrant l'AOI. Les dalles sont nommees
+# `RGEALTI_FXX_<xmin_km>_<ymax_km>_MNT_...asc` ; on selectionne sur ces bornes.
+.rgealti_extraire <- function(arch, aoi, crs, dir_cache) {
+  bb <- sf::st_bbox(sf::st_transform(sf::st_geometry(sf::st_as_sf(aoi)), crs))
+  deja <- list.files(dir_cache, pattern = "\\.asc$", recursive = TRUE,
+    full.names = TRUE)
+  garder <- function(f) {
+    m <- regmatches(basename(f), regexec("_(\\d{4})_(\\d{4})_", basename(f)))[[1]]
+    if (length(m) < 3) {
+      return(FALSE)
+    }
+    x0 <- as.numeric(m[2]) * 1000
+    y1 <- as.numeric(m[3]) * 1000
+    # Dalle de 5 km (produit 5 m) : [x0, x0+5000] x [y1-5000, y1].
+    x0 <= bb["xmax"] && (x0 + 5000) >= bb["xmin"] &&
+      (y1 - 5000) <= bb["ymax"] && y1 >= bb["ymin"]
+  }
+  sel <- deja[vapply(deja, garder, logical(1))]
+  if (length(sel)) {
+    return(sel)
+  }
+  .rgealti_desarchiver(arch, dir_cache)
+  deja <- list.files(dir_cache, pattern = "\\.asc$", recursive = TRUE,
+    full.names = TRUE)
+  deja[vapply(deja, garder, logical(1))]
+}
+
+# Desarchivage : py7zr (Python) ou binaire 7z. L'archive Geoservices est en .7z,
+# format que ni utils::unzip ni archive::archive ne lisent par defaut.
+.rgealti_desarchiver <- function(arch, dir_cache) {
+  bin <- Sys.which(c("7z", "7za", "7zr"))
+  bin <- bin[nzchar(bin)]
+  if (length(bin)) {
+    system2(bin[[1]], c("x", "-y", shQuote(arch), paste0("-o", shQuote(dir_cache))),
+      stdout = FALSE, stderr = FALSE)
+    return(invisible(TRUE))
+  }
+  py <- Sys.which("python3")
+  if (!nzchar(py)) {
+    cli::cli_abort("Ni {.code 7z} ni {.code python3} : impossible d'ouvrir
+                    l'archive RGE ALTI.")
+  }
+  code <- sprintf(
+    "import py7zr; z=py7zr.SevenZipFile(%s,'r'); z.extractall(%s)",
+    shQuote(arch, type = "sh"), shQuote(dir_cache, type = "sh"))
+  st <- system2(py, c("-c", shQuote(code)), stdout = FALSE, stderr = FALSE)
+  if (!identical(st, 0L)) {
+    cli::cli_abort("Extraction de l'archive RGE ALTI echouee
+                    ({.code py7zr} absent ?).")
+  }
+  invisible(TRUE)
+} # nocov end
+
 # --- Acquisition par source -------------------------------------------------
 
 #' Acquiert le MNT depuis RGE ALTI (IGN WMS)
@@ -185,6 +322,7 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
   # essaie chaque couche jusqu'a une couverture suffisante (le LIDAR HD n'est pas
   # partout : hors couverture, le WMS rend un raster majoritairement NA).
   couches <- c(info$layer, as.character(info$fallback_layers))
+  .verifier_couches_mnt(couches)
   for (i in seq_along(couches)) {
     ly <- couches[[i]]
     # La couche PRIMAIRE (LIDAR HD MNT) est telechargee FINE (res_lidar_m) sur
@@ -209,7 +347,37 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
       return(chemin)
     }
   }
-  cli::cli_abort("Aucune couche MNT ne couvre l'emprise (essaye : {.val {couches}}).")
+  cli::cli_abort(c(
+    "Aucune couche MNT ne couvre l'emprise (essaye : {.val {couches}}).",
+    "i" = "Il n'y a plus de repli WMS : les couches RGE ALTI servies par WMS
+           rendent un MNT {.strong blocky} (blocs plats a marches, fausses pentes
+           jusqu'a 382 %) -- cf. {.fn acquire_mnt_rgealti}.",
+    "i" = "Hors couverture LIDAR HD : {.code acquire_mnt_rgealti(aoi, dep = \"48\")}
+           telecharge les dalles departementales RGE ALTI, saines."
+  ))
+}
+
+# Interdiction dure : aucune couche RGE ALTI par WMS ne doit revenir dans la
+# chaine. Le WMS d'altitude sert une pyramide web-mercator rereprojetee ; sur
+# certaines tuiles elle rend un MNT blocky dont la pente est fausse (Q1 a 1,9 %
+# pour une mediane a 18,9 % et un MAX a 382 %, mesure sur l'AOI oracle le
+# 2026-07-29). Un tel MNT a alimente le banc `aoi` pendant deux semaines sans
+# que rien ne le signale. Garde-fou teste, pas seulement documente.
+.COUCHES_WMS_INTERDITES <- c(
+  "ELEVATION.ELEVATIONGRIDCOVERAGE",
+  "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"
+)
+
+.verifier_couches_mnt <- function(couches) {
+  mauvaises <- intersect(couches, .COUCHES_WMS_INTERDITES)
+  if (length(mauvaises)) {
+    cli::cli_abort(c(
+      "Couche{?s} MNT interdite{?s} : {.val {mauvaises}}.",
+      "x" = "Le RGE ALTI par WMS rend un MNT {.strong blocky} a fausses pentes.",
+      "i" = "Utiliser {.fn acquire_mnt_rgealti} (dalles departementales)."
+    ))
+  }
+  invisible(TRUE)
 }
 
 # Telecharge le MNT LIDAR HD fin (res_lidar_m) sur l'emprise dans
