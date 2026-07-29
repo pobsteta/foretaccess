@@ -225,16 +225,39 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   d
 }
 
+# Codes BD Foret v2 exclus du masque foret par ACCESSFOR (rapport fev. 2025,
+# annexe p.50) : « FORET = 0 pour les polygones ou CODE_TFV = LA4 (landes
+# ligneuses), LA6 (landes herbacees) ; FORET = 1 pour l'ensemble des autres ».
+# Une lande n'est pas une ressource a mobiliser : la compter en foret gonfle la
+# surface accessible.
+.CODES_TFV_NON_FORET <- c("LA4", "LA6")
+
 #' Acquiert la forêt depuis BD Forêt v2 (IGN WFS)
 #'
+#' @details
+#' Conforme au masque forêt d'ACCESSFOR (rapport février 2025, annexe p. 50) :
+#' les **landes** (`code_tfv` `LA4` ligneuses, `LA6` herbacées) sont **exclues**
+#' du masque -- elles portent `FORET = 0` chez ACCESSFOR, donc n'entrent pas dans
+#' le calcul d'accessibilité. Passer `exclure_landes = FALSE` pour l'ancien
+#' comportement (tous les polygones BD Forêt retenus).
+#'
 #' @inheritParams acquire_mnt
+#' @param exclure_landes Exclure les landes (`code_tfv` dans `LA4`/`LA6`) du
+#'   masque forêt, comme ACCESSFOR ? Défaut `TRUE`. Sans colonne `code_tfv` dans
+#'   le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.
 #' @return Un objet `sf` de polygones de forêt.
 #' @export
 acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
-                          overwrite = FALSE, country = "FR") {
+                          overwrite = FALSE, country = "FR",
+                          exclure_landes = TRUE) {
   chemin <- .chemin_cache(cache_dir, "foret", "gpkg")
   if (file.exists(chemin) && !overwrite) {
-    return(sf::st_read(chemin, quiet = TRUE))
+    # Filtrage applique AUSSI a la relecture du cache : un cache ecrit avant la
+    # v1.27.1 contient les landes, et le nom de fichier ne porte pas la trace du
+    # filtre. Ne filtrer qu'a l'ecriture rendrait la correction inoperante sur
+    # tout cache existant -- le piege exact de la classification de desserte
+    # (cache heuristique servi indefiniment apres le passage en clsvac).
+    return(.exclure_landes(sf::st_read(chemin, quiet = TRUE), exclure_landes))
   }
   info <- get_layer_service("bdforet_v2", country)
   if (is.null(info)) {
@@ -242,8 +265,27 @@ acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   brut <- .fetch_wfs(aoi, info$typename)
   f <- .reprojeter_clip(brut, aoi, crs)
+  f <- .exclure_landes(f, exclure_landes)
   sf::st_write(f, chemin, delete_dsn = TRUE, quiet = TRUE)
   f
+}
+
+# Retire les landes du masque foret (cf. .CODES_TFV_NON_FORET). Sans colonne
+# `code_tfv` on ne peut pas filtrer : on renvoie tel quel plutot que d'echouer.
+.exclure_landes <- function(f, exclure = TRUE) {
+  if (!isTRUE(exclure) || !("code_tfv" %in% names(f)) || nrow(f) == 0) {
+    return(f)
+  }
+  est_lande <- toupper(trimws(as.character(f$code_tfv))) %in% .CODES_TFV_NON_FORET
+  est_lande[is.na(est_lande)] <- FALSE
+  if (any(est_lande)) {
+    # Variable locale SANS point initial : cli >= 3.4 traite `{.x}` comme un
+    # style, pas comme une expression.
+    codes <- .CODES_TFV_NON_FORET
+    cli::cli_inform("Masque foret : {sum(est_lande)} polygone{?s} de lande
+                     ({.val {codes}}) exclu{?s} (conforme ACCESSFOR).")
+  }
+  f[!est_lande, , drop = FALSE]
 }
 
 #' Acquiert le parcellaire cadastral (IGN WFS, optionnel)

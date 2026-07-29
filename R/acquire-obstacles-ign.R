@@ -9,13 +9,60 @@
 # l'apport vient des cours d'eau/batis -- bien plus fort sur un massif a reserves).
 
 # Couches BD TOPO obstacles (WFS IGN data.geopf.fr). Lignes tamponnees en surface
-# au rasterisation ; polygones tels quels.
+# a la rasterisation ; polygones tels quels.
+#
+# Liste TRANSCRITE du tableau de l'annexe p.51-52 du rapport ACCESSFOR : quatre
+# thematiques (TRANSPORT / HYDROGRAPHIE / BATI / ZONES_REGLEMENTEES). Les couches
+# cimetiere, reservoir, terrain_de_sport et piste_d_aerodrome manquaient jusqu'a
+# la v1.27.1 -- soit 4 des 9 classes d'obstacles BD TOPO d'ACCESSFOR.
 .OBSTACLES_BDTOPO <- c(
-  cours_d_eau            = "BDTOPO_V3:cours_d_eau",
+  # HYDROGRAPHIE -- filtrees sur persistance permanente (cf. .filtre_obstacle).
+  cours_d_eau            = "BDTOPO_V3:troncon_hydrographique",
   surface_hydrographique = "BDTOPO_V3:surface_hydrographique",
+  # TRANSPORT -- voie ferree filtree (nature, position au sol) ; routes a part.
   voie_ferree            = "BDTOPO_V3:troncon_de_voie_ferree",
-  batiment               = "BDTOPO_V3:batiment"
+  piste_d_aerodrome      = "BDTOPO_V3:piste_d_aerodrome",
+  # BATI -- « Tout » chez ACCESSFOR, aucun filtre attributaire.
+  batiment               = "BDTOPO_V3:batiment",
+  cimetiere              = "BDTOPO_V3:cimetiere",
+  reservoir              = "BDTOPO_V3:reservoir",
+  terrain_de_sport       = "BDTOPO_V3:terrain_de_sport"
 )
+
+# Classements administratifs retenus par ACCESSFOR pour les « routes principales »
+# (annexe p.52, filtre sur `cpx_classement_administratif`). Remplace le filtre
+# `importance <= 3` de la v1.21.0, qui ne retrouvait PAS la meme selection : sur
+# l'AOI oracle il retenait 0 troncon la ou le classement en retient 11.
+.CLASSEMENTS_ROUTES_ACCESSFOR <- c(
+  "Autoroute", "Departementale", "Nationale", "Route europeenne",
+  "Route intercommunale"
+)
+
+# Filtres attributaires de l'annexe p.51-52, appliques couche par couche.
+#   * hydrographie : PERSISTANC = « Permanent » -- sans quoi les cours d'eau
+#     intermittents (secs une partie de l'annee) bloquent a tort ;
+#   * voie ferree  : NATURE != « sans objet » ;
+#   * transport    : POS_SOL >= 0 -- un TUNNEL n'est pas un obstacle de surface.
+.filtre_obstacle <- function(x, couche) {
+  if (is.null(x) || nrow(x) == 0) {
+    return(x)
+  }
+  garder <- rep(TRUE, nrow(x))
+  if (couche %in% c("cours_d_eau", "surface_hydrographique") &&
+      "persistance" %in% names(x)) {
+    garder <- garder & grepl("permanent", .ascii(x$persistance))
+  }
+  if (couche == "voie_ferree" && "nature" %in% names(x)) {
+    garder <- garder & !grepl("sans objet", .ascii(x$nature))
+  }
+  if (couche %in% c("voie_ferree", "routes_principales") &&
+      "position_par_rapport_au_sol" %in% names(x)) {
+    pos <- suppressWarnings(as.integer(as.character(x$position_par_rapport_au_sol)))
+    garder <- garder & (is.na(pos) | pos >= 0L)
+  }
+  garder[is.na(garder)] <- FALSE
+  x[garder, , drop = FALSE]
+}
 
 # Zonages reglementaires INPN/MNHN (famille Patrinat). Correspondance exacte aux
 # exclusions ACCESSFOR (rapport sec.2.3.4). Les couches "tout" excluent le polygone
@@ -49,9 +96,15 @@
 #' TOPO obstacles alone.
 #'
 #' @inheritParams acquire_desserte
-#' @param routes_importance_max Main roads with BD TOPO `importance` at most this
-#'   are added as obstacles (autoroutes/nationales/départementales structurantes).
-#'   Default 3. `NA` disables road obstacles.
+#' @param routes_importance_max Fallback selection of main roads by BD TOPO
+#'   `importance` (at most this value), used **only** when
+#'   `cpx_classement_administratif` is absent from the WFS feed. Default `NA`
+#'   (no fallback) -- ACCESSFOR selects on the administrative class, not on
+#'   `importance`, and the two do not coincide.
+#' @param classements_routes Values of BD TOPO `cpx_classement_administratif`
+#'   making a road an obstacle. Default: the ACCESSFOR list (annexe p. 52) --
+#'   motorway, département, national, European and intercommunal roads. `NULL`
+#'   disables the classement filter (then `routes_importance_max` applies).
 #' @param tampon_m Buffer (m) applied to line obstacles. Default 5.
 #' @param zonages Include the INPN/Patrinat regulatory exclusions? Default `TRUE`.
 #' @return An `sf` of `MULTIPOLYGON` obstacles in `crs`, clipped to `aoi`. Empty
@@ -61,8 +114,9 @@
 #' @export
 acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
                                      overwrite = FALSE, country = "FR",
-                                     routes_importance_max = 3L, tampon_m = 5,
-                                     zonages = TRUE) {
+                                     routes_importance_max = NA_integer_,
+                                     classements_routes = .CLASSEMENTS_ROUTES_ACCESSFOR,
+                                     tampon_m = 5, zonages = TRUE) {
   chemin <- .chemin_cache(cache_dir, "obstacles_bdtopo", "gpkg")
   if (file.exists(chemin) && !overwrite) {
     return(sf::st_read(chemin, quiet = TRUE))
@@ -71,20 +125,20 @@ acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
 
   polys <- list()
   # --- Obstacles BD TOPO ---------------------------------------------------
-  for (typ in .OBSTACLES_BDTOPO) {
-    x <- tryCatch(.fetch_wfs(aoi, typ), error = function(e) NULL)
+  for (nom in names(.OBSTACLES_BDTOPO)) {
+    x <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO[[nom]]), error = function(e) NULL)
+    x <- .filtre_obstacle(x, nom)
     g <- .obstacle_polygones(x, crs, aoi_cible, tampon_m)
-    if (!is.null(g)) polys[[typ]] <- g
+    if (!is.null(g)) polys[[nom]] <- g
   }
-  # Routes principales (grands axes) : depuis troncon_de_route, filtre importance.
-  if (!is.na(routes_importance_max)) {
+  # Routes principales : filtre ACCESSFOR sur `cpx_classement_administratif`
+  # (annexe p.52), repli sur `importance` si la colonne manque du flux.
+  if (!is.null(classements_routes) || !is.na(routes_importance_max)) {
     rt <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO_ROUTE()), error = function(e) NULL)
-    if (!is.null(rt) && "importance" %in% names(rt)) {
-      imp <- suppressWarnings(as.integer(as.character(rt$importance)))
-      rt <- rt[!is.na(imp) & imp <= routes_importance_max, ]
-      g <- .obstacle_polygones(rt, crs, aoi_cible, tampon_m)
-      if (!is.null(g)) polys[["routes_principales"]] <- g
-    }
+    rt <- .filtre_routes_principales(rt, classements_routes, routes_importance_max)
+    rt <- .filtre_obstacle(rt, "routes_principales")
+    g <- .obstacle_polygones(rt, crs, aoi_cible, tampon_m)
+    if (!is.null(g)) polys[["routes_principales"]] <- g
   }
   # --- Zonages reglementaires (INPN / Patrinat) ----------------------------
   if (isTRUE(zonages)) {
@@ -109,6 +163,27 @@ acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   sf::st_write(out, chemin, delete_dsn = TRUE, quiet = TRUE)
   out
+}
+
+# Selection des « routes principales » : classement administratif ACCESSFOR en
+# premier, repli `importance` si la colonne manque. Les deux ne coincident PAS --
+# sur l'AOI oracle, `importance <= 3` retenait 0 troncon quand le classement en
+# retient 11 (des departementales d'importance 4).
+.filtre_routes_principales <- function(rt, classements, importance_max) {
+  if (is.null(rt) || nrow(rt) == 0) {
+    return(rt)
+  }
+  if (!is.null(classements) && "cpx_classement_administratif" %in% names(rt)) {
+    cl <- .ascii(rt$cpx_classement_administratif)
+    garder <- cl %in% .ascii(classements)
+    garder[is.na(garder)] <- FALSE
+    return(rt[garder, , drop = FALSE])
+  }
+  if (!is.na(importance_max) && "importance" %in% names(rt)) {
+    imp <- suppressWarnings(as.integer(as.character(rt$importance)))
+    return(rt[!is.na(imp) & imp <= importance_max, , drop = FALSE])
+  }
+  rt[0, , drop = FALSE]
 }
 
 # Typename BD TOPO des routes (reutilise la config desserte).

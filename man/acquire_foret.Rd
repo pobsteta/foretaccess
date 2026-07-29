@@ -9,7 +9,8 @@ acquire_foret(
   crs = 2154,
   cache_dir = tempdir(),
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  exclure_landes = TRUE
 )
 }
 \arguments{
@@ -22,10 +23,21 @@ acquire_foret(
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
 
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
+
+\item{exclure_landes}{Exclure les landes (\code{code_tfv} dans \code{LA4}/\code{LA6}) du
+masque forêt, comme ACCESSFOR ? Défaut \code{TRUE}. Sans colonne \code{code_tfv} dans
+le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.}
 }
 \value{
 Un objet \code{sf} de polygones de forêt.
 }
 \description{
 Acquiert la forêt depuis BD Forêt v2 (IGN WFS)
+}
+\details{
+Conforme au masque forêt d'ACCESSFOR (rapport février 2025, annexe p. 50) :
+les \strong{landes} (\code{code_tfv} \code{LA4} ligneuses, \code{LA6} herbacées) sont \strong{exclues}
+du masque -- elles portent \code{FORET = 0} chez ACCESSFOR, donc n'entrent pas dans
+le calcul d'accessibilité. Passer \code{exclure_landes = FALSE} pour l'ancien
+comportement (tous les polygones BD Forêt retenus).
 }
