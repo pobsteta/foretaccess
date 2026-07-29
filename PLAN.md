@@ -393,6 +393,40 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-29 — banc `aoi-ugf` **abandonné**, `oracle_compare.R` prend le dernier run
+
+**Abandon d'`aoi-ugf`.** En nettoyant les sorties des bancs pour une relance
+propre, j'ai supprimé `data-raw/oracle/aoi-ugf/input/` — or `area.gpkg` y était
+l'**entrée** du script, pas une sortie : la seule source de l'emprise de ce banc,
+un `MultiPolygon` non reconstructible depuis le MNT en cache (qui n'en donne que
+la bbox bufferisée). Aucune sauvegarde ne la contenait. Décision : abandonner ce
+banc plutôt que lui substituer une bbox qui en aurait fait un banc *différent*
+sous le même nom. `data-raw/oracle_aoi_ugf.R` est retiré, `aoi` et ColduPre
+restent.
+
+Deux leçons, la seconde plus large que la première :
+
+1. Un répertoire `input/` peut contenir des **entrées irremplaçables** ; « sortie
+   régénérable » se vérifie fichier par fichier, pas au nom du dossier. Je le
+   savais — je l'avais écrit en tête du script le matin même — et je l'ai quand
+   même effacé en classant le dossier en bloc.
+2. Un banc dont l'emprise n'est **pas versionnée** est un banc fragile. `aoi`
+   tient parce que `data-raw/aoi.gpkg` est dans le dépôt ; `aoi-ugf` n'avait sa
+   géométrie que dans un répertoire gitignoré. Tout futur banc doit versionner
+   son emprise.
+
+**`oracle_compare.R` prend le dernier run Sylvaccess.** Sylvaccess n'écrase pas
+ses sorties : il **incrémente** (`Skidder_1`, `_2`, `_3`…). Le script lisait
+`_1` en dur, c'est-à-dire la toute première exécution — potentiellement très
+ancienne, sur des entrées qui n'ont plus cours. Nouvel argument positionnel
+`run`, défaut `"last"`, résolu **par module** (les modules peuvent avoir été
+relancés un nombre différent de fois). Le suffixe reste forçable.
+
+C'est ce qui explique que la comparaison lancée sur ColduPre rendait 99,95 % :
+elle confrontait les moteurs à leur oracle historique, sans rapport avec la
+classification du jour. Le défaut du script pointe d'ailleurs sur ColduPre, pas
+sur `aoi` — il faut lui passer les deux répertoires explicitement.
+
 ### 2026-07-29 — `v1.28.0` : la classification suit la règle ACCESSFOR publiée (spec 024)
 
 Décisions utilisateur : suivre **absolument** la table publiée, ajouter la route

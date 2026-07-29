@@ -70,7 +70,7 @@ aoi <- st_read("data-raw/aoi.gpkg", quiet = TRUE)
 cache <- Sys.getenv("ACCESSFOR_CACHE", "/tmp/accessfor-cache")
 dir.create(cache, recursive = TRUE, showWarnings = FALSE)
 cat("== Acquisition IGN + pretraitement (AOI Chastel-Nouvel) ==\n"); flush.console()
-# FA_DFCI=0 saute le flag DFCI, comme oracle_aoi.R et oracle_aoi_ugf.R :
+# FA_DFCI=0 saute le flag DFCI, comme oracle_aoi.R :
 # acquire_dfci() ne met rien en cache quand OSM ECHOUE (throttling Overpass), et
 # le flag ne sert a rien ici -- ACCESSFOR ne modelise ni DFCI ni camion.
 DFCI <- !identical(Sys.getenv("FA_DFCI"), "0")

@@ -13,10 +13,41 @@ suppressPackageStartupMessages({
   library(sf)
 })
 
+# Usage : Rscript data-raw/oracle_compare.R [dir_sylvaccess] [dir_foretaccess] [run]
+#   run : suffixe des dossiers Sylvaccess (`Skidder_<run>`, ...). Defaut "last".
+#
+# Sylvaccess N'ECRASE PAS ses sorties : il INCREMENTE. Relancer sur le meme banc
+# cree Skidder_2, Skidder_3... et le `_1` reste la toute premiere execution --
+# potentiellement tres ancienne, sur des entrees qui n'ont plus cours. Comparer
+# le `_1` par defaut, c'est confronter nos moteurs a un oracle perime sans que
+# rien ne le signale. D'ou "last" en defaut, et un suffixe explicite possible.
 args <- commandArgs(trailingOnly = TRUE)
 SYLVA <- if (length(args) >= 1) args[1] else "~/dev/sylvaccess-upstream/test/ColduPre/Results"
 FA <- if (length(args) >= 2) args[2] else "data-raw/oracle/coldupre/foretaccess"
+RUN <- if (length(args) >= 3) args[3] else "last"
 SYLVA <- path.expand(SYLVA)
+
+# Dossier d'un module Sylvaccess pour le run demande. `run = "last"` prend le
+# suffixe NUMERIQUE le plus eleve present pour CE module -- les modules peuvent
+# avoir ete relances un nombre different de fois.
+dir_run <- function(sylva, module, run = RUN) {
+  if (!identical(run, "last")) {
+    return(file.path(sylva, paste0(module, "_", run)))
+  }
+  cands <- list.dirs(sylva, recursive = FALSE, full.names = FALSE)
+  n <- suppressWarnings(as.integer(sub(paste0("^", module, "_"), "", cands)))
+  ok <- grepl(paste0("^", module, "_\\d+$"), cands) & !is.na(n)
+  if (!any(ok)) {
+    return(file.path(sylva, paste0(module, "_1"))) # absent : laisse echouer en aval
+  }
+  file.path(sylva, cands[ok][which.max(n[ok])])
+}
+
+cat("Oracle Sylvaccess :", SYLVA, "| run :", RUN, "\n")
+for (m in c("Skidder", "Porteur", "Cable", "DFCI")) {
+  d <- dir_run(SYLVA, m)
+  if (dir.exists(d)) cat(sprintf("  %-8s -> %s\n", m, basename(d)))
+}
 
 # PIEGE : Foret_accessible.tif vaut 1 sur les accessibles et NoData (0) ailleurs,
 # idem pour Foret_inaccessible.tif. Lues telles quelles, les cellules
@@ -112,7 +143,7 @@ lire <- function(...) {
 }
 
 # --- SKIDDER ----------------------------------------------------------------
-s_dir <- file.path(SYLVA, "Skidder_1")
+s_dir <- dir_run(SYLVA, "Skidder")
 acc_s <- lire(s_dir, "Foret_accessible.tif")
 inacc_s <- lire(s_dir, "Foret_inaccessible.tif")
 
@@ -148,7 +179,7 @@ for (p in list(
 }
 
 # --- PORTEUR ----------------------------------------------------------------
-f_dir <- file.path(SYLVA, "Porteur_1")
+f_dir <- dir_run(SYLVA, "Porteur")
 acc_ps <- lire(f_dir, "Foret_accessible.tif")
 acc_pf <- lire(FA, "porteur", "accessibilite.tif")
 if (!is.null(acc_ps) && !is.null(acc_pf)) {
@@ -183,7 +214,7 @@ if (!is.null(acc_ps) && !is.null(acc_pf)) {
 }
 
 # --- CABLE ------------------------------------------------------------------
-c_dir <- file.path(SYLVA, "Cable_1")
+c_dir <- dir_run(SYLVA, "Cable")
 acc_cs <- lire(c_dir, "Zone_accessible.tif")
 acc_cf <- lire(FA, "cable", "accessibilite.tif")
 if (!is.null(acc_cs) && !is.null(acc_cf)) {
@@ -197,7 +228,7 @@ if (!is.null(acc_cs) && !is.null(acc_cf)) {
 # --- DFCI -------------------------------------------------------------------
 # L'oracle DFCI n'est pas dans le lanceur standard (g_do_dfci defaut false) : le
 # bloc se saute si `DFCI_1/` est absent.
-d_dir <- file.path(SYLVA, "DFCI_1")
+d_dir <- dir_run(SYLVA, "DFCI")
 acc_ds <- lire(d_dir, "Foret_accessible.tif")
 acc_df <- lire(FA, "dfci", "accessibilite.tif")
 if (!is.null(acc_ds) && !is.null(acc_df)) {
