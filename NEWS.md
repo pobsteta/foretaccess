@@ -1,3 +1,67 @@
+# foretaccess 1.26.1 (2026-07-29)
+
+## Phase B (spec 023) : trois défauts d'intégration dessertR corrigés
+
+Banc Phase B joué sur la dalle du protocole spec 020 §6bis
+(`LHD_FXX_0737_6385`, Chastel-Nouvel, 44,6 M points, MNT 1 m) — script
+reproductible `data-raw/phaseB_dessertr.R`. Le volet largeur passait déjà
+(**39/44 tronçons mesurés, 0 échec**) mais **trois colonnes sortaient
+entièrement `NA`** :
+
+- **`apte_grumier` / `motif_inaptitude` (0/44)** — `dsr_trafficability()` rend
+  `list(stations, resume)` ; l'adaptateur lisait `traf$APTE_GRUMIER` au premier
+  niveau, toujours `NULL`. La trafficabilité grumier (point 4 du §7 de la spec
+  023) n'était donc **pas** branchée. Corrigé : lecture dans `traf$stations`.
+  Les motifs sont aussi rescindés avant déduplication (plus de
+  `largeur+largeur+pente`).
+- **`score_lidar` (0/44)** — `CONFIANCE_MNT` n'est émis par `dsr_measure()` que
+  si on lui passe l'argument optionnel `confiance`, jamais fourni. Corrigé :
+  `densite_sol` de `dsr_layers_pc()` (la source recommandée par `?dsr_measure`)
+  est désormais transmis ; il était déjà calculé puis jeté. **Sémantique
+  changée** : `score_lidar` n'est plus un score 0-100 façon ALSroads mais une
+  **densité de points sol** (pts/m², ici 2-34) — à comparer entre tronçons.
+- **`etat_classe` / `etat_dessertr` (0/44)** — `.echantillonner_etat()` indexait
+  `terra::extract(...)[, 2]`, or sur une **matrice de coordonnées** `extract()`
+  ne rend pas de colonne `ID` : l'erreur « undefined columns selected » était
+  avalée par un `tryCatch` et rendait `NA` partout. Second défaut latent : le
+  raster de `dsr_etat()` est **catégoriel**, l'extraction sort le libellé.
+  Corrigé : dernière colonne + remappage par la table des niveaux.
+
+**Phase B verte : 21/21 invariants**, dont 9 de **complétude** — la première
+série (9/9) était verte avec trois colonnes vides, un invariant de domaine
+(« `etat_classe` dans 1:4 ») passant à vide sur du tout-`NA`. Matrice d'état
+publiée : 23 `en_service`, 13 `trouee_sans_route`, 6 `hors_route`,
+2 `abandonnee` ; `apte_grumier` 1 apte / 38 inaptes (motifs : largeur, pente,
+rayon). Largeurs inchangées (1,68-7,66 m, médiane 2,83).
+
+- **Doc** : l'installation annoncée
+  `install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")`
+  échouait — dessertR n'y est pas publié. Remplacée par
+  `remotes::install_github("pobsteta/dessertR")`.
+
+# foretaccess 1.26.0 (2026-07-28)
+
+## Desserte LiDAR : `dessertR` remplace `ALSroads` (spec 023, ADR-009)
+
+- **Moteur LiDAR par défaut : `dessertR`** (`pobsteta/dessertR`, GPL-3, noyau
+  Rust) — réimplémentation **française** **maintenue** de la méthode d'ALSroads
+  (Roussel et al. 2022), calibrée BD TOPO / IGN LiDAR HD. `ALSroads` (POC non
+  maintenu, calibré Québec) devient un **repli de transition déprécié**.
+- **`acquire_desserte_lidar()`** gagne les arguments `mnh` (canal de surface),
+  `moteur` (`"auto"`/`"dessertr"`/`"alsroads"`) et `deviation_max` (recalage
+  contraint, BD TOPO autoritaire). **Contrat de colonnes préservé**
+  (`largeur_carrossable_m`, `largeur_plateforme_m`, `pente_pct`, `etat_classe`,
+  `score_lidar`) + **colonnes bonus dessertR** : `etat_dessertr`, `devers`,
+  `fosses`, `rayon_courbure_p05`, `apte_grumier`, `motif_inaptitude`. Attribut
+  `moteur` sur la sortie ; repli NDP 0 inchangé (ne plante jamais).
+- **`qualifier_desserte()`** : critère de disparition par **libellé d'état
+  dessertR** (`etats_disparus = c("abandonnee", "hors_route")`, repli seuil entier
+  pour ALSroads), plus **branchement de la trafficabilité** grumier
+  (`retirer_inaptes_grumier`).
+- Dépendance **optionnelle non déclarée** (accès dynamique, comme ALSroads) :
+  `install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")`. La CI
+  n'exerce que le repli NDP 0 ; le chemin dessertR est validé hors CI (Phase B).
+
 # foretaccess 1.25.0 (2026-07-26)
 
 ## Pré-calcul du CVAT sur emprise AOI + buffer (spec 021)

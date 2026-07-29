@@ -8,11 +8,15 @@ qualifier_desserte(
   desserte,
   las_source,
   mnt,
+  mnh = NULL,
+  moteur = c("auto", "dessertr", "alsroads"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
   retirer_disparues = FALSE,
-  etat_disparue = 4L
+  etats_disparus = c("abandonnee", "hors_route"),
+  etat_disparue = 4L,
+  retirer_inaptes_grumier = FALSE
 )
 }
 \arguments{
@@ -24,19 +28,32 @@ qualifier_desserte(
 \item{mnt}{Digital terrain model (>= 1 m; refined from ground points if
 coarser). See \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
 
+\item{mnh}{Canopy height model for the dessertR surface channel. See
+\code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
+
+\item{moteur}{LiDAR engine passed to \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}: \code{"auto"}
+(default), \code{"dessertr"} or \code{"alsroads"}.}
+
 \item{crs}{Target EPSG code. Default 2154.}
 
 \item{cache_dir}{Directory for the measurement cache. Default \code{tempdir()}.}
 
 \item{dtm_res}{Resolution (m) of the DTM derived when \code{mnt} is coarse. Default 1.}
 
-\item{retirer_disparues}{Drop segments whose measured state is at/beyond
-\code{etat_disparue} (existence qualification)? Default \code{FALSE} -- opt-in, as the
-French state semantics are not yet ground-truthed. Unmeasured segments
-(\code{etat_classe} \code{NA}) are \strong{never} dropped.}
+\item{retirer_disparues}{Drop segments whose measured state marks them gone
+(existence qualification)? Default \code{FALSE} -- opt-in. Unmeasured segments
+(state \code{NA}) are \strong{never} dropped.}
 
-\item{etat_disparue}{ALSroads \code{CLASS} at/beyond which a segment is deemed gone
-when \code{retirer_disparues = TRUE}. Default \code{4L} (worst state).}
+\item{etats_disparus}{dessertR state labels deemed gone when
+\code{retirer_disparues = TRUE}. Default \code{c("abandonnee", "hors_route")}.}
+
+\item{etat_disparue}{Fallback for the \strong{ALSroads} engine: integer \code{CLASS}
+at/beyond which a segment is gone (used only when \code{etat_dessertr} is absent).
+Default \code{4L}.}
+
+\item{retirer_inaptes_grumier}{Drop segments \strong{unfit for timber trucks}
+(\code{apte_grumier == FALSE}, dessertR trafficability)? Default \code{FALSE} -- opt-in.
+Unmeasured segments are never dropped.}
 }
 \value{
 An \code{sf} conforming to \code{\link[=acquire_desserte]{acquire_desserte()}} (fields \code{classe}, \code{largeur},
