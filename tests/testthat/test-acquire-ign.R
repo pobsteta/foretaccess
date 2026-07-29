@@ -74,25 +74,64 @@ test_that("acquire_mnt ecrit un raster en cache et est idempotent (CA-A.6)", {
   })
 })
 
-test_that("acquire_mnt bascule sur une couche de repli si la principale est vide", {
+# Mock de .fetch_wms_raster : la couche `vide` ne rend que des NA, les autres
+# des valeurs finies. Enregistre l'ordre des couches tentees.
+wms_mock <- function(vide, journal) {
+  function(aoi, layer, res, crs, filename) {
+    assign(journal, c(get(journal, envir = parent.frame(3)), layer),
+      envir = parent.frame(3))
+    r <- terra::rast(terra::ext(terra::vect(aoi)), resolution = res,
+      crs = paste0("EPSG:", crs))
+    terra::values(r) <- if (identical(layer, vide)) NA_real_ else seq_len(terra::ncell(r))
+    terra::writeRaster(r, filename, overwrite = TRUE)
+    r
+  }
+}
+
+test_that("acquire_mnt bascule sur un repli NON INTERDIT si la principale est vide", {
+  # Le mecanisme de repli existe toujours (autres pays, autres couches) ; c'est
+  # la config FR qui n'en propose plus, les replis WMS RGE ALTI etant interdits.
   withr::with_tempdir({
     principale <- "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"
     couches <- character(0)
-    testthat::local_mocked_bindings(.fetch_wms_raster = function(aoi, layer, res, crs, filename) {
-      couches <<- c(couches, layer)
-      r <- terra::rast(terra::ext(terra::vect(aoi)), resolution = res, crs = paste0("EPSG:", crs))
-      # La couche principale (LIDAR HD) n'a pas de donnee ici -> tout NA.
-      terra::values(r) <- if (identical(layer, principale)) NA_real_ else seq_len(terra::ncell(r))
-      terra::writeRaster(r, filename, overwrite = TRUE)
-      r
-    })
+    testthat::local_mocked_bindings(
+      get_layer_service = function(...) list(layer = principale,
+        fallback_layers = list("UNE_COUCHE_TIERCE_SAINE")),
+      .fetch_wms_raster = function(aoi, layer, res, crs, filename) {
+        couches <<- c(couches, layer)
+        r <- terra::rast(terra::ext(terra::vect(aoi)), resolution = res,
+          crs = paste0("EPSG:", crs))
+        terra::values(r) <- if (identical(layer, principale)) {
+          NA_real_
+        } else {
+          seq_len(terra::ncell(r))
+        }
+        terra::writeRaster(r, filename, overwrite = TRUE)
+        r
+      })
     p <- acquire_mnt(aoi_test(), res_m = 50, cache_dir = "cache")
     expect_true(file.exists(p))
-    # La principale a ete tentee puis abandonnee au profit du 1er repli.
     expect_equal(couches[1], principale)
     expect_gte(length(couches), 2L)
-    # Le MNT rendu est celui du repli (valeurs finies).
     expect_true(any(is.finite(terra::values(terra::rast(p), mat = FALSE))))
+  })
+})
+
+test_that("sans repli, une principale vide ECHOUE en renvoyant vers les dalles", {
+  # Le comportement voulu depuis le 2026-07-29 : echouer bruyamment plutot que
+  # servir en silence un MNT blocky. C'est un tel MNT, mis en cache le 14
+  # juillet, qui a alimente le banc `aoi` pendant deux semaines.
+  withr::with_tempdir({
+    testthat::local_mocked_bindings(
+      .fetch_wms_raster = function(aoi, layer, res, crs, filename) {
+        r <- terra::rast(terra::ext(terra::vect(aoi)), resolution = res,
+          crs = paste0("EPSG:", crs))
+        terra::values(r) <- NA_real_
+        terra::writeRaster(r, filename, overwrite = TRUE)
+        r
+      })
+    expect_error(acquire_mnt(aoi_test(), res_m = 50, cache_dir = "cache"),
+      "acquire_mnt_rgealti")
   })
 })
 
@@ -230,4 +269,27 @@ test_that(".cleabs_routes_forestieres : couche absente ou vide -> vecteur vide",
     geometry = sf::st_sfc(sf::st_point(c(0, 0)), sf::st_point(c(1, 1)),
       sf::st_point(c(2, 2)), crs = 2154)))
   expect_identical(foretaccess:::.cleabs_routes_forestieres(aoi_test()), "R1")
+})
+
+test_that("aucune couche RGE ALTI par WMS n'est acceptee dans la chaine MNT", {
+  # Le WMS d'altitude sert une pyramide web-mercator rereprojetee : sur certaines
+  # tuiles elle rend un MNT « blocky » dont la pente est fausse (Q1 1,9 % pour
+  # une mediane de 18,9 % et un MAX de 382 %, mesure sur l'AOI oracle). Un tel
+  # MNT a alimente le banc `aoi` deux semaines sans que rien ne le signale.
+  expect_error(
+    foretaccess:::.verifier_couches_mnt("ELEVATION.ELEVATIONGRIDCOVERAGE"),
+    "interdite")
+  expect_error(
+    foretaccess:::.verifier_couches_mnt("ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"),
+    "interdite")
+  # La couche LIDAR HD passe, seule ou en tete de chaine.
+  expect_true(foretaccess:::.verifier_couches_mnt(
+    "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93"))
+})
+
+test_that("la config FR ne propose plus de repli WMS pour le MNT", {
+  info <- get_layer_service("dem", "FR")
+  expect_length(as.character(info$fallback_layers), 0L)
+  expect_true(foretaccess:::.verifier_couches_mnt(
+    c(info$layer, as.character(info$fallback_layers))))
 })

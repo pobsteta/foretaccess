@@ -12,7 +12,13 @@ test_that("get_country_config lit le JSON FR et met en cache", {
 test_that("get_layer_service resout couche + service (CA-A.3)", {
   dem <- get_layer_service("dem", "FR")
   expect_equal(dem$layer, "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93")
-  expect_true("ELEVATION.ELEVATIONGRIDCOVERAGE" %in% as.character(dem$fallback_layers))
+  # Depuis le 2026-07-29, AUCUN repli WMS : les couches RGE ALTI servies par WMS
+  # rendent un MNT « blocky » a fausses pentes (max 382 %). Un tel MNT, mis en
+  # cache le 14 juillet, a alimente le banc `aoi` deux semaines. Hors couverture
+  # LIDAR HD, on echoue en renvoyant vers acquire_mnt_rgealti() (dalles
+  # departementales), on ne bascule plus en silence.
+  expect_false("ELEVATION.ELEVATIONGRIDCOVERAGE" %in% as.character(dem$fallback_layers))
+  expect_length(as.character(dem$fallback_layers), 0L)
   expect_equal(dem$url, "https://data.geopf.fr/wms-r/wms")
   expect_equal(as.integer(dem$resolution_m), 5L)
 
