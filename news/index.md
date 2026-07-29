@@ -1,5 +1,36 @@
 # Changelog
 
+## foretaccess 1.27.0 (2026-07-29)
+
+### Phase C (spec 023, ADR-009) : **ALSroads retiré**
+
+La Phase B ayant validé l’adaptateur dessertR (v1.26.1, 21/21
+invariants), le moteur de transition est retiré comme prévu par
+l’ADR-009.
+
+- **`ALSroads` et `lidR` ne sont plus utilisés du tout.** Le chemin NDP
+  1 ALSroads (~160 lignes : `.lidar_catalogue()`, `.mnt_alsroads()`,
+  `.decimer_ctg()`, `.couverture_dalles()`, `.desserte_lidar_mesurer()`,
+  `.fusionner_mesure()`) et le garde `.alsroads_dispo()` disparaissent,
+  ainsi que le banc `data-raw/validation_desserte_lidar.R` (remplacé par
+  `data-raw/phaseB_dessertr.R`). ALSroads avait été le moteur de la
+  v1.16.0 à la v1.26.x, puis un repli déprécié.
+- **`moteur` reste dans la signature** de
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
+  et
+  [`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md),
+  avec `c("auto", "dessertr")` — les deux valeurs convergent. La surface
+  d’API est stable si un autre moteur arrive un jour.
+  **`moteur = "alsroads"` est désormais une erreur** de
+  [`match.arg()`](https://rdrr.io/r/base/match.arg.html).
+- **Le repli NDP 0 est inchangé** : sans dessertR, la desserte BD TOPO
+  est renvoyée telle quelle, colonnes LiDAR à `NA`, sans jamais planter.
+  C’est toujours le seul chemin exercé en CI.
+- **Conséquence pratique** : plus de dérivation automatique d’un MNT 1 m
+  depuis les points sol — cette béquille servait à rattraper un MNT trop
+  grossier pour ALSroads. **Fournir un MNT à 1 m ou plus fin** (le MNT
+  LiDAR HD de l’IGN convient), sans quoi les largeurs sortent `NA`.
+
 ## foretaccess 1.26.1 (2026-07-29)
 
 ### Phase B (spec 023) : trois défauts d’intégration dessertR corrigés

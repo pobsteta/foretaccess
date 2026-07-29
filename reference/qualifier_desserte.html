@@ -21,7 +21,7 @@ are unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.26.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,7 +74,7 @@ are <strong>unchanged</strong>.</p>
 <span>  <span class="va">las_source</span>,</span>
 <span>  <span class="va">mnt</span>,</span>
 <span>  mnh <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  moteur <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"dessertr"</span>, <span class="st">"alsroads"</span><span class="op">)</span>,</span>
+<span>  moteur <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"dessertr"</span><span class="op">)</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -99,8 +99,8 @@ are <strong>unchanged</strong>.</p>
 
 
 <dt id="arg-mnt">mnt<a class="anchor" aria-label="anchor" href="#arg-mnt"></a></dt>
-<dd><p>Digital terrain model (&gt;= 1 m; refined from ground points if
-coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>.</p></dd>
+<dd><p>Digital terrain model (<strong>1 m or finer</strong>). See
+<code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>.</p></dd>
 
 
 <dt id="arg-mnh">mnh<a class="anchor" aria-label="anchor" href="#arg-mnh"></a></dt>
@@ -110,7 +110,7 @@ coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar
 
 <dt id="arg-moteur">moteur<a class="anchor" aria-label="anchor" href="#arg-moteur"></a></dt>
 <dd><p>LiDAR engine passed to <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>: <code>"auto"</code>
-(default), <code>"dessertr"</code> or <code>"alsroads"</code>.</p></dd>
+(default) or <code>"dessertr"</code>. <code>"alsroads"</code> is an error since v1.27.0.</p></dd>
 
 
 <dt id="arg-crs">crs<a class="anchor" aria-label="anchor" href="#arg-crs"></a></dt>
@@ -122,7 +122,7 @@ coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar
 
 
 <dt id="arg-dtm-res">dtm_res<a class="anchor" aria-label="anchor" href="#arg-dtm-res"></a></dt>
-<dd><p>Resolution (m) of the DTM derived when <code>mnt</code> is coarse. Default 1.</p></dd>
+<dd><p>Resolution (m) of the reference grid built from <code>mnt</code>. Default 1.</p></dd>
 
 
 <dt id="arg-retirer-disparues">retirer_disparues<a class="anchor" aria-label="anchor" href="#arg-retirer-disparues"></a></dt>
@@ -137,9 +137,9 @@ coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar
 
 
 <dt id="arg-etat-disparue">etat_disparue<a class="anchor" aria-label="anchor" href="#arg-etat-disparue"></a></dt>
-<dd><p>Fallback for the <strong>ALSroads</strong> engine: integer <code>CLASS</code>
-at/beyond which a segment is gone (used only when <code>etat_dessertr</code> is absent).
-Default <code>4L</code>.</p></dd>
+<dd><p>Fallback on the integer <code>etat_classe</code>: value at/beyond
+which a segment is gone. Used only when the <code>etat_dessertr</code> label is absent
+(NDP 0, or a state raster that could not be built). Default <code>4L</code>.</p></dd>
 
 
 <dt id="arg-retirer-inaptes-grumier">retirer_inaptes_grumier<a class="anchor" aria-label="anchor" href="#arg-retirer-inaptes-grumier"></a></dt>
@@ -158,19 +158,18 @@ available. Attributes: <code>ndp</code> (<code>0L</code>/<code>1L</code>) and <c
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Deterministic step 1 (spec 021).</strong> A thin post-processing over
-<code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (which wraps <code>ALSroads::measure_road</code>): ALSroads
+<code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code> (which wraps dessertR's <code>dsr_measure()</code>): the engine
 <em>corrects</em> an existing map, it does <strong>not</strong> detect roads absent from BD TOPO –
 those stay absent. Detecting missing tracks is step 2 (a CNN on RVT-derived
 channels, spec 021 sec.5), a research milestone not implemented here.</p>
-<p><strong>Requires a DTM &gt;= 1 m</strong> (see <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>): a coarser DTM is
-auto-refined from ground points. Without lidR/ALSroads, it falls back to
-<strong>NDP 0</strong> – the network is returned unchanged (no relocation, width left as-is)
-and a message says qualification was inoperative.</p>
-<p><strong>State semantics are not ground-truthed on French data.</strong> ALSroads' <code>CLASS</code>
-(road state) is calibrated on boreal roads; on French pistes a worst-class
-segment may be <em>degraded-but-real</em>, not <em>gone</em>. Dropping segments by state is
-therefore <strong>opt-in</strong> (<code>retirer_disparues = FALSE</code> by default) until a French
-reference (DESSOPT) quantifies the mapping.</p>
+<p><strong>Requires a DTM &gt;= 1 m</strong> (see <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>). Without dessertR, it
+falls back to <strong>NDP 0</strong> – the network is returned unchanged (no relocation,
+width left as-is) and a message says qualification was inoperative.</p>
+<p><strong>State semantics are not ground-truthed on French data.</strong> dessertR is
+calibrated on BD TOPO / IGN LiDAR HD, but on French pistes a worst-state
+segment may still be <em>degraded-but-real</em>, not <em>gone</em>. Dropping segments by
+state is therefore <strong>opt-in</strong> (<code>retirer_disparues = FALSE</code> by default) until a
+French reference (DESSOPT) quantifies the mapping.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

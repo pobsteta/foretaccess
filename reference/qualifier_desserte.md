@@ -19,7 +19,7 @@ qualifier_desserte(
   las_source,
   mnt,
   mnh = NULL,
-  moteur = c("auto", "dessertr", "alsroads"),
+  moteur = c("auto", "dessertr"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
@@ -45,8 +45,7 @@ qualifier_desserte(
 
 - mnt:
 
-  Digital terrain model (\>= 1 m; refined from ground points if
-  coarser). See
+  Digital terrain model (**1 m or finer**). See
   [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md).
 
 - mnh:
@@ -58,7 +57,8 @@ qualifier_desserte(
 
   LiDAR engine passed to
   [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md):
-  `"auto"` (default), `"dessertr"` or `"alsroads"`.
+  `"auto"` (default) or `"dessertr"`. `"alsroads"` is an error since
+  v1.27.0.
 
 - crs:
 
@@ -71,7 +71,7 @@ qualifier_desserte(
 
 - dtm_res:
 
-  Resolution (m) of the DTM derived when `mnt` is coarse. Default 1.
+  Resolution (m) of the reference grid built from `mnt`. Default 1.
 
 - retirer_disparues:
 
@@ -86,9 +86,9 @@ qualifier_desserte(
 
 - etat_disparue:
 
-  Fallback for the **ALSroads** engine: integer `CLASS` at/beyond which
-  a segment is gone (used only when `etat_dessertr` is absent). Default
-  `4L`.
+  Fallback on the integer `etat_classe`: value at/beyond which a segment
+  is gone. Used only when the `etat_dessertr` label is absent (NDP 0, or
+  a state raster that could not be built). Default `4L`.
 
 - retirer_inaptes_grumier:
 
@@ -110,23 +110,22 @@ where available. Attributes: `ndp` (`0L`/`1L`) and `qualifiee` (`TRUE`).
 
 **Deterministic step 1 (spec 021).** A thin post-processing over
 [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
-(which wraps `ALSroads::measure_road`): ALSroads *corrects* an existing
-map, it does **not** detect roads absent from BD TOPO – those stay
-absent. Detecting missing tracks is step 2 (a CNN on RVT-derived
+(which wraps dessertR's `dsr_measure()`): the engine *corrects* an
+existing map, it does **not** detect roads absent from BD TOPO – those
+stay absent. Detecting missing tracks is step 2 (a CNN on RVT-derived
 channels, spec 021 sec.5), a research milestone not implemented here.
 
 **Requires a DTM \>= 1 m** (see
-[`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)):
-a coarser DTM is auto-refined from ground points. Without lidR/ALSroads,
-it falls back to **NDP 0** – the network is returned unchanged (no
-relocation, width left as-is) and a message says qualification was
-inoperative.
+[`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)).
+Without dessertR, it falls back to **NDP 0** – the network is returned
+unchanged (no relocation, width left as-is) and a message says
+qualification was inoperative.
 
-**State semantics are not ground-truthed on French data.** ALSroads'
-`CLASS` (road state) is calibrated on boreal roads; on French pistes a
-worst-class segment may be *degraded-but-real*, not *gone*. Dropping
-segments by state is therefore **opt-in** (`retirer_disparues = FALSE`
-by default) until a French reference (DESSOPT) quantifies the mapping.
+**State semantics are not ground-truthed on French data.** dessertR is
+calibrated on BD TOPO / IGN LiDAR HD, but on French pistes a worst-state
+segment may still be *degraded-but-real*, not *gone*. Dropping segments
+by state is therefore **opt-in** (`retirer_disparues = FALSE` by
+default) until a French reference (DESSOPT) quantifies the mapping.
 
 ## See also
 

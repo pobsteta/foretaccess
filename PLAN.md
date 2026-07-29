@@ -538,6 +538,30 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-29 — `v1.27.0` : **Phase C — ALSroads retiré** (spec 023, ADR-009)
+
+La Phase B ayant validé l’adaptateur, le moteur de transition part comme
+prévu. Suppression du chemin NDP 1 ALSroads (~160 lignes :
+`.lidar_catalogue()`, `.mnt_alsroads()`, `.decimer_ctg()`,
+`.couverture_dalles()`, `.desserte_lidar_mesurer()`,
+`.fusionner_mesure()`), du garde `.alsroads_dispo()` et du banc
+`data-raw/validation_desserte_lidar.R` (remplacé par
+`data-raw/phaseB_dessertr.R`). `lidR`, `ALSroads` et `raster` ne sont
+plus touchés nulle part.
+
+**Bump minor, pas major** (décision utilisateur) : `moteur = "alsroads"`
+comme option publique n’a existé que dans la v1.26.0, jamais releasée.
+`moteur` reste dans la signature en `c("auto", "dessertr")` — les deux
+valeurs convergent, la surface d’API tient si un autre moteur arrive.
+`"alsroads"` lève désormais une erreur de
+[`match.arg()`](https://rdrr.io/r/base/match.arg.html).
+
+**Effet de bord à connaître** : la dérivation automatique d’un MNT 1 m
+depuis les points sol disparaît — c’était une béquille pour rattraper un
+MNT trop grossier pour ALSroads. Il faut désormais **fournir un MNT à 1
+m ou plus fin**, sinon les largeurs sortent `NA`. Le repli NDP 0 est
+inchangé et reste le seul chemin exercé en CI.
+
 ### 2026-07-29 — `v1.26.1` : **Phase B jouée et verte** — trois défauts d’intégration dessertR
 
 Banc Phase B (spec 023 §7) exécuté sur la dalle du protocole spec 020

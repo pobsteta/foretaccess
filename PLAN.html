@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.26.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.27.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,6 +342,12 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-29--v1270--phase-c--alsroads-retiré-spec-023-adr-009">2026-07-29 — <code>v1.27.0</code> : <strong>Phase C — ALSroads retiré</strong> (spec 023, ADR-009)<a class="anchor" aria-label="anchor" href="#id_2026-07-29--v1270--phase-c--alsroads-retir%C3%A9-spec-023-adr-009"></a></h3>
+<p>La Phase B ayant validé l’adaptateur, le moteur de transition part comme prévu. Suppression du chemin NDP 1 ALSroads (~160 lignes : <code>.lidar_catalogue()</code>, <code>.mnt_alsroads()</code>, <code>.decimer_ctg()</code>, <code>.couverture_dalles()</code>, <code>.desserte_lidar_mesurer()</code>, <code>.fusionner_mesure()</code>), du garde <code>.alsroads_dispo()</code> et du banc <code>data-raw/validation_desserte_lidar.R</code> (remplacé par <code>data-raw/phaseB_dessertr.R</code>). <code>lidR</code>, <code>ALSroads</code> et <code>raster</code> ne sont plus touchés nulle part.</p>
+<p><strong>Bump minor, pas major</strong> (décision utilisateur) : <code>moteur = "alsroads"</code> comme option publique n’a existé que dans la v1.26.0, jamais releasée. <code>moteur</code> reste dans la signature en <code>c("auto", "dessertr")</code> — les deux valeurs convergent, la surface d’API tient si un autre moteur arrive. <code>"alsroads"</code> lève désormais une erreur de <code><a href="https://rdrr.io/r/base/match.arg.html" class="external-link">match.arg()</a></code>.</p>
+<p><strong>Effet de bord à connaître</strong> : la dérivation automatique d’un MNT 1 m depuis les points sol disparaît — c’était une béquille pour rattraper un MNT trop grossier pour ALSroads. Il faut désormais <strong>fournir un MNT à 1 m ou plus fin</strong>, sinon les largeurs sortent <code>NA</code>. Le repli NDP 0 est inchangé et reste le seul chemin exercé en CI.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-29--v1261--phase-b-jouée-et-verte--trois-défauts-dintégration-dessertr">2026-07-29 — <code>v1.26.1</code> : <strong>Phase B jouée et verte</strong> — trois défauts d’intégration dessertR<a class="anchor" aria-label="anchor" href="#id_2026-07-29--v1261--phase-b-jou%C3%A9e-et-verte--trois-d%C3%A9fauts-dint%C3%A9gration-dessertr"></a></h3>
 <p>Banc Phase B (spec 023 §7) exécuté sur la dalle du protocole spec 020 §6bis : <code>LHD_FXX_0737_6385</code> (Chastel-Nouvel, 259,9 Mo, 44,6 M points, 44,6 pts/m²), MNT LiDAR HD à <strong>1 m</strong>, desserte BD TOPO de l’emprise (44 tronçons). Script reproductible : <code>data-raw/phaseB_dessertr.R</code> (la dalle et les sorties vivent sous <code>data-raw/oracle/</code>, gitignoré).</p>
