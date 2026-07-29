@@ -11,7 +11,12 @@
 #           NUALHD_1-0__LAZ_LAMB93_MN_2024-12-13/
 #           LHD_FXX_0737_6385_PTS_LAMB93_IGN69.copc.laz
 #
-# Usage : Rscript data-raw/phaseB_dessertr.R
+# Usage : Rscript data-raw/phaseB_dessertr.R [res_mnt_m]
+#   res_mnt_m : resolution du MNT servi a dsr_measure (defaut 1). Le MNT LiDAR HD
+#   descend a 0.5 : la MESURE s'affine, mais la grille morphometrique reste a 1 m
+#   (dtm_res), conformement a ?dsr_grille_reference -- « descendre a 0.5
+#   uniquement pour la mesure fine ». Cache et sorties sont suffixes par la
+#   resolution : les deux runs coexistent et se comparent.
 .libPaths(c("/home/pascal/R/x86_64-pc-linux-gnu-library/4.6", .libPaths()))
 suppressPackageStartupMessages({
   library(sf)
@@ -22,12 +27,19 @@ suppressPackageStartupMessages({
 stopifnot(requireNamespace("dessertR", quietly = TRUE))
 cat("dessertR", as.character(packageVersion("dessertR")), "\n")
 
+ARGS <- commandArgs(trailingOnly = TRUE)
+RES_MNT <- if (length(ARGS)) as.numeric(ARGS[[1]]) else 1
+stopifnot(is.finite(RES_MNT), RES_MNT > 0)
+SUFFIXE <- sub("\\.", "p", format(RES_MNT, trim = TRUE)) # 0.5 -> "0p5"
+cat("resolution MNT :", RES_MNT, "m\n")
+
 RACINE <- normalizePath("data-raw/oracle/aoi", mustWork = TRUE)
 LAZ <- file.path(RACINE, "cache", "lidar_nuage",
   "LHD_FXX_0737_6385_PTS_LAMB93_IGN69.copc.laz")
 stopifnot(file.exists(LAZ))
-# Cache dedie : ne pas ecraser le MNT 5 m du banc oracle.
-CACHE <- file.path(RACINE, "phaseB", "cache")
+# Cache dedie ET suffixe par la resolution : ne pas ecraser le MNT 5 m du banc
+# oracle, ni le MNT d'un run a une autre resolution.
+CACHE <- file.path(RACINE, "phaseB", paste0("cache_", SUFFIXE))
 dir.create(CACHE, recursive = TRUE, showWarnings = FALSE)
 
 # --- 1. Emprise = la dalle -------------------------------------------------
@@ -36,10 +48,10 @@ dalle <- st_as_sfc(st_bbox(c(xmin = 737000, ymin = 6384000,
                              xmax = 738000, ymax = 6385000), crs = 2154))
 dalle <- st_sf(geom = dalle)
 
-# --- 2. Entrees : desserte BD TOPO + MNT 1 m -------------------------------
-# MNT a 1 m EXIGE (spec 020 sec. 6bis : le 5 m rendait des largeurs NA).
+# --- 2. Entrees : desserte BD TOPO + MNT ------------------------------------
+# MNT a 1 m ou plus fin EXIGE (spec 020 sec. 6bis : le 5 m rendait des largeurs NA).
 desserte <- acquire_desserte(dalle, cache_dir = CACHE)
-mnt1 <- acquire_mnt(dalle, res_m = 1, res_lidar_m = 1, cache_dir = CACHE)
+mnt1 <- acquire_mnt(dalle, res_m = RES_MNT, res_lidar_m = RES_MNT, cache_dir = CACHE)
 
 cat(sprintf("desserte : %d troncons | MNT : %s\n", nrow(desserte),
   paste(res(rast(mnt1)), collapse = " x ")))
@@ -114,7 +126,7 @@ print(table(etat = dl$etat_dessertr, classe = dl$classe, useNA = "ifany"))
 for (n in names(inv)) cat(sprintf("  [%s] %s\n", ifelse(inv[[n]], "OK", "KO"), n))
 cat("\n", sum(inv), "/", length(inv), " invariants verts\n", sep = "")
 
-saveRDS(dl, file.path(RACINE, "phaseB", "desserte_lidar_dessertr.rds"))
-st_write(dl, file.path(RACINE, "phaseB", "desserte_lidar_dessertr.gpkg"),
+saveRDS(dl, file.path(RACINE, "phaseB", paste0("dessertr_", SUFFIXE, ".rds")))
+st_write(dl, file.path(RACINE, "phaseB", paste0("dessertr_", SUFFIXE, ".gpkg")),
   delete_dsn = TRUE, quiet = TRUE)
 cat("\nsorties : ", file.path(RACINE, "phaseB"), "\n")
