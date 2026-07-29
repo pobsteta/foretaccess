@@ -26,9 +26,17 @@ for (d in c(IN, RES, FA)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
 
 # --- 1. Acquisition ---------------------------------------------------------
 aoi <- st_read("data-raw/aoi.gpkg", quiet = TRUE)
+# FA_DFCI=0 saute le flag DFCI. Utile car acquire_dfci() n'ecrit PAS de cache
+# quand OSM ne rend rien (le cas ici : 0 troncon ref:FR:DFCI, repli geometrique
+# a 0 aussi) : chaque execution re-interroge Overpass, qui finit par throttler
+# et bloquer le script en backoff 60 s. Neutre sur la sortie tant qu'aucun
+# troncon ne devient classe = "dfci".
+DFCI <- !identical(Sys.getenv("FA_DFCI"), "0")
+if (!DFCI) cat("  DFCI         SAUTE (FA_DFCI=0)\n")
 inp <- acquire_inputs(aoi,
   sources = c("mnt", "desserte", "foret"),
-  cache_dir = file.path(RACINE, "cache"), res_m = 5, buffer_m = 100
+  cache_dir = file.path(RACINE, "cache"), res_m = 5, buffer_m = 100,
+  dfci = DFCI
 )
 mnt <- rast(inp$mnt)
 desserte <- inp$desserte

@@ -1,3 +1,41 @@
+# foretaccess 1.28.0 (2026-07-29)
+
+## Desserte : la classification suit la règle ACCESSFOR **publiée** (spec 024)
+
+Le rapport final ACCESSFOR (`docs/rapport_final_accessfor_vf_fev2025.pdf`) a été
+versé au dépôt. Son **annexe p. 51** publie la table `NATURE` → CL_SVAC que la
+spec 022 §3.4 croyait non publiée et avait calée empiriquement.
+
+- **`acquire_desserte(classification = "accessfor")` est le nouveau défaut** :
+  « Route à 1 ou 2 chaussées » → **`reseau_public`** (barrière/terminus),
+  « Route empierrée » → `route`, « Chemin » → `piste`, **tout le reste** (dont
+  « Sentier », « Rond-point ») → **hors desserte**. La table se lit sur `nature`
+  **seul** : `importance` n'y figure pas.
+- **Sur l'AOI oracle, 108 tronçons sur 256 (42 %) changent de classe.** Les 49
+  « Route à 1 chaussée » passent de route forestière à **réseau public** — notre
+  ancien `reseau_public` piloté par `importance ≤ 3` n'en attrapait aucun
+  (importances 4 et 5). Les 59 « Sentier » quittent la desserte.
+- **Routes forestières nommées** : récupérées sur la couche liée
+  `route_numerotee_ou_nommee` (attribut `type_de_route`), jointe via
+  `liens_vers_route_nommee`. Couche absente ou vide → aucun reclassement, sans
+  erreur.
+- **Les tronçons hors desserte sont retirés** de la couche rendue, comme dans la
+  couche Sylvaccess d'ACCESSFOR qui ne contient que les classes 1/2/3.
+  `garder_hors_desserte = TRUE` pour inspecter ce qui a été écarté — ne pas
+  passer une telle couche à `preprocess()`.
+- **Rétro-compatibilité** : `classification = "clsvac"` (calage empirique de la
+  v1.20.0) et `"heuristique"` (historique) restent accessibles, inchangées.
+  D'où un bump **mineur** et non majeur.
+
+**Écarts assumés, non corrigés** (décision) : le MNT reste le **LiDAR HD** (et
+non le RGE Alti 5 m d'ACCESSFOR — le rapport p. 16 annonce lui-même ce
+remplacement), et les zonages réglementaires restent lus sur l'**INPN/Patrinat**
+avec APB et réserve intégrale de parc national, conformément au corps §2.3.4 du
+rapport plutôt qu'à son annexe.
+
+**Non couvert** : les deux contraintes d'intégrité du réseau (classe 1 connectée
+à 2 ou 3, classe 2 connectée à 3) font l'objet de la **spec 025**.
+
 # foretaccess 1.27.0 (2026-07-29)
 
 ## Phase C (spec 023, ADR-009) : **ALSroads retiré**

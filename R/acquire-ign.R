@@ -61,10 +61,40 @@
 #    piste (chemins/sentiers, on y traine), route forestiere = terminus du
 #    trainage (routes carrossables, y compris empierrees) et reseau public =
 #    grands axes (barriere : le skidder n'y va pas). Rapproche d'ACCESSFOR.
-.mapper_classe_desserte <- function(x, classification = c("clsvac", "heuristique")) {
+#  * "accessfor" (defaut, spec 024) : la table PUBLIEE du rapport ACCESSFOR
+#    (annexe p.51), fondee sur `nature` SEUL -- `importance` n'y figure pas :
+#      Route a 2 chaussees / Route a 1 chaussee -> 3 reseau public
+#      Route empierree / Route forestiere nommee -> 2 route forestiere
+#      Chemin -> 1 piste
+#      tout le reste (dont Sentier, Rond-point) -> 0 HORS DESSERTE
+#    La spec 022 croyait cette table non publiee et l'avait calee empiriquement
+#    ("clsvac") : sur l'AOI oracle les deux divergent sur 108/256 troncons.
+.mapper_classe_desserte <- function(x, classification = c("accessfor", "clsvac",
+                                                          "heuristique"),
+                                    cleabs_forestieres = character(0)) {
   classification <- match.arg(classification)
   nat <- if ("nature" %in% names(x)) as.character(x$nature) else rep(NA_character_, nrow(x))
   nat_ascii <- tolower(iconv(nat, to = "ASCII//TRANSLIT"))
+
+  if (classification == "accessfor") {
+    # Transcription A LA LETTRE de l'annexe p.51 : appariement sur la modalite
+    # ENTIERE de `nature`, pas par mots-cles -- « Route a 1 chaussee » ne doit pas
+    # etre attrapee par un motif « route » trop large.
+    classe <- rep("hors_desserte", length(nat_ascii))
+    classe[nat_ascii %in% c("route a 2 chaussees", "route a 1 chaussee")] <- "reseau_public"
+    classe[nat_ascii == "route empierree"] <- "route"
+    classe[nat_ascii == "chemin"] <- "piste"
+    # Route forestiere nommee : l'annexe la lit sur la couche LIEE « Route
+    # numerotee ou nommee » (`type_de_route`), pas sur `nature`. Le lien est
+    # porte par `liens_vers_route_nommee` (cleabs de la couche liee).
+    if (length(cleabs_forestieres) &&
+        "liens_vers_route_nommee" %in% names(x)) {
+      lien <- as.character(x$liens_vers_route_nommee)
+      est_rf <- !is.na(lien) & lien %in% cleabs_forestieres
+      classe[est_rf] <- "route"
+    }
+    return(classe)
+  }
 
   if (classification == "heuristique") {
     motifs_piste <- c("chemin", "sentier", "empierree", "escalier", "piste cyclable")
@@ -97,6 +127,27 @@
   classe[est_piste] <- "piste"
   classe[est_public] <- "reseau_public"
   classe
+}
+
+# Identifiants (`cleabs`) des ROUTES FORESTIERES NOMMEES, sur la couche liee
+# « Route numerotee ou nommee » de la BD TOPO. L'annexe ACCESSFOR p.51 les classe
+# en CL_SVAC = 2 au meme titre que les routes empierrees, mais l'information ne
+# vit PAS dans `nature` : elle est portee par `type_de_route` de la couche liee,
+# que `troncon_de_route` reference via `liens_vers_route_nommee`.
+# Couche absente ou vide -> vecteur vide, donc aucun reclassement : degradation
+# silencieuse, jamais d'echec (CA-24.3).
+.ROUTES_NOMMEES_TYPENAME <- "BDTOPO_V3:route_numerotee_ou_nommee"
+
+.cleabs_routes_forestieres <- function(aoi) {
+  rn <- tryCatch(.fetch_wfs(aoi, .ROUTES_NOMMEES_TYPENAME), error = function(e) NULL)
+  if (is.null(rn) || nrow(rn) == 0 ||
+      !all(c("cleabs", "type_de_route") %in% names(rn))) {
+    return(character(0))
+  }
+  est_f <- grepl("forestiere", tolower(iconv(as.character(rn$type_de_route),
+    to = "ASCII//TRANSLIT")), fixed = TRUE)
+  est_f[is.na(est_f)] <- FALSE
+  unique(as.character(rn$cleabs)[est_f])
 }
 
 # --- Acquisition par source -------------------------------------------------
@@ -195,16 +246,25 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
 #'
 #' @inheritParams acquire_mnt
 #' @param classification Comment classer la BD TOPO en desserte Sylvaccess.
-#'   `"clsvac"` (défaut, spec 022) : trois classes `piste` / `route` (forestière,
-#'   terminus du traînage) / `reseau_public` (grands axes, barrière), aligné sur
-#'   ACCESSFOR — les routes empierrées carrossables deviennent `route`, pas
-#'   `piste`. `"heuristique"` : ancien mapping deux classes `route`/`piste`
-#'   (bit-pour-bit ; la route empierrée y tombe en `piste`).
+#'   `"accessfor"` (défaut, spec 024) applique la table **publiée** du rapport
+#'   ACCESSFOR (annexe p. 51), fondée sur `nature` **seul** : « Route à 1 ou 2
+#'   chaussées » → `reseau_public`, « Route empierrée » et route forestière
+#'   nommée → `route`, « Chemin » → `piste`, **tout le reste** (dont « Sentier »)
+#'   → hors desserte, donc retiré. `"clsvac"` (spec 022) est le calage empirique
+#'   antérieur, qui utilisait `importance` ; `"heuristique"` l'historique deux
+#'   classes. Sur l'AOI oracle, `"accessfor"` et `"clsvac"` divergent sur 42 %
+#'   des tronçons.
+#' @param garder_hors_desserte Conserver les tronçons `hors_desserte`
+#'   (CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut `FALSE` —
+#'   la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
+#'   `TRUE` sert à inspecter ce qui a été écarté ; **ne pas** passer une telle
+#'   couche à [preprocess()].
 #' @return Un objet `sf` de lignes avec un champ `classe`.
 #' @export
 acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
                              overwrite = FALSE, country = "FR",
-                             classification = c("clsvac", "heuristique")) {
+                             classification = c("accessfor", "clsvac", "heuristique"),
+                             garder_hors_desserte = FALSE) {
   classification <- match.arg(classification)
   chemin <- .chemin_cache(cache_dir, "desserte", "gpkg")
   if (file.exists(chemin) && !overwrite) {
@@ -216,25 +276,67 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   brut <- .fetch_wfs(aoi, info$typename)
   d <- .reprojeter_clip(brut, aoi, crs)
-  d$classe <- .mapper_classe_desserte(d, classification)
+  # Routes forestieres nommees : une seule requete sur la couche liee, et
+  # seulement quand la classification s'en sert.
+  cleabs_f <- if (classification == "accessfor") {
+    .cleabs_routes_forestieres(aoi)
+  } else {
+    character(0)
+  }
+  d$classe <- .mapper_classe_desserte(d, classification, cleabs_f)
   # On conserve la largeur BD TOPO (emprise) : critere du repli geometrique DFCI
   # (`.flag_dfci_repli`). Absente du flux -> NA (colonne quand meme presente).
   d$largeur <- .largeur_desserte(d)
   d <- d[, c("classe", "largeur")]
+  # CL_SVAC = 0 : ces troncons ne sont PAS de la desserte forestiere (la couche
+  # Sylvaccess d'ACCESSFOR ne contient que 1/2/3). On les retire, sans quoi ils
+  # deviendraient des pistes praticables. Ils ne sont PAS ajoutes a
+  # `.classes_desserte()` : `.rasteriser_desserte()` code les classes par leur
+  # RANG et prend le `max` (la barriere l'emporte) -- une 5e classe passerait
+  # devant `reseau_public`.
+  hd <- d$classe == "hors_desserte"
+  if (any(hd) && !isTRUE(garder_hors_desserte)) {
+    cli::cli_inform("Desserte : {sum(hd)} troncon{?s} hors desserte
+                     (CL_SVAC = 0) retire{?s} -- {.val {unique(d$classe[!hd])}} conserve{?s}.")
+    d <- d[!hd, , drop = FALSE]
+  }
   sf::st_write(d, chemin, delete_dsn = TRUE, quiet = TRUE)
   d
 }
 
+# Codes BD Foret v2 exclus du masque foret par ACCESSFOR (rapport fev. 2025,
+# annexe p.50) : « FORET = 0 pour les polygones ou CODE_TFV = LA4 (landes
+# ligneuses), LA6 (landes herbacees) ; FORET = 1 pour l'ensemble des autres ».
+# Une lande n'est pas une ressource a mobiliser : la compter en foret gonfle la
+# surface accessible.
+.CODES_TFV_NON_FORET <- c("LA4", "LA6")
+
 #' Acquiert la forêt depuis BD Forêt v2 (IGN WFS)
 #'
+#' @details
+#' Conforme au masque forêt d'ACCESSFOR (rapport février 2025, annexe p. 50) :
+#' les **landes** (`code_tfv` `LA4` ligneuses, `LA6` herbacées) sont **exclues**
+#' du masque -- elles portent `FORET = 0` chez ACCESSFOR, donc n'entrent pas dans
+#' le calcul d'accessibilité. Passer `exclure_landes = FALSE` pour l'ancien
+#' comportement (tous les polygones BD Forêt retenus).
+#'
 #' @inheritParams acquire_mnt
+#' @param exclure_landes Exclure les landes (`code_tfv` dans `LA4`/`LA6`) du
+#'   masque forêt, comme ACCESSFOR ? Défaut `TRUE`. Sans colonne `code_tfv` dans
+#'   le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.
 #' @return Un objet `sf` de polygones de forêt.
 #' @export
 acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
-                          overwrite = FALSE, country = "FR") {
+                          overwrite = FALSE, country = "FR",
+                          exclure_landes = TRUE) {
   chemin <- .chemin_cache(cache_dir, "foret", "gpkg")
   if (file.exists(chemin) && !overwrite) {
-    return(sf::st_read(chemin, quiet = TRUE))
+    # Filtrage applique AUSSI a la relecture du cache : un cache ecrit avant la
+    # v1.27.1 contient les landes, et le nom de fichier ne porte pas la trace du
+    # filtre. Ne filtrer qu'a l'ecriture rendrait la correction inoperante sur
+    # tout cache existant -- le piege exact de la classification de desserte
+    # (cache heuristique servi indefiniment apres le passage en clsvac).
+    return(.exclure_landes(sf::st_read(chemin, quiet = TRUE), exclure_landes))
   }
   info <- get_layer_service("bdforet_v2", country)
   if (is.null(info)) {
@@ -242,8 +344,27 @@ acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   brut <- .fetch_wfs(aoi, info$typename)
   f <- .reprojeter_clip(brut, aoi, crs)
+  f <- .exclure_landes(f, exclure_landes)
   sf::st_write(f, chemin, delete_dsn = TRUE, quiet = TRUE)
   f
+}
+
+# Retire les landes du masque foret (cf. .CODES_TFV_NON_FORET). Sans colonne
+# `code_tfv` on ne peut pas filtrer : on renvoie tel quel plutot que d'echouer.
+.exclure_landes <- function(f, exclure = TRUE) {
+  if (!isTRUE(exclure) || !("code_tfv" %in% names(f)) || nrow(f) == 0) {
+    return(f)
+  }
+  est_lande <- toupper(trimws(as.character(f$code_tfv))) %in% .CODES_TFV_NON_FORET
+  est_lande[is.na(est_lande)] <- FALSE
+  if (any(est_lande)) {
+    # Variable locale SANS point initial : cli >= 3.4 traite `{.x}` comme un
+    # style, pas comme une expression.
+    codes <- .CODES_TFV_NON_FORET
+    cli::cli_inform("Masque foret : {sum(est_lande)} polygone{?s} de lande
+                     ({.val {codes}}) exclu{?s} (conforme ACCESSFOR).")
+  }
+  f[!est_lande, , drop = FALSE]
 }
 
 #' Acquiert le parcellaire cadastral (IGN WFS, optionnel)

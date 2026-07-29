@@ -11,7 +11,13 @@
 # ont ete calculees avec l'ancien reseau et sont donc PERIMEES -- les recalculer
 # est une operation manuelle (lancer Sylvaccess sur param.csv).
 #
-# Usage : Rscript data-raw/oracle_aoi_ugf.R
+# Sylvaccess se lance ensuite a la main :
+#   cd ~/dev/sylvaccess-upstream/scripts
+#   ~/miniforge3/envs/sylvaccess/bin/python 0_Lance_sylvaccess.py \
+#       -file <repo>/data-raw/oracle/aoi-ugf/param.csv
+#
+# Usage : FA_DFCI=0 Rscript data-raw/oracle_aoi_ugf.R
+#         FA_DFCI=0 FA_CABLE=0 Rscript data-raw/oracle_aoi_ugf.R   # sans le cable
 suppressPackageStartupMessages({
   library(sf)
   library(terra)
@@ -20,7 +26,15 @@ suppressPackageStartupMessages({
 
 RACINE <- normalizePath("data-raw/oracle/aoi-ugf", mustWork = TRUE)
 IN <- file.path(RACINE, "input")
+FA <- file.path(RACINE, "foretaccess")
 stopifnot(dir.exists(IN))
+dir.create(FA, recursive = TRUE, showWarnings = FALSE)
+
+# Memes interrupteurs que oracle_aoi.R : FA_DFCI=0 saute le flag DFCI (evite le
+# throttling Overpass quand OSM ne rend rien), FA_CABLE=0 saute le cable (poste
+# le plus lourd, ~1 h sur l'AOI voisine).
+DFCI <- !identical(Sys.getenv("FA_DFCI"), "0")
+if (!DFCI) cat("  DFCI         SAUTE (FA_DFCI=0)\n")
 
 # --- 1. Acquisition (memes parametres que le banc aoi) ----------------------
 # buffer 100 m / res 5 m / EPSG 2154 : retro-verifies sur l'emprise du MNT deja
@@ -28,7 +42,8 @@ stopifnot(dir.exists(IN))
 aoi <- st_read(file.path(IN, "area.gpkg"), quiet = TRUE)
 inp <- acquire_inputs(aoi,
   sources = c("mnt", "desserte", "foret"),
-  cache_dir = file.path(RACINE, "cache"), res_m = 5, buffer_m = 100
+  cache_dir = file.path(RACINE, "cache"), res_m = 5, buffer_m = 100,
+  dfci = DFCI
 )
 mnt <- rast(inp$mnt)
 desserte <- inp$desserte
@@ -64,4 +79,52 @@ cat("\n--- reseau exporte ---\n")
 print(table(CL_SVAC = rn$CL_SVAC))
 cat("departs cable (CABLE=1) :", sum(rn$CABLE), "/", nrow(rn), "\n")
 cat("\nEntrees regenerees :", IN, "\n")
-cat("ATTENTION : results/ est perime (calcule avec l'ancien reseau).\n")
+
+# --- 3. ForetAccess ---------------------------------------------------------
+# Config STRICTEMENT identique a oracle_aoi.R sec.4 : les deux bancs doivent se
+# comparer entre eux, un ecart de parametrage les rendrait incomparables.
+config <- foretaccess_config(
+  general = list(pente_abattage_max_pct = 100),
+  skidder = list(
+    debardage_amont_max_m = 50, debardage_aval_max_m = 100,
+    pente_bascule_amont_pct = 75, pente_bascule_aval_pct = 20,
+    distance_hors_desserte_max_m = 50, pente_skidder_max_pct = 30,
+    pente_abattage_max_pct = 100, option_modelisation = 1L
+  ),
+  porteur = list(
+    pente_travers_max_pct = 15, pente_montee_max_pct = 30,
+    pente_descente_max_pct = 25, portee_grue_m = 8,
+    distance_pente_forte_max_m = 300, distance_hors_desserte_max_m = 200,
+    pente_abattage_max_pct = 100
+  ),
+  cable = list(
+    longueur_max_m = 750, longueur_min_m = 150, hauteur_mat_m = 10.5,
+    hauteur_support_terminal_m = 12, distance_laterale_max_m = 40,
+    coeff_securite = 2
+  )
+)
+
+chrono <- function(nom, expr) {
+  t <- system.time(v <- force(expr))
+  cat(sprintf("  %-12s CPU %6.1f s | ecoule %6.1f s\n", nom, t[["user.self"]], t[["elapsed"]]))
+  v
+}
+
+cat("\nForetAccess sur aoi-ugf\n")
+pre <- chrono("preprocess", preprocess(mnt, desserte, foret, config = config))
+sk <- chrono("skidder", skidder(pre, config, write_dir = file.path(FA, "skidder")))
+po <- chrono("porteur", porteur(pre, config, write_dir = file.path(FA, "porteur")))
+
+if (!identical(Sys.getenv("FA_CABLE"), "0")) {
+  departs <- desserte[desserte$classe %in% c("route", "dfci"), ]
+  departs$cable <- 1L
+  ca <- chrono("cable", potentiel_cable(pre, config,
+    departs = departs, write_dir = file.path(FA, "cable")
+  ))
+} else {
+  cat("  cable        SAUTE (FA_CABLE=0)\n")
+}
+
+cat("\nSorties ForetAccess :", FA, "\n")
+cat("ATTENTION : results/ (Sylvaccess) reste PERIME tant que Sylvaccess n'a pas\n")
+cat("ete relance a la main sur", file.path(RACINE, "param.csv"), "\n")
