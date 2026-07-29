@@ -76,8 +76,9 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
 
 - `preprocess()` reçoit une desserte au `classe` différent → **tous** les moteurs
   terrestres bougent. Non-régression Sylvaccess à rejouer intégralement.
-- Les bancs oracle (`aoi`, `aoi-ugf`) doivent être ré-exportés **et** Sylvaccess
-  relancé, sinon la confrontation compare deux réseaux différents.
+- Le banc oracle `aoi` doit être ré-exporté **et** Sylvaccess relancé, sinon la
+  confrontation compare deux réseaux différents. (Le banc `aoi-ugf` a été
+  abandonné le 2026-07-29, cf. `PLAN.md`.)
 - `places_depot()` : plus de `reseau_public` = moins de départs lâches, l'effet
   recherché depuis la spec 004.
 - L'accord ACCESSFOR (77,1 % en 9 classes après v1.20.0) devrait progresser ; la
