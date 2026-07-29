@@ -45,3 +45,45 @@ test_that("le jeu d'obstacles est configurable", {
     expect_false("building" %in% vus)
   })
 })
+
+test_that(".acquire_retournements met en cache, y compris un resultat VIDE", {
+  # Sans cache, cette fonction re-interrogeait Overpass a CHAQUE execution des
+  # que le DFCI etait vide -- le cas courant -- jusqu'au throttling (backoff
+  # 60 s a repetition). Un vide legitime doit couter une requete, pas N.
+  appels <- 0L
+  testthat::local_mocked_bindings(.fetch_osm = function(...) {
+    appels <<- appels + 1L
+    list(osm_points = NULL)
+  })
+  aoi <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 100, ymax = 100), crs = 2154))
+
+  withr::with_tempdir({
+    r1 <- foretaccess:::.acquire_retournements(aoi, cache_dir = "cache")
+    n1 <- appels
+    expect_s3_class(r1, "sf")
+    expect_equal(nrow(r1), 0L)
+    expect_true(file.exists(file.path("cache", "layers", "retournements",
+      "retournements.gpkg")))
+
+    # Second appel : servi par le cache, aucune requete OSM supplementaire.
+    r2 <- foretaccess:::.acquire_retournements(aoi, cache_dir = "cache")
+    expect_identical(appels, n1)
+    expect_equal(nrow(r2), 0L)
+
+    # overwrite = TRUE re-interroge.
+    foretaccess:::.acquire_retournements(aoi, cache_dir = "cache", overwrite = TRUE)
+    expect_gt(appels, n1)
+  })
+})
+
+test_that(".acquire_retournements sans cache_dir n'ecrit rien (retro-compat)", {
+  testthat::local_mocked_bindings(.fetch_osm = function(...) list(osm_points = NULL))
+  aoi <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 100, ymax = 100), crs = 2154))
+  withr::with_tempdir({
+    r <- foretaccess:::.acquire_retournements(aoi)
+    expect_s3_class(r, "sf")
+    expect_equal(length(list.files(".", recursive = TRUE)), 0L)
+  })
+})

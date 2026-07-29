@@ -148,7 +148,23 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
 
 # Aires de retournement OSM (points), pour le repli geometrique de flag_dfci.
 # Non exporte : detail d'acquisition, mocke via .fetch_osm dans les tests.
-.acquire_retournements <- function(aoi, crs = 2154) {
+#
+# MISE EN CACHE (`cache_dir` non NULL) : cette fonction est appelee des que le
+# DFCI est vide ou injoignable -- c'est-a-dire SYSTEMATIQUEMENT sur une emprise
+# sans piste `ref:FR:DFCI`, le cas courant. Sans cache elle re-interrogeait
+# Overpass a chaque execution, jusqu'au throttling (backoff 60 s a repetition
+# qui bloquait `data-raw/oracle_aoi.R`). Le resultat VIDE est mis en cache comme
+# les autres : une emprise sans aire de retournement n'a pas a etre redemandee.
+.acquire_retournements <- function(aoi, crs = 2154, cache_dir = NULL,
+                                   overwrite = FALSE) {
+  chemin <- if (!is.null(cache_dir)) {
+    .chemin_cache(cache_dir, "retournements", "gpkg")
+  } else {
+    NULL
+  }
+  if (!is.null(chemin) && file.exists(chemin) && !overwrite) {
+    return(sf::st_read(chemin, quiet = TRUE))
+  }
   aoi_wgs <- sf::st_transform(aoi, 4326)
   bbox_wgs <- sf::st_bbox(aoi_wgs)
   geoms <- NULL
@@ -161,8 +177,13 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
     }
   }
   crs_obj <- sf::st_crs(crs)
-  if (is.null(geoms)) {
-    return(sf::st_sf(geometry = sf::st_sfc(crs = crs_obj)))
+  pts <- if (is.null(geoms)) {
+    sf::st_sf(geometry = sf::st_sfc(crs = crs_obj))
+  } else {
+    sf::st_transform(sf::st_sf(geometry = geoms), crs)
   }
-  sf::st_transform(sf::st_sf(geometry = geoms), crs)
+  if (!is.null(chemin)) {
+    sf::st_write(pts, chemin, delete_dsn = TRUE, quiet = TRUE)
+  }
+  pts
 }

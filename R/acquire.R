@@ -122,12 +122,32 @@ acquire_inputs <- function(aoi,
   # Flag DFCI (CL_DFCI) sur la desserte : reseau OSM `ref:FR:DFCI`, avec repli
   # geometrique si OSM ne rend rien. Orthogonal aux classes route/piste.
   if (isTRUE(dfci) && !is.null(out$desserte) && nrow(out$desserte) > 0) {
+    # « OSM ne trouve rien » et « OSM injoignable » sont deux choses. Le premier
+    # est mis en cache (sf vide) et ne coute plus rien ensuite ; le second ne
+    # laisse AUCUNE trace -- l'appel suivant retentera. Les confondre en un NULL
+    # muet rendait un CL_DFCI vide indiscernable d'une emprise reellement sans
+    # DFCI, tout en re-tapant Overpass a chaque execution jusqu'au throttling.
     dfci_lignes <- tryCatch(
       acquire_dfci(emprise, crs = crs, cache_dir = cache_dir, overwrite = overwrite),
-      error = function(e) NULL
+      error = function(e) {
+        cli::cli_warn(c(
+          "!" = "DFCI : OSM injoignable ({conditionMessage(e)}) -- flag {.field CL_DFCI}
+                 non pose. Rien n'est mis en cache : l'appel suivant retentera.",
+          "i" = "Passer {.code dfci = FALSE} pour ne pas retenter."
+        ))
+        NULL
+      }
     )
     retournements <- if (is.null(dfci_lignes) || nrow(dfci_lignes) == 0) {
-      tryCatch(.acquire_retournements(emprise, crs = crs), error = function(e) NULL)
+      tryCatch(
+        .acquire_retournements(emprise, crs = crs, cache_dir = cache_dir,
+          overwrite = overwrite),
+        error = function(e) {
+          cli::cli_warn("Aires de retournement : OSM injoignable
+                         ({conditionMessage(e)}) -- repli geometrique degrade.")
+          NULL
+        }
+      )
     } else {
       NULL
     }
