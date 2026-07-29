@@ -9,7 +9,7 @@ acquire_desserte_lidar(
   las_source,
   mnt,
   mnh = NULL,
-  moteur = c("auto", "dessertr", "alsroads"),
+  moteur = c("auto", "dessertr"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
@@ -22,52 +22,51 @@ acquire_desserte_lidar(
 output of \code{\link[=acquire_desserte]{acquire_desserte()}}).}
 
 \item{las_source}{Airborne LiDAR: a directory/vector of \code{.las}/\code{.laz}/\code{.copc.laz}
-tiles, or a lidR \code{LAScatalog}. Passed to \code{lidR::readLAScatalog()}. Not
-downloaded here -- the caller provides it (e.g. the app's
+tiles. Not downloaded here -- the caller provides it (e.g. the app's
 \code{download_ign_lidar_hd(product = "nuage")}).}
 
-\item{mnt}{Digital terrain model: \code{SpatRaster} or path. Must share the CRS of
-\code{desserte} (no implicit reprojection, ADR-004).}
+\item{mnt}{Digital terrain model: \code{SpatRaster} or path, \strong{1 m or finer}. Must
+share the CRS of \code{desserte} (no implicit reprojection, ADR-004).}
 
 \item{mnh}{Canopy height model (\code{SpatRaster}/path) or \code{NULL}. Used by the
-dessertR surface channel (\code{sigma_surf}) and left \code{NULL} for ALSroads.}
+dessertR surface channel (\code{sigma_surf}).}
 
-\item{moteur}{LiDAR engine: \code{"auto"} (default -- dessertR if installed, else
-ALSroads, else NDP 0), \code{"dessertr"} or \code{"alsroads"} (deprecated).}
+\item{moteur}{LiDAR engine: \code{"auto"} (default) or \code{"dessertr"} -- both resolve
+to dessertR if installed, else NDP 0. Kept for API stability; \code{"alsroads"} is
+an error since v1.27.0.}
 
 \item{crs}{Target EPSG code. Default 2154.}
 
 \item{cache_dir}{Directory for the per-segment measurement cache. Default
 \code{tempdir()}.}
 
-\item{dtm_res}{Resolution (m) of the DTM derived from ground points when \code{mnt}
-is coarser than 1.5 m. Default 1 (robust under canopy). 0.5 matches
-ALSroads' internal profile but needs a denser ground return.}
+\item{dtm_res}{Resolution (m) of the reference grid built from \code{mnt}. Default 1
+(robust under canopy); 0.5 sharpens the profiles but needs a denser ground
+return.}
 
 \item{long_min_m}{Minimum tronçon length (m) below which measurement is skipped
-(returned \code{NA}) without calling ALSroads -- shorter roads are unstable under
-its search buffer. Default 40. A full BD TOPO desserte has many short
-segments; only long tronçons under a tile get a width.}
+(returned \code{NA}) -- shorter roads are unstable under the search buffer.
+Default 40. A full BD TOPO desserte has many short segments; only long
+tronçons under a tile get a width.}
 
 \item{deviation_max}{Maximum lateral shift (m) allowed when dessertR
 re-registers a tronçon onto the LiDAR-detected roadbed
 (\code{dsr_repositionner()}). BD TOPO stays authoritative: beyond this budget the
 declared geometry is kept rather than snapped to a neighbouring track.
-Default 10. Ignored by the ALSroads engine, which has its own search buffer.}
+Default 10.}
 }
 \value{
 An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the contract
 columns \code{largeur_carrossable_m}, \code{largeur_plateforme_m}, \code{pente_pct},
 \code{etat_classe} (state, 4 classes) and \code{score_lidar}. \strong{\code{score_lidar} is not a
-0-100 confidence like ALSroads' \code{SCORE}}: with the dessertR engine it is
-dessertR's \code{CONFIANCE_MNT}, i.e. the \strong{ground point density} (pts/m²)
-sampled along the tronçon -- higher means the DTM under the road rests on
-more ground returns. Compare it across tronçons, not against a fixed scale.
-With the \strong{dessertR}
-engine, also the bonus columns \code{etat_dessertr} (state label), \code{devers}
-(cross-slope), \code{fosses} (ditches 0/1/2), \code{rayon_courbure_p05}, \code{apte_grumier}
-and \code{motif_inaptitude}. In NDP 0 all these are \code{NA}. Attributes: \code{ndp}
-(\code{0L}/\code{1L}) and \code{moteur} (\code{"dessertr"}/\code{"alsroads"}/\code{"ndp0"}).
+0-100 confidence like ALSroads' former \code{SCORE}}: it is dessertR's
+\code{CONFIANCE_MNT}, i.e. the \strong{ground point density} (pts/m²) sampled along the
+tronçon -- higher means the DTM under the road rests on more ground returns.
+Compare it across tronçons, not against a fixed scale. Also the bonus columns
+\code{etat_dessertr} (state label), \code{devers} (cross-slope), \code{fosses} (ditches
+0/1/2), \code{rayon_courbure_p05}, \code{apte_grumier} and \code{motif_inaptitude}. In NDP 0
+all these are \code{NA}. Attributes: \code{ndp} (\code{0L}/\code{1L}) and \code{moteur}
+(\code{"dessertr"}/\code{"ndp0"}).
 }
 \description{
 Recomputes, from an airborne LiDAR HD point cloud, a \strong{realigned geometry} and
@@ -78,46 +77,38 @@ discriminator \code{\link[=places_depot]{places_depot()}} lacks on raw BD TOPO (
 is blind without a measured width); a measured width turns that criterion on.
 }
 \details{
-\strong{Engine.} The default engine is \strong{dessertR} (\code{pobsteta/dessertR}, GPL-3, Rust
-core) -- a maintained \strong{French} reimplementation of the ALSroads method
-(Roussel et al. 2022), calibrated for BD TOPO / IGN LiDAR HD (specs 023 +
-ADR-009). \strong{ALSroads} (\code{r-lidar-lab/ALSroads}, unmaintained, Quebec-calibrated)
-is kept as a \strong{deprecated transition fallback} (\code{moteur = "alsroads"}). Both
-are \strong{optional, undeclared} dependencies accessed dynamically; install dessertR
-with \code{remotes::install_github("pobsteta/dessertR")} (it is \strong{not} published on
-any r-universe).
-Without any engine, the function falls back to \strong{NDP 0}: the road network is
-returned unchanged, the LiDAR columns set to \code{NA}. It \strong{never} errors on a
+\strong{Engine.} The engine is \strong{dessertR} (\code{pobsteta/dessertR}, GPL-3, Rust core)
+-- a maintained \strong{French} reimplementation of the ALSroads method (Roussel et
+al. 2022), calibrated for BD TOPO / IGN LiDAR HD (specs 023 + ADR-009). It is an
+\strong{optional, undeclared} dependency accessed dynamically; install it with
+\code{remotes::install_github("pobsteta/dessertR")} (it is \strong{not} published on any
+r-universe). Without it, the function falls back to \strong{NDP 0}: the road network
+is returned unchanged, the LiDAR columns set to \code{NA}. It \strong{never} errors on a
 missing point cloud.
 
-\strong{DTM resolution is critical.} ALSroads builds its edge-detection profiles at
-\verb{profile_resolution = 0.5 m}; a DTM coarser than 1 m yields \code{NA} widths (this
-was the cause of the initial 0/6 in spec 020 Phase B, fed a 5 m accessibility
-grid). When the supplied \code{mnt} is coarser than 1.5 m, a \code{dtm_res}-metre DTM is
-derived here from the tile's ground points -- prefer passing IGN's 0.5 m LiDAR
-HD DTM directly.
+\strong{ALSroads was removed} in v1.27.0 (spec 023 Phase C, ADR-009) after the
+Phase B bench validated the dessertR adapter. It had been the engine from
+v1.16.0, then a deprecated transition fallback. \code{moteur = "alsroads"} is now an
+error.
 
-\strong{Calibration.} ALSroads is calibrated on Quebec (MFFP) forest roads, but with
-a >= 1 m DTM it \strong{does} measure French BD TOPO forest roads (spec 020 Phase B,
-Chastel-Nouvel: Class-1 pistes measured at ~7 m). Still treat widths as
-experimental and cross-check against an orthophoto on sensitive sites.
+\strong{DTM resolution is critical.} Edge-detection profiles are built at a sub-metre
+step; a DTM coarser than 1 m yields \code{NA} widths (this was the cause of the
+initial 0/6 in spec 020 Phase B, fed a 5 m accessibility grid). Pass a DTM at
+\strong{1 m or finer} -- IGN's LiDAR HD DTM is ideal.
 
-\strong{Geometry and coverage.} ALSroads requires a \strong{single \code{LINESTRING}} centerline
-and errors on the \code{MULTILINESTRING} of BD TOPO \code{troncon_de_route}; each tronçon
-is therefore recast to one \code{LINESTRING} (contiguous parts merged, else the
-longest part kept). Tronçons \strong{outside the tiles' footprint} are dropped to
-\code{NA} \strong{before} any \code{measure_road} call: this is not just an optimisation but a
-\strong{safety guard} -- calling ALSroads on the thousands of point-less tronçons of a
-full project desserte (hundreds of km for a handful of tiles) makes lidR/ALSroads
-\strong{segfault} (an uncatchable C++ crash). Tronçons \strong{shorter than \code{long_min_m}}
-are likewise skipped. Expect \strong{most of a full desserte to be \code{NA}} and only the
+\strong{Geometry and coverage.} Measurement needs a \strong{single \code{LINESTRING}}
+centerline, and BD TOPO \code{troncon_de_route} is \code{MULTILINESTRING}; each tronçon is
+therefore recast to one \code{LINESTRING} (contiguous parts merged, else the longest
+part kept). Tronçons \strong{outside the tiles' footprint} are dropped to \code{NA}
+\strong{before} any measurement, and tronçons \strong{shorter than \code{long_min_m}} are
+likewise skipped. Expect \strong{most of a full desserte to be \code{NA}} and only the
 long tronçons lying under a tile to carry a width. The \code{bilan} attribute of the
 result breaks the outcome down: \code{mesure}, \code{trop_court}, \code{hors_couverture},
 \code{geometrie}, \code{echec}, \code{total}.
 }
 \examples{
 \dontrun{
-# NDP 1 (requires lidR + ALSroads + a point cloud):
+# NDP 1 (requires dessertR + a point cloud):
 des <- acquire_desserte(aoi)
 des_lidar <- acquire_desserte_lidar(des, las_source = "cache/lidar_nuage", mnt = mnt)
 places <- places_depot(des_lidar, mnt, largeur_min_m = 4) # acces camion discriminant

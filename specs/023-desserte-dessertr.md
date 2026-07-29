@@ -160,8 +160,16 @@ foretaccess** est neuf → il reste une **Phase B de validation de l'intégratio
   NDP 0 ; ALSroads en repli explicite (`moteur = "alsroads"`).
 - **Phase B (validation de l'intégration)** : banc dessertR sur dalle réelle
   (Meisenthal / Chastel-Nouvel) → largeurs, état, `apte_grumier` vs invariants
-  (spec 020 §6bis) ; publier les chiffres.
+  (spec 020 §6bis) ; publier les chiffres. **FAITE en v1.26.1** sur la dalle
+  `LHD_FXX_0737_6385` (Chastel-Nouvel), banc `data-raw/phaseB_dessertr.R` :
+  39/44 mesurés, 0 échec, largeurs 1,68-7,66 m ; **trois défauts d'intégration
+  trouvés et corrigés** (`apte_grumier`, `score_lidar`, `etat_classe` tous `NA`) ;
+  21/21 invariants verts dont 9 de complétude.
 - **Phase C** : retrait d'ALSroads (`moteur` et code) une fois B publiée.
+  **FAITE en v1.27.0** : chemin NDP 1 ALSroads, `.alsroads_dispo()` et le banc
+  `validation_desserte_lidar.R` supprimés ; `moteur` conservé en
+  `c("auto", "dessertr")` (bump **minor**, pas major : `moteur = "alsroads"`
+  comme option publique n'a existé que dans la v1.26.0, jamais releasée).
 
 ## 8. Critères d'acceptation (si go)
 

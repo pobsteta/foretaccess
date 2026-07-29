@@ -1,4 +1,4 @@
-# qualifier_desserte() (spec 021, etape 1). ALSroads/lidR optionnels, absents en
+# qualifier_desserte() (spec 021, etape 1). dessertR optionnel, absent en
 # CI : les tests exercent le repli NDP 0 (desserte declaree renvoyee telle quelle,
 # conforme au contrat preprocess). Le chemin NDP 1 (relocalisation + largeur) est
 # valide hors CI (Phase B, cf. acquire_desserte_lidar).
@@ -25,9 +25,8 @@ mnt_qualif_test <- function() {
   r
 }
 
-test_that("sans lidR/ALSroads : NDP 0, desserte declaree renvoyee telle quelle", {
+test_that("sans dessertR : NDP 0, desserte declaree renvoyee telle quelle", {
   testthat::local_mocked_bindings(
-    .alsroads_dispo = function() FALSE,
     .dessertr_dispo = function() FALSE,
     .env = asNamespace("foretaccess")
   )
@@ -61,7 +60,6 @@ test_that("une desserte vide ou non lineaire est refusee (delegue au socle LiDAR
 
 test_that("la sortie qualifiee est consommable par preprocess (classe presente)", {
   testthat::local_mocked_bindings(
-    .alsroads_dispo = function() FALSE,
     .dessertr_dispo = function() FALSE,
     .env = asNamespace("foretaccess")
   )

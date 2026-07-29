@@ -9,7 +9,7 @@ qualifier_desserte(
   las_source,
   mnt,
   mnh = NULL,
-  moteur = c("auto", "dessertr", "alsroads"),
+  moteur = c("auto", "dessertr"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
@@ -25,20 +25,20 @@ qualifier_desserte(
 
 \item{las_source}{Airborne LiDAR (see \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}).}
 
-\item{mnt}{Digital terrain model (>= 1 m; refined from ground points if
-coarser). See \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
+\item{mnt}{Digital terrain model (\strong{1 m or finer}). See
+\code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
 
 \item{mnh}{Canopy height model for the dessertR surface channel. See
 \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
 
 \item{moteur}{LiDAR engine passed to \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}: \code{"auto"}
-(default), \code{"dessertr"} or \code{"alsroads"}.}
+(default) or \code{"dessertr"}. \code{"alsroads"} is an error since v1.27.0.}
 
 \item{crs}{Target EPSG code. Default 2154.}
 
 \item{cache_dir}{Directory for the measurement cache. Default \code{tempdir()}.}
 
-\item{dtm_res}{Resolution (m) of the DTM derived when \code{mnt} is coarse. Default 1.}
+\item{dtm_res}{Resolution (m) of the reference grid built from \code{mnt}. Default 1.}
 
 \item{retirer_disparues}{Drop segments whose measured state marks them gone
 (existence qualification)? Default \code{FALSE} -- opt-in. Unmeasured segments
@@ -47,9 +47,9 @@ coarser). See \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}.}
 \item{etats_disparus}{dessertR state labels deemed gone when
 \code{retirer_disparues = TRUE}. Default \code{c("abandonnee", "hors_route")}.}
 
-\item{etat_disparue}{Fallback for the \strong{ALSroads} engine: integer \code{CLASS}
-at/beyond which a segment is gone (used only when \code{etat_dessertr} is absent).
-Default \code{4L}.}
+\item{etat_disparue}{Fallback on the integer \code{etat_classe}: value at/beyond
+which a segment is gone. Used only when the \code{etat_dessertr} label is absent
+(NDP 0, or a state raster that could not be built). Default \code{4L}.}
 
 \item{retirer_inaptes_grumier}{Drop segments \strong{unfit for timber trucks}
 (\code{apte_grumier == FALSE}, dessertR trafficability)? Default \code{FALSE} -- opt-in.
@@ -73,21 +73,20 @@ are \strong{unchanged}.
 }
 \details{
 \strong{Deterministic step 1 (spec 021).} A thin post-processing over
-\code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}} (which wraps \code{ALSroads::measure_road}): ALSroads
+\code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}} (which wraps dessertR's \code{dsr_measure()}): the engine
 \emph{corrects} an existing map, it does \strong{not} detect roads absent from BD TOPO --
 those stay absent. Detecting missing tracks is step 2 (a CNN on RVT-derived
 channels, spec 021 sec.5), a research milestone not implemented here.
 
-\strong{Requires a DTM >= 1 m} (see \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}): a coarser DTM is
-auto-refined from ground points. Without lidR/ALSroads, it falls back to
-\strong{NDP 0} -- the network is returned unchanged (no relocation, width left as-is)
-and a message says qualification was inoperative.
+\strong{Requires a DTM >= 1 m} (see \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}). Without dessertR, it
+falls back to \strong{NDP 0} -- the network is returned unchanged (no relocation,
+width left as-is) and a message says qualification was inoperative.
 
-\strong{State semantics are not ground-truthed on French data.} ALSroads' \code{CLASS}
-(road state) is calibrated on boreal roads; on French pistes a worst-class
-segment may be \emph{degraded-but-real}, not \emph{gone}. Dropping segments by state is
-therefore \strong{opt-in} (\code{retirer_disparues = FALSE} by default) until a French
-reference (DESSOPT) quantifies the mapping.
+\strong{State semantics are not ground-truthed on French data.} dessertR is
+calibrated on BD TOPO / IGN LiDAR HD, but on French pistes a worst-state
+segment may still be \emph{degraded-but-real}, not \emph{gone}. Dropping segments by
+state is therefore \strong{opt-in} (\code{retirer_disparues = FALSE} by default) until a
+French reference (DESSOPT) quantifies the mapping.
 }
 \examples{
 \dontrun{
