@@ -98,6 +98,7 @@ reference:
   contents:
   - acquire_inputs
   - acquire_mnt
+  - acquire_mnt_rgealti
   - acquire_desserte
   - acquire_desserte_lidar
   - qualifier_desserte
