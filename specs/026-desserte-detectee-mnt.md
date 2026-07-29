@@ -1,6 +1,7 @@
 # specs/026 — Desserte **détectée** sur le MNT comme amorce de conception
 
-> **Statut** : **PROPOSÉE** — décisions §7 à prendre. Indépendante des specs
+> **Statut** : **VALIDÉE — À IMPLÉMENTER** (décisions §7 prises par l'utilisateur
+> le 2026-07-29). Indépendante des specs
 > [024](024-desserte-clsvac-regle-publiee.md) (classification) et
 > [025](025-integrite-reseau-desserte.md) (intégrité), mais consomme leurs
 > sorties. Version cible : `1.30.0` (feat).
@@ -113,24 +114,32 @@ raccrochable au tarif réouverture.
       bit-pour-bit la sortie actuelle.
 - [ ] **CA-26.4** — Le coût de réouverture est appliqué aux seules cellules de
       tronçons détectés **et** qualifiés.
-- [ ] **CA-26.5 (juge de paix)** — Sur l'AOI oracle : publier le linéaire
-      détecté, la part qui survit à la qualification, et le **taux de faux
-      positifs sur orthophoto** (échantillon annoté à la main). Sans ce chiffre,
-      la fonction n'est pas livrable — on ajouterait du réseau fantôme à un
-      modèle qu'on vient de rendre conforme à ACCESSFOR.
+- [ ] **CA-26.5 (juge de paix)** — Sur l'AOI oracle, en régime `complet` et pour
+      chaque seuil du balayage 0,4-0,8 : publier le linéaire détecté, la part qui
+      survit à la qualification, la part **recoupant un objet BD TOPO connu**
+      (cours d'eau, fossé, limite — faux positifs quantifiés sans annotation), et
+      le taux de faux positifs résiduel sur orthophoto annotée. Sans ce dernier
+      chiffre la fonction n'est pas livrable : on ajouterait du réseau fantôme à
+      un modèle qu'on vient de rendre conforme à ACCESSFOR.
 
-## 7. Décisions à prendre
+## 7. Décisions prises (2026-07-29)
 
-1. **Le seuil de détection** (`seuil = 0.6` par défaut chez dessertR) : le garder
-   ou le caler sur l'AOI ? Un seuil bas gonfle les faux positifs, un seuil haut
-   rate les pistes anciennes — c'est-à-dire justement celles qui ont de la valeur.
-2. **Le régime** : `"complet"` (balayer toute la grille) ou `"corridor"`
-   (restreindre à une emprise autour des parcelles à desservir) ? Le second est
-   bien moins coûteux et suffit sans doute au cas d'usage.
-3. **`cout_reouverture_m`** : quelle valeur, et sur quelle base ? Barème ONF,
-   dire d'expert, ou paramètre laissé sans défaut pour forcer un choix explicite ?
-4. **L'échantillon d'annotation** pour le CA-26.5 : qui annote, sur quelle
-   surface, avec quelle orthophoto ?
+1. **Seuil : balayage `0,4 → 0,8`, courbe publiée.** On ne pose pas un seuil, on
+   mesure où la détection décroche. Le livrable est la courbe « linéaire détecté ×
+   faux positifs » par seuil, pas un chiffre unique.
+2. **Régime : `complet` pour la validation, `corridor` en production.** Le
+   dénominateur du taux de faux positifs doit être non biaisé — un corridor le
+   tire vers les zones déjà intéressantes. Deux modes à maintenir, chaque chiffre
+   restant interprétable.
+3. **`cout_reouverture_m` : barème ONF/CNPF à chercher d'abord.** Aucune valeur
+   n'est écrite avant d'avoir une source. Un défaut posé au doigt mouillé
+   deviendrait un chiffre de référence par simple inertie, dans des arbitrages
+   économiques.
+4. **Faux positifs : recoupement automatique BD TOPO d'abord.** Combien de
+   linéaires détectés tombent sur des objets connus (cours d'eau, fossés,
+   limites) ? Ça chiffre une part des faux positifs sans annotation humaine.
+   **L'annotation reste nécessaire pour le reste** — ce recoupement la réduit, il
+   ne la remplace pas, et le CA-26.5 n'est pas satisfait sans elle.
 
 ## 8. Ce que ça n'est PAS
 
