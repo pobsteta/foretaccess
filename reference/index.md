@@ -254,7 +254,7 @@ OpenStreetMap).
 - [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
   : Acquiert la desserte depuis BD TOPO (IGN WFS)
 - [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
-  : Enrich/correct a road network with airborne LiDAR (ALSroads, NDP 1)
+  : Enrich/correct a road network with airborne LiDAR (dessertR, NDP 1)
 - [`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
   : Qualify a declared road network with airborne LiDAR (spec 021, step
   1)

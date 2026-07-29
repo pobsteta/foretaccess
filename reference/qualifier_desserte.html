@@ -21,7 +21,7 @@ are unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.25.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.26.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,11 +73,15 @@ are <strong>unchanged</strong>.</p>
 <span>  <span class="va">desserte</span>,</span>
 <span>  <span class="va">las_source</span>,</span>
 <span>  <span class="va">mnt</span>,</span>
+<span>  mnh <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  moteur <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"dessertr"</span>, <span class="st">"alsroads"</span><span class="op">)</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  retirer_disparues <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  etat_disparue <span class="op">=</span> <span class="fl">4L</span></span>
+<span>  etats_disparus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"abandonnee"</span>, <span class="st">"hors_route"</span><span class="op">)</span>,</span>
+<span>  etat_disparue <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>  retirer_inaptes_grumier <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -99,6 +103,16 @@ are <strong>unchanged</strong>.</p>
 coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>.</p></dd>
 
 
+<dt id="arg-mnh">mnh<a class="anchor" aria-label="anchor" href="#arg-mnh"></a></dt>
+<dd><p>Canopy height model for the dessertR surface channel. See
+<code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>.</p></dd>
+
+
+<dt id="arg-moteur">moteur<a class="anchor" aria-label="anchor" href="#arg-moteur"></a></dt>
+<dd><p>LiDAR engine passed to <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>: <code>"auto"</code>
+(default), <code>"dessertr"</code> or <code>"alsroads"</code>.</p></dd>
+
+
 <dt id="arg-crs">crs<a class="anchor" aria-label="anchor" href="#arg-crs"></a></dt>
 <dd><p>Target EPSG code. Default 2154.</p></dd>
 
@@ -112,15 +126,26 @@ coarser). See <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar
 
 
 <dt id="arg-retirer-disparues">retirer_disparues<a class="anchor" aria-label="anchor" href="#arg-retirer-disparues"></a></dt>
-<dd><p>Drop segments whose measured state is at/beyond
-<code>etat_disparue</code> (existence qualification)? Default <code>FALSE</code> – opt-in, as the
-French state semantics are not yet ground-truthed. Unmeasured segments
-(<code>etat_classe</code> <code>NA</code>) are <strong>never</strong> dropped.</p></dd>
+<dd><p>Drop segments whose measured state marks them gone
+(existence qualification)? Default <code>FALSE</code> – opt-in. Unmeasured segments
+(state <code>NA</code>) are <strong>never</strong> dropped.</p></dd>
+
+
+<dt id="arg-etats-disparus">etats_disparus<a class="anchor" aria-label="anchor" href="#arg-etats-disparus"></a></dt>
+<dd><p>dessertR state labels deemed gone when
+<code>retirer_disparues = TRUE</code>. Default <code>c("abandonnee", "hors_route")</code>.</p></dd>
 
 
 <dt id="arg-etat-disparue">etat_disparue<a class="anchor" aria-label="anchor" href="#arg-etat-disparue"></a></dt>
-<dd><p>ALSroads <code>CLASS</code> at/beyond which a segment is deemed gone
-when <code>retirer_disparues = TRUE</code>. Default <code>4L</code> (worst state).</p></dd>
+<dd><p>Fallback for the <strong>ALSroads</strong> engine: integer <code>CLASS</code>
+at/beyond which a segment is gone (used only when <code>etat_dessertr</code> is absent).
+Default <code>4L</code>.</p></dd>
+
+
+<dt id="arg-retirer-inaptes-grumier">retirer_inaptes_grumier<a class="anchor" aria-label="anchor" href="#arg-retirer-inaptes-grumier"></a></dt>
+<dd><p>Drop segments <strong>unfit for timber trucks</strong>
+(<code>apte_grumier == FALSE</code>, dessertR trafficability)? Default <code>FALSE</code> – opt-in.
+Unmeasured segments are never dropped.</p></dd>
 
 </dl></div>
     <div class="section level2">

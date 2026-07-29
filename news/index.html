@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.25.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.26.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,37 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.26.1" id="foretaccess-1261-2026-07-29">foretaccess 1.26.1 (2026-07-29)<a class="anchor" aria-label="anchor" href="#foretaccess-1261-2026-07-29"></a></h2>
+<div class="section level3">
+<h3 id="phase-b-spec--trois-défauts-dintégration-dessertr-corrigés-1-26-1">Phase B (spec 023) : trois défauts d’intégration dessertR corrigés<a class="anchor" aria-label="anchor" href="#phase-b-spec--trois-d%C3%A9fauts-dint%C3%A9gration-dessertr-corrig%C3%A9s-1-26-1"></a></h3>
+<p>Banc Phase B joué sur la dalle du protocole spec 020 §6bis (<code>LHD_FXX_0737_6385</code>, Chastel-Nouvel, 44,6 M points, MNT 1 m) — script reproductible <code>data-raw/phaseB_dessertr.R</code>. Le volet largeur passait déjà (<strong>39/44 tronçons mesurés, 0 échec</strong>) mais <strong>trois colonnes sortaient entièrement <code>NA</code></strong> :</p>
+<ul><li>
+<strong><code>apte_grumier</code> / <code>motif_inaptitude</code> (0/44)</strong> — <code>dsr_trafficability()</code> rend <code>list(stations, resume)</code> ; l’adaptateur lisait <code>traf$APTE_GRUMIER</code> au premier niveau, toujours <code>NULL</code>. La trafficabilité grumier (point 4 du §7 de la spec
+<ol start="23" style="list-style-type: decimal"><li>n’était donc <strong>pas</strong> branchée. Corrigé : lecture dans <code>traf$stations</code>. Les motifs sont aussi rescindés avant déduplication (plus de <code>largeur+largeur+pente</code>).</li>
+</ol></li>
+<li>
+<strong><code>score_lidar</code> (0/44)</strong> — <code>CONFIANCE_MNT</code> n’est émis par <code>dsr_measure()</code> que si on lui passe l’argument optionnel <code>confiance</code>, jamais fourni. Corrigé : <code>densite_sol</code> de <code>dsr_layers_pc()</code> (la source recommandée par <code>?dsr_measure</code>) est désormais transmis ; il était déjà calculé puis jeté. <strong>Sémantique changée</strong> : <code>score_lidar</code> n’est plus un score 0-100 façon ALSroads mais une <strong>densité de points sol</strong> (pts/m², ici 2-34) — à comparer entre tronçons.</li>
+<li>
+<strong><code>etat_classe</code> / <code>etat_dessertr</code> (0/44)</strong> — <code>.echantillonner_etat()</code> indexait <code>terra::extract(...)[, 2]</code>, or sur une <strong>matrice de coordonnées</strong> <code>extract()</code> ne rend pas de colonne <code>ID</code> : l’erreur « undefined columns selected » était avalée par un <code>tryCatch</code> et rendait <code>NA</code> partout. Second défaut latent : le raster de <code>dsr_etat()</code> est <strong>catégoriel</strong>, l’extraction sort le libellé. Corrigé : dernière colonne + remappage par la table des niveaux.</li>
+</ul><p><strong>Phase B verte : 21/21 invariants</strong>, dont 9 de <strong>complétude</strong> — la première série (9/9) était verte avec trois colonnes vides, un invariant de domaine (« <code>etat_classe</code> dans 1:4 ») passant à vide sur du tout-<code>NA</code>. Matrice d’état publiée : 23 <code>en_service</code>, 13 <code>trouee_sans_route</code>, 6 <code>hors_route</code>, 2 <code>abandonnee</code> ; <code>apte_grumier</code> 1 apte / 38 inaptes (motifs : largeur, pente, rayon). Largeurs inchangées (1,68-7,66 m, médiane 2,83).</p>
+<ul><li>
+<strong>Doc</strong> : l’installation annoncée <code>install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")</code> échouait — dessertR n’y est pas publié. Remplacée par <code>remotes::install_github("pobsteta/dessertR")</code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.26.0" id="foretaccess-1260-2026-07-28">foretaccess 1.26.0 (2026-07-28)<a class="anchor" aria-label="anchor" href="#foretaccess-1260-2026-07-28"></a></h2>
+<div class="section level3">
+<h3 id="desserte-lidar--dessertr-remplace-alsroads-spec-adr-1-26-0">Desserte LiDAR : <code>dessertR</code> remplace <code>ALSroads</code> (spec 023, ADR-009)<a class="anchor" aria-label="anchor" href="#desserte-lidar--dessertr-remplace-alsroads-spec-adr-1-26-0"></a></h3>
+<ul><li>
+<strong>Moteur LiDAR par défaut : <code>dessertR</code></strong> (<code>pobsteta/dessertR</code>, GPL-3, noyau Rust) — réimplémentation <strong>française</strong> <strong>maintenue</strong> de la méthode d’ALSroads (Roussel et al. 2022), calibrée BD TOPO / IGN LiDAR HD. <code>ALSroads</code> (POC non maintenu, calibré Québec) devient un <strong>repli de transition déprécié</strong>.</li>
+<li>
+<strong><code><a href="../reference/acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code></strong> gagne les arguments <code>mnh</code> (canal de surface), <code>moteur</code> (<code>"auto"</code>/<code>"dessertr"</code>/<code>"alsroads"</code>) et <code>deviation_max</code> (recalage contraint, BD TOPO autoritaire). <strong>Contrat de colonnes préservé</strong> (<code>largeur_carrossable_m</code>, <code>largeur_plateforme_m</code>, <code>pente_pct</code>, <code>etat_classe</code>, <code>score_lidar</code>) + <strong>colonnes bonus dessertR</strong> : <code>etat_dessertr</code>, <code>devers</code>, <code>fosses</code>, <code>rayon_courbure_p05</code>, <code>apte_grumier</code>, <code>motif_inaptitude</code>. Attribut <code>moteur</code> sur la sortie ; repli NDP 0 inchangé (ne plante jamais).</li>
+<li>
+<strong><code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code></strong> : critère de disparition par <strong>libellé d’état dessertR</strong> (<code>etats_disparus = c("abandonnee", "hors_route")</code>, repli seuil entier pour ALSroads), plus <strong>branchement de la trafficabilité</strong> grumier (<code>retirer_inaptes_grumier</code>).</li>
+<li>Dépendance <strong>optionnelle non déclarée</strong> (accès dynamique, comme ALSroads) : <code>install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")</code>. La CI n’exerce que le repli NDP 0 ; le chemin dessertR est validé hors CI (Phase B).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.25.0" id="foretaccess-1250-2026-07-26">foretaccess 1.25.0 (2026-07-26)<a class="anchor" aria-label="anchor" href="#foretaccess-1250-2026-07-26"></a></h2>
 <div class="section level3">

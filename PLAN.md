@@ -538,6 +538,69 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-29 — `v1.26.1` : **Phase B jouée et verte** — trois défauts d’intégration dessertR
+
+Banc Phase B (spec 023 §7) exécuté sur la dalle du protocole spec 020
+§6bis : `LHD_FXX_0737_6385` (Chastel-Nouvel, 259,9 Mo, 44,6 M points,
+44,6 pts/m²), MNT LiDAR HD à **1 m**, desserte BD TOPO de l’emprise (44
+tronçons). Script reproductible : `data-raw/phaseB_dessertr.R` (la dalle
+et les sorties vivent sous `data-raw/oracle/`, gitignoré).
+
+Le volet **largeur** passait déjà — **39/44 mesurés, 0 échec**,
+1,68-7,66 m (médiane 2,83), pente en long 0,25-32 %. Mais **trois
+colonnes sortaient entièrement `NA`**, toutes par désaccord avec l’API
+réelle de dessertR 1.0.0, aucune par défaut de dessertR :
+
+1.  `apte_grumier`/`motif_inaptitude` — lecture de `traf$APTE_GRUMIER`
+    alors que `dsr_trafficability()` rend `list(stations, resume)`. La
+    trafficabilité grumier n’était donc pas branchée (point 4 du §7 de
+    la spec 023).
+2.  `score_lidar` — `CONFIANCE_MNT` n’est émis que si
+    `dsr_measure(confiance=)` est fourni. `densite_sol` de
+    `dsr_layers_pc()` était calculé puis jeté ; il est désormais
+    transmis. **`score_lidar` change de sémantique** : densité de points
+    sol (pts/m², 2-34), plus un score 0-100 façon ALSroads.
+3.  `etat_classe`/`etat_dessertr` — `terra::extract()[, 2]` sur une
+    **matrice** de coordonnées (pas de colonne `ID` → erreur avalée par
+    `tryCatch`), plus un raster **catégoriel** rendant le libellé.
+    Corrigé par dernière colonne + remappage sur la table des niveaux.
+
+**21/21 invariants verts**, dont **9 de complétude** — ajoutés parce que
+la première série (9/9) était verte *avec* les trois colonnes vides : un
+invariant de domaine passe à vide sur du tout-`NA`. Leçon à retenir pour
+tout banc.
+
+État publié : 23 `en_service`, 13 `trouee_sans_route`, 6 `hors_route`, 2
+`abandonnee` ; `apte_grumier` 1 apte / 38 inaptes (motifs largeur,
+pente, rayon). Doc d’installation corrigée au passage (dessertR n’est
+publié sur aucun r-universe →
+`remotes::install_github("pobsteta/dessertR")`).
+
+**Phase C (retrait d’ALSroads) est débloquée** au sens de l’ADR-009 : B
+est jouée et publiée. Reste à décider si on la coupe maintenant.
+
+### 2026-07-28 — `v1.26.0` : desserte LiDAR — `dessertR` remplace `ALSroads` (spec 023, ADR-009)
+
+Swap du moteur LiDAR de desserte : `dessertR` (pobsteta, GPL-3, noyau
+Rust, réimplémentation **française maintenue** de la méthode Roussel
+2022) devient le **moteur par défaut** ; ALSroads (POC non maintenu,
+calibré Québec) passe repli de transition déprécié. Phase A livrée :
+adaptateur `.desserte_lidar_dessertr()` (pipeline
+`dsr_catalog`→`dsr_conductivite`/`dsr_sigma_surf`→`dsr_etat`→
+`dsr_repositionner`→`dsr_measure`→`dsr_trafficability`), dispatch
+`.moteur_lidar()` (auto : dessertR \> ALSroads \> NDP 0),
+`acquire_desserte_lidar(mnh, moteur, deviation_max)`, **contrat de
+colonnes préservé** + colonnes bonus (etat_dessertr, devers, fosses,
+rayon_courbure_p05, apte_grumier, motif_inaptitude),
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+critère d’état par libellé (`etats_disparus`) + trafficabilité grumier
+(`retirer_inaptes_grumier`). Décisions utilisateur : GO **production**
+(§7 spec 023). Chemin dessertR en `# nocov` (comme ALSroads), CI sur
+repli NDP 0 ; **Phase B** (validation sur dalles réelles
+Meisenthal/Chastel-Nouvel) puis **Phase C** (retrait d’ALSroads) à
+suivre. dessertR = dépendance optionnelle non déclarée (r-universe),
+règle 1 respectée (on consomme, on n’inline pas).
+
 ### 2026-07-26 — `v1.25.0` : pré-calcul CVAT sur emprise AOI + buffer (spec 021)
 
 `build_cvat_precomputed(aoi, cache_dir, buffer_m, mnt_existant, out, ...)`

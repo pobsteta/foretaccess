@@ -1,14 +1,13 @@
-# Enrich/correct a road network with airborne LiDAR (ALSroads, NDP 1)
+# Enrich/correct a road network with airborne LiDAR (dessertR, NDP 1)
 
-Wraps **ALSroads** (`measure_road`) to recompute, from an airborne LiDAR
-point cloud, a **realigned geometry** and per-segment attributes for a
-BD TOPO road network: **drivable width**, platform width, longitudinal
-slope and **state** (in use / decommissioned / gone). The drivable width
-is the discriminator
+Recomputes, from an airborne LiDAR HD point cloud, a **realigned
+geometry** and per-segment attributes for a BD TOPO road network:
+**drivable width**, platform width, longitudinal slope, **state** and
+(dessertR) cross-slope, ditches, curvature and **timber-truck
+trafficability**. The drivable width is the discriminator
 [`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
 lacks on raw BD TOPO (its truck-access criterion is blind without a
-measured width, hence loose departures – see its *Performance et
-selectivite* section); a measured width turns that criterion on.
+measured width); a measured width turns that criterion on.
 
 ## Usage
 
@@ -17,10 +16,13 @@ acquire_desserte_lidar(
   desserte,
   las_source,
   mnt,
+  mnh = NULL,
+  moteur = c("auto", "dessertr", "alsroads"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
-  long_min_m = 40
+  long_min_m = 40,
+  deviation_max = 10
 )
 ```
 
@@ -42,6 +44,16 @@ acquire_desserte_lidar(
 
   Digital terrain model: `SpatRaster` or path. Must share the CRS of
   `desserte` (no implicit reprojection, ADR-004).
+
+- mnh:
+
+  Canopy height model (`SpatRaster`/path) or `NULL`. Used by the
+  dessertR surface channel (`sigma_surf`) and left `NULL` for ALSroads.
+
+- moteur:
+
+  LiDAR engine: `"auto"` (default – dessertR if installed, else
+  ALSroads, else NDP 0), `"dessertr"` or `"alsroads"` (deprecated).
 
 - crs:
 
@@ -65,27 +77,44 @@ acquire_desserte_lidar(
   under its search buffer. Default 40. A full BD TOPO desserte has many
   short segments; only long tronçons under a tile get a width.
 
+- deviation_max:
+
+  Maximum lateral shift (m) allowed when dessertR re-registers a tronçon
+  onto the LiDAR-detected roadbed (`dsr_repositionner()`). BD TOPO stays
+  authoritative: beyond this budget the declared geometry is kept rather
+  than snapped to a neighbouring track. Default 10. Ignored by the
+  ALSroads engine, which has its own search buffer.
+
 ## Value
 
 An `sf` in the format of
 [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
-**plus** the columns `largeur_carrossable_m` (ALSroads `DRIVABLEWIDTH`),
-`largeur_plateforme_m` (`ROADWIDTH`), `pente_pct` (computed here from
-the realigned geometry), `etat_classe` (ALSroads `CLASS` – road **state
-in four classes**) and `score_lidar` (`SCORE`). In NDP 0 (no
-LiDAR/ALSroads) the geometry is unchanged and those columns are `NA`.
-The `ndp` attribute is `0L` or `1L`.
+**plus** the contract columns `largeur_carrossable_m`,
+`largeur_plateforme_m`, `pente_pct`, `etat_classe` (state, 4 classes)
+and `score_lidar`. **`score_lidar` is not a 0-100 confidence like
+ALSroads' `SCORE`**: with the dessertR engine it is dessertR's
+`CONFIANCE_MNT`, i.e. the **ground point density** (pts/m²) sampled
+along the tronçon – higher means the DTM under the road rests on more
+ground returns. Compare it across tronçons, not against a fixed scale.
+With the **dessertR** engine, also the bonus columns `etat_dessertr`
+(state label), `devers` (cross-slope), `fosses` (ditches 0/1/2),
+`rayon_courbure_p05`, `apte_grumier` and `motif_inaptitude`. In NDP 0
+all these are `NA`. Attributes: `ndp` (`0L`/`1L`) and `moteur`
+(`"dessertr"`/`"alsroads"`/`"ndp0"`).
 
 ## Details
 
-**Optional, experimental (NDP 1).** ALSroads and lidR are **not**
-declared dependencies – ALSroads is an unmaintained proof-of-concept
-(`r-lidar-lab/ALSroads`, v0.2.0). Install them yourself to use this:
-`install.packages("lidR")` and
-`remotes::install_github("r-lidar-lab/ALSroads")`. Without them, the
-function falls back to **NDP 0**: the road network is returned
-unchanged, the LiDAR columns set to `NA`, and a message says so. It
-**never** errors on a missing point cloud.
+**Engine.** The default engine is **dessertR** (`pobsteta/dessertR`,
+GPL-3, Rust core) – a maintained **French** reimplementation of the
+ALSroads method (Roussel et al. 2022), calibrated for BD TOPO / IGN
+LiDAR HD (specs 023 + ADR-009). **ALSroads** (`r-lidar-lab/ALSroads`,
+unmaintained, Quebec-calibrated) is kept as a **deprecated transition
+fallback** (`moteur = "alsroads"`). Both are **optional, undeclared**
+dependencies accessed dynamically; install dessertR with
+`remotes::install_github("pobsteta/dessertR")` (it is **not** published
+on any r-universe). Without any engine, the function falls back to **NDP
+0**: the road network is returned unchanged, the LiDAR columns set to
+`NA`. It **never** errors on a missing point cloud.
 
 **DTM resolution is critical.** ALSroads builds its edge-detection
 profiles at `profile_resolution = 0.5 m`; a DTM coarser than 1 m yields

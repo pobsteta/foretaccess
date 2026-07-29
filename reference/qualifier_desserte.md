@@ -18,11 +18,15 @@ qualifier_desserte(
   desserte,
   las_source,
   mnt,
+  mnh = NULL,
+  moteur = c("auto", "dessertr", "alsroads"),
   crs = 2154,
   cache_dir = tempdir(),
   dtm_res = 1,
   retirer_disparues = FALSE,
-  etat_disparue = 4L
+  etats_disparus = c("abandonnee", "hors_route"),
+  etat_disparue = 4L,
+  retirer_inaptes_grumier = FALSE
 )
 ```
 
@@ -45,6 +49,17 @@ qualifier_desserte(
   coarser). See
   [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md).
 
+- mnh:
+
+  Canopy height model for the dessertR surface channel. See
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md).
+
+- moteur:
+
+  LiDAR engine passed to
+  [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md):
+  `"auto"` (default), `"dessertr"` or `"alsroads"`.
+
 - crs:
 
   Target EPSG code. Default 2154.
@@ -60,15 +75,26 @@ qualifier_desserte(
 
 - retirer_disparues:
 
-  Drop segments whose measured state is at/beyond `etat_disparue`
-  (existence qualification)? Default `FALSE` – opt-in, as the French
-  state semantics are not yet ground-truthed. Unmeasured segments
-  (`etat_classe` `NA`) are **never** dropped.
+  Drop segments whose measured state marks them gone (existence
+  qualification)? Default `FALSE` – opt-in. Unmeasured segments (state
+  `NA`) are **never** dropped.
+
+- etats_disparus:
+
+  dessertR state labels deemed gone when `retirer_disparues = TRUE`.
+  Default `c("abandonnee", "hors_route")`.
 
 - etat_disparue:
 
-  ALSroads `CLASS` at/beyond which a segment is deemed gone when
-  `retirer_disparues = TRUE`. Default `4L` (worst state).
+  Fallback for the **ALSroads** engine: integer `CLASS` at/beyond which
+  a segment is gone (used only when `etat_dessertr` is absent). Default
+  `4L`.
+
+- retirer_inaptes_grumier:
+
+  Drop segments **unfit for timber trucks** (`apte_grumier == FALSE`,
+  dessertR trafficability)? Default `FALSE` – opt-in. Unmeasured
+  segments are never dropped.
 
 ## Value
 
