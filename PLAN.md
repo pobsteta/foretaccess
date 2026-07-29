@@ -538,6 +538,75 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-29 — CA-24.5 atteint, RGE ALTI par WMS **banni**, deux diagnostics
+
+**CA-24.5 atteint** (spec 024). Accord vs ACCESSFOR sur l’AOI, 608,5 ha
+comparés : skidder **81,5 %** en 9 classes (contre 77,1 % en v1.20.0) et
+**88,3 %** en agrégé (contre ~81 %) ; porteur 89,3 % / 92,0 %. Le gain
+est plus fort sur l’agrégé : faire de 49 tronçons une barrière change
+d’abord la décision accessible/inaccessible. L’**artefact de masque est
+écarté** — 0,3 pt entre les deux variantes, alors que l’emprise change
+beaucoup.
+
+**Diagnostic 1 — hypothèse des composantes orphelines : confirmée.** Sur
+les 6 composantes du réseau, **3 sont orphelines** ; 7 tronçons en
+infraction aux contraintes de l’annexe p. 51 (0,9 km sur 46,9 km), et
+**32,3 ha** de forêt à moins de 250 m d’un tronçon en infraction — à
+comparer aux 22,3 ha du bloc `inaccessible` × `500-1000 m`. Même ordre
+de grandeur avec un buffer généreux : corroboration, pas preuve. Ça
+chiffre l’enjeu de la **spec 025**. Première mise en œuvre réelle de
+`dsr_reseau()`.
+
+**Diagnostic 2 — le MNT est disculpé.** Contre les **vraies dalles
+départementales** RGE ALTI (443 Mo, dép. 48, annexe p. 50), notre LiDAR
+HD donne une pente quasi superposable : médiane 40,99 % contre 39,96 %,
+écart d’altitude médian +0,19 m (p95 2,88 m). Au seuil du porteur (15
+%), le désaccord est **symétrique** : 8,7 ha côté LiDAR contre 10,4 ha
+côté RGE. Trop petit et du mauvais sens pour porter les 29,7 ha de flips
+porteur. L’écart n° 4 est assumé **et chiffré** ; le conservatisme du
+porteur vient d’ailleurs (pente en travers, distance hors desserte,
+portée de grue).
+
+**Le RGE ALTI par WMS est banni.** Le premier passage du diagnostic 2
+utilisait `ELEVATION.ELEVATIONGRIDCOVERAGE` par WMS et annonçait 213 ha
+d’écart — **25 fois la vraie valeur**. Cause : le WMS sert une pyramide
+web-mercator reprojetée qui rend un MNT *blocky*, Q1 de pente à 1,92 %
+pour une médiane à 18,89 % et un **maximum à 382 %**. Un premier
+quartile à 3 % pour une médiane à 26 % n’a aucun sens physique —
+l’erreur était détectable dans les chiffres eux-mêmes.
+
+Pire : `data-raw/oracle/aoi/cache/layers/mnt/mnt.tif`, **daté du 14
+juillet**, était ce MNT-là — statistiques et taille de fichier
+identiques à l’octet près. Le banc `aoi` a donc tourné **deux semaines
+sur un terrain fictif**, et les runs Sylvaccess de la journée aussi
+(`input/mnt.tif` en est une copie). Corrigé :
+
+- `fallback_layers` vidé dans `inst/datasources/FR.json` ;
+- `.verifier_couches_mnt()` **lève** si une couche WMS interdite entre
+  dans la chaîne — garde-fou testé, pas seulement documenté ;
+- hors couverture LiDAR HD,
+  [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
+  **échoue bruyamment** en renvoyant vers la bonne source, au lieu de
+  basculer en silence ;
+- **`acquire_mnt_rgealti(aoi, dep, res_m)`** — dalles départementales
+  depuis Géoservices, l’identifiant de livraison étant résolu via le
+  flux Atom (sa date varie par département). C’est le produit que
+  prescrit l’annexe ACCESSFOR.
+
+**Troisième occurrence du jour** du même motif : un cache annule
+silencieusement une correction (desserte le matin, landes l’après-midi,
+MNT le soir). Les trois fois, le nom du fichier ne portait aucune trace
+de ce qui l’avait produit. Un marqueur de provenance dans le cache
+réglerait la classe entière — à spécifier.
+
+**Spec 026 ouverte** : desserte **détectée** sur le MNT comme amorce de
+conception. `dsr_detecter()` rend caduc le jalon « CNN » de la spec 021
+§5. Les tronçons détectés forment une couche **candidate**, qualifiée
+avant tout usage, avec un coût de **réouverture** distinct du coût de
+création. Le CA-26.5 (taux de faux positifs sur orthophoto) est bloquant
+: le micro-relief rend aussi les drains, limites parcellaires et traces
+fossiles.
+
 ### 2026-07-29 — banc `aoi-ugf` **abandonné**, `oracle_compare.R` prend le dernier run
 
 **Abandon d’`aoi-ugf`.** En nettoyant les sorties des bancs pour une
