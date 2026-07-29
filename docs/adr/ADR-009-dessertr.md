@@ -25,9 +25,11 @@ utilisateur : dessertR **entre en production** (plus expérimental).
 - **`dessertR` devient le moteur LiDAR par défaut** de `acquire_desserte_lidar()` /
   `qualifier_desserte()`. `ALSroads` est **déprécié** : gardé en repli explicite
   (`moteur = "alsroads"`) le temps de la Phase B, puis retiré (Phase C).
+  **Fait** : Phase B en v1.26.1, Phase C (retrait effectif) en v1.27.0.
 - **Dépendance optionnelle, non déclarée en Suggests** (comme ALSroads, spec 020
-  §5) : accédée dynamiquement, `Additional_repositories: https://r-lidar.r-universe.dev`
-  documenté. Règle 1 : la logique métier LiDAR reste **hors** de foretaccess
+  §5) : accédée dynamiquement. **Correction v1.26.1** : dessertR n'est publié sur
+  aucun r-universe — l'installation passe par `remotes::install_github("pobsteta/dessertR")`,
+  et il n'y a donc pas d'`Additional_repositories` à déclarer. Règle 1 : la logique métier LiDAR reste **hors** de foretaccess
   (on consomme dessertR, on ne l'inline pas ; pas de fusion de noyaux Rust).
 - **Contrat de colonnes préservé** (`largeur_carrossable_m`, `largeur_plateforme_m`,
   `pente_pct`, `etat_classe`, `score_lidar`) → `places_depot()` et l'aval
@@ -54,9 +56,14 @@ utilisateur : dessertR **entre en production** (plus expérimental).
 - **Sémantique d'état** : `etat_classe` provient désormais de `dsr_etat` (4 états
   croisant `sigma_geo` × `sigma_surf`) au lieu du `CLASS` d'ALSroads ; mapping
   documenté (spec 023 §4) pour préserver `qualifier_desserte(etat_disparue = 4L)`.
-- **Repli NDP 0 inchangé** (pas de LiDAR/moteur → colonnes `NA`) et pré-filtre de
-  couverture (`.couverture_dalles()`) conservé (anti-segfault, spec 020 §6quater).
+- **Repli NDP 0 inchangé** (pas de LiDAR/moteur → colonnes `NA`). Le pré-filtre de
+  couverture est conservé côté dessertR sous la forme de `.troncons_couverts()`
+  (emprise = bbox du MNT) ; `.couverture_dalles()`, qui dérivait l'emprise d'un
+  `LAScatalog` lidR, part avec ALSroads en Phase C.
 - Phase B (validation de l'intégration) requise avant retrait d'ALSroads.
+  **Faite en v1.26.1** : elle a révélé trois défauts d'intégration (trafficabilité
+  non branchée, `CONFIANCE_MNT` jamais demandé, extraction d'état cassée) — ce qui
+  justifie rétrospectivement d'avoir conditionné la Phase C à un banc réel.
 
 ## Alternatives écartées
 

@@ -1,7 +1,7 @@
-# acquire_desserte_lidar() (spec 020, NDP 1). ALSroads/lidR sont des dependances
-# OPTIONNELLES hors CRAN, absentes en CI : les tests exercent le REPLI NDP 0
-# (desserte inchangee + colonnes LiDAR a NA) et les garde-fous. Le chemin ALSroads
-# reel (calibre Quebec) est valide en Phase B sur donnee francaise, hors CI.
+# acquire_desserte_lidar() (specs 020/023, NDP 1). dessertR est une dependance
+# OPTIONNELLE hors CRAN, absente en CI : les tests exercent le REPLI NDP 0
+# (desserte inchangee + colonnes LiDAR a NA) et les garde-fous. Le chemin dessertR
+# reel est valide par le banc Phase B (data-raw/phaseB_dessertr.R), hors CI.
 
 desserte_lignes_test <- function() {
   sf::st_sf(
@@ -24,9 +24,9 @@ mnt_test <- function() {
   r
 }
 
-test_that("sans lidR/ALSroads : repli NDP 0 (desserte inchangee, colonnes NA)", {
-  # Repli force par mock : deterministe, que lidR/ALSroads soient installes ou non.
-  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE, .dessertr_dispo = function() FALSE)
+test_that("sans dessertR : repli NDP 0 (desserte inchangee, colonnes NA)", {
+  # Repli force par mock : deterministe, que dessertR soit installe ou non.
+  testthat::local_mocked_bindings(.dessertr_dispo = function() FALSE)
   des <- desserte_lignes_test()
   expect_message(
     out <- acquire_desserte_lidar(des, las_source = "peu_importe", mnt = mnt_test()),
@@ -51,29 +51,24 @@ test_that("sans lidR/ALSroads : repli NDP 0 (desserte inchangee, colonnes NA)", 
   expect_identical(attr(out, "moteur"), "ndp0")
 })
 
-test_that(".moteur_lidar : dispatch dessertR (defaut) > ALSroads > NDP 0", {
-  # auto : dessertR prioritaire s'il est dispo.
-  testthat::local_mocked_bindings(
-    .dessertr_dispo = function() TRUE, .alsroads_dispo = function() TRUE)
+test_that(".moteur_lidar : dessertR ou NDP 0 (ALSroads retire, Phase C)", {
+  # "auto" et "dessertr" convergent : un seul moteur depuis la v1.27.0.
+  testthat::local_mocked_bindings(.dessertr_dispo = function() TRUE)
   expect_identical(foretaccess:::.moteur_lidar("auto"), "dessertr")
-  # auto : repli ALSroads si dessertR absent.
-  testthat::local_mocked_bindings(
-    .dessertr_dispo = function() FALSE, .alsroads_dispo = function() TRUE)
-  expect_identical(foretaccess:::.moteur_lidar("auto"), "alsroads")
-  # auto : NDP 0 si aucun moteur.
-  testthat::local_mocked_bindings(
-    .dessertr_dispo = function() FALSE, .alsroads_dispo = function() FALSE)
-  expect_identical(foretaccess:::.moteur_lidar("auto"), "ndp0")
-  # explicite : "dessertr" force le moteur, NDP 0 s'il est absent.
+  expect_identical(foretaccess:::.moteur_lidar("dessertr"), "dessertr")
+  # Sans dessertR : NDP 0 dans les deux cas.
   testthat::local_mocked_bindings(.dessertr_dispo = function() FALSE)
+  expect_identical(foretaccess:::.moteur_lidar("auto"), "ndp0")
   expect_identical(foretaccess:::.moteur_lidar("dessertr"), "ndp0")
+  # "alsroads" n'est plus une valeur acceptee (Phase C, ADR-009).
+  expect_error(foretaccess:::.moteur_lidar("alsroads"), "arg")
 })
 
 test_that("la sortie NDP 0 est consommable par places_depot (largeur presente mais NA)", {
   # Le champ largeur_carrossable_m existe : places_depot pourra s'en servir des
   # que le LiDAR le renseignera (ici NA -> critere largeur indeterminable, comme
   # une BD TOPO sans largeur, cf. places_depot).
-  testthat::local_mocked_bindings(.alsroads_dispo = function() FALSE, .dessertr_dispo = function() FALSE)
+  testthat::local_mocked_bindings(.dessertr_dispo = function() FALSE)
   des <- desserte_lignes_test()
   out <- suppressMessages(acquire_desserte_lidar(des, "x", mnt_test()))
   expect_true("largeur_carrossable_m" %in% names(out))
@@ -92,13 +87,12 @@ test_that("une desserte vide ou non lineaire est refusee (avant tout repli)", {
   expect_error(acquire_desserte_lidar(pts, "x", mnt_test()), "couche de lignes")
 })
 
-test_that(".alsroads_dispo est FALSE quand les paquets manquent", {
-  # Documente l'invariant de CI : sans lidR+ALSroads, on est en NDP 0.
-  if (requireNamespace("lidR", quietly = TRUE) &&
-      requireNamespace("ALSroads", quietly = TRUE)) {
-    skip("lidR + ALSroads installes : NDP 1 disponible")
+test_that(".dessertr_dispo est FALSE quand le paquet manque", {
+  # Documente l'invariant de CI : sans dessertR, on est en NDP 0.
+  if (requireNamespace("dessertR", quietly = TRUE)) {
+    skip("dessertR installe : NDP 1 disponible")
   }
-  expect_false(foretaccess:::.alsroads_dispo())
+  expect_false(foretaccess:::.dessertr_dispo())
 })
 
 test_that(".troncon_linestring ramene une MULTILINESTRING a une LINESTRING unique", {
@@ -138,8 +132,8 @@ test_that(".troncon_linestring ramene une MULTILINESTRING a une LINESTRING uniqu
 })
 
 test_that(".troncons_couverts n'attaque QUE les troncons sous une dalle (anti-segfault)", {
-  # Sur une desserte de projet (806 km) pour quelques dalles, appeler measure_road
-  # sur les milliers de troncons hors couverture fait segfaulter lidR/ALSroads.
+  # Sur une desserte de projet (806 km) pour quelques dalles, mesurer les milliers
+  # de troncons hors couverture est au mieux du gachis, au pire un crash du moteur.
   # Ce filtre les ecarte AVANT l'appel. Une dalle = carre [0,100] x [0,100].
   couv <- sf::st_sfc(sf::st_polygon(list(rbind(
     c(0, 0), c(100, 0), c(100, 100), c(0, 100), c(0, 0)
