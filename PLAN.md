@@ -538,6 +538,42 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-07-29 — cycle dev : garde-fou MNT, banc Phase B paramétré, banc `aoi-ugf` réparé
+
+Trois suites de la Phase C, sans bump (cycle dev `1.27.0.9000` ;
+l’entrée `NEWS.md` viendra avec la release).
+
+**Garde-fou `res(mnt) > 1.5`.** Jusqu’à la v1.26.x, ALSroads rattrapait
+un MNT trop grossier en dérivant un MNT 1 m des points sol. Ce
+rattrapage est parti avec lui : un MNT à 5 m rend désormais des largeurs
+`NA` **en silence**, indiscernables d’un « hors couverture » dans le
+`bilan` — exactement le mode d’échec qui avait fait conclure à tort à un
+défaut de calibrage en v1.15.0. `.avertir_mnt_grossier()` avertit sans
+rattraper. Le seuil 1,5 est repris tel quel de `.mnt_alsroads()` : c’est
+une marge qui laisse passer LiDAR HD (0,5 m) et RGE ALTI (1 m) même
+quand une reprojection rend `res()` = 1.0000001.
+
+**Banc Phase B paramétré** (`Rscript data-raw/phaseB_dessertr.R [res]`),
+cache et sorties suffixés — les runs coexistent. Comparaison **0,5 m vs
+1 m** sur les 39 tronçons mesurés : RMSE **0,313 m**, MAE 0,222, biais
+**−0,076 m** (le 0,5 mesure très légèrement plus étroit), corrélation
+0,978 ; 3/39 au-delà de 0,5 m d’écart. Mais l’**état bouge sur 5/44**
+(`en_service` → `abandonnee`, `hors_route` → `abandonnee`), alors que la
+grille morphométrique reste à 1 m dans les deux runs :
+`dsr_layers_dtm()` dérive `sigma_geo` du **MNT**, pas de la grille.
+`apte_grumier` d’accord 39/39. **Décision : on reste à 1 m** — gain dans
+le bruit sur les largeurs, instabilité d’état en face, et aucune vérité
+terrain pour arbitrer. C’est aussi la position de
+`?dsr_grille_reference`.
+
+**Banc `aoi-ugf` réparé.** Il n’avait aucun script de construction et
+ses entrées Sylvaccess étaient figées sur la classification
+`heuristique` d’avant v1.20.0 : 23/23 en `CL_SVAC=1`, `CABLE=0` partout,
+donc **aucun point de départ câble**. `data-raw/oracle_aoi_ugf.R`
+régénère `input/` depuis le cache (17 piste / 6 route, **6 départs
+câble**). `results/` reste **périmé** : les sorties Sylvaccess ont été
+calculées avec l’ancien réseau, les recalculer est manuel.
+
 ### 2026-07-29 — `v1.27.0` : **Phase C — ALSroads retiré** (spec 023, ADR-009)
 
 La Phase B ayant validé l’adaptateur, le moteur de transition part comme
