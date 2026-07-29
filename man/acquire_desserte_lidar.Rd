@@ -52,7 +52,12 @@ segments; only long tronçons under a tile get a width.}
 \value{
 An \code{sf} in the format of \code{\link[=acquire_desserte]{acquire_desserte()}} \strong{plus} the contract
 columns \code{largeur_carrossable_m}, \code{largeur_plateforme_m}, \code{pente_pct},
-\code{etat_classe} (state, 4 classes) and \code{score_lidar}. With the \strong{dessertR}
+\code{etat_classe} (state, 4 classes) and \code{score_lidar}. \strong{\code{score_lidar} is not a
+0-100 confidence like ALSroads' \code{SCORE}}: with the dessertR engine it is
+dessertR's \code{CONFIANCE_MNT}, i.e. the \strong{ground point density} (pts/m²)
+sampled along the tronçon -- higher means the DTM under the road rests on
+more ground returns. Compare it across tronçons, not against a fixed scale.
+With the \strong{dessertR}
 engine, also the bonus columns \code{etat_dessertr} (state label), \code{devers}
 (cross-slope), \code{fosses} (ditches 0/1/2), \code{rayon_courbure_p05}, \code{apte_grumier}
 and \code{motif_inaptitude}. In NDP 0 all these are \code{NA}. Attributes: \code{ndp}
@@ -73,7 +78,8 @@ core) -- a maintained \strong{French} reimplementation of the ALSroads method
 ADR-009). \strong{ALSroads} (\code{r-lidar-lab/ALSroads}, unmaintained, Quebec-calibrated)
 is kept as a \strong{deprecated transition fallback} (\code{moteur = "alsroads"}). Both
 are \strong{optional, undeclared} dependencies accessed dynamically; install dessertR
-with \code{install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")}.
+with \code{remotes::install_github("pobsteta/dessertR")} (it is \strong{not} published on
+any r-universe).
 Without any engine, the function falls back to \strong{NDP 0}: the road network is
 returned unchanged, the LiDAR columns set to \code{NA}. It \strong{never} errors on a
 missing point cloud.

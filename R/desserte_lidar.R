@@ -80,7 +80,8 @@
 #' ADR-009). **ALSroads** (`r-lidar-lab/ALSroads`, unmaintained, Quebec-calibrated)
 #' is kept as a **deprecated transition fallback** (`moteur = "alsroads"`). Both
 #' are **optional, undeclared** dependencies accessed dynamically; install dessertR
-#' with `install.packages("dessertR", repos = "https://r-lidar.r-universe.dev")`.
+#' with `remotes::install_github("pobsteta/dessertR")` (it is **not** published on
+#' any r-universe).
 #' Without any engine, the function falls back to **NDP 0**: the road network is
 #' returned unchanged, the LiDAR columns set to `NA`. It **never** errors on a
 #' missing point cloud.
@@ -134,7 +135,12 @@
 #'   segments; only long tronçons under a tile get a width.
 #' @return An `sf` in the format of [acquire_desserte()] **plus** the contract
 #'   columns `largeur_carrossable_m`, `largeur_plateforme_m`, `pente_pct`,
-#'   `etat_classe` (state, 4 classes) and `score_lidar`. With the **dessertR**
+#'   `etat_classe` (state, 4 classes) and `score_lidar`. **`score_lidar` is not a
+#'   0-100 confidence like ALSroads' `SCORE`**: with the dessertR engine it is
+#'   dessertR's `CONFIANCE_MNT`, i.e. the **ground point density** (pts/m²)
+#'   sampled along the tronçon -- higher means the DTM under the road rests on
+#'   more ground returns. Compare it across tronçons, not against a fixed scale.
+#'   With the **dessertR**
 #'   engine, also the bonus columns `etat_dessertr` (state label), `devers`
 #'   (cross-slope), `fosses` (ditches 0/1/2), `rayon_courbure_p05`, `apte_grumier`
 #'   and `motif_inaptitude`. In NDP 0 all these are `NA`. Attributes: `ndp`
@@ -170,7 +176,7 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
       "!" = "LiDAR indisponible (ni {.pkg dessertR} ni {.pkg ALSroads}) : repli
              {.strong NDP 0} -- desserte BD TOPO inchangee, largeurs a {.val NA}.",
       "i" = "Installer dessertR :
-             {.code install.packages(\"dessertR\", repos = \"https://r-lidar.r-universe.dev\")}."
+             {.code remotes::install_github(\"pobsteta/dessertR\")}."
     ))
     return(.desserte_lidar_ndp0(des))
   }
@@ -252,7 +258,11 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
   dalles <- tryCatch(.dsr("dsr_catalog")(laz = las_source),
     error = function(e) NULL)
   laz <- if (!is.null(dalles) && !is.null(dalles$laz)) as.character(dalles$laz) else character(0)
-  sigma_surf <- .dsr_sigma_surf_dalles(laz, grille)
+  # Canaux du nuage : sigma_surf (etat) ET densite de points sol (confiance du
+  # MNT). Les deux derivent des memes `dsr_layers_pc`, calcules une seule fois.
+  canaux <- .dsr_canaux_dalles(laz, grille)
+  sigma_surf <- canaux$sigma_surf
+  confiance <- canaux$confiance
   etat_r <- if (!is.null(sigma_surf)) {
     tryCatch(.dsr("dsr_etat")(sigma_geo, sigma_surf), error = function(e) NULL)
   } else {
@@ -291,10 +301,12 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
       lignes_ok[[i]] <- .fusionner_mesure_dsr(road_l, NULL, NULL, NULL, mnt, etat_r)
       next
     }
-    m <- tryCatch(.dsr("dsr_measure")(road_l, mnt, methode_largeur = "chaussee"),
-      error = function(e) NULL)
-    mp <- tryCatch(.dsr("dsr_measure")(road_l, mnt, methode_largeur = "planeite"),
-      error = function(e) NULL)
+    # `confiance` alimente CONFIANCE_MNT (densite de points sol) : sans cet
+    # argument dessertR n'emet PAS la colonne, et `score_lidar` reste NA.
+    m <- tryCatch(.dsr("dsr_measure")(road_l, mnt, methode_largeur = "chaussee",
+      confiance = confiance), error = function(e) NULL)
+    mp <- tryCatch(.dsr("dsr_measure")(road_l, mnt, methode_largeur = "planeite",
+      confiance = confiance), error = function(e) NULL)
     if (is.null(m)) {
       n_echec <- n_echec + 1L
     } else {
@@ -319,26 +331,33 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
   out
 }
 
-# sigma_surf sur PLUSIEURS dalles : couches_pc par dalle (dsr_layers_pc traite une
-# dalle a la fois) mosaiquees, puis dsr_sigma_surf. NULL si aucune dalle.
-.dsr_sigma_surf_dalles <- function(laz, grille) {
+# Canaux du nuage sur PLUSIEURS dalles : couches_pc par dalle (dsr_layers_pc
+# traite une dalle a la fois) mosaiquees, puis sigma_surf (entree de dsr_etat) et
+# densite_sol (confiance du MNT, entree de CONFIANCE_MNT). Les deux sortent des
+# memes couches : on ne les calcule qu'une fois. Champs a NULL si aucune dalle.
+.dsr_canaux_dalles <- function(laz, grille) {
+  vide <- list(sigma_surf = NULL, confiance = NULL)
   laz <- laz[file.exists(laz)]
   if (length(laz) == 0L) {
-    return(NULL)
+    return(vide)
   }
   couches <- lapply(laz, function(f) {
     tryCatch(.dsr("dsr_layers_pc")(f, grille = grille), error = function(e) NULL)
   })
   couches <- couches[!vapply(couches, is.null, logical(1))]
   if (length(couches) == 0L) {
-    return(NULL)
+    return(vide)
   }
   cp <- if (length(couches) == 1L) {
     couches[[1]]
   } else {
     do.call(terra::mosaic, c(couches, list(fun = "mean")))
   }
-  tryCatch(.dsr("dsr_sigma_surf")(cp), error = function(e) NULL)
+  list(
+    sigma_surf = tryCatch(.dsr("dsr_sigma_surf")(cp), error = function(e) NULL),
+    # Source recommandee par dessertR pour CONFIANCE_MNT (cf. ?dsr_measure).
+    confiance = if ("densite_sol" %in% names(cp)) cp[["densite_sol"]] else NULL
+  )
 }
 
 # Assemble une mesure dessertR (m = chaussee, mp = planeite, traf) dans le troncon
@@ -363,10 +382,15 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
 
   apte <- NA
   motif <- NA_character_
-  if (!is.null(traf) && !is.null(traf$APTE_GRUMIER)) {
-    apte <- all(traf$APTE_GRUMIER, na.rm = TRUE) # troncon apte ssi toutes stations aptes
-    mot <- unique(traf$MOTIF_INAPTITUDE)
-    mot <- mot[!is.na(mot) & nzchar(mot)]
+  # dsr_trafficability() rend list(stations, resume) : APTE_GRUMIER/MOTIF_INAPTITUDE
+  # vivent dans `stations`, PAS au premier niveau de la liste.
+  st_traf <- if (!is.null(traf) && !is.null(traf$stations)) traf$stations else NULL
+  if (!is.null(st_traf) && !is.null(st_traf$APTE_GRUMIER)) {
+    apte <- all(st_traf$APTE_GRUMIER, na.rm = TRUE) # apte ssi toutes stations aptes
+    # Chaque station peut porter PLUSIEURS motifs deja joints par "+" : on
+    # rescinde avant de dedupliquer, sinon on recolle "largeur+largeur+pente".
+    mot <- unlist(strsplit(stats::na.omit(st_traf$MOTIF_INAPTITUDE), "+", fixed = TRUE))
+    mot <- sort(unique(mot[nzchar(mot)]))
     motif <- if (length(mot)) paste(mot, collapse = "+") else ""
   }
 
@@ -398,15 +422,30 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
   if (is.null(m) || nrow(m) == 0) {
     return(list(code = NA_integer_, label = NA_character_))
   }
-  v <- tryCatch(as.integer(terra::extract(etat_r, m)[, 2]), error = function(e) NA_integer_)
+  # terra::extract() sur une MATRICE de coordonnees ne rend PAS de colonne `ID` :
+  # la valeur est en DERNIERE colonne (indexer [, 2] levait "undefined columns
+  # selected", avale par le tryCatch -> etat NA partout). Et `dsr_etat()` rend un
+  # raster CATEGORIEL : l'extraction sort le LIBELLE, qu'on remappe en code via
+  # la table des niveaux (as.integer() direct donnerait NA).
+  ex <- tryCatch(terra::extract(etat_r, m), error = function(e) NULL)
+  if (is.null(ex) || !NCOL(ex)) {
+    return(list(code = NA_integer_, label = NA_character_))
+  }
+  brut <- ex[[NCOL(ex)]]
+  lev <- tryCatch(terra::levels(etat_r)[[1]], error = function(e) NULL)
+  a_niveaux <- is.data.frame(lev) && ncol(lev) >= 2
+  v <- if (a_niveaux && !is.numeric(brut)) {
+    as.integer(lev[[1]])[match(as.character(brut), as.character(lev[[2]]))]
+  } else {
+    suppressWarnings(as.integer(brut))
+  }
   v <- v[!is.na(v)]
   if (!length(v)) {
     return(list(code = NA_integer_, label = NA_character_))
   }
   code <- as.integer(names(sort(table(v), decreasing = TRUE))[1])
-  lev <- tryCatch(terra::levels(etat_r)[[1]], error = function(e) NULL)
   label <- NA_character_
-  if (is.data.frame(lev) && ncol(lev) >= 2) {
+  if (a_niveaux) {
     hit <- lev[[1]] == code
     if (any(hit)) label <- as.character(lev[[2]][which(hit)[1]])
   }
