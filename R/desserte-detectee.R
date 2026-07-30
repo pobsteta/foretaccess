@@ -95,8 +95,11 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
     sigma_surf <- .dsr_canaux_dalles(laz, grille)$sigma_surf
   }
   if (is.null(sigma_surf)) {
-    cli::cli_warn("Detection sans canal de surface : « nettement moins sure »
-                   (cf. {.fn dsr_indice_detection}).")
+    # Pas de guillemets francais ICI : R CMD check refuse le non-ASCII dans un
+    # LITTERAL de chaine (il le tolere en commentaire). Cf. memoire « rcmdcheck
+    # avant push ».
+    cli::cli_warn("Detection sans canal de surface : detection nettement moins
+                   sure (cf. {.fn dsr_indice_detection}).")
   }
 
   ref <- if (!is.null(reference)) sf::st_geometry(sf::st_as_sf(reference)) else NULL
