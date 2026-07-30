@@ -25,9 +25,89 @@
   )
 }
 
-.fetch_wfs <- function(aoi, typename) {
+# Cote (m) des tuiles de requetage WFS. Le WFS IGN rend des jeux INCOMPLETS sur
+# une grande bbox : mesure sur l'AOI oracle le 2026-07-30, une requete unique sur
+# une emprise de 1600 m de buffer rendait 1380 features dont seulement 86
+# touchaient l'AOI stricte, contre 245 en decoupant la meme emprise en quadrants.
+# La perte n'est PAS repartie au hasard -- le WFS rend les features dans son ordre
+# interne, pas spatial -- et rien ne la signale. Un reseau ampute produit des
+# composantes orphelines fictives (cf. spec 025) et des surfaces inaccessibles a
+# tort. 2 km : sous le regime ou la perte apparait sur les couches testees.
+.TUILE_WFS_M <- 2000
+
+.fetch_wfs <- function(aoi, typename, tuile_m = .TUILE_WFS_M) {
   .require_pkg("happign")
-  happign::get_wfs(x = aoi, layer = typename)
+  aoi_sf <- sf::st_as_sf(sf::st_geometry(sf::st_as_sf(aoi)))
+  tuiles <- .tuiles_bbox(aoi_sf, tuile_m)
+  if (length(tuiles) <= 1L) {
+    return(happign::get_wfs(x = aoi, layer = typename))
+  }
+  morceaux <- lapply(tuiles, function(t) {
+    tryCatch(happign::get_wfs(x = t, layer = typename), error = function(e) NULL)
+  })
+  morceaux <- morceaux[!vapply(morceaux, is.null, logical(1))]
+  morceaux <- morceaux[vapply(morceaux, function(x) nrow(x) > 0, logical(1))]
+  if (!length(morceaux)) {
+    return(happign::get_wfs(x = aoi, layer = typename)) # nocov
+  }
+  .dedupe_features(.rbind_features(morceaux))
+}
+
+# Decoupe la bbox de `aoi` en tuiles carrees d'au plus `tuile_m` de cote. Rend une
+# liste de `sfc` ; un seul element si l'emprise tient dans une tuile.
+.tuiles_bbox <- function(aoi_sf, tuile_m) {
+  bb <- sf::st_bbox(aoi_sf)
+  crs <- sf::st_crs(aoi_sf)
+  nx <- max(1L, ceiling(as.numeric(bb["xmax"] - bb["xmin"]) / tuile_m))
+  ny <- max(1L, ceiling(as.numeric(bb["ymax"] - bb["ymin"]) / tuile_m))
+  if (nx * ny <= 1L) {
+    return(list(sf::st_as_sfc(bb)))
+  }
+  xs <- seq(bb["xmin"], bb["xmax"], length.out = nx + 1L)
+  ys <- seq(bb["ymin"], bb["ymax"], length.out = ny + 1L)
+  out <- vector("list", nx * ny)
+  k <- 0L
+  for (i in seq_len(nx)) {
+    for (j in seq_len(ny)) {
+      k <- k + 1L
+      # Chevauchement d'une tuile sur l'autre : un troncon a cheval doit sortir
+      # ENTIER d'au moins une requete, sinon la deduplication garderait deux
+      # moities et le graphe resterait coupe.
+      b <- c(xmin = xs[i] - tuile_m * 0.05, ymin = ys[j] - tuile_m * 0.05,
+             xmax = xs[i + 1L] + tuile_m * 0.05, ymax = ys[j + 1L] + tuile_m * 0.05)
+      g <- sf::st_as_sfc(sf::st_bbox(b))
+      sf::st_crs(g) <- crs
+      out[[k]] <- g
+    }
+  }
+  out
+}
+
+# rbind tolerant : les pages WFS peuvent differer d'une colonne a l'autre selon
+# les valeurs rencontrees. On s'aligne sur les colonnes COMMUNES plutot que
+# d'echouer -- perdre une colonne annexe vaut mieux que perdre la tuile.
+.rbind_features <- function(morceaux) {
+  communs <- Reduce(intersect, lapply(morceaux, names))
+  if (!length(communs)) {
+    return(morceaux[[1]]) # nocov
+  }
+  do.call(rbind, lapply(morceaux, function(x) x[, communs, drop = FALSE]))
+}
+
+# Deduplication des features rendues par plusieurs tuiles. `cleabs` est
+# l'identifiant stable de la BD TOPO ; a defaut on retombe sur la geometrie.
+.dedupe_features <- function(x) {
+  if (nrow(x) == 0) {
+    return(x)
+  }
+  cle <- if ("cleabs" %in% names(x)) {
+    as.character(x$cleabs)
+  } else {
+    vapply(sf::st_geometry(x), function(g) {
+      paste0(format(unclass(sf::st_bbox(g)), digits = 12), collapse = "|")
+    }, character(1))
+  }
+  x[!duplicated(cle), , drop = FALSE]
 }
 
 # --- Utilitaires communs ----------------------------------------------------
@@ -423,16 +503,21 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
 #'   classes. Sur l'AOI oracle, `"accessfor"` et `"clsvac"` divergent sur 42 %
 #'   des tronçons.
 #' @param garder_hors_desserte Conserver les tronçons `hors_desserte`
-#'   (CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut `FALSE` —
-#'   la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
-#'   `TRUE` sert à inspecter ce qui a été écarté ; **ne pas** passer une telle
-#'   couche à [preprocess()].
+#'   (CL_SVAC = 0) dans la sortie ? **Défaut `TRUE` depuis le 2026-07-30.**
+#'   Les retirer **coupe le réseau** : mesuré sur l'AOI oracle, leur suppression
+#'   faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
+#'   buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
+#'   nécessaire mais **permet de garder un réseau intègre** ». Ils sont donc
+#'   conservés pour la **topologie**, et exclus du **débardage** par
+#'   [preprocess()], qui ne connaît que les classes de
+#'   `.classes_desserte()`. `FALSE` reproduit la couche Sylvaccess stricte
+#'   (classes 1/2/3 seulement).
 #' @return Un objet `sf` de lignes avec un champ `classe`.
 #' @export
 acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
                              overwrite = FALSE, country = "FR",
                              classification = c("accessfor", "clsvac", "heuristique"),
-                             garder_hors_desserte = FALSE) {
+                             garder_hors_desserte = TRUE) {
   classification <- match.arg(classification)
   chemin <- .chemin_cache(cache_dir, "desserte", "gpkg")
   if (file.exists(chemin) && !overwrite) {
@@ -464,8 +549,11 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   # devant `reseau_public`.
   hd <- d$classe == "hors_desserte"
   if (any(hd) && !isTRUE(garder_hors_desserte)) {
-    cli::cli_inform("Desserte : {sum(hd)} troncon{?s} hors desserte
-                     (CL_SVAC = 0) retire{?s} -- {.val {unique(d$classe[!hd])}} conserve{?s}.")
+    cli::cli_inform(c(
+      "Desserte : {sum(hd)} troncon{?s} hors desserte (CL_SVAC = 0) retire{?s}.",
+      "!" = "Les retirer COUPE le reseau : ils portent la connectivite
+             (rond-points, liaisons). Preferer {.code garder_hors_desserte = TRUE}."
+    ))
     d <- d[!hd, , drop = FALSE]
   }
   sf::st_write(d, chemin, delete_dsn = TRUE, quiet = TRUE)

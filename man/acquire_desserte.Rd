@@ -11,7 +11,7 @@ acquire_desserte(
   overwrite = FALSE,
   country = "FR",
   classification = c("accessfor", "clsvac", "heuristique"),
-  garder_hors_desserte = FALSE
+  garder_hors_desserte = TRUE
 )
 }
 \arguments{
@@ -36,10 +36,15 @@ classes. Sur l'AOI oracle, \code{"accessfor"} et \code{"clsvac"} divergent sur 4
 des tronçons.}
 
 \item{garder_hors_desserte}{Conserver les tronçons \code{hors_desserte}
-(CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut \code{FALSE} —
-la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
-\code{TRUE} sert à inspecter ce qui a été écarté ; \strong{ne pas} passer une telle
-couche à \code{\link[=preprocess]{preprocess()}}.}
+(CL_SVAC = 0) dans la sortie ? \strong{Défaut \code{TRUE} depuis le 2026-07-30.}
+Les retirer \strong{coupe le réseau} : mesuré sur l'AOI oracle, leur suppression
+faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
+buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
+nécessaire mais \strong{permet de garder un réseau intègre} ». Ils sont donc
+conservés pour la \strong{topologie}, et exclus du \strong{débardage} par
+\code{\link[=preprocess]{preprocess()}}, qui ne connaît que les classes de
+\code{.classes_desserte()}. \code{FALSE} reproduit la couche Sylvaccess stricte
+(classes 1/2/3 seulement).}
 }
 \value{
 Un objet \code{sf} de lignes avec un champ \code{classe}.
