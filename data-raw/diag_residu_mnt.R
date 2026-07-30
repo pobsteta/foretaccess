@@ -60,15 +60,24 @@ cat(sprintf("grille : %s | LiDAR HD et RGE Alti alignes\n",
 
 # --- 3. Skidder sur chaque MNT ----------------------------------------------
 config <- foretaccess_config()
+# MOTEUR : skidder par defaut, porteur via FA_MOTEUR=porteur. Le porteur a des
+# seuils bien plus serres (travers 15 %, hors desserte 200 m, grue 8 m) : un
+# desaccord de pente peut y couper des corridors entiers, ou au contraire ne rien
+# changer sur une surface deja majoritairement inaccessible. On mesure, on ne
+# raisonne pas -- c'est le raisonnement par cellule qui s'est revele faux pour le
+# skidder (desaccord par cellule 27,8/25,1 ha, deplacement reel 21,2/23,5 ha).
+MOTEUR <- Sys.getenv("FA_MOTEUR", "skidder")
+moteur_fn <- if (identical(MOTEUR, "porteur")) porteur else skidder
+
 lancer <- function(mnt, nom) {
   t <- system.time({
     pre <- preprocess(mnt, desserte, foret, config = config)
-    sk <- skidder(pre, config)
+    sk <- moteur_fn(pre, config)
   })
   cat(sprintf("  %-10s %5.1f s\n", nom, t[["elapsed"]]))
   list(pre = pre, sk = sk)
 }
-cat("\nskidder :\n")
+cat("\n", MOTEUR, " :\n", sep = "")
 a <- lancer(mnt_lidar, "LiDAR HD")
 b <- lancer(mnt_rge, "RGE Alti")
 
@@ -78,8 +87,20 @@ acc <- function(x) {
   lev <- try(levels(r)[[1]], silent = TRUE)
   v <- values(r, mat = FALSE)
   if (inherits(lev, "data.frame") && ncol(lev) >= 2) {
-    codes <- lev[[1]][grepl("accessible", tolower(as.character(lev[[2]])))]
-    v %in% codes
+    # APPARIEMENT EXACT, pas grepl() : les niveaux sont `parcourable`,
+    # `accessible`, `non_accessible`, `hors_foret` -- et « non_accessible »
+    # CONTIENT « accessible ». Un grep comptait donc l'accessible PLUS
+    # l'inaccessible, ce qui a produit des surfaces de 476 ha la ou Sylvaccess
+    # en mesure 134, et une fausse non-monotonie du porteur (2026-07-30).
+    # DEFINITION DU HARNAIS VALIDE (data-raw/oracle_compare.R:165) :
+    # `parcourable` (la machine y roule) ET `accessible` (atteint par la grue ou
+    # le regime de pente) comptent tous deux pour de la foret accessible.
+    #
+    # Deux erreurs successives ici le 2026-07-30, a ne pas refaire :
+    #   grepl("accessible")            -> attrapait AUSSI `non_accessible`
+    #   == "accessible" seul           -> excluait `parcourable`
+    # La premiere donnait 476 ha, la seconde 23 ha, la bonne ~136 ha.
+    v %in% lev[[1]][as.character(lev[[2]]) %in% c("parcourable", "accessible")]
   } else {
     !is.na(v) & v > 0
   }
@@ -90,7 +111,7 @@ mfor <- !is.na(values(a$pre$foret_mask, mat = FALSE)) &
   values(a$pre$foret_mask, mat = FALSE) == 1
 ha <- function(x) sum(x, na.rm = TRUE) * prod(res(mnt_lidar)) / 1e4
 
-cat("\n--- surface forestiere accessible au skidder ---\n")
+cat("\n--- surface forestiere accessible (", MOTEUR, ") ---\n", sep = "")
 cat(sprintf("  LiDAR HD : %7.1f ha\n", ha(fa & mfor)))
 cat(sprintf("  RGE Alti : %7.1f ha\n", ha(fb & mfor)))
 cat(sprintf("  ecart    : %+7.1f ha\n", ha(fb & mfor) - ha(fa & mfor)))
@@ -101,6 +122,9 @@ cat(sprintf("  inaccessible LiDAR / accessible RGE : %6.1f ha  <- notre residu\n
 cat(sprintf("  accessible LiDAR / inaccessible RGE : %6.1f ha\n",
   ha(fa & !fb & mfor)))
 
-cat("\nLecture : le bloc `inaccessible` x `500-1000` de la matrice ACCESSFOR vaut\n")
-cat("22,3 ha. Si « inaccessible LiDAR / accessible RGE » en approche l'ordre de\n")
-cat("grandeur, le MNT explique le residu ; sinon il faut chercher ailleurs.\n")
+ref <- if (identical(MOTEUR, "porteur")) 29.7 else 22.3
+cat(sprintf("\nLecture : les flips « nous inaccessible / eux accessible » contre\n"))
+cat(sprintf("ACCESSFOR valent %.1f ha pour le %s. Si « inaccessible LiDAR /\n", ref, MOTEUR))
+cat("accessible RGE » en approche l'ordre de grandeur, le MNT explique le\n")
+cat("residu ; sinon il faut chercher ailleurs (pente EN TRAVERS, distance hors\n")
+cat("desserte, portee de grue).\n")
