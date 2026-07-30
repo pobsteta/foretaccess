@@ -75,7 +75,8 @@ reserve</strong> of national parks – not the whole park). Distinct from
 <span>  routes_importance_max <span class="op">=</span> <span class="cn">NA_integer_</span>,</span>
 <span>  classements_routes <span class="op">=</span> <span class="va">.CLASSEMENTS_ROUTES_ACCESSFOR</span>,</span>
 <span>  tampon_m <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  zonages <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  zonages <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  politique_cache <span class="op">=</span> <span class="st">"reacquerir"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -124,6 +125,14 @@ disables the classement filter (then <code>routes_importance_max</code> applies)
 
 <dt id="arg-zonages">zonages<a class="anchor" aria-label="anchor" href="#arg-zonages"></a></dt>
 <dd><p>Include the INPN/Patrinat regulatory exclusions? Default <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-politique-cache">politique_cache<a class="anchor" aria-label="anchor" href="#arg-politique-cache"></a></dt>
+<dd><p>Que faire d'un cache produit avec <strong>d'autres
+paramètres</strong> ? <code>"reacquerir"</code> (défaut) refait l'acquisition, <code>"avertir"</code> sert
+le cache en nommant ce qui diverge, <code>"echouer"</code> interrompt, <code>"ignorer"</code>
+désactive le contrôle. Un cache <strong>sans provenance</strong> (antérieur à la v1.29.0)
+compte comme divergent. Cf. <code><a href="cache_utilisable.html">cache_utilisable()</a></code> et <code>specs/027</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

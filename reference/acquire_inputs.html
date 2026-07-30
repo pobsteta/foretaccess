@@ -74,6 +74,7 @@ sont déclarés dans <code>inst/datasources/&lt;pays&gt;.json</code>, jamais cod
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
 <span>  dfci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  politique_cache <span class="op">=</span> <span class="st">"reacquerir"</span>,</span>
 <span>  volume <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  champ_volume <span class="op">=</span> <span class="st">"P1"</span>,</span>
 <span>  config <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -127,6 +128,12 @@ agrégée à <code>res_m</code> (cf. <code><a href="acquire_mnt.html">acquire_mn
 <dd><p>Alimenter le flag DFCI (<code>CL_DFCI</code>) sur la desserte, source du camion
 DFCI (spec 006) : réseau OSM <code>ref:FR:DFCI</code> (<code><a href="acquire_dfci.html">acquire_dfci()</a></code>), avec repli
 géométrique (<code><a href="flag_dfci.html">flag_dfci()</a></code>) si OSM ne rend rien. Défaut <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-politique-cache">politique_cache<a class="anchor" aria-label="anchor" href="#arg-politique-cache"></a></dt>
+<dd><p>Propagé à toutes les acquisitions : que faire d'un
+cache produit avec <strong>d'autres paramètres</strong> ? Défaut <code>"reacquerir"</code>. Voir
+<code><a href="cache_utilisable.html">cache_utilisable()</a></code> et <code>specs/027</code>.</p></dd>
 
 
 <dt id="arg-volume">volume<a class="anchor" aria-label="anchor" href="#arg-volume"></a></dt>

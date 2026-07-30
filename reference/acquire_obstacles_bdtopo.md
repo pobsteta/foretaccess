@@ -22,7 +22,8 @@ acquire_obstacles_bdtopo(
   routes_importance_max = NA_integer_,
   classements_routes = .CLASSEMENTS_ROUTES_ACCESSFOR,
   tampon_m = 5,
-  zonages = TRUE
+  zonages = TRUE,
+  politique_cache = "reacquerir"
 )
 ```
 
@@ -70,6 +71,16 @@ acquire_obstacles_bdtopo(
 - zonages:
 
   Include the INPN/Patrinat regulatory exclusions? Default `TRUE`.
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ?
+  `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert le
+  cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+  désactive le contrôle. Un cache **sans provenance** (antérieur à la
+  v1.29.0) compte comme divergent. Cf.
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 

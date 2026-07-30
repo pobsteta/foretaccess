@@ -11,7 +11,8 @@ acquire_foret(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  exclure_landes = TRUE
+  exclure_landes = TRUE,
+  politique_cache = "reacquerir"
 )
 ```
 
@@ -42,6 +43,16 @@ acquire_foret(
   Exclure les landes (`code_tfv` dans `LA4`/`LA6`) du masque forêt,
   comme ACCESSFOR ? Défaut `TRUE`. Sans colonne `code_tfv` dans le flux,
   aucun filtrage n'est possible et la couche est renvoyée telle quelle.
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ?
+  `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert le
+  cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+  désactive le contrôle. Un cache **sans provenance** (antérieur à la
+  v1.29.0) compte comme divergent. Cf.
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 

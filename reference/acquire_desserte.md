@@ -14,7 +14,8 @@ acquire_desserte(
   overwrite = FALSE,
   country = "FR",
   classification = c("accessfor", "clsvac", "heuristique"),
-  garder_hors_desserte = TRUE
+  garder_hors_desserte = TRUE,
+  politique_cache = "reacquerir"
 )
 ```
 
@@ -64,6 +65,16 @@ acquire_desserte(
   [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
   qui ne connaît que les classes de `.classes_desserte()`. `FALSE`
   reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ?
+  `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert le
+  cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+  désactive le contrôle. Un cache **sans provenance** (antérieur à la
+  v1.29.0) compte comme divergent. Cf.
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 

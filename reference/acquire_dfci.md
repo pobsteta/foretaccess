@@ -11,7 +11,13 @@ laissée ouverte en phase 1 (spec 010 §10.2).
 ## Usage
 
 ``` r
-acquire_dfci(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE)
+acquire_dfci(
+  aoi,
+  crs = 2154,
+  cache_dir = tempdir(),
+  overwrite = FALSE,
+  politique_cache = "reacquerir"
+)
 ```
 
 ## Arguments
@@ -31,6 +37,13 @@ acquire_dfci(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE)
 - overwrite:
 
   Re-télécharger même si le cache existe. Défaut `FALSE`.
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ? Défaut
+  `"reacquerir"`. Voir
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 

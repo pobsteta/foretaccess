@@ -373,6 +373,14 @@ OpenStreetMap).
 - [`acquire_inputs()`](https://pobsteta.github.io/foretaccess/reference/acquire_inputs.md)
   : Acquiert les entrées ForêtAccess depuis une AOI
 
+- [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  : Politique de réutilisation des caches d'acquisition
+
+- [`politique_cache_valeurs()`](https://pobsteta.github.io/foretaccess/reference/politique_cache_valeurs.md)
+  :
+
+  Valeurs admises pour `politique_cache`
+
 - [`acquire_mnt()`](https://pobsteta.github.io/foretaccess/reference/acquire_mnt.md)
   : Acquiert le MNT depuis RGE ALTI (IGN WMS)
 
@@ -384,6 +392,18 @@ OpenStreetMap).
 
 - [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
   : Acquiert la desserte depuis BD TOPO (IGN WFS)
+
+- [`acquire_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_osm.md)
+  : Acquiert la desserte candidate depuis OpenStreetMap (spec 028)
+
+- [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
+  : Détecte la desserte absente de la référence, sur le MNT (spec 026)
+
+- [`detecter_desserte_balayage()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte_balayage.md)
+  : Balayage de seuils pour la détection (spec 026, CA-26.5)
+
+- [`comparer_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/comparer_desserte_osm.md)
+  : Compare une desserte OSM à la BD TOPO (spec 028)
 
 - [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
   : Enrich/correct a road network with airborne LiDAR (dessertR, NDP 1)

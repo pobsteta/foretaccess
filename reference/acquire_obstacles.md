@@ -13,7 +13,8 @@ acquire_obstacles(
   features = c("building", "water", "railway", "cliff"),
   crs = 2154,
   cache_dir = tempdir(),
-  overwrite = FALSE
+  overwrite = FALSE,
+  politique_cache = "reacquerir"
 )
 ```
 
@@ -39,6 +40,13 @@ acquire_obstacles(
 - overwrite:
 
   Re-télécharger même si le cache existe. Défaut `FALSE`.
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ? Défaut
+  `"reacquerir"`. Voir
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 

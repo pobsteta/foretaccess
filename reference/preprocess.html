@@ -63,7 +63,8 @@ après validation stricte. Aucune règle de moteur n'est appliquée ici.</p>
 <span>  volume <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parcellaire <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  config <span class="op">=</span> <span class="fu"><a href="foretaccess_config.html">foretaccess_config</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  write_dir <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  write_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ecarter_infractions <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -115,6 +116,14 @@ Lot 8 pour l'agrégation).</p></dd>
 <dt id="arg-write-dir">write_dir<a class="anchor" aria-label="anchor" href="#arg-write-dir"></a></dt>
 <dd><p>Répertoire où écrire les rasters en GeoTIFF/COG. <code>NULL</code>
 (défaut) : tout reste en mémoire.</p></dd>
+
+
+<dt id="arg-ecarter-infractions">ecarter_infractions<a class="anchor" aria-label="anchor" href="#arg-ecarter-infractions"></a></dt>
+<dd><p>Écarter les tronçons dont
+<code><a href="verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> a jugé l'infraction <strong>réelle</strong> (ni bord
+d'AOI, ni topologie) ? Défaut <code>FALSE</code> — on ne retire pas une information
+terrain potentiellement juste. Sans les colonnes de diagnostic, la desserte
+passe telle quelle avec un avertissement. Cf. <code>specs/025</code> (CA-25.6).</p></dd>
 
 </dl></div>
     <div class="section level2">

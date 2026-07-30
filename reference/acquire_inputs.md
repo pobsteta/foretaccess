@@ -23,6 +23,7 @@ acquire_inputs(
   overwrite = FALSE,
   country = "FR",
   dfci = TRUE,
+  politique_cache = "reacquerir",
   volume = NULL,
   champ_volume = "P1",
   config = NULL
@@ -81,6 +82,13 @@ acquire_inputs(
   avec repli géométrique
   ([`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md))
   si OSM ne rend rien. Défaut `TRUE`.
+
+- politique_cache:
+
+  Propagé à toutes les acquisitions : que faire d'un cache produit avec
+  **d'autres paramètres** ? Défaut `"reacquerir"`. Voir
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 - volume:
 

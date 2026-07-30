@@ -59,7 +59,8 @@ WGS84 de l'AOI, puis reprojeté et découpé sur l'AOI (spec 010 Q3).</p>
 <span>  features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"building"</span>, <span class="st">"water"</span>, <span class="st">"railway"</span>, <span class="st">"cliff"</span><span class="op">)</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  politique_cache <span class="op">=</span> <span class="st">"reacquerir"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -86,6 +87,12 @@ WGS84 de l'AOI, puis reprojeté et découpé sur l'AOI (spec 010 Q3).</p>
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
 <dd><p>Re-télécharger même si le cache existe. Défaut <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-politique-cache">politique_cache<a class="anchor" aria-label="anchor" href="#arg-politique-cache"></a></dt>
+<dd><p>Que faire d'un cache produit avec <strong>d'autres
+paramètres</strong> ? Défaut <code>"reacquerir"</code>. Voir <code><a href="cache_utilisable.html">cache_utilisable()</a></code> et
+<code>specs/027</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

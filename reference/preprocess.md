@@ -17,7 +17,8 @@ preprocess(
   volume = NULL,
   parcellaire = NULL,
   config = foretaccess_config(),
-  write_dir = NULL
+  write_dir = NULL,
+  ecarter_infractions = FALSE
 )
 ```
 
@@ -71,6 +72,15 @@ preprocess(
 
   Répertoire où écrire les rasters en GeoTIFF/COG. `NULL` (défaut) :
   tout reste en mémoire.
+
+- ecarter_infractions:
+
+  Écarter les tronçons dont
+  [`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
+  a jugé l'infraction **réelle** (ni bord d'AOI, ni topologie) ? Défaut
+  `FALSE` — on ne retire pas une information terrain potentiellement
+  juste. Sans les colonnes de diagnostic, la desserte passe telle quelle
+  avec un avertissement. Cf. `specs/025` (CA-25.6).
 
 ## Value
 

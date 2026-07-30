@@ -12,7 +12,8 @@ acquire_mnt(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  res_lidar_m = 1
+  res_lidar_m = 1,
+  politique_cache = "reacquerir"
 )
 ```
 
@@ -48,6 +49,16 @@ acquire_mnt(
   primaire) sur l'emprise, agrégée ensuite à `res_m`. Défaut 1. Doit
   diviser `res_m` (ex. 1 → 5). Passer `res_lidar_m >= res_m` désactive
   l'agrégation (téléchargement direct à `res_m`).
+
+- politique_cache:
+
+  Que faire d'un cache produit avec **d'autres paramètres** ?
+  `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert le
+  cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+  désactive le contrôle. Un cache **sans provenance** (antérieur à la
+  v1.29.0) compte comme divergent. Cf.
+  [`cache_utilisable()`](https://pobsteta.github.io/foretaccess/reference/cache_utilisable.md)
+  et `specs/027`.
 
 ## Value
 
