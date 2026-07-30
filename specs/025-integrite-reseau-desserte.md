@@ -137,17 +137,41 @@ sur plusieurs AOI.
 
 ## 6. Critères d'acceptation
 
-- [ ] **CA-25.1** — `verifier_integrite_desserte()` rend, par tronçon,
-      `composant` / `connecte_public` / `viole_contrainte`, et un `resume`
-      chiffré. Sans `dessertR`, dégradation propre (diagnostic vide + message),
-      jamais d'échec.
-- [ ] **CA-25.2** — La cause probable (`bord_aoi` / `topologie` / `reel`) est
-      attribuée à chaque infraction.
-- [ ] **CA-25.3** — L'élargissement adaptatif mesure `L(b)` **sur l'AOI stricte**
-      et s'arrête sur convergence ou plafond ; la courbe est retournée.
-- [ ] **CA-25.4** — Sur l'AOI oracle : publier `L(b)`, et la part des infractions
-      imputables au bord. C'est le chiffre qui dira si le buffer suffit.
-- [ ] **CA-25.5** — Le niveau 2 (recollage) n'est jamais appliqué sans demande
+- [x] **CA-25.1** — Fait. Sur l'AOI oracle : 196 tronçons, 6 composantes dont
+      **3 orphelines**, 7 infractions (0,86 km). Repli testé sans dessertR.
+- [x] **CA-25.2** — Fait. Sur l'AOI : **3 `bord_aoi`, 4 `reel`**, aucune
+      `topologie`.
+- [x] **CA-25.3** — Implémenté (`integrite_buffer_adaptatif()`), mesure bien sur
+      l'AOI stricte, courbe retournée.
+- [ ] **CA-25.4 — NON ATTEINT : la courbe n'est PAS monotone.** Mesuré sur l'AOI
+      oracle (2026-07-30) :
+
+      | buffer | infractions (AOI stricte) | longueur |
+      |---:|---:|---:|
+      | 100 m | 1 | 184 m |
+      | 400 m | **0** | 0 m |
+      | 1600 m | **21** | 7 612 m |
+
+      La prémisse du §4.2 — `L(b)` décroît, ce qui résiste est réel — **ne tient
+      pas**. Deux hypothèses testées et **écartées** :
+
+      * *déduplication des parallèles* (`largeur_dedupe`) : avec 0 les 1003
+        tronçons sont conservés, le graphe garde **69 composantes** ;
+      * *plafond de features du WFS* : le flux rend 1380 / 2882 / 5080 features
+        à 1600 / 2500 / 4000 m, sans troncature.
+
+      À 1600 m les 21 infractions se répartissent sur **14 composantes minuscules**
+      (tailles 1 à 6, plus une de 32). Pourquoi des tronçons intérieurs à l'AOI
+      appartiennent à un grand composant à 400 m et à des fragments à 1600 m
+      **reste inexpliqué**. Tant que ce n'est pas élucidé, l'élargissement
+      adaptatif ne doit pas servir à trancher `bord_aoi` contre `reel`.
+
+      **Conséquence sur la spec 024** : l'hypothèse « les composantes orphelines
+      expliquent les 22,3 ha du bloc `inaccessible` × `500-1000` » est
+      **affaiblie**. Sur l'AOI stricte, à 400 m de buffer, il n'y a **aucune**
+      infraction. Les 7 infractions du banc (buffer 100) sont comptées sur
+      l'emprise bufferisée, dont 3 attribuées au bord.
+- [x] **CA-25.5** — Le niveau 2 (recollage) n'est jamais appliqué sans demande
       explicite, et le niveau 3 (suppression) n'existe pas dans le code.
 - [ ] **CA-25.6** — Les infractions `reel` portent une colonne de marquage, et
       `preprocess()` sait les écarter sur option (défaut : les conserve).
