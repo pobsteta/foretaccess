@@ -150,17 +150,32 @@ ACCESSFOR les a fait respecter par un script FME + des retouches manuelles.
       forêt » : 3,9 → 28,0 ha). Les désaccords résiduels ne viennent pas du
       masque forêt.
 
-      **Résidu skidder** : biais « nous plus loin » persistant — 31,0 ha dans une
-      bande plus lointaine qu'ACCESSFOR contre 8,6 ha plus proche (rapport 3,6:1,
-      ~3,7 % de la surface). La plus grosse cellule hors diagonale est
-      **22,3 ha** où nous disons *inaccessible* et ACCESSFOR *500-1000 m* —
-      hypothèse : composantes orphelines chez nous, reconnectées à la main par
-      ACCESSFOR (annexe p. 51). Instruit en spec 025.
+      **Résidus expliqués : c'est le MNT** (mesure du 2026-07-30,
+      `data-raw/diag_residu_mnt.R`). Protocole : rejouer chaque moteur à entrées
+      **strictement identiques**, en ne changeant que le MNT — LiDAR HD contre
+      les dalles départementales RGE Alti d'ACCESSFOR.
 
-      **Résidu porteur, sens inverse** : nous plus conservateurs (29,7 ha
-      inaccessibles chez nous / accessibles chez eux, contre 18,9 ha en sens
-      inverse). Piste : effet de pente, notre MNT LiDAR HD contre leur RGE Alti
-      (écart n° 4, assumé).
+      | | skidder | porteur |
+      |---|---:|---:|
+      | flips « nous inaccessible / eux accessible » | 22,3 ha | 29,7 ha |
+      | dont déplacés par le seul changement de MNT | **16,3 ha (73 %)** | **27,6 ha (93 %)** |
+      | effet net sur la surface accessible | +3,7 ha | +13,7 ha |
+
+      Notre MNT LiDAR HD, plus fin, crée des **micro-barrières** que le RGE Alti
+      lisse. L'effet n'est pas symétrique en accessibilité même quand le
+      désaccord *par cellule* l'est : une cellule bloquée condamne tout ce qui
+      est derrière elle.
+
+      Le résidu n'est donc **pas un défaut** mais la conséquence mesurée de
+      l'**écart n° 4**, assumé (§6.4). L'accord plafonnera tant qu'ACCESSFOR
+      restera sur le RGE Alti — que son propre rapport (p. 16) annonce comme
+      remplacé à brève échéance par le LiDAR HD.
+
+      **Hypothèses écartées en chemin** : les composantes orphelines (réfutées,
+      spec 025 — aucune infraction dans l'AOI stricte) et une non-monotonie
+      supposée du porteur (**inexistante** : artefact d'un bug de comptage,
+      Sylvaccess passant de 133,8 à 263,8 ha quand on relâche `f_slope_up` de
+      30 à 50 %).
 
 ## 8. Ce que ça n'est PAS
 
