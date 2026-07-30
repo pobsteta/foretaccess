@@ -32,6 +32,9 @@
 #' @param buffer_m Buffer d'emprise (m) autour de l'AOI. Défaut 100.
 #' @param overwrite Re-télécharger même si le cache existe. Défaut `FALSE`.
 #' @param country Code pays ISO. Défaut `"FR"`.
+#' @param politique_cache Propagé à toutes les acquisitions : que faire d'un
+#'   cache produit avec **d'autres paramètres** ? Défaut `"reacquerir"`. Voir
+#'   [cache_utilisable()] et `specs/027`.
 #' @param dfci Alimenter le flag DFCI (`CL_DFCI`) sur la desserte, source du camion
 #'   DFCI (spec 006) : réseau OSM `ref:FR:DFCI` ([acquire_dfci()]), avec repli
 #'   géométrique ([flag_dfci()]) si OSM ne rend rien. Défaut `TRUE`.
@@ -79,6 +82,7 @@ acquire_inputs <- function(aoi,
                            overwrite = FALSE,
                            country = "FR",
                            dfci = TRUE,
+                           politique_cache = "reacquerir",
                            volume = NULL,
                            champ_volume = "P1",
                            config = NULL) {
@@ -100,19 +104,23 @@ acquire_inputs <- function(aoi,
 
   if ("mnt" %in% sources) {
     out$mnt <- acquire_mnt(emprise, res_m = res_m, res_lidar_m = res_lidar_m, crs = crs,
-      cache_dir = cache_dir, overwrite = overwrite, country = country)
+      cache_dir = cache_dir, overwrite = overwrite, country = country,
+      politique_cache = politique_cache)
   }
   if ("desserte" %in% sources) {
     out$desserte <- acquire_desserte(emprise, crs = crs,
-      cache_dir = cache_dir, overwrite = overwrite, country = country)
+      cache_dir = cache_dir, overwrite = overwrite, country = country,
+      politique_cache = politique_cache)
   }
   if ("foret" %in% sources) {
     out$foret <- acquire_foret(emprise, crs = crs,
-      cache_dir = cache_dir, overwrite = overwrite, country = country)
+      cache_dir = cache_dir, overwrite = overwrite, country = country,
+      politique_cache = politique_cache)
   }
   if ("obstacles" %in% sources) {
     out$obstacles <- acquire_obstacles(emprise, crs = crs,
-      cache_dir = cache_dir, overwrite = overwrite)
+      cache_dir = cache_dir, overwrite = overwrite,
+      politique_cache = politique_cache)
   }
   if ("cadastre" %in% sources) {
     out$parcellaire <- acquire_cadastre(emprise, crs = crs,
@@ -128,7 +136,8 @@ acquire_inputs <- function(aoi,
     # muet rendait un CL_DFCI vide indiscernable d'une emprise reellement sans
     # DFCI, tout en re-tapant Overpass a chaque execution jusqu'au throttling.
     dfci_lignes <- tryCatch(
-      acquire_dfci(emprise, crs = crs, cache_dir = cache_dir, overwrite = overwrite),
+      acquire_dfci(emprise, crs = crs, cache_dir = cache_dir, overwrite = overwrite,
+        politique_cache = politique_cache),
       error = function(e) {
         cli::cli_warn(c(
           "!" = "DFCI : OSM injoignable ({conditionMessage(e)}) -- flag {.field CL_DFCI}
@@ -141,7 +150,7 @@ acquire_inputs <- function(aoi,
     retournements <- if (is.null(dfci_lignes) || nrow(dfci_lignes) == 0) {
       tryCatch(
         .acquire_retournements(emprise, crs = crs, cache_dir = cache_dir,
-          overwrite = overwrite),
+          overwrite = overwrite, politique_cache = politique_cache),
         error = function(e) {
           cli::cli_warn("Aires de retournement : OSM injoignable
                          ({conditionMessage(e)}) -- repli geometrique degrade.")

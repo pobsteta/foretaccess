@@ -100,7 +100,9 @@
 acquire_obstacles <- function(aoi, features = c("building", "water", "railway", "cliff"),
                               crs = 2154, cache_dir = tempdir(), overwrite = FALSE) {
   chemin <- .chemin_cache(cache_dir, "obstacles", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(crs = crs)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "obstacles", "osm", prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
   features <- match.arg(features, names(.OBSTACLES_OSM), several.ok = TRUE)
@@ -125,12 +127,14 @@ acquire_obstacles <- function(aoi, features = c("building", "water", "railway", 
   if (is.null(geoms)) {
     vide <- sf::st_sf(type = character(0), geometry = sf::st_sfc(crs = crs_obj))
     sf::st_write(vide, chemin, delete_dsn = TRUE, quiet = TRUE)
+    .provenance_ecrire(chemin, "obstacles", "osm", prov)
     return(vide)
   }
 
   obs <- sf::st_sf(type = types, geometry = geoms)
   obs <- .reprojeter_clip(obs, aoi, crs)
   sf::st_write(obs, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "obstacles", "osm", prov)
   obs
 }
 
@@ -152,13 +156,19 @@ acquire_obstacles <- function(aoi, features = c("building", "water", "railway", 
 #' « source dédiée » laissée ouverte en phase 1 (spec 010 §10.2).
 #'
 #' @inheritParams acquire_obstacles
+#' @param politique_cache Que faire d'un cache produit avec **d'autres
+#'   paramètres** ? Défaut `"reacquerir"`. Voir [cache_utilisable()] et
+#'   `specs/027`.
 #' @return Un objet `sf` de lignes DFCI avec un champ `ref`, ou un `sf` vide si
 #'   aucune piste DFCI n'est trouvée.
 #' @seealso [flag_dfci()], [acquire_desserte()]
 #' @export
-acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE) {
+acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE,
+                         politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "dfci", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(crs = crs)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "dfci", "osm", prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
   aoi_wgs <- sf::st_transform(aoi, 4326)
@@ -181,12 +191,14 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
   if (is.null(geoms)) {
     vide <- sf::st_sf(ref = character(0), geometry = sf::st_sfc(crs = crs_obj))
     sf::st_write(vide, chemin, delete_dsn = TRUE, quiet = TRUE)
+    .provenance_ecrire(chemin, "dfci", "osm", prov)
     return(vide)
   }
 
   dfci <- sf::st_sf(ref = refs, geometry = geoms)
   dfci <- .reprojeter_clip(dfci, aoi, crs)
   sf::st_write(dfci, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "dfci", "osm", prov)
   dfci
 }
 
@@ -200,13 +212,16 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
 # qui bloquait `data-raw/oracle_aoi.R`). Le resultat VIDE est mis en cache comme
 # les autres : une emprise sans aire de retournement n'a pas a etre redemandee.
 .acquire_retournements <- function(aoi, crs = 2154, cache_dir = NULL,
-                                   overwrite = FALSE) {
+                                   overwrite = FALSE,
+                                   politique_cache = "reacquerir") {
   chemin <- if (!is.null(cache_dir)) {
     .chemin_cache(cache_dir, "retournements", "gpkg")
   } else {
     NULL
   }
-  if (!is.null(chemin) && file.exists(chemin) && !overwrite) {
+  if (!is.null(chemin) && file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "retournements", "osm", list(crs = crs),
+        politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
   aoi_wgs <- sf::st_transform(aoi, 4326)
@@ -228,6 +243,7 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
   }
   if (!is.null(chemin)) {
     sf::st_write(pts, chemin, delete_dsn = TRUE, quiet = TRUE)
+    .provenance_ecrire(chemin, "retournements", "osm", list(crs = crs))
   }
   pts
 }

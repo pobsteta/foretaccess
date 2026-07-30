@@ -213,11 +213,16 @@ test_that("acquire_foret filtre les landes AUSSI a la relecture du cache", {
     sf::st_write(sf::st_sf(code_tfv = c("FF1-00", "LA4"), geometry = geom),
       file.path(d, "foret.gpkg"), quiet = TRUE)
 
-    f <- suppressMessages(acquire_foret(aoi_test(), cache_dir = "cache"))
+    # `politique_cache = "ignorer"` : ce test porte sur le FILTRE a la relecture,
+    # pas sur la provenance. Sans ca, un cache ecrit a la main -- donc sans
+    # sidecar -- serait juge divergent et RE-ACQUIS (spec 027), ce qui est le
+    # comportement voulu par ailleurs mais court-circuiterait ce qu'on mesure ici.
+    f <- suppressMessages(acquire_foret(aoi_test(), cache_dir = "cache",
+      politique_cache = "ignorer"))
     expect_equal(nrow(f), 1L)
     expect_false("LA4" %in% f$code_tfv)
     # Opt-out : l'ancien comportement reste joignable.
     expect_equal(nrow(acquire_foret(aoi_test(), cache_dir = "cache",
-      exclure_landes = FALSE)), 2L)
+      exclure_landes = FALSE, politique_cache = "ignorer")), 2L)
   })
 })

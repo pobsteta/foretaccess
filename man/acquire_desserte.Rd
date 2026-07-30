@@ -11,7 +11,8 @@ acquire_desserte(
   overwrite = FALSE,
   country = "FR",
   classification = c("accessfor", "clsvac", "heuristique"),
-  garder_hors_desserte = TRUE
+  garder_hors_desserte = TRUE,
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -45,6 +46,12 @@ conservés pour la \strong{topologie}, et exclus du \strong{débardage} par
 \code{\link[=preprocess]{preprocess()}}, qui ne connaît que les classes de
 \code{.classes_desserte()}. \code{FALSE} reproduit la couche Sylvaccess stricte
 (classes 1/2/3 seulement).}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
+le cache en nommant ce qui diverge, \code{"echouer"} interrompt, \code{"ignorer"}
+désactive le contrôle. Un cache \strong{sans provenance} (antérieur à la v1.29.0)
+compte comme divergent. Cf. \code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 }
 \value{
 Un objet \code{sf} de lignes avec un champ \code{classe}.

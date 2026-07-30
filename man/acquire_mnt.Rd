@@ -11,7 +11,8 @@ acquire_mnt(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  res_lidar_m = 1
+  res_lidar_m = 1,
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -31,6 +32,12 @@ acquire_mnt(
 (couche primaire) sur l'emprise, agrégée ensuite à \code{res_m}. Défaut 1. Doit
 diviser \code{res_m} (ex. 1 → 5). Passer \code{res_lidar_m >= res_m} désactive
 l'agrégation (téléchargement direct à \code{res_m}).}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
+le cache en nommant ce qui diverge, \code{"echouer"} interrompt, \code{"ignorer"}
+désactive le contrôle. Un cache \strong{sans provenance} (antérieur à la v1.29.0)
+compte comme divergent. Cf. \code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 }
 \value{
 Le chemin du raster \code{mnt.tif} écrit en cache.
