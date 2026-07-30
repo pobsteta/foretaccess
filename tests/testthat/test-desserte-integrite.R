@@ -95,3 +95,51 @@ test_that("integrite_buffer_adaptatif mesure sur l'AOI STRICTE et converge", {
   # Le troncon lointain n'est JAMAIS compte : la mesure reste sur l'AOI stricte.
   expect_true(all(out$courbe$n_infractions == 1L))
 })
+
+# --- CA-25.6 : marquage des infractions reelles, exclusion sur option ---------
+
+desserte_diagnostiquee <- function() {
+  seg <- function(a, b) sf::st_linestring(rbind(a, b))
+  sf::st_sf(
+    classe = c("route", "piste", "piste"),
+    viole_contrainte = c(FALSE, TRUE, TRUE),
+    cause = c(NA, "reel", "bord_aoi"),
+    geometry = sf::st_sfc(
+      seg(c(0, 0), c(100, 0)), seg(c(0, 50), c(100, 50)),
+      seg(c(0, 90), c(100, 90)), crs = 2154)
+  )
+}
+
+test_that("preprocess conserve les infractions PAR DEFAUT", {
+  # Decision du 2026-07-29 : on ne retire pas une information terrain
+  # potentiellement juste. On cesse seulement de la subir en aveugle.
+  d <- desserte_diagnostiquee()
+  expect_identical(nrow(foretaccess:::.ecarter_infractions_reelles(d, FALSE)), 3L)
+})
+
+test_that("ecarter_infractions ne retire QUE les infractions reelles", {
+  d <- desserte_diagnostiquee()
+  out <- suppressMessages(foretaccess:::.ecarter_infractions_reelles(d, TRUE))
+  expect_equal(nrow(out), 2L)
+  # Le troncon `bord_aoi` reste : son infraction est un artefact de decoupe,
+  # pas un cul-de-sac reel. Le retirer amputerait le reseau sur la foi d'une
+  # limite d'emprise arbitraire.
+  expect_true("bord_aoi" %in% out$cause)
+  expect_false(any(!is.na(out$cause) & out$cause == "reel"))
+})
+
+test_that("sans colonnes de diagnostic : avertissement, desserte inchangee", {
+  # preprocess() ne doit pas EXIGER d'avoir ete precede du diagnostic.
+  d <- sf::st_sf(classe = "piste", geometry = sf::st_sfc(
+    sf::st_linestring(rbind(c(0, 0), c(10, 10))), crs = 2154))
+  expect_warning(out <- foretaccess:::.ecarter_infractions_reelles(d, TRUE),
+    "sans colonnes de diagnostic")
+  expect_identical(nrow(out), 1L)
+})
+
+test_that("une desserte sans aucune infraction reelle passe intacte", {
+  d <- desserte_diagnostiquee()
+  d$cause[d$cause %in% "reel"] <- "topologie"
+  out <- foretaccess:::.ecarter_infractions_reelles(d, TRUE)
+  expect_identical(nrow(out), 3L)
+})

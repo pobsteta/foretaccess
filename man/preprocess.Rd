@@ -13,7 +13,8 @@ preprocess(
   volume = NULL,
   parcellaire = NULL,
   config = foretaccess_config(),
-  write_dir = NULL
+  write_dir = NULL,
+  ecarter_infractions = FALSE
 )
 }
 \arguments{
@@ -44,6 +45,12 @@ Lot 8 pour l'agrégation).}
 
 \item{write_dir}{Répertoire où écrire les rasters en GeoTIFF/COG. \code{NULL}
 (défaut) : tout reste en mémoire.}
+
+\item{ecarter_infractions}{Écarter les tronçons dont
+\code{\link[=verifier_integrite_desserte]{verifier_integrite_desserte()}} a jugé l'infraction \strong{réelle} (ni bord
+d'AOI, ni topologie) ? Défaut \code{FALSE} — on ne retire pas une information
+terrain potentiellement juste. Sans les colonnes de diagnostic, la desserte
+passe telle quelle avec un avertissement. Cf. \code{specs/025} (CA-25.6).}
 }
 \value{
 Un objet de classe \code{foretaccess_preprocessing} : une liste dont les
