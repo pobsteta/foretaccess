@@ -44,8 +44,9 @@ test_that("acquire_desserte reprojette, decoupe et pose le champ classe", {
     expect_true("classe" %in% names(d))
     # `hors_desserte` (CL_SVAC = 0) est RETIRE de la sortie : la couche
     # Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
-    expect_true(all(d$classe %in% .classes_desserte()))
-    expect_false("hors_desserte" %in% d$classe)
+    # `hors_desserte` peut etre present (defaut depuis le 2026-07-30) : il porte
+    # la connectivite. Les autres valeurs doivent rester du vocabulaire connu.
+    expect_true(all(d$classe %in% c(.classes_desserte(), "hors_desserte")))
     expect_equal(sf::st_crs(d), sf::st_crs(2154))
     # Cache ecrit.
     expect_true(file.exists(file.path("cache", "layers", "desserte", "desserte.gpkg")))
@@ -247,15 +248,17 @@ test_that("acquire_desserte retire les troncons hors desserte, sauf demande", {
   }
   withr::with_tempdir({
     testthat::local_mocked_bindings(.fetch_wfs = fixture)
-    d <- suppressMessages(acquire_desserte(aoi_test(), cache_dir = "c1"))
-    expect_equal(nrow(d), 2L) # le Sentier est parti
-    expect_setequal(d$classe, c("piste", "route"))
+    # DEFAUT depuis le 2026-07-30 : on GARDE les hors_desserte, ils portent la
+    # connectivite du reseau. `.rasteriser_desserte()` les ecarte du debardage.
+    d <- acquire_desserte(aoi_test(), cache_dir = "c1")
+    expect_equal(nrow(d), 3L)
+    expect_true("hors_desserte" %in% d$classe)
 
-    # Inspection : on peut les garder pour voir ce qui a ete ecarte.
-    dg <- acquire_desserte(aoi_test(), cache_dir = "c2",
-      garder_hors_desserte = TRUE)
-    expect_equal(nrow(dg), 3L)
-    expect_true("hors_desserte" %in% dg$classe)
+    # Opt-out : la couche Sylvaccess stricte, classes 1/2/3 seulement.
+    ds <- suppressMessages(acquire_desserte(aoi_test(), cache_dir = "c2",
+      garder_hors_desserte = FALSE))
+    expect_equal(nrow(ds), 2L) # le Sentier est parti
+    expect_setequal(ds$classe, c("piste", "route"))
   })
 })
 
@@ -292,4 +295,82 @@ test_that("la config FR ne propose plus de repli WMS pour le MNT", {
   expect_length(as.character(info$fallback_layers), 0L)
   expect_true(foretaccess:::.verifier_couches_mnt(
     c(info$layer, as.character(info$fallback_layers))))
+})
+
+test_that(".tuiles_bbox pave au-dela d'une tuile, avec chevauchement", {
+  # Une emprise qui tient dans une tuile -> une seule requete.
+  petit <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 500, ymax = 500), crs = 2154)))
+  expect_length(foretaccess:::.tuiles_bbox(petit, 2000), 1L)
+
+  # 5 km x 3 km avec des tuiles de 2 km -> 3 x 2 = 6 tuiles.
+  grand <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 5000, ymax = 3000), crs = 2154)))
+  tu <- foretaccess:::.tuiles_bbox(grand, 2000)
+  expect_length(tu, 6L)
+  # Les tuiles se CHEVAUCHENT : un troncon a cheval doit sortir ENTIER d'au moins
+  # une requete, sinon la deduplication garderait deux moities et le graphe
+  # resterait coupe.
+  u <- sf::st_union(do.call(c, tu))
+  expect_true(as.numeric(sf::st_area(u)) > as.numeric(sf::st_area(grand)))
+  expect_true(all(vapply(tu, function(g) sf::st_crs(g) == sf::st_crs(2154), logical(1))))
+})
+
+test_that(".dedupe_features deduplique sur cleabs, sinon sur la geometrie", {
+  g <- sf::st_sfc(sf::st_point(c(0, 0)), sf::st_point(c(0, 0)),
+    sf::st_point(c(1, 1)), crs = 2154)
+  # cleabs present : c'est l'identifiant stable BD TOPO qui fait foi.
+  x <- sf::st_sf(cleabs = c("A", "A", "B"), geometry = g)
+  expect_equal(nrow(foretaccess:::.dedupe_features(x)), 2L)
+  # Sans cleabs : repli sur la geometrie.
+  y <- sf::st_sf(v = 1:3, geometry = g)
+  expect_equal(nrow(foretaccess:::.dedupe_features(y)), 2L)
+  expect_equal(nrow(foretaccess:::.dedupe_features(y[0, ])), 0L)
+})
+
+test_that(".fetch_wfs pave les grandes emprises et deduplique", {
+  # Le WFS IGN rend des jeux INCOMPLETS sur une grande bbox, sans le signaler :
+  # mesure sur l'AOI oracle, 86 troncons interieurs rendus contre 214 en pavant.
+  appels <- 0L
+  testthat::local_mocked_bindings(.require_pkg = function(...) TRUE)
+  local_mocked_bindings(get_wfs = function(x, layer, ...) {
+    appels <<- appels + 1L
+    sf::st_sf(cleabs = paste0("T", appels), geometry = sf::st_sfc(
+      sf::st_point(c(appels, appels)), crs = 2154))
+  }, .package = "happign")
+
+  grand <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 6000, ymax = 4000), crs = 2154))
+  out <- foretaccess:::.fetch_wfs(grand, "BDTOPO_V3:troncon_de_route")
+  expect_gt(appels, 1L)          # pave
+  expect_equal(nrow(out), appels) # une feature distincte par tuile
+
+  # Une petite emprise reste une requete unique.
+  appels <- 0L
+  petit <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 500, ymax = 500), crs = 2154))
+  foretaccess:::.fetch_wfs(petit, "BDTOPO_V3:troncon_de_route")
+  expect_identical(appels, 1L)
+})
+
+test_that("hors_desserte est conserve pour la TOPOLOGIE mais exclu du debardage", {
+  # Les retirer coupe le reseau (mesure : 15 -> 21 infractions a 1600 m de
+  # buffer). L'annexe ACCESSFOR le dit du rond-point : « non necessaire mais
+  # permet de garder un reseau integre ». On les garde donc dans la couche, et
+  # c'est `.rasteriser_desserte()` qui les ecarte -- `match()` sur
+  # `.classes_desserte()` leur donne NA, donc aucune cellule de desserte.
+  seg <- function(a, b) sf::st_linestring(rbind(a, b))
+  d <- sf::st_sf(classe = c("piste", "route", "hors_desserte"),
+    geometry = sf::st_sfc(seg(c(0, 0), c(100, 100)), seg(c(100, 100), c(200, 200)),
+      seg(c(200, 200), c(300, 300)), crs = 2154))
+  r <- terra::rast(terra::ext(0, 300, 0, 300), resolution = 10, crs = "EPSG:2154")
+  out <- foretaccess:::.rasteriser_desserte(d, r)
+
+  # Le vocabulaire de classes reste a 4 : hors_desserte n'y entre PAS, sinon son
+  # rang le ferait passer devant `reseau_public` sous le `fun = "max"` qui donne
+  # la priorite a la barriere.
+  expect_identical(as.character(terra::levels(out)[[1]][[2]]), .classes_desserte())
+  expect_false("hors_desserte" %in% as.character(terra::levels(out)[[1]][[2]]))
+  # Des cellules existent (piste + route), mais aucune pour le 3e troncon.
+  expect_gt(sum(!is.na(terra::values(out, mat = FALSE))), 0L)
 })

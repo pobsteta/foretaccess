@@ -137,17 +137,47 @@ sur plusieurs AOI.
 
 ## 6. Critères d'acceptation
 
-- [ ] **CA-25.1** — `verifier_integrite_desserte()` rend, par tronçon,
-      `composant` / `connecte_public` / `viole_contrainte`, et un `resume`
-      chiffré. Sans `dessertR`, dégradation propre (diagnostic vide + message),
-      jamais d'échec.
-- [ ] **CA-25.2** — La cause probable (`bord_aoi` / `topologie` / `reel`) est
-      attribuée à chaque infraction.
-- [ ] **CA-25.3** — L'élargissement adaptatif mesure `L(b)` **sur l'AOI stricte**
-      et s'arrête sur convergence ou plafond ; la courbe est retournée.
-- [ ] **CA-25.4** — Sur l'AOI oracle : publier `L(b)`, et la part des infractions
-      imputables au bord. C'est le chiffre qui dira si le buffer suffit.
-- [ ] **CA-25.5** — Le niveau 2 (recollage) n'est jamais appliqué sans demande
+- [x] **CA-25.1** — Fait. Sur l'AOI oracle : 196 tronçons, 6 composantes dont
+      **3 orphelines**, 7 infractions (0,86 km). Repli testé sans dessertR.
+- [x] **CA-25.2** — Fait. Sur l'AOI : **3 `bord_aoi`, 4 `reel`**, aucune
+      `topologie`.
+- [x] **CA-25.3** — Implémenté (`integrite_buffer_adaptatif()`), mesure bien sur
+      l'AOI stricte, courbe retournée.
+- [x] **CA-25.4 — ATTEINT après correction d'un défaut d'acquisition.** La
+      première mesure donnait une courbe **non monotone** (1 / 0 / 21 infractions
+      à 100 / 400 / 1600 m). Quatre hypothèses testées ; les trois premières
+      **écartées** — déduplication des parallèles (avec 0, les 1003 tronçons sont
+      conservés et le graphe garde 69 composantes), plafond de features du WFS
+      (1380 / 2882 / 5080 à 1600 / 2500 / 4000 m), métrique de rattachement
+      (graphe et `connecte_public` de dessertR concordent : 1/1, 0/0, 21/24).
+
+      **La cause était l'acquisition.** `.fetch_wfs()` perdait des features sur
+      une grande bbox, et pas au hasard : le WFS rend les objets dans son ordre
+      interne, pas spatial. Une requête unique à 1600 m de buffer rendait 1380
+      features dont **86** touchaient l'AOI stricte, contre **245** en quadrants.
+      Corrigé par pavage en tuiles de 2 km avec recouvrement et déduplication sur
+      `cleabs` (`.TUILE_WFS_M`). Le nombre de tronçons intérieurs devient
+      **invariant** : 214 à 400 m comme à 1600 m.
+
+      Courbe après correction :
+
+      | buffer | infractions (AOI stricte) |
+      |---:|---:|
+      | 100 m | 1 |
+      | 400 m | **0** |
+      | 1600 m | **0** |
+
+      Monotone et convergente : la méthode du §4.2 est validée.
+
+      **Conséquence sur la spec 024 : l'hypothèse est RÉFUTÉE.** Sur l'AOI
+      stricte, dès 400 m de buffer et avec une acquisition correcte, il n'y a
+      **aucune** infraction d'intégrité. Les composantes orphelines
+      **n'expliquent pas** les 22,3 ha du bloc `inaccessible` × `500-1000` de la
+      matrice skidder. La corroboration annoncée le 2026-07-29 (« 32,3 ha à moins
+      de 250 m d'une infraction ») reposait sur des tronçons dont une part
+      relevait du bord d'AOI et sur une acquisition tronquée. **Le résidu skidder
+      reste inexpliqué** — à instruire ailleurs.
+- [x] **CA-25.5** — Le niveau 2 (recollage) n'est jamais appliqué sans demande
       explicite, et le niveau 3 (suppression) n'existe pas dans le code.
 - [ ] **CA-25.6** — Les infractions `reel` portent une colonne de marquage, et
       `preprocess()` sait les écarter sur option (défaut : les conserve).
