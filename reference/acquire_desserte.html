@@ -58,7 +58,7 @@ classe attendu par preprocess()."></head><body>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  country <span class="op">=</span> <span class="st">"FR"</span>,</span>
 <span>  classification <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"accessfor"</span>, <span class="st">"clsvac"</span>, <span class="st">"heuristique"</span><span class="op">)</span>,</span>
-<span>  garder_hors_desserte <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  garder_hors_desserte <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -100,10 +100,15 @@ des tronçons.</p></dd>
 
 <dt id="arg-garder-hors-desserte">garder_hors_desserte<a class="anchor" aria-label="anchor" href="#arg-garder-hors-desserte"></a></dt>
 <dd><p>Conserver les tronçons <code>hors_desserte</code>
-(CL_SVAC = 0) dans la sortie, au lieu de les retirer ? Défaut <code>FALSE</code> —
-la couche Sylvaccess d'ACCESSFOR ne contient que les classes 1/2/3.
-<code>TRUE</code> sert à inspecter ce qui a été écarté ; <strong>ne pas</strong> passer une telle
-couche à <code><a href="preprocess.html">preprocess()</a></code>.</p></dd>
+(CL_SVAC = 0) dans la sortie ? <strong>Défaut <code>TRUE</code> depuis le 2026-07-30.</strong>
+Les retirer <strong>coupe le réseau</strong> : mesuré sur l'AOI oracle, leur suppression
+faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
+buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
+nécessaire mais <strong>permet de garder un réseau intègre</strong> ». Ils sont donc
+conservés pour la <strong>topologie</strong>, et exclus du <strong>débardage</strong> par
+<code><a href="preprocess.html">preprocess()</a></code>, qui ne connaît que les classes de
+<code>.classes_desserte()</code>. <code>FALSE</code> reproduit la couche Sylvaccess stricte
+(classes 1/2/3 seulement).</p></dd>
 
 </dl></div>
     <div class="section level2">

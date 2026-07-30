@@ -269,6 +269,13 @@ OpenStreetMap).
   : Qualify a declared road network with airborne LiDAR (spec 021, step
   1)
 
+- [`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
+  : Vérifie les contraintes d'intégrité du réseau de desserte (spec 025)
+
+- [`integrite_buffer_adaptatif()`](https://pobsteta.github.io/foretaccess/reference/integrite_buffer_adaptatif.md)
+  : Élargissement adaptatif de l'emprise pour distinguer l'effet de bord
+  (spec 025)
+
 - [`acquire_foret()`](https://pobsteta.github.io/foretaccess/reference/acquire_foret.md)
   : Acquiert la forêt depuis BD Forêt v2 (IGN WFS)
 

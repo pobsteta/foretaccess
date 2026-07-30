@@ -14,7 +14,7 @@ acquire_desserte(
   overwrite = FALSE,
   country = "FR",
   classification = c("accessfor", "clsvac", "heuristique"),
-  garder_hors_desserte = FALSE
+  garder_hors_desserte = TRUE
 )
 ```
 
@@ -54,11 +54,16 @@ acquire_desserte(
 
 - garder_hors_desserte:
 
-  Conserver les tronçons `hors_desserte` (CL_SVAC = 0) dans la sortie,
-  au lieu de les retirer ? Défaut `FALSE` — la couche Sylvaccess
-  d'ACCESSFOR ne contient que les classes 1/2/3. `TRUE` sert à inspecter
-  ce qui a été écarté ; **ne pas** passer une telle couche à
-  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
+  Conserver les tronçons `hors_desserte` (CL_SVAC = 0) dans la sortie ?
+  **Défaut `TRUE` depuis le 2026-07-30.** Les retirer **coupe le
+  réseau** : mesuré sur l'AOI oracle, leur suppression faisait passer
+  les infractions de connectivité de 15 à 21 à 1600 m de buffer.
+  L'annexe ACCESSFOR le dit elle-même du rond-point — « non nécessaire
+  mais **permet de garder un réseau intègre** ». Ils sont donc conservés
+  pour la **topologie**, et exclus du **débardage** par
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
+  qui ne connaît que les classes de `.classes_desserte()`. `FALSE`
+  reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).
 
 ## Value
 
