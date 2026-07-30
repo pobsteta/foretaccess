@@ -102,6 +102,8 @@ reference:
   - acquire_desserte
   - acquire_desserte_lidar
   - qualifier_desserte
+  - verifier_integrite_desserte
+  - integrite_buffer_adaptatif
   - acquire_foret
   - acquire_cadastre
   - acquire_obstacles
