@@ -245,6 +245,20 @@ foretaccess_config <- function(skidder = list(),
         # meilleur sol. **Seul paramètre obligatoire** ; sans les couches
         # optionnelles, le coût vaut cette base partout.
         cout_base_m = 20,
+        # Reouverture d'une plateforme EXISTANTE, en FRACTION du cout de
+        # creation (spec 026 sec.7.3). 0,65 est le milieu de deux baremes
+        # regionaux repris de plafonds fixes par l'Etat : mise au gabarit /
+        # creation d'une route empierree vaut 45/65 dans le Puy-de-Dome et 40/65
+        # en Auvergne-Rhone-Alpes. Le meme bareme donne « route en terrain
+        # naturel : 20 000 EUR/km », soit exactement `cout_base_m` ci-dessus.
+        #
+        # RESERVE : « mise au gabarit » = elargir une route EXISTANTE ET
+        # PRATICABLE aux normes. La spec 026 vise une piste EFFACEE du couvert,
+        # dont seule la plateforme subsiste : pas de couche de roulement a
+        # reprendre, mais de la vegetation a rouvrir. Aucun bareme consulte n'a
+        # de ligne « reouverture d'ancienne piste ». Point d'ancrage defendable,
+        # PAS une mesure du bon objet.
+        fraction_reouverture = 0.65,
         # Surcoût de pente (EUR/m) par classe de pente du terrain (%). `[min, max)`
         # -> `surcout`. `Inf` en surcoût = pente non constructible (cellule NA dans
         # `franchissable`). Bornes croissantes, surcoûts >= 0 et croissants.
@@ -422,6 +436,7 @@ validate_config <- function(cfg) {
   # --- Desserte : barème de coût de construction (Lot 14, CA-14.6) ------------
   co <- cfg$desserte$cout
   checkmate::assert_number(co$cout_base_m, lower = 0, finite = TRUE)
+  checkmate::assert_number(co$fraction_reouverture, lower = 0, upper = 1)
   checkmate::assert_number(co$cout_pont_m, lower = 0, finite = TRUE)
   checkmate::assert_number(co$cout_buse_m, lower = 0, finite = TRUE)
   checkmate::assert_data_frame(co$bareme_pente, min.rows = 1)

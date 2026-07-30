@@ -94,13 +94,17 @@
 #' @param crs Code EPSG de sortie. Défaut 2154.
 #' @param cache_dir Répertoire de cache.
 #' @param overwrite Re-télécharger même si le cache existe. Défaut `FALSE`.
+#' @param politique_cache Que faire d'un cache produit avec **d'autres
+#'   paramètres** ? Défaut `"reacquerir"`. Voir [cache_utilisable()] et
+#'   `specs/027`.
 #' @return Un objet `sf` d'obstacles avec un champ `type`, ou un `sf` vide si
 #'   aucun obstacle n'est trouvé.
 #' @export
 acquire_obstacles <- function(aoi, features = c("building", "water", "railway", "cliff"),
-                              crs = 2154, cache_dir = tempdir(), overwrite = FALSE) {
+                              crs = 2154, cache_dir = tempdir(), overwrite = FALSE,
+                              politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "obstacles", "gpkg")
-  prov <- list(crs = crs)
+  prov <- list(crs = crs, features = paste(sort(features), collapse = ","))
   if (file.exists(chemin) && !overwrite &&
       cache_utilisable(chemin, "obstacles", "osm", prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))

@@ -122,3 +122,48 @@ test_that("un cache ecrit A LA MAIN est re-acquis, faute de provenance", {
     expect_identical(appels, 1L)
   })
 })
+
+test_that("TOUTES les acquisitions acceptent politique_cache", {
+  # `acquire_inputs()` propage cet argument a chacune. Une signature oubliee ne
+  # se voit qu'a l'execution du chemin concerne -- ou par l'analyse statique de
+  # R CMD check, qui l'a effectivement levee sur `acquire_obstacles()` (PR #139,
+  # « unused argument »). La suite locale, elle, ne couvrait pas ce chemin.
+  #
+  # Un controle de SIGNATURE le rend visible en quelques millisecondes.
+  fns <- c("acquire_mnt", "acquire_desserte", "acquire_foret",
+           "acquire_obstacles", "acquire_obstacles_bdtopo", "acquire_dfci",
+           "acquire_desserte_osm")
+  manquants <- fns[!vapply(fns, function(f) {
+    "politique_cache" %in% names(formals(get(f, envir = asNamespace("foretaccess"))))
+  }, logical(1))]
+  expect_identical(manquants, character(0))
+  expect_true("politique_cache" %in%
+    names(formals(foretaccess:::.acquire_retournements)))
+  expect_true("politique_cache" %in% names(formals(acquire_inputs)))
+})
+
+test_that("acquire_inputs propage effectivement politique_cache", {
+  # Le controle de signature ne suffit pas : encore faut-il que l'argument soit
+  # PASSE. On mocke chaque acquisition et on verifie ce qu'elle recoit.
+  recu <- list()
+  testthat::local_mocked_bindings(
+    acquire_mnt = function(..., politique_cache) {
+      recu$mnt <<- politique_cache; tempfile(fileext = ".tif")
+    },
+    acquire_desserte = function(..., politique_cache) {
+      recu$desserte <<- politique_cache
+      sf::st_sf(classe = "piste", geometry = sf::st_sfc(
+        sf::st_linestring(rbind(c(0, 0), c(1, 1))), crs = 2154))
+    },
+    acquire_foret = function(..., politique_cache) {
+      recu$foret <<- politique_cache
+      sf::st_sf(geometry = sf::st_sfc(crs = 2154))
+    })
+  aoi <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 100, ymax = 100), crs = 2154))
+  suppressWarnings(try(acquire_inputs(aoi, sources = c("mnt", "desserte", "foret"),
+    dfci = FALSE, politique_cache = "echouer"), silent = TRUE))
+  expect_identical(recu$mnt, "echouer")
+  expect_identical(recu$desserte, "echouer")
+  expect_identical(recu$foret, "echouer")
+})

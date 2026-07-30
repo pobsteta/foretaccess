@@ -103,6 +103,8 @@ reference:
   - acquire_mnt_rgealti
   - acquire_desserte
   - acquire_desserte_osm
+  - detecter_desserte
+  - detecter_desserte_balayage
   - comparer_desserte_osm
   - acquire_desserte_lidar
   - qualifier_desserte
