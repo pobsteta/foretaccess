@@ -15,6 +15,7 @@ acquire_inputs(
   overwrite = FALSE,
   country = "FR",
   dfci = TRUE,
+  politique_cache = "reacquerir",
   volume = NULL,
   champ_volume = "P1",
   config = NULL
@@ -45,6 +46,10 @@ agrégée à \code{res_m} (cf. \code{\link[=acquire_mnt]{acquire_mnt()}}). Défa
 \item{dfci}{Alimenter le flag DFCI (\code{CL_DFCI}) sur la desserte, source du camion
 DFCI (spec 006) : réseau OSM \code{ref:FR:DFCI} (\code{\link[=acquire_dfci]{acquire_dfci()}}), avec repli
 géométrique (\code{\link[=flag_dfci]{flag_dfci()}}) si OSM ne rend rien. Défaut \code{TRUE}.}
+
+\item{politique_cache}{Propagé à toutes les acquisitions : que faire d'un
+cache produit avec \strong{d'autres paramètres} ? Défaut \code{"reacquerir"}. Voir
+\code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 
 \item{volume}{Volume sur pied à injecter (facultatif). \strong{Jamais téléchargé} :
 sa source est un inventaire ou l'indicateur \strong{P1} de Nemeton (cf.

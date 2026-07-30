@@ -1,7 +1,8 @@
 # specs/025 — Contraintes d'intégrité du réseau de desserte, automatisées
 
-> **Statut** : **VALIDÉE — À IMPLÉMENTER** (décisions §7 prises par l'utilisateur
-> le 2026-07-29). Complète la spec
+> **Statut** : **IMPLÉMENTÉE** (2026-07-30). Les six critères d'acceptation sont
+> satisfaits. Le niveau 2 de remédiation reste accessible par `tol_noeud`, le
+> niveau 3 n'existe pas dans le code — comme décidé. Complète la spec
 > [024](024-desserte-clsvac-regle-publiee.md) : celle-ci pose la **classification**
 > ACCESSFOR, celle-là les **contraintes de connectivité** qui l'accompagnent.
 > Version cible : `1.29.0` (feat, nouvelle sortie de diagnostic).
@@ -179,8 +180,12 @@ sur plusieurs AOI.
       reste inexpliqué** — à instruire ailleurs.
 - [x] **CA-25.5** — Le niveau 2 (recollage) n'est jamais appliqué sans demande
       explicite, et le niveau 3 (suppression) n'existe pas dans le code.
-- [ ] **CA-25.6** — Les infractions `reel` portent une colonne de marquage, et
-      `preprocess()` sait les écarter sur option (défaut : les conserve).
+- [x] **CA-25.6** — Fait. Les tronçons portent `viole_contrainte` et `cause` ;
+      `preprocess(ecarter_infractions = TRUE)` retire **les seules infractions
+      `reel`** — un tronçon `bord_aoi` reste, son infraction étant un artefact de
+      découpe et non un cul-de-sac. Défaut `FALSE`. Sans colonnes de diagnostic,
+      avertissement et desserte inchangée : `preprocess()` n'exige pas d'avoir
+      été précédé du diagnostic.
 
 ## 7. Décisions prises (2026-07-29)
 

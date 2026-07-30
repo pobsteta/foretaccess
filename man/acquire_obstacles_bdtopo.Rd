@@ -13,7 +13,8 @@ acquire_obstacles_bdtopo(
   routes_importance_max = NA_integer_,
   classements_routes = .CLASSEMENTS_ROUTES_ACCESSFOR,
   tampon_m = 5,
-  zonages = TRUE
+  zonages = TRUE,
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -41,6 +42,12 @@ disables the classement filter (then \code{routes_importance_max} applies).}
 \item{tampon_m}{Buffer (m) applied to line obstacles. Default 5.}
 
 \item{zonages}{Include the INPN/Patrinat regulatory exclusions? Default \code{TRUE}.}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
+le cache en nommant ce qui diverge, \code{"echouer"} interrompt, \code{"ignorer"}
+désactive le contrôle. Un cache \strong{sans provenance} (antérieur à la v1.29.0)
+compte comme divergent. Cf. \code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 }
 \value{
 An \code{sf} of \code{MULTIPOLYGON} obstacles in \code{crs}, clipped to \code{aoi}. Empty

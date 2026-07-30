@@ -97,9 +97,15 @@ reference:
   desc: Téléchargement config-driven des entrées (IGN Géoplateforme, OpenStreetMap).
   contents:
   - acquire_inputs
+  - cache_utilisable
+  - politique_cache_valeurs
   - acquire_mnt
   - acquire_mnt_rgealti
   - acquire_desserte
+  - acquire_desserte_osm
+  - detecter_desserte
+  - detecter_desserte_balayage
+  - comparer_desserte_osm
   - acquire_desserte_lidar
   - qualifier_desserte
   - verifier_integrite_desserte

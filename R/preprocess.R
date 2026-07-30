@@ -26,6 +26,11 @@
 #' @param parcellaire Parcellaire : vecteur de polygones (facultatif ; utilisé au
 #'   Lot 8 pour l'agrégation).
 #' @param config Objet [foretaccess_config()].
+#' @param ecarter_infractions Écarter les tronçons dont
+#'   [verifier_integrite_desserte()] a jugé l'infraction **réelle** (ni bord
+#'   d'AOI, ni topologie) ? Défaut `FALSE` — on ne retire pas une information
+#'   terrain potentiellement juste. Sans les colonnes de diagnostic, la desserte
+#'   passe telle quelle avec un avertissement. Cf. `specs/025` (CA-25.6).
 #' @param write_dir Répertoire où écrire les rasters en GeoTIFF/COG. `NULL`
 #'   (défaut) : tout reste en mémoire.
 #'
@@ -76,8 +81,10 @@ preprocess <- function(mnt,
                        volume = NULL,
                        parcellaire = NULL,
                        config = foretaccess_config(),
-                       write_dir = NULL) {
+                       write_dir = NULL,
+                       ecarter_infractions = FALSE) {
   validate_config(config)
+  desserte <- .ecarter_infractions_reelles(desserte, ecarter_infractions)
 
   # 1. Chargement (chemin ou objet déjà chargé).
   mnt <- .as_raster(mnt, "mnt")
@@ -231,6 +238,40 @@ preprocess <- function(mnt,
     grepl("POLYGON", types), "surface",
     ifelse(grepl("LINE", types), "ligne", "point")
   )
+}
+
+# Ecarte les troncons dont `verifier_integrite_desserte()` a juge l'infraction
+# REELLE -- ni artefact de bord d'AOI, ni defaut topologique. Une piste dont le
+# bois n'atteint aucune route ne debarde nulle part : la garder produit des
+# surfaces accessibles fictives.
+#
+# DESACTIVE PAR DEFAUT (spec 025, decision du 2026-07-29) : on ne retire pas une
+# information terrain potentiellement juste. On cesse seulement de la subir en
+# aveugle -- le marquage est disponible, l'exclusion est un choix explicite.
+#
+# Sans les colonnes de diagnostic, la desserte passe telle quelle : `preprocess()`
+# ne doit pas exiger d'avoir ete precede de `verifier_integrite_desserte()`.
+.ecarter_infractions_reelles <- function(desserte, ecarter) {
+  if (!isTRUE(ecarter)) {
+    return(desserte)
+  }
+  d <- sf::st_as_sf(desserte)
+  if (!all(c("viole_contrainte", "cause") %in% names(d))) {
+    cli::cli_warn(c(
+      "!" = "{.code ecarter_infractions = TRUE} sans colonnes de diagnostic :
+             desserte inchangee.",
+      "i" = "Passer la sortie de {.fn verifier_integrite_desserte}."
+    ))
+    return(desserte)
+  }
+  ecarte <- !is.na(d$viole_contrainte) & d$viole_contrainte &
+    !is.na(d$cause) & d$cause == "reel"
+  if (any(ecarte)) {
+    km <- sum(as.numeric(sf::st_length(d[ecarte, ]))) / 1000
+    cli::cli_inform("Desserte : {sum(ecarte)} troncon{?s} en infraction
+                     {.strong reelle} ecarte{?s} ({round(km, 2)} km).")
+  }
+  d[!ecarte, , drop = FALSE]
 }
 
 # Raster catégoriel de la desserte, codes stables : route = 1, piste = 2,

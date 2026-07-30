@@ -9,7 +9,8 @@ acquire_obstacles(
   features = c("building", "water", "railway", "cliff"),
   crs = 2154,
   cache_dir = tempdir(),
-  overwrite = FALSE
+  overwrite = FALSE,
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ acquire_obstacles(
 \item{cache_dir}{Répertoire de cache.}
 
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? Défaut \code{"reacquerir"}. Voir \code{\link[=cache_utilisable]{cache_utilisable()}} et
+\code{specs/027}.}
 }
 \value{
 Un objet \code{sf} d'obstacles avec un champ \code{type}, ou un \code{sf} vide si

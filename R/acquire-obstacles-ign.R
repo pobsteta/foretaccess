@@ -116,9 +116,14 @@ acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
                                      overwrite = FALSE, country = "FR",
                                      routes_importance_max = NA_integer_,
                                      classements_routes = .CLASSEMENTS_ROUTES_ACCESSFOR,
-                                     tampon_m = 5, zonages = TRUE) {
+                                     tampon_m = 5, zonages = TRUE,
+                                     politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "obstacles_bdtopo", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(crs = crs, tampon_m = tampon_m, zonages = zonages,
+               classements = paste(classements_routes, collapse = ","),
+               routes_importance_max = routes_importance_max)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "obstacles_bdtopo", NULL, prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
   aoi_cible <- sf::st_transform(sf::st_geometry(sf::st_as_sf(aoi)), crs)
@@ -162,6 +167,7 @@ acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
     sf::st_sf(obstacle = character(0), geometry = sf::st_sfc(crs = crs))
   }
   sf::st_write(out, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "obstacles_bdtopo", NULL, prov)
   out
 }
 

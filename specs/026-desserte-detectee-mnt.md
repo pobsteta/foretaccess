@@ -94,8 +94,9 @@ appliqué aux cellules couvertes par un tronçon détecté **et qualifié**. Le 
 de pente continue de s'appliquer (une plateforme ancienne sur pente forte reste
 chère à remettre en état) mais la base baisse.
 
-Valeur par défaut : à caler. Je ne propose pas de chiffre — le poser au doigt
-mouillé ferait basculer des arbitrages économiques sur une constante inventée.
+Valeur par défaut : **0,65 × `cout_base_m`**, sourcée sur deux barèmes régionaux
+(cf. §7.3). Exprimée en fraction pour que le barème de base reste le seul point
+de calage.
 
 ### 5.4. Injection **opt-in** dans la conception
 
@@ -131,10 +132,32 @@ raccrochable au tarif réouverture.
    dénominateur du taux de faux positifs doit être non biaisé — un corridor le
    tire vers les zones déjà intéressantes. Deux modes à maintenir, chaque chiffre
    restant interprétable.
-3. **`cout_reouverture_m` : barème ONF/CNPF à chercher d'abord.** Aucune valeur
-   n'est écrite avant d'avoir une source. Un défaut posé au doigt mouillé
-   deviendrait un chiffre de référence par simple inertie, dans des arbitrages
-   économiques.
+3. **`cout_reouverture_m` : SOURCÉ (2026-07-30), fraction de `cout_base_m`,
+   défaut 0,65.** Deux barèmes régionaux indépendants, repris de **plafonds de
+   dépense fixés par l'État** (dispositifs FEADER), distinguent création et
+   *mise au gabarit* d'une route forestière empierrée :
+
+   | | création | mise au gabarit | ratio |
+   |---|---:|---:|---:|
+   | Puy-de-Dôme | 65 000 €/km | 45 000 €/km | 0,69 |
+   | Auvergne-Rhône-Alpes | 65 000 €/km | 40 000 €/km | 0,62 |
+
+   Le défaut retenu est le milieu, **0,65**, exprimé en **fraction** de
+   `cout_base_m` et non en valeur absolue : le barème de base reste ainsi le seul
+   point de calage.
+
+   **Validation incidente** : le barème donne « création de route forestière en
+   terrain naturel : 20 000 €/km », soit exactement notre `cout_base_m = 20` €/m,
+   posé antérieurement. Et « piste forestière : 8 000 €/km » recoupe les 5,5 à
+   8 €/m relevés par ailleurs pour les pistes de débardage.
+
+   **RÉSERVE, à ne pas perdre** : « mise au gabarit » désigne l'élargissement
+   d'une route **existante et praticable** aux normes. La spec 026 vise une piste
+   **effacée du couvert**, dont seule la plateforme subsiste dans le
+   micro-relief : pas de couche de roulement à reprendre, mais de la végétation à
+   rouvrir. Aucun des barèmes consultés ne comporte de ligne « réouverture
+   d'ancienne piste ». **0,65 est un point d'ancrage défendable, pas une mesure
+   du bon objet.**
 4. **Faux positifs : recoupement automatique BD TOPO d'abord.** Combien de
    linéaires détectés tombent sur des objets connus (cours d'eau, fossés,
    limites) ? Ça chiffre une part des faux positifs sans annotation humaine.
@@ -158,4 +181,9 @@ raccrochable au tarif réouverture.
 - `dessertR` : `?dsr_detecter`, `?dsr_indice_detection`, `?dsr_vectoriser`.
 - `specs/021` §5 (le jalon de recherche que cette spec rend caduc),
   `specs/014` (barème de coût), `specs/016` (réseau MTAP).
+- **Barèmes de desserte** (consultés le 2026-07-30) :
+  [Puy-de-Dôme](https://www.puy-de-dome.fr/subventions/guide-des-aides-departementales/aide-a-la-desserte-forestiere.html),
+  [Communes forestières AURA](https://www.communesforestieres-aura.org/article_535_102_le-reglement-de-l-aide-regionale-a-la-creation-de-desserte-forestiere-se-precise.html),
+  [Zimmer — coût des routes forestières](https://www.zimmersa.com/blog-forestier/des-routes-forestieres-quoi-comment-et-a-quel-prix--n125),
+  [CNPF, fiche desserte](https://ifc.cnpf.fr/sites/socle/files/cnpf-old/441060_fiche33_desserte_ok_1.pdf).
 - `R/desserte_reseau.R` (`reseau_desserte()`), `R/config.R` (`desserte$cout`).

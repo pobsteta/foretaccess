@@ -10,7 +10,8 @@ acquire_foret(
   cache_dir = tempdir(),
   overwrite = FALSE,
   country = "FR",
-  exclure_landes = TRUE
+  exclure_landes = TRUE,
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -27,6 +28,12 @@ acquire_foret(
 \item{exclure_landes}{Exclure les landes (\code{code_tfv} dans \code{LA4}/\code{LA6}) du
 masque forêt, comme ACCESSFOR ? Défaut \code{TRUE}. Sans colonne \code{code_tfv} dans
 le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
+le cache en nommant ce qui diverge, \code{"echouer"} interrompt, \code{"ignorer"}
+désactive le contrôle. Un cache \strong{sans provenance} (antérieur à la v1.29.0)
+compte comme divergent. Cf. \code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 }
 \value{
 Un objet \code{sf} de polygones de forêt.

@@ -381,12 +381,20 @@ acquire_mnt_rgealti <- function(aoi, dep, res_m = 5, crs = 2154,
 #'   (couche primaire) sur l'emprise, agrégée ensuite à `res_m`. Défaut 1. Doit
 #'   diviser `res_m` (ex. 1 → 5). Passer `res_lidar_m >= res_m` désactive
 #'   l'agrégation (téléchargement direct à `res_m`).
+#' @param politique_cache Que faire d'un cache produit avec **d'autres
+#'   paramètres** ? `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert
+#'   le cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+#'   désactive le contrôle. Un cache **sans provenance** (antérieur à la v1.29.0)
+#'   compte comme divergent. Cf. [cache_utilisable()] et `specs/027`.
 #' @return Le chemin du raster `mnt.tif` écrit en cache.
 #' @export
 acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
-                        overwrite = FALSE, country = "FR", res_lidar_m = 1) {
+                        overwrite = FALSE, country = "FR", res_lidar_m = 1,
+                        politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "mnt", "tif")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(res_m = res_m, res_lidar_m = res_lidar_m, crs = crs)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "mnt", NULL, prov, politique_cache)) {
     return(chemin)
   }
   checkmate::assert_number(res_lidar_m, lower = 0, finite = TRUE)
@@ -424,6 +432,10 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
       if (i > 1L) {
         cli::cli_inform("MNT : couche principale indisponible sur l'emprise, repli sur {.val {ly}}.")
       }
+      # La couche EFFECTIVEMENT servie, pas celle demandee : c'est elle qui
+      # decrit le contenu. Un repli silencieux etait la cause de l'incident du
+      # MNT blocky du 14 juillet.
+      .provenance_ecrire(chemin, "mnt", ly, prov)
       return(chemin)
     }
   }
@@ -512,15 +524,25 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
 #'   [preprocess()], qui ne connaît que les classes de
 #'   `.classes_desserte()`. `FALSE` reproduit la couche Sylvaccess stricte
 #'   (classes 1/2/3 seulement).
+#' @param politique_cache Que faire d'un cache produit avec **d'autres
+#'   paramètres** ? `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert
+#'   le cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+#'   désactive le contrôle. Un cache **sans provenance** (antérieur à la v1.29.0)
+#'   compte comme divergent. Cf. [cache_utilisable()] et `specs/027`.
 #' @return Un objet `sf` de lignes avec un champ `classe`.
 #' @export
 acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
                              overwrite = FALSE, country = "FR",
                              classification = c("accessfor", "clsvac", "heuristique"),
-                             garder_hors_desserte = TRUE) {
+                             garder_hors_desserte = TRUE,
+                             politique_cache = "reacquerir") {
   classification <- match.arg(classification)
   chemin <- .chemin_cache(cache_dir, "desserte", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(classification = classification, crs = crs,
+               garder_hors_desserte = garder_hors_desserte,
+               tuile_m = .TUILE_WFS_M)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "desserte", NULL, prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
   info <- get_layer_service("roads", country)
@@ -557,6 +579,7 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
     d <- d[!hd, , drop = FALSE]
   }
   sf::st_write(d, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "desserte", info$typename, prov)
   d
 }
 
@@ -580,13 +603,21 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' @param exclure_landes Exclure les landes (`code_tfv` dans `LA4`/`LA6`) du
 #'   masque forêt, comme ACCESSFOR ? Défaut `TRUE`. Sans colonne `code_tfv` dans
 #'   le flux, aucun filtrage n'est possible et la couche est renvoyée telle quelle.
+#' @param politique_cache Que faire d'un cache produit avec **d'autres
+#'   paramètres** ? `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert
+#'   le cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
+#'   désactive le contrôle. Un cache **sans provenance** (antérieur à la v1.29.0)
+#'   compte comme divergent. Cf. [cache_utilisable()] et `specs/027`.
 #' @return Un objet `sf` de polygones de forêt.
 #' @export
 acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
                           overwrite = FALSE, country = "FR",
-                          exclure_landes = TRUE) {
+                          exclure_landes = TRUE,
+                          politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "foret", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
+  prov <- list(exclure_landes = exclure_landes, crs = crs)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "foret", NULL, prov, politique_cache)) {
     # Filtrage applique AUSSI a la relecture du cache : un cache ecrit avant la
     # v1.27.1 contient les landes, et le nom de fichier ne porte pas la trace du
     # filtre. Ne filtrer qu'a l'ecriture rendrait la correction inoperante sur
@@ -602,6 +633,7 @@ acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
   f <- .reprojeter_clip(brut, aoi, crs)
   f <- .exclure_landes(f, exclure_landes)
   sf::st_write(f, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "foret", info$typename, prov)
   f
 }
 

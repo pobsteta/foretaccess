@@ -4,7 +4,13 @@
 \alias{acquire_dfci}
 \title{Acquiert le réseau DFCI depuis OpenStreetMap}
 \usage{
-acquire_dfci(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE)
+acquire_dfci(
+  aoi,
+  crs = 2154,
+  cache_dir = tempdir(),
+  overwrite = FALSE,
+  politique_cache = "reacquerir"
+)
 }
 \arguments{
 \item{aoi}{Objet \code{sf}/\code{sfc} d'emprise, dans le CRS cible.}
@@ -14,6 +20,10 @@ acquire_dfci(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FALSE)
 \item{cache_dir}{Répertoire de cache.}
 
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? Défaut \code{"reacquerir"}. Voir \code{\link[=cache_utilisable]{cache_utilisable()}} et
+\code{specs/027}.}
 }
 \value{
 Un objet \code{sf} de lignes DFCI avec un champ \code{ref}, ou un \code{sf} vide si
