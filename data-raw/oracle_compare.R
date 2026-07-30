@@ -92,8 +92,28 @@ accord_binaire <- function(nous, eux, dans, nom) {
               faux_pos, 100 * faux_pos / length(n)))
   cat(sprintf("  nous NON / eux OUI : %6d cellules (%.2f %%)  <- trop conservateur\n",
               faux_neg, 100 * faux_neg / length(n)))
+
+  # JACCARD sur la classe POSITIVE : intersection / union des « accessible ».
+  #
+  # L'accord brut ci-dessus compte TOUTES les cellules forestieres, y compris
+  # celles ou les deux moteurs disent non. Sur une classe rare il est
+  # structurellement optimiste et peut masquer une degradation. Mesure du
+  # 2026-07-30 sur le cable : 98,36 % d'accord brut sur ColduPre (5,9 % de foret
+  # accessible) contre 93,65 % sur l'AOI (67 % accessible) -- d'ou j'avais
+  # conclu a tort a un sur-ajustement au banc de calibrage. En Jaccard le
+  # classement s'INVERSE : 79,5 % sur ColduPre contre 90,9 % sur l'AOI.
+  #
+  # Meme piege que les invariants de la Phase B qui passaient a vide sur du
+  # tout-NA : une metrique qui ne peut pas mal se comporter ne mesure rien.
+  union_pos <- sum(n | e)
+  jaccard <- if (union_pos > 0) sum(n & e) / union_pos else NA_real_
+  cat(sprintf("  Jaccard (classe accessible) : %.1f %%  [%d communs / %d union]",
+              100 * jaccard, sum(n & e), union_pos))
+  cat(sprintf("   -- part accessible : nous %.1f %%, eux %.1f %%\n",
+              100 * mean(n), 100 * mean(e)))
   print(tab)
-  invisible(list(accord = accord, faux_pos = faux_pos, faux_neg = faux_neg, table = tab))
+  invisible(list(accord = accord, jaccard = jaccard, faux_pos = faux_pos,
+                 faux_neg = faux_neg, table = tab))
 }
 
 # --- Ecart sur une couche continue ------------------------------------------
