@@ -15,11 +15,55 @@
 
 # Wrapper reseau (point de mock) : renvoie l'objet osmdata_sf pour une (cle,
 # valeur) sur une bbox WGS84.
-.fetch_osm <- function(bbox_wgs, key, value = NULL) {
+# Instances Overpass, essayees dans l'ordre. L'instance principale limite
+# agressivement le debit : une session un peu active se fait refuser jusqu'au
+# `status` (HTTP 504 puis echec de overpass_status), et osmdata boucle alors en
+# backoff 60 s sans jamais aboutir. Les miroirs n'ont pas les memes quotas.
+# Mesure du 2026-07-30 : apres une journee de requetes, l'instance par defaut
+# refusait toute requete tandis qu'un miroir repondait immediatement.
+.SERVEURS_OVERPASS <- c(
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter"
+)
+
+.fetch_osm <- function(bbox_wgs, key, value = NULL, timeout = 120,
+                       serveurs = .SERVEURS_OVERPASS) {
   .require_pkg("osmdata")
-  q <- osmdata::opq(bbox = bbox_wgs)
-  q <- osmdata::add_osm_feature(q, key = key, value = value)
-  osmdata::osmdata_sf(q)
+  urls <- unique(c(osmdata::get_overpass_url(), serveurs))
+  initial <- osmdata::get_overpass_url()
+  # PIEGE : `set_overpass_url()` appelle `overpass_status()`, donc il TAPE le
+  # reseau. Quand l'instance est saturee, c'est le CHANGEMENT d'instance qui
+  # echoue, pas la requete -- et une rotation naive meurt avant d'avoir essaye
+  # le moindre miroir. On l'enveloppe donc, restauration finale comprise.
+  basculer <- function(u) {
+    isTRUE(tryCatch({
+      osmdata::set_overpass_url(u)
+      TRUE
+    }, error = function(e) FALSE, warning = function(w) TRUE))
+  }
+  on.exit(basculer(initial), add = TRUE)
+  derniere <- NULL
+  for (u in urls) {
+    if (!basculer(u)) {
+      next
+    }
+    q <- osmdata::opq(bbox = bbox_wgs, timeout = timeout)
+    q <- osmdata::add_osm_feature(q, key = key, value = value)
+    res <- tryCatch(osmdata::osmdata_sf(q), error = function(e) e)
+    if (!inherits(res, "error")) {
+      if (!identical(u, initial)) {
+        cli::cli_inform("OSM : instance {.val {initial}} indisponible, repli sur
+                         {.val {u}}.")
+      }
+      return(res)
+    }
+    derniere <- res
+  }
+  # Toutes les instances ont echoue : on relaie l'erreur plutot que de rendre un
+  # resultat vide, qu'un appelant confondrait avec « rien a cet endroit ».
+  stop(derniere) # nocov
 }
 
 # Geometries pertinentes d'un objet osmdata_sf : polygones, multipolygones et
