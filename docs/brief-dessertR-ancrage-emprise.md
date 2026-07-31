@@ -5,10 +5,14 @@
 > Ce document est conservé comme **trace d'audit**. Les deux demandes du §5 sont
 > livrées :
 >
-> | demande | livraison 1.1.0 |
+> | demande | livraison |
 > |---|---|
-> | exposer `c` jusqu'à `dsr_layers_dtm()` | `dsr_c_vessel()` + `dsr_layers_dtm(c_vessel = )` |
-> | faire produire `a`/`b` par `dsr_calibrer_specs()` | `dsr_calibrer_specs(bornes = TRUE)` |
+> | exposer `c` jusqu'à `dsr_layers_dtm()` | **1.1.0** — `dsr_c_vessel()` + `dsr_layers_dtm(c_vessel = )` |
+> | faire produire `a`/`b` par `dsr_calibrer_specs()` | **1.1.0** — `dsr_calibrer_specs(bornes = TRUE)` |
+> | §5.3 — `rugosite` déclaré à l'envers | **1.1.0.9000** (`d9f336b`) — corrigé dans `dsr_specs_geomorpho()` |
+>
+> Les **trois** points du brief sont traités. Le correctif de `rugosite` ne change
+> rien pour nous : nous passons nos propres specs figées, pas les défauts.
 >
 > Le commit amont crédite « un audit ForêtAccess sur le commit `cb9376c` ».
 > Le contournement listé au §6 a été **retiré** de ForêtAccess :
@@ -19,6 +23,34 @@
 > (`a = NA`, `b = NA`) — les deux populations sont à zéro en médiane. Le canal est
 > écarté de notre calibration de référence pour cette raison, faute de quoi il
 > retomberait sur la dérivation par quantiles.
+
+> ## ⚠ NOUVEAU (2026-07-31, après 1.1.0) — le vectoriseur `agent` est inatteignable via `dsr_detecter()`
+>
+> Constaté en mesurant sur `wsfi` avec `dessertR` 1.1.0, `reference` fournie
+> (129 tronçons BD TOPO) : *« Aucune amorce exploitable pour l'agent ; repli sur
+> le squelette interne. ℹ Fournir `reference` pour amorcer »* — alors que
+> `reference` **était** fournie.
+>
+> **Mécanisme.** `dsr_indice_detection()` masque le corridor de référence par
+> `terra::mask(out, ..., inverse = TRUE)` (`R/detect.R`), donc à **`NA`**. Or
+> `dsr_amorces()` (`R/agent.R:604-606`) filtre ses amorces par
+> `!is.na(terra::extract(p, depart))`, où `depart` est `l[nrow(l), 1:2]`,
+> c'est-à-dire **l'extrémité du tronçon de référence elle-même** — toujours dans
+> le corridor masqué. Dès que `buffer_ref > 0`, **toutes** les amorces issues de
+> la référence tombent. Ne restent que les amorces de bordure, qui exigent
+> `p >= seuil` sur le bord de l'emprise.
+>
+> **Portée.** Le cas d'usage touché est celui du titre même de la fonction —
+> « Détecter la desserte **hors référence** ». Le vectoriseur `agent`, défaut
+> depuis la 1.1.0, n'y est donc jamais exercé : `dsr_detecter()` replie
+> systématiquement sur le squelette. Les métriques `wsfi` du NEWS 1.1.0 (rappel
+> 0,317, précision 0,740, « agent amorcé par la référence ») ont
+> vraisemblablement été mesurées en pilotant `dsr_conduire()` directement.
+>
+> **Piste de correction.** Tester la viabilité de l'amorce **au-delà** de
+> l'extrémité (`bout$p + k * d`, hors corridor) plutôt qu'à l'extrémité, ou
+> exempter du test `is.na` les amorces issues de `reference` — le test visait le
+> cas d'un tronçon débordant de l'emprise, pas le corridor.
 
 > **Origine** : session ForêtAccess du 2026-07-31, spec 026 (desserte détectée sur MNT).
 > **Version auditée** : `dessertR` `1.0.0.9000`, commit **`cb9376c`**.
