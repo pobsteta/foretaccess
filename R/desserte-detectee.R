@@ -127,6 +127,14 @@ specs_desserte_calibrees <- function() {
 #'   dénominateur du taux de faux positifs vers les zones déjà intéressantes — et
 #'   `corridor` en production.
 #' @param dtm_res Résolution (m) de la grille de référence. Défaut 1.
+#' @param methode Vectoriseur, passé tel quel à `dessertR::dsr_detecter()`.
+#'   **Défaut `"squelette"`, nommé et non subi** : depuis dessertR 1.1.0,
+#'   `"auto"` résout vers `"agent"`, mais l'agent ne peut pas s'amorcer quand
+#'   `buffer_ref > 0` — `dsr_amorces()` filtre ses amorces sur `!is.na(p)` à
+#'   l'extrémité des tronçons de référence, qui est précisément la zone que
+#'   `dsr_indice_detection()` vient de masquer. `"auto"` replierait donc sur le
+#'   squelette **en silence**, et la chaîne mesurée changerait sans préavis au
+#'   jour où l'amont corrigera. Voir `specs/026` §6.0.1 (précondition P5).
 #' @param specs Bornes d'appartenance, voir [specs_desserte_calibrees()] (défaut).
 #'   **`NULL` restaure les specs de dessertR**, dont les bornes sont dérivées par
 #'   quantiles de l'emprise — le `seuil` cesse alors d'être comparable d'un site
@@ -142,6 +150,7 @@ specs_desserte_calibrees <- function() {
 detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
                               seuil = 0.6, buffer_ref = 15, long_min = 30,
                               emprise = NULL, dtm_res = 1,
+                              methode = "squelette",
                               specs = specs_desserte_calibrees()) {
   checkmate::assert_number(seuil, lower = 0, upper = 1)
   # `canal_surface` porte sur TOUTES les sorties, y compris vides : un appelant
@@ -224,6 +233,7 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
   det <- tryCatch(
     .dsr("dsr_detecter")(sigma_geo, reference = ref, vesselness = vess,
       sigma_surf = sigma_surf, seuil = seuil, buffer_ref = buffer_ref,
+      methode = methode,
       long_min = long_min, emprise = emprise,
       regime = if (is.null(emprise)) "complet" else "corridor"),
     error = function(e) {

@@ -195,19 +195,58 @@ Le CA-26.5 est **atteint** si, pour au moins un jeu de paramètres :
   la tolérance mesurée sur OSM, pas davantage ;
 * `km_qualifie` ≥ **0,5 km/km² explorable** — en deçà, l'apport ne justifie pas
   le risque de fausser le réseau ;
-* l'échantillon annoté compte au moins **20 linéaires**, ordre de grandeur du
-  CA-28.5 (24 tronçons) — en deçà, le taux n'a pas de sens ;
+* l'échantillon annoté compte au moins **20 linéaires** **de longueur médiane
+  ≥ 100 m** — les deux conditions, pas l'une ou l'autre ;
 * le tout sur un banc **disjoint** du jeu de calibration (P6).
+
+> **Correction du 2026-07-31, au premier usage du critère.** La rédaction
+> initiale exigeait « au moins 20 linéaires » sans condition de longueur. Le banc
+> `wsfi` l'a **satisfait avec 21 linéaires totalisant 255 m — 12 m de moyenne**,
+> c'est-à-dire du bruit. Un critère d'effectif qui ne regarde pas la longueur se
+> laisse satisfaire par la fragmentation, exactement le travers reproché au
+> protocole précédent. Le seuil de 100 m est prudent : le CA-28.5 mesure **559 m
+> de moyenne** sur le gisement OSM (13,41 km pour 24 tronçons), soit cinq fois
+> plus. En deçà de 100 m, on n'annote pas une desserte, on annote un fragment.
 
 Il est **rejeté** — et la spec close en « détection non exploitable » — si aucun
 jeu de paramètres n'y parvient sur deux bancs indépendants.
 
-**Le blocage réel n'est pas l'annotation, c'est le volume à annoter.** Au
-2026-07-31, la détection rend **58 m sur 4 km²** (squelette, dessertR 1.1.0),
-contre 13,41 km pour le gisement OSM. On n'annote pas 58 mètres : le critère des
-20 linéaires ci-dessus est aujourd'hui hors d'atteinte de deux ordres de
-grandeur. **C'est le détecteur qu'il faut faire produire avant de parler
-d'annotation.**
+**Le blocage réel n'est pas l'annotation, c'est le volume à annoter.**
+
+#### 6.0.6. Première mesure conforme au protocole — banc `wsfi`, 2026-07-31
+
+`data-raw/banc_wsfi_longmin.R`, seuil 0,4, méthode `squelette` (nommée).
+Préconditions **P1–P5 vertes** (MNT 0,50 m ; canal de surface **consommé**,
+attribut et non `list.files()` ; dessertR 1.1.0 ; 10 canaux à bornes absolues ;
+vectoriseur nommé). **P6 violée** — la dalle de calibration est le quart
+sud-ouest de l'emprise —, d'où la colonne « hors calibration ».
+
+| `long_min` | linéaires | total | hors dalle de calibration |
+|---:|---:|---:|---:|
+| 5 m | 21 | 255 m | **243 m** |
+| 10 m | 9 | 170 m | 170 m |
+| 15 m | 4 | 112 m | 112 m |
+| 20 m | 1 | 58 m | 58 m |
+| 30 m | 1 | 58 m | 58 m |
+
+**Volume : NON ATTEINT.** 0,078 km/km² explorable au mieux, contre 0,5 exigé —
+il manque un facteur **6,4**.
+
+**La circularité n'explique rien** : 243 des 255 m tombent *hors* de la dalle de
+calibration, qui ne produit presque rien. La violation de P6 ne gonfle donc pas
+le résultat, elle le laisse intact.
+
+**Longueur médiane 12 m** contre 559 m pour le gisement OSM (CA-28.5) : deux
+ordres de grandeur. Ce sont des fragments, pas des dessertes — d'où la
+correction du critère d'effectif ci-dessus.
+
+**Conclusion partielle.** Le §6.0.4 exige **deux bancs indépendants** pour
+rejeter ; nous en avons **un** valide, Chastel-Nouvel étant disqualifié par P1
+(MNT 5 m). Pas de rejet formel, donc, mais la direction n'est pas ambiguë :
+dans des conditions enfin valides, la détection MNT rend 255 m de fragments là
+où **`acquire_desserte_osm()` rend 13,41 km à 93 % de justesse**. Le second banc
+indépendant (bloc `ltcp`) est ce qui manque pour trancher — et l'annotation n'a
+pas lieu d'être tant que le volume est à ce niveau.
 
 #### 6.0.5. Ce qui invalide une mesure, explicitement
 
