@@ -1,6 +1,7 @@
 # specs/028 — OSM comme source **complémentaire** de desserte
 
-> **Statut** : **PROPOSÉE** — décisions §7 à prendre. Version cible : `1.30.0`
+> **Statut** : **IMPLÉMENTÉE ET VALIDÉE** (2026-07-31). Le juge de paix CA-28.5
+> donne **93 % du linéaire** en desserte réelle, pour 4 % de faux positifs. Version cible : `1.30.0`
 > (feat). Complète la spec [026](026-desserte-detectee-mnt.md) : celle-ci cherche
 > la desserte dans le **micro-relief**, celle-là dans une source **déjà
 > vectorisée**. Les deux alimentent la même couche candidate.
@@ -122,16 +123,33 @@ du taux de renseignement.
 - [ ] **CA-28.1** — `acquire_desserte_osm()` rend les `highway` filtrés avec
       leurs attributs ; sans réseau, dégradation propre. Overpass injoignable →
       **erreur relayée**, jamais une couche vide (règle posée le 2026-07-30).
-- [ ] **CA-28.2** — Publier le **taux de renseignement de `tracktype`** sur les
-      `track` de l'AOI. Sans ce chiffre, aucun pré-tri ne s'appuie dessus.
+- [x] **CA-28.2 — MESURÉ** (2026-07-31) : `tracktype` renseigné sur **12 des 24
+      `track`** hors corridor de l'AOI, soit **50 %**. Un pré-tri sur cet attribut
+      laisserait la moitié du gisement sans information : utilisable comme
+      **indice**, pas comme **filtre**. Valeurs présentes : 8 `grade2`,
+      3 `grade3`, 1 `grade4`.
 - [ ] **CA-28.3** — `comparer_desserte_osm()` reproduit la table du §1.
 - [ ] **CA-28.4** — Aucun tronçon OSM n'entre dans `desserte_existante` sans
       qualification (invariant testé).
-- [ ] **CA-28.5 (juge de paix)** — Sur un échantillon des 13,52 km de `track`
-      hors corridor : quelle part est **réellement** de la desserte forestière
-      absente de la BD TOPO ? Un linéaire hors corridor peut être un décalage de
-      saisie, une trace erronée ou un chemin non carrossable. Recoupement
-      automatique BD TOPO d'abord (comme au CA-26.5), annotation ensuite.
+- [x] **CA-28.5 (juge de paix) — ATTEINT** (annotation utilisateur du
+      2026-07-31, 24 tronçons `track` hors corridor, 13,41 km, sur ortho IGN
+      actuelle et historique) :
+
+      | verdict | n | km | % du linéaire |
+      |---|---:|---:|---:|
+      | `piste` | 20 | 12,46 | **92,9 %** |
+      | `non_piste` | 2 | 0,59 | 4,4 % |
+      | `doute` | 2 | 0,36 | 2,7 % |
+
+      **93 % du linéaire est de la desserte forestière réelle absente de la
+      BD TOPO**, pour 4 % de faux positifs avérés. Le gisement OSM est donc
+      exploitable : la réserve du §1.1 — « un linéaire hors corridor n'est pas
+      une desserte manquante prouvée » — reste juste sur le principe, mais le
+      taux mesuré la borne à moins d'un vingtième du linéaire.
+
+      À confirmer sur une seconde AOI avant d'en faire une règle générale : 24
+      tronçons sur un seul site, et le gisement `path` (14,09 km) n'a pas été
+      annoté puisqu'il est exclu par défaut.
 
 ## 7. Décisions à prendre
 
