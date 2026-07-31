@@ -172,23 +172,42 @@ par ordre d'effet observé :
 | `pct_annote` | **taux de faux positifs sur orthophoto annotée** |
 | `km2_explorable` | surface hors corridor — le dénominateur, sans quoi `km` ne veut rien dire |
 
-**`pct_annote` reste bloquant.** Le recoupement automatique *réduit* le travail
-d'annotation, il ne le remplace pas : un linéaire qui ne recoupe aucun objet
-connu peut être une terrasse, une limite non cartographiée ou une trace fossile.
-Sans ce chiffre, on ajouterait du réseau fantôme à un modèle qu'on vient de
-rendre conforme à ACCESSFOR.
+**`pct_annote` reste bloquant** — mais la méthode est **établie et éprouvée**,
+pas à inventer. Le CA-28.5 (spec 028) a été tranché le 2026-07-31 par annotation
+utilisateur : 24 tronçons `track` OSM hors corridor, 13,41 km, sur ortho IGN
+actuelle **et historique**. Outillage réutilisable tel quel :
+`data-raw/oracle/aoi/annoter.qgz` (projet QGIS, millésimes WMS du §7.5) et
+`a_annoter_osm.gpkg`. Le recoupement automatique *réduit* ce travail, il ne le
+remplace pas : un linéaire qui ne recoupe aucun objet connu peut être une
+terrasse, une limite non cartographiée ou une trace fossile.
 
 #### 6.0.4. Seuil de recevabilité
 
+**Référence disponible** : le gisement **OSM** annoté rend **92,9 %** de desserte
+réelle pour **4,4 %** de faux positifs avérés (CA-28.5). C'est le point de
+comparaison, et il est exigeant — un gisement détecté qui tolérerait 20 % de faux
+positifs serait quatre fois plus sale que celui dont on dispose déjà, pour un
+coût d'instruction bien supérieur.
+
 Le CA-26.5 est **atteint** si, pour au moins un jeu de paramètres :
 
-* `pct_annote` ≤ **20 %** de faux positifs sur l'échantillon annoté ;
+* `pct_annote` ≤ **10 %** de faux positifs sur l'échantillon annoté — deux fois
+  la tolérance mesurée sur OSM, pas davantage ;
 * `km_qualifie` ≥ **0,5 km/km² explorable** — en deçà, l'apport ne justifie pas
   le risque de fausser le réseau ;
-* les deux tiennent sur un banc **disjoint** du jeu de calibration (P6).
+* l'échantillon annoté compte au moins **20 linéaires**, ordre de grandeur du
+  CA-28.5 (24 tronçons) — en deçà, le taux n'a pas de sens ;
+* le tout sur un banc **disjoint** du jeu de calibration (P6).
 
 Il est **rejeté** — et la spec close en « détection non exploitable » — si aucun
 jeu de paramètres n'y parvient sur deux bancs indépendants.
+
+**Le blocage réel n'est pas l'annotation, c'est le volume à annoter.** Au
+2026-07-31, la détection rend **58 m sur 4 km²** (squelette, dessertR 1.1.0),
+contre 13,41 km pour le gisement OSM. On n'annote pas 58 mètres : le critère des
+20 linéaires ci-dessus est aujourd'hui hors d'atteinte de deux ordres de
+grandeur. **C'est le détecteur qu'il faut faire produire avant de parler
+d'annotation.**
 
 #### 6.0.5. Ce qui invalide une mesure, explicitement
 
