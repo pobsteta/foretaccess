@@ -1,6 +1,9 @@
 # specs/026 — Desserte **détectée** sur le MNT comme amorce de conception
 
 > **Statut** : **IMPLÉMENTÉE PARTIELLEMENT, NON VALIDÉE** (2026-07-31).
+> **CA-26.5 : protocole réécrit** le 2026-07-31 (§6.0) — l'ancien balayait
+> `seuil` en tenant l'emprise pour neutre et mesurait un artefact. Aucune mesure
+> antérieure à cette date n'est recevable (§6.0.5).
 > `detecter_desserte()` et `detecter_desserte_balayage()` sont livrés
 > (`R/desserte-detectee.R`, §5.1-5.2) ainsi que le tarif de réouverture (§5.3,
 > `config$desserte$cout$fraction_reouverture`). **L'injection dans
@@ -122,35 +125,78 @@ raccrochable au tarif réouverture.
       bit-pour-bit la sortie actuelle.
 - [ ] **CA-26.4** — Le coût de réouverture est appliqué aux seules cellules de
       tronçons détectés **et** qualifiés.
-- [ ] **CA-26.5 (juge de paix)** — Sur l'AOI oracle, en régime `complet` et pour
-      chaque seuil du balayage 0,4-0,8 : publier le linéaire détecté, la part qui
-      survit à la qualification, la part **recoupant un objet BD TOPO connu**
-      (cours d'eau, fossé, limite — faux positifs quantifiés sans annotation), et
-      le taux de faux positifs résiduel sur orthophoto annotée. Sans ce dernier
-      chiffre la fonction n'est pas livrable : on ajouterait du réseau fantôme à
-      un modèle qu'on vient de rendre conforme à ACCESSFOR.
+- [ ] **CA-26.5 (juge de paix)** — **protocole réécrit le 2026-07-31**, voir
+      §6.0. L'ancienne rédaction balayait `seuil` de 0,4 à 0,8 en tenant
+      l'emprise pour neutre : elle mesurait un artefact. Détail en §6.3.
 
-      **NON EXERÇABLE SUR L'AOI ORACLE** (mesure du 2026-07-31). Le balayage rend
-      **3 linéaires à 0,4 (134 m) et ZÉRO au-delà**.
+### 6.0. CA-26.5 — protocole (réécriture du 2026-07-31)
 
-      **L'explication d'abord retenue — « le corridor ne laisse plus de surface à
-      explorer » — est FAUSSE**, et le contrôle du 2026-07-31 la réfute : hors du
-      corridor de 15 m, il reste **6,03 km² sur 7,21, soit 83,7 %** de l'emprise.
-      La saturation n'est pas la cause. (La densité invoquée, « 44 tronçons sur
-      1 km² », mélangeait par ailleurs le linéaire — 44,64 km — et un décompte
-      d'objets : la valeur réelle est 197 objets sur 7,21 km².)
+**Ce que le CA doit établir** : que la détection trouve de la desserte *réelle*
+et *absente de la BD TOPO*, en quantité et en pureté suffisantes pour qu'on
+puisse en ajouter au réseau sans le fausser. Rien de moins ne justifie
+d'appliquer le tarif de réouverture à des cellules détectées.
 
-      **La cause probable est la résolution du MNT.** Aucun MNT plus fin que
-      **5 m** n'existe pour Chastel-Nouvel — l'entrée oracle `mnt.tif` est à 5 m,
-      et les caches RGE ALTI de la campagne l'étaient aussi. Or
-      `detecter_desserte()` **avertit lui-même au-delà de 1,5 m** que « le
-      micro-relief d'une plateforme ancienne ne survit pas à cette résolution ».
-      Le balayage a donc tourné à 3,3 fois le seuil de son propre garde-fou.
+#### 6.0.1. Préconditions — à vérifier **avant** toute mesure, et à publier
 
-      C'est le motif exact du faux négatif ALSroads (0/22 à 5 m, 22/22 à 1 m) :
-      **conclure à l'échec d'un détecteur qu'on n'a jamais alimenté correctement.**
-      Chastel-Nouvel n'est pas un banc valable pour cette spec — non parce qu'il
-      est trop desservi, mais parce qu'il n'a pas de MNT à la résolution requise.
+Chacune a coûté une journée de mesures fausses au moins une fois.
+
+| # | précondition | contrôle |
+|---|---|---|
+| P1 | MNT ≤ **1,5 m** | `max(terra::res(mnt))` — garde-fou de `detecter_desserte()` |
+| P2 | canal de surface **consommé**, pas seulement disponible | `attr(det, "canal_surface")` — jamais `list.files()` |
+| P3 | `dessertR` ≥ **1.1.0** | sinon `c_vessel` est ignoré et la mesure redevient relative |
+| P4 | specs **absolues** — toute borne `a`/`b` renseignée | un canal sans bornes retombe sur les quantiles |
+| P5 | vectoriseur **nommé**, jamais subi | `methode` explicite ; un repli silencieux change la chaîne mesurée |
+| P6 | banc **disjoint** du jeu de calibration | recouvrement mesuré et publié |
+
+#### 6.0.2. Ce qu'on balaye — et ce qu'on ne balaye plus
+
+Balayer `seuil` n'avait de sens que si `seuil` désignait une quantité absolue.
+Depuis que les bornes sont figées, **c'est le cas** — le balayage redevient
+licite, mais il n'est plus le cœur du protocole. Les trois variables à mesurer,
+par ordre d'effet observé :
+
+1. **`long_min`** — le filtre de longueur décide de tout. Mesuré : 23 linéaires
+   à 5 m contre 1 à 30 m, sur la même fenêtre. À balayer sur **5, 10, 15, 20,
+   30, 50 m**.
+2. **`seuil`** — plage 0,4 → 0,8, désormais interprétable entre sites.
+3. **`methode`** — `squelette` et `agent` explicitement, jamais `auto`.
+
+#### 6.0.3. Ce qu'on publie, par point de mesure
+
+| grandeur | définition |
+|---|---|
+| `n`, `km` | linéaire détecté hors corridor de référence |
+| `km_qualifie` | part survivant à [`qualifier_desserte()`] |
+| `km_recoupe`, `pct_recoupe` | part recoupant un objet BD TOPO connu (cours d'eau, fossé, limite) — faux positifs **sans annotation** |
+| `pct_annote` | **taux de faux positifs sur orthophoto annotée** |
+| `km2_explorable` | surface hors corridor — le dénominateur, sans quoi `km` ne veut rien dire |
+
+**`pct_annote` reste bloquant.** Le recoupement automatique *réduit* le travail
+d'annotation, il ne le remplace pas : un linéaire qui ne recoupe aucun objet
+connu peut être une terrasse, une limite non cartographiée ou une trace fossile.
+Sans ce chiffre, on ajouterait du réseau fantôme à un modèle qu'on vient de
+rendre conforme à ACCESSFOR.
+
+#### 6.0.4. Seuil de recevabilité
+
+Le CA-26.5 est **atteint** si, pour au moins un jeu de paramètres :
+
+* `pct_annote` ≤ **20 %** de faux positifs sur l'échantillon annoté ;
+* `km_qualifie` ≥ **0,5 km/km² explorable** — en deçà, l'apport ne justifie pas
+  le risque de fausser le réseau ;
+* les deux tiennent sur un banc **disjoint** du jeu de calibration (P6).
+
+Il est **rejeté** — et la spec close en « détection non exploitable » — si aucun
+jeu de paramètres n'y parvient sur deux bancs indépendants.
+
+#### 6.0.5. Ce qui invalide une mesure, explicitement
+
+Une mesure est **nulle et non avenue** si l'une des préconditions P1-P6 n'est pas
+publiée avec elle, ou si le vectoriseur a replié sans qu'on le nomme. C'est la
+règle qui manquait : les mesures du 2026-07-31 (balayage de 82 min, balayage
+`long_min`, comparaison Chastel-Nouvel/`wsfi`) violent P3, P4 et P5, et sont donc
+écartées — pas discutées.
 
 ### 6.1. Le second banc — bloc `wsfi` (désigné le 2026-07-31)
 
@@ -228,6 +274,48 @@ purge de cache. Toute sortie du banc est écrite dans
 `data-raw/oracle/wsfi/`, jamais dans le projet nemeton. Le chemin est lu depuis
 la variable d'environnement `FA_WSFI` avec ce défaut, pour que le banc reste
 rejouable ailleurs.
+
+**`wsfi` ne satisfait PAS la précondition P6.** Le recouvrement avec l'AOI oracle
+est de **2,143 km² sur 4,00**, soit **54 %**, et la dalle sur laquelle les specs
+sont calibrées (`LHD_FXX_0737_6385`) est son **quart sud-ouest**. Un résultat
+obtenu sur `wsfi` entier est donc partiellement circulaire. Deux issues : scorer
+uniquement sur les 3 km² **hors** dalle de calibration, ou passer au bloc `ltcp`
+(25 dalles, 5 × 5 km) comme banc disjoint.
+
+### 6.3. Pourquoi le protocole précédent était invalide
+
+L'ancien CA-26.5 balayait `seuil` de 0,4 à 0,8 en régime `complet` et comparait
+les sites entre eux. Trois explications successives ont été données à ses zéros,
+les deux premières fausses :
+
+1. *« Le corridor de 15 m ne laisse plus de surface à explorer »* — **réfuté** :
+   hors corridor, il reste 6,03 km² sur 7,21, soit **83,7 %**.
+2. *« La cause est le MNT à 5 m, 3,3× le seuil du garde-fou »* — **non
+   confirmé** : `wsfi`, MNT **0,50 m** avec canal de surface, rend **zéro aux
+   cinq seuils** en 82 min. Dix fois plus fin, et moins de détections.
+3. **La cause réelle : la détection dépendait de l'emprise soumise.** La même
+   fenêtre de 0,25 km² rendait **116 m** analysée seule et **0 m** analysée dans
+   4 km². `dsr_appartenance()` dérivait ses bornes des quantiles de la donnée
+   reçue, et `dsr_frangi()` son `c` du maximum de l'image — ce second mécanisme
+   agissant **en amont** des bornes, donc hors de leur portée. Le `seuil` n'était
+   pas une quantité absolue mais un **rang dans l'emprise**.
+
+Corrigé en amont le jour même (**dessertR 1.1.0** : `dsr_calibrer_specs(bornes =
+TRUE)`, `dsr_c_vessel()`, `dsr_layers_dtm(c_vessel = )`). Trace :
+`docs/brief-dessertR-ancrage-emprise.md`.
+
+**Ce que ça enseigne au protocole**, et qui est la vraie raison de la
+réécriture : un balayage ne vaut que si la grandeur balayée est **absolue**.
+Balayer un rang en le prenant pour une mesure, c'est produire un tableau de
+chiffres cohérents entre eux et sans référent. Les préconditions P1-P6 du §6.0.1
+existent pour que cette faute soit détectable **avant** la mesure, pas après.
+
+**Restriction en vigueur** : `dsr_detecter()` ne peut pas amorcer le vectoriseur
+`agent` quand `buffer_ref > 0` — `dsr_amorces()` filtre ses amorces sur
+`!is.na(p)` à l'extrémité des tronçons de référence, qui est précisément la zone
+masquée. Le vectoriseur par défaut replie donc sur le squelette dans le cas
+d'usage de cette spec. Tant que ce n'est pas corrigé en amont, **P5 impose de
+nommer `methode = "squelette"`** plutôt que de subir le repli.
 
 ## 7. Décisions prises (2026-07-29)
 
