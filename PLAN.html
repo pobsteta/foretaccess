@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -348,6 +348,16 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-07-31--v200--les-résultats-antérieurs-ne-sont-plus-reproductibles">2026-07-31 — <code>v2.0.0</code> : les résultats antérieurs ne sont plus reproductibles<a class="anchor" aria-label="anchor" href="#id_2026-07-31--v200--les-r%C3%A9sultats-ant%C3%A9rieurs-ne-sont-plus-reproductibles"></a></h3>
+<p><strong>Deuxième version majeure.</strong> Le sens du bump suit la tradition de <code>v1.0.0</code> (« validée contre le vrai moteur ») : il ne dit pas « périmètre atteint » mais <strong>« purgez vos caches »</strong>. Deux commits <code>!</code> le justifient, tous deux des défauts d’acquisition capables de fausser un banc entier sans rien signaler :</p>
+<ul><li>
+<strong>le WFS perdait des tronçons sur les grandes emprises</strong> — 86 features contre 245 en pavant la même AOI, soit <strong>110 tronçons intérieurs disparus en élargissant l’emprise</strong>. Corrigé par pavage + déduplication ;</li>
+<li>
+<strong>le RGE ALTI par WMS est banni</strong> — MNT <em>blocky</em>, médiane de pente 18,89 % contre 40,99 % pour le LiDAR HD, maximum à 382 %. Il a fait tourner le banc oracle deux semaines sur un terrain fictif.</li>
+</ul><p>Bump majeur <strong>confirmé par l’utilisateur</strong> (règle CLAUDE.md). Ni l’un ni l’autre ne retire d’API — le <code>NAMESPACE</code> est inchangé ou enrichi — mais tous deux cassent la <strong>reproductibilité des résultats</strong>, ce qui pour un paquet scientifique est la rupture qui compte.</p>
+<p>La release emporte <strong>025</strong> (intégrité du réseau), <strong>027</strong> (provenance des caches), <strong>028</strong> (desserte OSM, CA-28.5 atteint à 92,9 %) et <strong>026</strong> en état partiel assumé. Cohérence à relever : <strong>la spec 027 existe à cause des deux ruptures</strong> — les caches produits par le WFS amputé et par le RGE ALTI blocky étaient indiscernables des bons. La release corrige les défauts et livre en même temps le mécanisme qui les aurait détectés.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-07-31--ca-271-complété-deux-acquire_-sans-contrôle-banc-wsfi-désigné">2026-07-31 — CA-27.1 <strong>complété</strong> (deux <code>acquire_*</code> sans contrôle), banc <code>wsfi</code> désigné<a class="anchor" aria-label="anchor" href="#id_2026-07-31--ca-271-compl%C3%A9t%C3%A9-deux-acquire_-sans-contr%C3%B4le-banc-wsfi-d%C3%A9sign%C3%A9"></a></h3>
 <p><strong>Le trou.</strong> La première livraison de la spec 027 (<code>v1.28.0.9000</code>, PR #139) déclarait le CA-27.1 tenu — « toute fonction <code>acquire_*</code> écrit un sidecar de provenance ». Elle ne l’était pas : <code><a href="reference/acquire_mnt_rgealti.html">acquire_mnt_rgealti()</a></code> et <code><a href="reference/acquire_cadastre.html">acquire_cadastre()</a></code> servaient leur cache <strong>sans aucun contrôle</strong>. L’ironie tient à la première : elle a été écrite <em>en réponse</em> à l’incident du MNT blocky. Un cache à 5 m aurait été servi à qui demande 1 m — le même scénario, à la résolution près. Pour <code><a href="reference/acquire_cadastre.html">acquire_cadastre()</a></code>, <code>country</code> change la couche source : un cache FR servi à un appel CH aurait rendu du parcellaire du mauvais pays, sans rien pour le signaler.</p>

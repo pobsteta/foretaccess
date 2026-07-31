@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.28.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,52 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.0.0" id="foretaccess-200-2026-07-31">foretaccess 2.0.0 (2026-07-31)<a class="anchor" aria-label="anchor" href="#foretaccess-200-2026-07-31"></a></h2>
+<p>Deuxième version <strong>majeure</strong>. Le sens du bump n’est pas « périmètre atteint » mais <strong>« les résultats antérieurs ne sont plus reproductibles »</strong> — dans la tradition de <code>v1.0.0</code>, qui signifiait « validée contre le vrai moteur ». Deux défauts d’acquisition, chacun capable de fausser un banc entier sans rien signaler, sont corrigés. <strong>Tout cache antérieur est invalide, et tout chiffre publié avec est suspect.</strong></p>
+<div class="section level3">
+<h3 id="les-deux-ruptures-2-0-0">Les deux ruptures<a class="anchor" aria-label="anchor" href="#les-deux-ruptures-2-0-0"></a></h3>
+<p><strong>Le WFS perdait des tronçons sur les grandes emprises.</strong> Mesure sur l’AOI oracle : une requête unique sur un buffer de 1 600 m rendait 1 380 features dont <strong>86 seulement</strong> touchaient l’AOI stricte — contre <strong>245</strong> en découpant la même emprise en quadrants. Autrement dit, <strong>élargir l’emprise faisait disparaître 110 tronçons intérieurs</strong>. La perte n’est pas aléatoire : le WFS rend les features dans son ordre interne, pas spatial, et rien ne le signale. Un réseau amputé produit des composantes orphelines fictives et des surfaces déclarées inaccessibles à tort. Corrigé par pavage + déduplication. Portée : desserte, obstacles, forêt, cadastre — toute acquisition WFS sur une AOI de plus de ~2 km.</p>
+<p><strong>Le RGE ALTI par WMS est banni.</strong> Il rendait un MNT <em>blocky</em> dont la médiane de pente tombait à 18,89 % (maximum 382 %) contre 40,99 % pour le LiDAR HD sur la même AOI. Il a fait tourner le banc oracle <strong>deux semaines sur un terrain fictif</strong>. Remplacé par les dalles départementales (<code><a href="../reference/acquire_mnt_rgealti.html">acquire_mnt_rgealti()</a></code>), dont la distribution de pente est quasi identique au LiDAR HD (39,96 % contre 40,99 %).</p>
+</div>
+<div class="section level3">
+<h3 id="provenance-des-caches-spec-2-0-0">Provenance des caches (spec 027)<a class="anchor" aria-label="anchor" href="#provenance-des-caches-spec-2-0-0"></a></h3>
+<p><strong>La spec 027 existe à cause des deux ruptures ci-dessus.</strong> Un cache est nommé d’après ce qu’il <em>contient</em>, jamais d’après ce qui l’a <em>produit</em> : toute correction du code est donc annulée en silence pour quiconque possède déjà un cache. Cinq incidents en deux jours, tous de cette cause.</p>
+<p>Chaque fonction <code>acquire_*</code> écrit désormais un <strong>sidecar de provenance</strong> et contrôle à la relecture ; <code>politique_cache</code> décide (<code>"reacquerir"</code> par défaut, <code>"avertir"</code>, <code>"echouer"</code> pour les bancs, <code>"ignorer"</code>). Un cache <strong>sans</strong> sidecar est traité comme divergent — la migration se fait d’elle-même, sans rien détruire.</p>
+<p>Le CA-27.1 a d’abord été déclaré tenu <strong>à tort</strong> : <code><a href="../reference/acquire_mnt_rgealti.html">acquire_mnt_rgealti()</a></code> et <code><a href="../reference/acquire_cadastre.html">acquire_cadastre()</a></code> servaient leur cache sans aucun contrôle — dont, ironie, celle écrite <em>en réponse</em> à l’incident du MNT. La cause n’était pas l’oubli mais la forme du test, qui vérifiait <strong>quelques</strong> fonctions ; il les <strong>énumère</strong> désormais.</p>
+</div>
+<div class="section level3">
+<h3 id="desserte-osm-gisement-validé-spec-2-0-0">Desserte OSM, gisement validé (spec 028)<a class="anchor" aria-label="anchor" href="#desserte-osm-gisement-valid%C3%A9-spec-2-0-0"></a></h3>
+<p><code><a href="../reference/acquire_desserte_osm.html">acquire_desserte_osm()</a></code> complète la BD TOPO par les <code>track</code> OSM hors corridor. <strong>CA-28.5 atteint</strong> par annotation sur ortho IGN actuelle <strong>et historique</strong>, 24 tronçons, 13,41 km :</p>
+<table class="table"><thead><tr><th>verdict</th>
+<th align="right">n</th>
+<th align="right">km</th>
+<th align="right">% du linéaire</th>
+</tr></thead><tbody><tr><td><code>piste</code></td>
+<td align="right">20</td>
+<td align="right">12,46</td>
+<td align="right"><strong>92,9 %</strong></td>
+</tr><tr><td><code>non_piste</code></td>
+<td align="right">2</td>
+<td align="right">0,59</td>
+<td align="right">4,4 %</td>
+</tr><tr><td><code>doute</code></td>
+<td align="right">2</td>
+<td align="right">0,36</td>
+<td align="right">2,7 %</td>
+</tr></tbody></table></div>
+<div class="section level3">
+<h3 id="intégrité-du-réseau-spec-2-0-0">Intégrité du réseau (spec 025)<a class="anchor" aria-label="anchor" href="#int%C3%A9grit%C3%A9-du-r%C3%A9seau-spec-2-0-0"></a></h3>
+<p>Les deux contraintes d’ACCESSFOR — classe 1 connectée à 2 ou 3, classe 2 connectée à 3 — sont vérifiables, et les infractions <strong>réelles</strong> écartables sur option (CA-25.6).</p>
+</div>
+<div class="section level3">
+<h3 id="desserte-détectée-sur-mnt--partielle-et-assumée-spec-2-0-0">Desserte détectée sur MNT — partielle et assumée (spec 026)<a class="anchor" aria-label="anchor" href="#desserte-d%C3%A9tect%C3%A9e-sur-mnt--partielle-et-assum%C3%A9e-spec-2-0-0"></a></h3>
+<p><code><a href="../reference/detecter_desserte.html">detecter_desserte()</a></code> est livrée, <strong>l’injection dans <code><a href="../reference/reseau_desserte.html">reseau_desserte()</a></code> ne l’est pas</strong> : elle attend le CA-26.5, faute de quoi on ajouterait du réseau fantôme à un modèle qu’on vient de rendre conforme à ACCESSFOR.</p>
+<p><strong>La détection ne dépend plus de l’emprise qu’on lui passe.</strong> Elle rendait des résultats différents pour le même terrain selon l’étendue soumise — la même fenêtre de 0,25 km² rendait <strong>116 m</strong> analysée seule et <strong>0 m</strong> analysée dans 4 km². Le <code>seuil</code> n’était pas une quantité absolue mais un <strong>rang dans l’emprise</strong>. Deux mécanismes indépendants, aucun suffisant seul : bornes d’appartenance dérivées des quantiles de la donnée reçue, et <code>c</code> de Frangi dérivé du maximum de norme de Hessien <strong>de l’image</strong>, en amont des bornes donc hors de leur portée. <strong>Corrigé en amont dans dessertR 1.1.0</strong> à la suite de cet audit ; <code><a href="../reference/specs_desserte_calibrees.html">specs_desserte_calibrees()</a></code> porte une calibration de référence figée.</p>
+<p><strong>Le CA-26.5 n’est pas tranché</strong>, et son protocole a été <strong>réécrit</strong> : l’ancien balayait <code>seuil</code> en tenant l’emprise pour neutre, il mesurait un artefact. Le nouveau publie six préconditions <strong>avant</strong> ses chiffres et porte un seuil de recevabilité chiffré avec condition de rejet. Première mesure conforme sur <code>wsfi</code> : <strong>0,078 km/km² contre 0,5 exigé</strong>, il manque un facteur 6,4.</p>
+<p><strong>Dépendance</strong> : <code>dessertR &gt;= 1.1.0</code> pour l’ancrage (<code>c_vessel</code>). En deçà, la détection reste relative à l’emprise et le paquet <strong>avertit</strong> au lieu de replier en silence.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.28.0" id="foretaccess-1280-2026-07-29">foretaccess 1.28.0 (2026-07-29)<a class="anchor" aria-label="anchor" href="#foretaccess-1280-2026-07-29"></a></h2>
 <div class="section level3">
