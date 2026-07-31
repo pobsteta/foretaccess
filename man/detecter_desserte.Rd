@@ -13,6 +13,7 @@ detecter_desserte(
   long_min = 30,
   emprise = NULL,
   dtm_res = 1,
+  methode = "squelette",
   specs = specs_desserte_calibrees()
 )
 }
@@ -40,6 +41,15 @@ dénominateur du taux de faux positifs vers les zones déjà intéressantes — 
 \code{corridor} en production.}
 
 \item{dtm_res}{Résolution (m) de la grille de référence. Défaut 1.}
+
+\item{methode}{Vectoriseur, passé tel quel à \code{dessertR::dsr_detecter()}.
+\strong{Défaut \code{"squelette"}, nommé et non subi} : depuis dessertR 1.1.0,
+\code{"auto"} résout vers \code{"agent"}, mais l'agent ne peut pas s'amorcer quand
+\code{buffer_ref > 0} — \code{dsr_amorces()} filtre ses amorces sur \code{!is.na(p)} à
+l'extrémité des tronçons de référence, qui est précisément la zone que
+\code{dsr_indice_detection()} vient de masquer. \code{"auto"} replierait donc sur le
+squelette \strong{en silence}, et la chaîne mesurée changerait sans préavis au
+jour où l'amont corrigera. Voir \code{specs/026} §6.0.1 (précondition P5).}
 
 \item{specs}{Bornes d'appartenance, voir \code{\link[=specs_desserte_calibrees]{specs_desserte_calibrees()}} (défaut).
 \strong{\code{NULL} restaure les specs de dessertR}, dont les bornes sont dérivées par
