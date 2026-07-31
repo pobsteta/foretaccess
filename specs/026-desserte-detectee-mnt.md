@@ -1,7 +1,14 @@
 # specs/026 — Desserte **détectée** sur le MNT comme amorce de conception
 
-> **Statut** : **VALIDÉE — À IMPLÉMENTER** (décisions §7 prises par l'utilisateur
-> le 2026-07-29). Indépendante des specs
+> **Statut** : **IMPLÉMENTÉE PARTIELLEMENT, NON VALIDÉE** (2026-07-31).
+> `detecter_desserte()` et `detecter_desserte_balayage()` sont livrés
+> (`R/desserte-detectee.R`, §5.1-5.2) ainsi que le tarif de réouverture (§5.3,
+> `config$desserte$cout$fraction_reouverture`). **L'injection dans
+> `reseau_desserte()` (§5.4) n'est délibérément PAS faite** : elle attend le
+> CA-26.5, faute de quoi on ajouterait du réseau fantôme à un modèle qu'on vient
+> de rendre conforme à ACCESSFOR. Second banc désigné le 2026-07-31 (§6.1).
+> Décisions §7 prises par l'utilisateur
+> le 2026-07-29. Indépendante des specs
 > [024](024-desserte-clsvac-regle-publiee.md) (classification) et
 > [025](025-integrite-reseau-desserte.md) (intégrité), mais consomme leurs
 > sorties. Version cible : `1.30.0` (feat).
@@ -124,12 +131,103 @@ raccrochable au tarif réouverture.
       un modèle qu'on vient de rendre conforme à ACCESSFOR.
 
       **NON EXERÇABLE SUR L'AOI ORACLE** (mesure du 2026-07-31). Le balayage rend
-      **3 linéaires à 0,4 (134 m) et ZÉRO au-delà** : la dalle porte déjà 44
-      tronçons BD TOPO sur 1 km², et un corridor de 15 m autour de chacun ne
-      laisse presque plus de surface à explorer. Deux explications restent
-      indistinguables — dalle réellement bien cartographiée, ou détection qui
-      sous-performe. **Il faut une seconde AOI, moins densément desservie**, pour
-      trancher. Chastel-Nouvel n'est pas un banc valable pour cette spec.
+      **3 linéaires à 0,4 (134 m) et ZÉRO au-delà**.
+
+      **L'explication d'abord retenue — « le corridor ne laisse plus de surface à
+      explorer » — est FAUSSE**, et le contrôle du 2026-07-31 la réfute : hors du
+      corridor de 15 m, il reste **6,03 km² sur 7,21, soit 83,7 %** de l'emprise.
+      La saturation n'est pas la cause. (La densité invoquée, « 44 tronçons sur
+      1 km² », mélangeait par ailleurs le linéaire — 44,64 km — et un décompte
+      d'objets : la valeur réelle est 197 objets sur 7,21 km².)
+
+      **La cause probable est la résolution du MNT.** Aucun MNT plus fin que
+      **5 m** n'existe pour Chastel-Nouvel — l'entrée oracle `mnt.tif` est à 5 m,
+      et les caches RGE ALTI de la campagne l'étaient aussi. Or
+      `detecter_desserte()` **avertit lui-même au-delà de 1,5 m** que « le
+      micro-relief d'une plateforme ancienne ne survit pas à cette résolution ».
+      Le balayage a donc tourné à 3,3 fois le seuil de son propre garde-fou.
+
+      C'est le motif exact du faux négatif ALSroads (0/22 à 5 m, 22/22 à 1 m) :
+      **conclure à l'échec d'un détecteur qu'on n'a jamais alimenté correctement.**
+      Chastel-Nouvel n'est pas un banc valable pour cette spec — non parce qu'il
+      est trop desservi, mais parce qu'il n'a pas de MNT à la résolution requise.
+
+### 6.1. Le second banc — bloc `wsfi` (désigné le 2026-07-31)
+
+Bloc **`wsfi`** du projet nemeton, déjà utilisé comme jeu de validation de
+`dessertR` lui-même. Chemin (**lecture seule**, cf. §6.2) :
+
+```
+/home/pascal/.local/share/nemeton/projects/20260717_101641_wsfi/cache/layers/
+```
+
+Chiffres **mesurés** par `data-raw/banc_wsfi_026.R` le 2026-07-31, sur l'emprise
+du banc = emprise de la mosaïque MNT (2 × 2 km) :
+
+| | Chastel-Nouvel | **wsfi** |
+|---|---:|---:|
+| **résolution MNT** | **5 m** ❌ | **0,50 m** ✅ |
+| emprise | 7,21 km² | 4,00 km² |
+| forêt | — | 3,68 km² |
+| surface hors corridor 15 m | 6,03 km² (83,7 %) | 3,10 km² (77,6 %) |
+| réseau BD TOPO | 47,05 km / 197 obj. | 32,13 km / 129 obj. |
+| densité / emprise | 6,53 km/km² | **8,03 km/km²** |
+| densité / forêt | 7,89 km/km² | **8,74 km/km²** |
+| dalles LiDAR classées | — | **4** (COPC, LAS 1.4) |
+| altitude | — | 827 – 1263 m |
+
+Classes ACCESSFOR (spec 024) dans l'emprise : 60 `piste`, 32 `route`,
+7 `reseau_public`, 30 `hors_desserte`.
+
+> **Trois chiffres de la première rédaction de cette fiche étaient faux**
+> (corrigés ci-dessus le 2026-07-31). Ils avaient été lus sur `roads.gpkg`, la
+> couche que **nemeton** met en cache dans le bloc — 51 objets, 16,4 km, natures
+> 29 `Chemin` / 10 `Route empierrée` / 3 `Route à 1 chaussée` / 9 `Sentier`.
+> Cette couche est découpée sur l'AOI du **projet nemeton**, plus petite que la
+> mosaïque MNT sur laquelle le banc travaille. Décrire un banc avec les chiffres
+> d'une **autre emprise** est la même faute que servir un cache produit avec
+> d'autres paramètres (spec 027) : la fiche d'un banc se **mesure** sur l'emprise
+> du banc, elle ne se recopie pas d'une couche voisine.
+
+**Ce qui en fait le bon second banc, par ordre d'importance :**
+
+1. **Un MNT à 50 cm** — trois fois plus fin que le seuil du garde-fou, dix fois
+   plus fin que Chastel-Nouvel. C'est la raison décisive, et c'est **la seule qui
+   ait survécu à la mesure** : c'est le premier site où l'exigence de résolution
+   de la spec est effectivement satisfaite.
+2. **Le canal de surface est disponible** — 4 dalles LiDAR classées. Sans lui,
+   dessertR annonce une détection « nettement moins sûre », et c'est le canal
+   qu'il pondère **double**.
+3. ~~**Moins desservi**~~ — **RÉFUTÉ par la mesure.** `wsfi` est **plus** dense
+   que Chastel-Nouvel, pas moins : 8,74 contre 7,89 km/km² de forêt, et 8,03
+   contre 6,53 km/km² d'emprise. Le « 4,92 km/km², soit 38 % de moins » venait de
+   la couche nemeton sur une emprise plus petite.
+
+**Ce qui l'affaiblit, à ne pas passer sous silence** — et la mesure a **aggravé**
+ce point au lieu de le rassurer : l'emprise est plus petite (4,00 contre
+7,21 km²), le réseau y est plus dense, et la surface explorable tombe à
+**3,10 km² contre 6,03, soit 0,51×** (et non 0,6× comme d'abord écrit). Un
+résultat nul sur wsfi est donc **encore moins concluant** que prévu : il cumule
+une emprise réduite et une desserte plus serrée. Si le CA-26.5 n'est pas tranché
+ici, il faudra un **troisième** bloc plus vaste — le projet `ltcp` (25 dalles,
+5×5 km) est le candidat déjà identifié.
+
+**Biais à déclarer** : `wsfi` est le jeu sur lequel `dessertR` a été calibré
+(mémoire `dessertr-validation-wsfi`). Valider notre détection dessus mesure
+l'intégration, **pas** la généralisation. Le constat dessertR du 2026-07-28 y est
+d'ailleurs défavorable : « repositionnement sur `sigma_geo` SEUL n'aide pas, le
+pathfinder accroche des linéaires parallèles (fossés, traces fossiles) » —
+exactement le piège du §4. À contraindre par `sigma_surf`, et à ne jamais
+présenter comme une validation indépendante.
+
+### 6.2. Règle d'usage du bloc
+
+Le répertoire `wsfi` appartient à **nemeton**. Il est en **lecture seule** depuis
+une session ForêtAccess (règle stricte 6) : aucune écriture, aucun `git`, aucune
+purge de cache. Toute sortie du banc est écrite dans
+`data-raw/oracle/wsfi/`, jamais dans le projet nemeton. Le chemin est lu depuis
+la variable d'environnement `FA_WSFI` avec ce défaut, pour que le banc reste
+rejouable ailleurs.
 
 ## 7. Décisions prises (2026-07-29)
 

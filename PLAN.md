@@ -207,6 +207,17 @@
   l'algorithme **SEILAPLAN** (Bont & Heinimann 2012, graphe + plus court chemin), plus sain et
   validé — voir `specs/013-seilaplan-hauteur.md` et `docs/comparaison-cable-seilaplan.md`. Le `_NoH`
   (défaut) reste intact. Phase 2 acquisition : MNH LiDAR → volume, BD Forêt v3.
+- **Cycle dev ouvert sur `v1.28.0.9000`** (dernière release `v1.28.0`, 2026-07-29). Quatre specs
+  y sont mergées et **non encore releasées** : **025** (intégrité du réseau, #136), **027**
+  (provenance des caches, #139), **028** (OSM source complémentaire, #139) et **026**
+  (desserte détectée sur MNT, #140, **partielle**). Release visée : **`1.29.0`** sur la spec 027,
+  qui est la seule complète.
+- **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
+  `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
+  (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
+  délibérément non faite** tant que le CA-26.5 n'est pas tranché — sans quoi on ajouterait du
+  réseau fantôme à un modèle qu'on vient de rendre conforme à ACCESSFOR. Le banc est **`wsfi`**
+  (MNT 0,50 m), Chastel-Nouvel étant disqualifié pour cause de MNT à 5 m.
 
 ## Avancement par lot
 
@@ -277,18 +288,19 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 
 ## Prochaine étape
 
-Le spec `specs/004-cable.md` est validé (2026-07-12). Implémenter le **Lot 4 — noyau
-câble (Rust)** par incréments :
+*(Section réécrite le 2026-07-31. Elle décrivait encore le Lot 4 — noyau câble —, clos depuis
+`v0.13.0`. Une « prochaine étape » périmée est pire qu'absente : elle envoie rejouer un chantier
+déjà livré.)*
 
-- **4a** — caténaire élastique (`f_x`, `f_z`, Jacobien analytique) + Newton-Raphson
-  (`newton_ThTv`, `find_ThTvTmax`) en Rust, `cargo test` contre les valeurs de référence
-  du `.pyx`, binding `extendr`, test d'intégration R. Le cœur numérique.
-- **4b** — faisabilité d'une travée : tension ≤ `Tmax`, garde au sol via `calcul_zs`.
-- **4c** — optimisation des supports intermédiaires (0…3), `rayon`.
-- **4d** — balayage 360°/pixel, orchestration R (`potentiel_cable()`), tuilage (Lot 7).
-
-Chaque incrément est mergeable seul ; 4a livre la mécanique, 4d la carte. Release
-visée `v0.6.0` (nouveau moteur).
+1. **Jouer le banc `wsfi`** (`data-raw/banc_wsfi_026.R`) pour trancher le **CA-26.5**. C'est le
+   seul blocage de la spec 026, et il commande l'injection de la desserte détectée dans
+   `reseau_desserte()`. Le banc mesure sur MNT **0,50 m** avec canal de surface (4 dalles COPC),
+   là où Chastel-Nouvel n'offrait que 5 m.
+2. **Couper la release `1.29.0`** sur la spec 027, complète depuis que le CA-27.1 est
+   effectivement tenu. Elle emporte aussi 025 et 028, déjà mergées.
+3. **Selon le verdict du CA-26.5** : injection dans `reseau_desserte()` au tarif de réouverture
+   (spec 026 §5.4) → `1.30.0`, ou troisième banc plus vaste (bloc `ltcp`, 25 dalles) si `wsfi`
+   ne tranche pas.
 
 Le portage Rust des moteurs **terrestres** reste **après le tuilage** : à l'échelle du
 département, le Lot 7 suffit (cf. § performance).
@@ -392,6 +404,41 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-07-31 — CA-27.1 **complété** (deux `acquire_*` sans contrôle), banc `wsfi` désigné
+
+**Le trou.** La première livraison de la spec 027 (`v1.28.0.9000`, PR #139) déclarait le CA-27.1
+tenu — « toute fonction `acquire_*` écrit un sidecar de provenance ». Elle ne l'était pas :
+`acquire_mnt_rgealti()` et `acquire_cadastre()` servaient leur cache **sans aucun contrôle**.
+L'ironie tient à la première : elle a été écrite *en réponse* à l'incident du MNT blocky. Un cache
+à 5 m aurait été servi à qui demande 1 m — le même scénario, à la résolution près. Pour
+`acquire_cadastre()`, `country` change la couche source : un cache FR servi à un appel CH aurait
+rendu du parcellaire du mauvais pays, sans rien pour le signaler.
+
+**La cause n'est pas l'oubli, c'est la forme du test.** `test-cache-provenance.R` vérifiait
+**quelques** fonctions ; un test qui vérifie « la plupart » ne peut pas détecter un trou. Il
+**énumère** désormais la liste des fonctions d'acquisition en cache et échoue sur toute fonction
+sans `politique_cache`. C'est la garde qui rend le CA-27.1 vérifiable, pas la correction elle-même.
+
+**Décisions §7 de la spec 027 tranchées** (2026-07-30) : défaut `"reacquerir"` (un avertissement se
+noie dans la sortie d'un banc — c'est exactement ce qui s'est produit avec le MNT) ; bancs de
+`data-raw/` en `"echouer"` ; **empreinte `sha256` non retenue** — coûteuse sur un MNT de 250 Mo et
+elle détecterait une corruption, pas le défaut visé, qui est un cache *intact* produit avec
+d'autres paramètres (aucun des cinq incidents du §1 n'aurait été pris par une empreinte) ;
+**pas de purge de migration** — un cache sans sidecar est déjà traité comme divergent (CA-27.3),
+donc ré-acquis au défaut. Choix conforté par la perte irréversible d'une entrée de banc le
+2026-07-31 : **le code ne supprime pas de données d'entrée.**
+
+**Spec 026 — la première explication du 0/0 était fausse.** Le balayage sur Chastel-Nouvel rend
+3 linéaires à 0,4 (134 m) et **zéro au-delà**. L'explication d'abord retenue — « le corridor de
+15 m ne laisse plus de surface à explorer » — est **réfutée** : hors corridor, il reste
+**6,03 km² sur 7,21, soit 83,7 %** de l'emprise. (La densité invoquée à l'appui, « 44 tronçons sur
+1 km² », mélangeait le linéaire — 44,64 km — et un décompte d'objets ; la valeur réelle est
+197 objets sur 7,21 km².) **La cause probable est la résolution du MNT** : aucun MNT plus fin que
+5 m n'existe pour Chastel-Nouvel, et `detecter_desserte()` **avertit lui-même au-delà de 1,5 m**.
+Le balayage a tourné à 3,3× le seuil de son propre garde-fou — le motif exact du faux négatif
+ALSroads (0/22 à 5 m, 22/22 à 1 m) : **conclure à l'échec d'un détecteur qu'on n'a jamais
+alimenté correctement.**
 
 ### 2026-07-29 — CA-24.5 atteint, RGE ALTI par WMS **banni**, deux diagnostics
 

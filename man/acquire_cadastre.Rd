@@ -9,7 +9,8 @@ acquire_cadastre(
   crs = 2154,
   cache_dir = tempdir(),
   overwrite = FALSE,
-  country = "FR"
+  country = "FR",
+  politique_cache = "reacquerir"
 )
 }
 \arguments{
@@ -22,6 +23,12 @@ acquire_cadastre(
 \item{overwrite}{Re-télécharger même si le cache existe. Défaut \code{FALSE}.}
 
 \item{country}{Code pays ISO. Défaut \code{"FR"}.}
+
+\item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
+paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
+le cache en nommant ce qui diverge, \code{"echouer"} interrompt, \code{"ignorer"}
+désactive le contrôle. Un cache \strong{sans provenance} (antérieur à la v1.29.0)
+compte comme divergent. Cf. \code{\link[=cache_utilisable]{cache_utilisable()}} et \code{specs/027}.}
 }
 \value{
 Un objet \code{sf} de polygones de parcelles.
