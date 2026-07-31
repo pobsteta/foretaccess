@@ -1,3 +1,94 @@
+# foretaccess 2.0.0 (2026-07-31)
+
+Deuxième version **majeure**. Le sens du bump n'est pas « périmètre atteint »
+mais **« les résultats antérieurs ne sont plus reproductibles »** — dans la
+tradition de `v1.0.0`, qui signifiait « validée contre le vrai moteur ». Deux
+défauts d'acquisition, chacun capable de fausser un banc entier sans rien
+signaler, sont corrigés. **Tout cache antérieur est invalide, et tout chiffre
+publié avec est suspect.**
+
+## Les deux ruptures
+
+**Le WFS perdait des tronçons sur les grandes emprises.** Mesure sur l'AOI
+oracle : une requête unique sur un buffer de 1 600 m rendait 1 380 features dont
+**86 seulement** touchaient l'AOI stricte — contre **245** en découpant la même
+emprise en quadrants. Autrement dit, **élargir l'emprise faisait disparaître 110
+tronçons intérieurs**. La perte n'est pas aléatoire : le WFS rend les features
+dans son ordre interne, pas spatial, et rien ne le signale. Un réseau amputé
+produit des composantes orphelines fictives et des surfaces déclarées
+inaccessibles à tort. Corrigé par pavage + déduplication. Portée : desserte,
+obstacles, forêt, cadastre — toute acquisition WFS sur une AOI de plus de ~2 km.
+
+**Le RGE ALTI par WMS est banni.** Il rendait un MNT *blocky* dont la médiane de
+pente tombait à 18,89 % (maximum 382 %) contre 40,99 % pour le LiDAR HD sur la
+même AOI. Il a fait tourner le banc oracle **deux semaines sur un terrain
+fictif**. Remplacé par les dalles départementales (`acquire_mnt_rgealti()`), dont
+la distribution de pente est quasi identique au LiDAR HD (39,96 % contre
+40,99 %).
+
+## Provenance des caches (spec 027)
+
+**La spec 027 existe à cause des deux ruptures ci-dessus.** Un cache est nommé
+d'après ce qu'il *contient*, jamais d'après ce qui l'a *produit* : toute
+correction du code est donc annulée en silence pour quiconque possède déjà un
+cache. Cinq incidents en deux jours, tous de cette cause.
+
+Chaque fonction `acquire_*` écrit désormais un **sidecar de provenance** et
+contrôle à la relecture ; `politique_cache` décide (`"reacquerir"` par défaut,
+`"avertir"`, `"echouer"` pour les bancs, `"ignorer"`). Un cache **sans** sidecar
+est traité comme divergent — la migration se fait d'elle-même, sans rien
+détruire.
+
+Le CA-27.1 a d'abord été déclaré tenu **à tort** : `acquire_mnt_rgealti()` et
+`acquire_cadastre()` servaient leur cache sans aucun contrôle — dont, ironie,
+celle écrite *en réponse* à l'incident du MNT. La cause n'était pas l'oubli mais
+la forme du test, qui vérifiait **quelques** fonctions ; il les **énumère**
+désormais.
+
+## Desserte OSM, gisement validé (spec 028)
+
+`acquire_desserte_osm()` complète la BD TOPO par les `track` OSM hors corridor.
+**CA-28.5 atteint** par annotation sur ortho IGN actuelle **et historique**, 24
+tronçons, 13,41 km :
+
+| verdict | n | km | % du linéaire |
+|---|---:|---:|---:|
+| `piste` | 20 | 12,46 | **92,9 %** |
+| `non_piste` | 2 | 0,59 | 4,4 % |
+| `doute` | 2 | 0,36 | 2,7 % |
+
+## Intégrité du réseau (spec 025)
+
+Les deux contraintes d'ACCESSFOR — classe 1 connectée à 2 ou 3, classe 2
+connectée à 3 — sont vérifiables, et les infractions **réelles** écartables sur
+option (CA-25.6).
+
+## Desserte détectée sur MNT — partielle et assumée (spec 026)
+
+`detecter_desserte()` est livrée, **l'injection dans `reseau_desserte()` ne l'est
+pas** : elle attend le CA-26.5, faute de quoi on ajouterait du réseau fantôme à
+un modèle qu'on vient de rendre conforme à ACCESSFOR.
+
+**La détection ne dépend plus de l'emprise qu'on lui passe.** Elle rendait des
+résultats différents pour le même terrain selon l'étendue soumise — la même
+fenêtre de 0,25 km² rendait **116 m** analysée seule et **0 m** analysée dans
+4 km². Le `seuil` n'était pas une quantité absolue mais un **rang dans
+l'emprise**. Deux mécanismes indépendants, aucun suffisant seul : bornes
+d'appartenance dérivées des quantiles de la donnée reçue, et `c` de Frangi dérivé
+du maximum de norme de Hessien **de l'image**, en amont des bornes donc hors de
+leur portée. **Corrigé en amont dans dessertR 1.1.0** à la suite de cet audit ;
+`specs_desserte_calibrees()` porte une calibration de référence figée.
+
+**Le CA-26.5 n'est pas tranché**, et son protocole a été **réécrit** : l'ancien
+balayait `seuil` en tenant l'emprise pour neutre, il mesurait un artefact. Le
+nouveau publie six préconditions **avant** ses chiffres et porte un seuil de
+recevabilité chiffré avec condition de rejet. Première mesure conforme sur
+`wsfi` : **0,078 km/km² contre 0,5 exigé**, il manque un facteur 6,4.
+
+**Dépendance** : `dessertR >= 1.1.0` pour l'ancrage (`c_vessel`). En deçà, la
+détection reste relative à l'emprise et le paquet **avertit** au lieu de replier
+en silence.
+
 # foretaccess 1.28.0 (2026-07-29)
 
 ## Desserte : la classification suit la règle ACCESSFOR **publiée** (spec 024)

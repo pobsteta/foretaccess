@@ -414,6 +414,32 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-07-31 — `v2.0.0` : les résultats antérieurs ne sont plus reproductibles
+
+**Deuxième version majeure.** Le sens du bump suit la tradition de `v1.0.0`
+(« validée contre le vrai moteur ») : il ne dit pas « périmètre atteint » mais
+**« purgez vos caches »**. Deux commits `!` le justifient, tous deux des défauts
+d'acquisition capables de fausser un banc entier sans rien signaler :
+
+- **le WFS perdait des tronçons sur les grandes emprises** — 86 features contre
+  245 en pavant la même AOI, soit **110 tronçons intérieurs disparus en
+  élargissant l'emprise**. Corrigé par pavage + déduplication ;
+- **le RGE ALTI par WMS est banni** — MNT *blocky*, médiane de pente 18,89 %
+  contre 40,99 % pour le LiDAR HD, maximum à 382 %. Il a fait tourner le banc
+  oracle deux semaines sur un terrain fictif.
+
+Bump majeur **confirmé par l'utilisateur** (règle CLAUDE.md). Ni l'un ni l'autre
+ne retire d'API — le `NAMESPACE` est inchangé ou enrichi — mais tous deux cassent
+la **reproductibilité des résultats**, ce qui pour un paquet scientifique est la
+rupture qui compte.
+
+La release emporte **025** (intégrité du réseau), **027** (provenance des
+caches), **028** (desserte OSM, CA-28.5 atteint à 92,9 %) et **026** en état
+partiel assumé. Cohérence à relever : **la spec 027 existe à cause des deux
+ruptures** — les caches produits par le WFS amputé et par le RGE ALTI blocky
+étaient indiscernables des bons. La release corrige les défauts et livre en même
+temps le mécanisme qui les aurait détectés.
+
 ### 2026-07-31 — CA-27.1 **complété** (deux `acquire_*` sans contrôle), banc `wsfi` désigné
 
 **Le trou.** La première livraison de la spec 027 (`v1.28.0.9000`, PR #139) déclarait le CA-27.1
