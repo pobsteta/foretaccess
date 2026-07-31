@@ -307,7 +307,12 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
 # traite une dalle a la fois) mosaiquees, puis sigma_surf (entree de dsr_etat) et
 # densite_sol (confiance du MNT, entree de CONFIANCE_MNT). Les deux sortent des
 # memes couches : on ne les calcule qu'une fois. Champs a NULL si aucune dalle.
-.dsr_canaux_dalles <- function(laz, grille) {
+# `specs` NULL = specs par defaut de dessertR (bornes derivees par quantiles).
+# Le chemin `acquire_desserte_lidar()` le laisse a NULL : la MESURE d'un troncon
+# connu n'est pas la DETECTION d'un troncon inconnu, et rien ne dit que les
+# bornes calibrees pour la seconde conviennent a la premiere. Ne pas changer un
+# banc valide (Phase B) par effet de bord d'un correctif de detection.
+.dsr_canaux_dalles <- function(laz, grille, specs = NULL) {
   vide <- list(sigma_surf = NULL, confiance = NULL)
   laz <- laz[file.exists(laz)]
   if (length(laz) == 0L) {
@@ -326,7 +331,13 @@ acquire_desserte_lidar <- function(desserte, las_source, mnt, mnh = NULL,
     do.call(terra::mosaic, c(couches, list(fun = "mean")))
   }
   list(
-    sigma_surf = tryCatch(.dsr("dsr_sigma_surf")(cp), error = function(e) NULL),
+    sigma_surf = tryCatch(
+      if (is.null(specs)) {
+        .dsr("dsr_sigma_surf")(cp)
+      } else {
+        .dsr("dsr_sigma_surf")(cp, specs = specs)
+      },
+      error = function(e) NULL),
     # Source recommandee par dessertR pour CONFIANCE_MNT (cf. ?dsr_measure).
     confiance = if ("densite_sol" %in% names(cp)) cp[["densite_sol"]] else NULL
   )

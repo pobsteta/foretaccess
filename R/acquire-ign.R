@@ -254,11 +254,19 @@
 #' @seealso [acquire_mnt()] (LIDAR HD, source par défaut).
 #' @export
 acquire_mnt_rgealti <- function(aoi, dep, res_m = 5, crs = 2154,
-                                cache_dir = tempdir(), overwrite = FALSE) {
+                                cache_dir = tempdir(), overwrite = FALSE,
+                                politique_cache = "reacquerir") {
   checkmate::assert_string(dep, min.chars = 2, max.chars = 3)
   checkmate::assert_choice(as.integer(res_m), c(1L, 5L))
   chemin <- .chemin_cache(cache_dir, "mnt_rgealti", "tif")
-  if (file.exists(chemin) && !overwrite) {
+  # La provenance importe DOUBLEMENT ici : cette fonction existe parce qu'un
+  # cache MNT indiscernable (RGE ALTI par WMS, blocky) a fait tourner le banc
+  # deux semaines sur un terrain fictif. Un cache a 5 m servi a qui demande 1 m
+  # rejouerait le meme scenario, resolution en moins.
+  prov <- list(dep = dep, res_m = as.integer(res_m), crs = crs)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "mnt_rgealti", "rgealti-dalles-dep", prov,
+        politique_cache)) {
     return(chemin)
   }
   # nocov start : reseau + archive lourde, hors CI (valide sur le dep 48).
@@ -278,6 +286,7 @@ acquire_mnt_rgealti <- function(aoi, dep, res_m = 5, crs = 2154,
   aoi_c <- sf::st_transform(sf::st_geometry(sf::st_as_sf(aoi)), crs)
   mos <- terra::crop(mos, terra::vect(aoi_c), snap = "out")
   terra::writeRaster(mos, chemin, overwrite = TRUE)
+  .provenance_ecrire(chemin, "mnt_rgealti", "rgealti-dalles-dep", prov)
   chemin
   # nocov end
 }
@@ -661,17 +670,23 @@ acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' @return Un objet `sf` de polygones de parcelles.
 #' @export
 acquire_cadastre <- function(aoi, crs = 2154, cache_dir = tempdir(),
-                             overwrite = FALSE, country = "FR") {
+                             overwrite = FALSE, country = "FR",
+                             politique_cache = "reacquerir") {
   chemin <- .chemin_cache(cache_dir, "cadastre", "gpkg")
-  if (file.exists(chemin) && !overwrite) {
-    return(sf::st_read(chemin, quiet = TRUE))
-  }
   info <- get_layer_service("cadastre", country)
   if (is.null(info)) {
     cli::cli_abort("Couche {.val cadastre} introuvable pour le pays {.val {country}}.")
   }
+  # `country` change la couche source : un cache FR servi a un appel CH serait
+  # du parcellaire du mauvais pays, sans rien pour le signaler.
+  prov <- list(crs = crs, country = country)
+  if (file.exists(chemin) && !overwrite &&
+      cache_utilisable(chemin, "cadastre", info$typename, prov, politique_cache)) {
+    return(sf::st_read(chemin, quiet = TRUE))
+  }
   brut <- .fetch_wfs(aoi, info$typename)
   p <- .reprojeter_clip(brut, aoi, crs)
   sf::st_write(p, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, "cadastre", info$typename, prov)
   p
 }

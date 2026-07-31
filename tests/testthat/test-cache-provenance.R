@@ -167,3 +167,20 @@ test_that("acquire_inputs propage effectivement politique_cache", {
   expect_identical(recu$desserte, "echouer")
   expect_identical(recu$foret, "echouer")
 })
+
+# CA-27.1 : la couverture doit etre EXHAUSTIVE, pas « la plupart ».
+# `acquire_mnt_rgealti()` et `acquire_cadastre()` servaient leur cache sans
+# aucun controle jusqu'au 2026-07-31 -- et la premiere est precisement celle
+# ecrite en reponse a l'incident du MNT blocky. Un test qui enumere les
+# fonctions au lieu d'en verifier quelques-unes rend le trou detectable.
+test_that("toute fonction d'acquisition en cache accepte politique_cache", {
+  attendues <- c("acquire_mnt", "acquire_mnt_rgealti", "acquire_desserte",
+    "acquire_foret", "acquire_obstacles", "acquire_obstacles_bdtopo",
+    "acquire_dfci", "acquire_cadastre", "acquire_desserte_osm",
+    "acquire_inputs")
+  sans <- Filter(function(f) {
+    !("politique_cache" %in% names(formals(get(f, envir = asNamespace("foretaccess")))))
+  }, attendues)
+  expect_identical(sans, character(0),
+    info = paste("sans politique_cache :", paste(sans, collapse = ", ")))
+})

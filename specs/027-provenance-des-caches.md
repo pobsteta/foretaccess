@@ -1,6 +1,7 @@
 # specs/027 — Marqueur de **provenance** dans les caches d'acquisition
 
-> **Statut** : **PROPOSÉE** — décisions §7 à prendre. Version cible : `1.29.0`
+> **Statut** : **IMPLÉMENTÉE** (`R/cache-provenance.R`, 2026-07-30 ; couverture
+> complétée le 2026-07-31). Version cible : `1.29.0`
 > (feat). Transversale : concerne toutes les fonctions `acquire_*`.
 > **Origine** : **cinq incidents en deux jours** (2026-07-29/30), tous de la même
 > cause. Aucun ne s'est signalé ; trois ont fait circuler des résultats faux.
@@ -107,16 +108,20 @@ invaliderait des caches sains et pousserait à mettre `politique_cache =
 
 ## 5. Critères d'acceptation
 
-- [ ] **CA-27.1** — Toute fonction `acquire_*` écrit un sidecar de provenance.
-- [ ] **CA-27.2** — À la relecture, une divergence de paramètre déclenche le
-      comportement de `politique_cache` ; le défaut ré-acquiert.
-- [ ] **CA-27.3** — Un cache **sans sidecar** (antérieur) est traité comme
-      divergent, avec un message distinct de celui d'une divergence connue.
-- [ ] **CA-27.4** — Les cinq incidents du §1 sont rejoués en test et **détectés**
-      chacun : classification changée, filtre landes, couche MNT différente,
-      tuilage WFS, et l'absence de sidecar.
-- [ ] **CA-27.5** — `politique_cache = "ignorer"` reproduit **bit-pour-bit** le
-      comportement actuel.
+- [x] **CA-27.1 — TENU** (complété le 2026-07-31). Toute fonction `acquire_*`
+      écrit un sidecar et contrôle à la relecture. **La première livraison ne le
+      tenait pas** : `acquire_mnt_rgealti()` et `acquire_cadastre()` servaient
+      leur cache sans aucun contrôle — dont, ironiquement, celle écrite *en
+      réponse* à l'incident du MNT blocky. Un cache à 5 m aurait été servi à qui
+      demande 1 m, rejouant le même scénario à la résolution près. Le trou tenait
+      à un test qui vérifiait **quelques** fonctions au lieu de les **énumérer** ;
+      il énumère désormais (`test-cache-provenance.R`).
+- [x] **CA-27.2 — TENU** — divergence → comportement de `politique_cache` ; le
+      défaut `"reacquerir"` ré-acquiert.
+- [x] **CA-27.3 — TENU** — cache sans sidecar traité comme divergent, message
+      distinct (`"sidecar_absent"`).
+- [x] **CA-27.4 — TENU** — les cinq incidents du §1 sont rejoués et détectés.
+- [x] **CA-27.5 — TENU** — `"ignorer"` reproduit le comportement antérieur.
 
 ## 6. Portée
 
@@ -125,17 +130,20 @@ invaliderait des caches sains et pousserait à mettre `politique_cache =
 `acquire_dfci()`, `acquire_cadastre()`, `.acquire_retournements()`, et
 `acquire_inputs()` qui doit propager `politique_cache`.
 
-## 7. Décisions à prendre
+## 7. Décisions prises (2026-07-30)
 
-1. **Défaut à `"reacquerir"` ou `"avertir"` ?** Je penche pour `"reacquerir"` :
-   un avertissement dans un script de banc se noie dans la sortie, et c'est
-   précisément ce qui s'est produit avec le MNT.
-2. **Les bancs de `data-raw/` doivent-ils forcer `"echouer"` ?** Ce sont eux qui
-   publient des chiffres ; un cache périmé y est plus grave qu'ailleurs.
-3. **Empreinte du fichier** (`sha256`) : utile pour détecter une corruption ou
-   une édition manuelle, mais coûteuse sur un MNT de 250 Mo. À calculer, ou pas ?
-4. **Migration** : purger les caches existants à la première exécution, ou les
-   laisser vivre en `"avertir"` le temps d'une version ?
+1. **Défaut `"reacquerir"`** — retenu. Un avertissement dans un script de banc se
+   noie dans la sortie, et c'est précisément ce qui s'est produit avec le MNT.
+2. **Bancs de `data-raw/` en `"echouer"`** — retenu : ce sont eux qui publient
+   des chiffres, un cache périmé y est plus grave qu'ailleurs.
+3. **Empreinte `sha256` : NON retenue.** Coûteuse sur un MNT de 250 Mo, et elle
+   détecterait une corruption ou une édition manuelle — pas le défaut visé, qui
+   est un cache *intact* produit avec d'autres paramètres. Aucun des cinq
+   incidents du §1 n'aurait été pris par une empreinte.
+4. **Migration : pas de purge.** Un cache sans sidecar est traité comme divergent
+   (CA-27.3), donc ré-acquis au défaut — la migration se fait d'elle-même, sans
+   détruire quoi que ce soit. Choix conforté par la perte irréversible d'une
+   entrée de banc le 2026-07-31 : le code ne supprime pas de données d'entrée.
 
 ## 8. Sources
 

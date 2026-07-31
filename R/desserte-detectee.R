@@ -15,6 +15,80 @@
 # etant « faible ou noyee dans les traces fossiles ». La couche rendue est
 # CANDIDATE : elle doit passer `qualifier_desserte()` avant tout usage.
 
+#' Calibration de référence de la détection (spec 026)
+#'
+#' Specs **absolues** et `c_vessel` figés sur un jeu de référence, pour que le
+#' `seuil` de [detecter_desserte()] désigne la même chose d'un site à l'autre.
+#'
+#' @details
+#' **Pourquoi figer.** `dessertR::dsr_calibrer_specs()` calibre sur les données
+#' qu'on lui donne : appelé par AOI, il rendrait des specs justes localement mais
+#' **incomparables entre sites**, ce qui est précisément ce que le CA-26.5
+#' interdit. On calibre donc **une fois**, sur un jeu de référence, et on fige.
+#'
+#' **Valeurs produites par** `data-raw/calibrer_bornes_dsr.R` contre **dessertR
+#' 1.1.0**, sur la dalle `LHD_FXX_0737_6385` (Chastel-Nouvel, 1 km², 32 tronçons,
+#' 7 561 m de desserte BD TOPO `piste` + `route`). Onze canaux retenus, AUC de
+#' 0,826 (`taux_penetration`) à 0,572 (`svf`).
+#'
+#' **Ordre de calibration, qui n'est pas indifférent** : `c_vessel` est mesuré
+#' **avant** la pile, et la pile construite avec — sinon les bornes seraient
+#' calibrées sur une vesselness elle-même relative à l'emprise, et le défaut
+#' réapparaîtrait un cran plus bas.
+#'
+#' **`densite_sousetage` est écarté**, bien que `dsr_calibrer_specs()` le
+#' retienne (AUC 0,565). Motif : ses bornes sortent **indéterminées**
+#' (`a = NA, b = NA`), les deux populations étant à zéro en médiane. Le garder le
+#' ferait retomber sur la dérivation par quantiles, donc **réintroduirait la
+#' dépendance à l'emprise** sur ce canal — l'inverse du but. Ce n'est pas un
+#' jugement sur sa valeur : dessertR 1.1.0 note qu'il mesure un **état** et non
+#' la présence d'une route, « une route recolonisée reste une route ».
+#'
+#' **Portée — un seul massif.** Lozère, 830–1 260 m, forêt de montagne. dessertR
+#' 1.1.0 calibre sur **deux** massifs ; nous n'en avons qu'un, et il recouvre le
+#' bloc `wsfi` à 54 %. Ces valeurs sont **provisoires** : elles ancrent, elles ne
+#' généralisent pas. `specs = NULL` dans [detecter_desserte()] restaure les
+#' défauts dessertR.
+#'
+#' @return Une liste : `geomorpho` (pour `dessertR::dsr_conductivite()`),
+#'   `surface` (pour `dessertR::dsr_sigma_surf()`) et `c_vessel` (pour
+#'   `dessertR::dsr_layers_dtm()`, une valeur par échelle).
+#' @seealso [detecter_desserte()], `dessertR::dsr_calibrer_specs()`,
+#'   `dessertR::dsr_c_vessel()`, `specs/026`.
+#' @export
+specs_desserte_calibrees <- function() {
+  list(
+    geomorpho = list(
+      rugosite     = list(type = "croissante", a = 0.0402013732,
+                          b = 0.172684016, poids = 2),
+      pente        = list(type = "decroissante", a = 4.4913660574,
+                          b = 20.256017850, poids = 2),
+      vesselness   = list(type = "croissante", a = 0.0006361408,
+                          b = 0.070831439, poids = 2),
+      openness_pos = list(type = "decroissante", a = 81.4344019229,
+                          b = 86.632451057, poids = 1),
+      slrm         = list(type = "decroissante", a = -0.2492187500,
+                          b = 0.007807821, poids = 1),
+      openness_neg = list(type = "croissante", a = 86.9214112193,
+                          b = 89.202206074, poids = 1),
+      svf          = list(type = "croissante", a = 0.8552256750,
+                          b = 0.914393904, poids = 1)
+    ),
+    surface = list(
+      taux_penetration = list(type = "croissante", a = 0.1290322581, b = 1,
+                              poids = 3),
+      densite_sol      = list(type = "croissante", a = 6, b = 29, poids = 3),
+      h_couvert        = list(type = "decroissante", a = 6.8340001106,
+                              b = 13.803000450, poids = 2)
+    ),
+    # `dsr_c_vessel()` sur l'emprise de reference. Sans lui, les bornes
+    # ci-dessus ne suffiraient pas : `dsr_frangi()` prend
+    # `c = 0,5 * max(norme de Hessien) DU RASTER FOURNI`, en amont des
+    # appartenances. Relaye par `dsr_layers_dtm(c_vessel = )` depuis la 1.1.0.
+    c_vessel = c(c_1 = 0.3541673, c_2 = 0.7593123, c_4 = 1.2454072)
+  )
+}
+
 #' Détecte la desserte absente de la référence, sur le MNT (spec 026)
 #'
 #' Cherche dans le **micro-relief** les linéaires que la BD TOPO ne porte pas :
@@ -53,23 +127,38 @@
 #'   dénominateur du taux de faux positifs vers les zones déjà intéressantes — et
 #'   `corridor` en production.
 #' @param dtm_res Résolution (m) de la grille de référence. Défaut 1.
+#' @param specs Bornes d'appartenance, voir [specs_desserte_calibrees()] (défaut).
+#'   **`NULL` restaure les specs de dessertR**, dont les bornes sont dérivées par
+#'   quantiles de l'emprise — le `seuil` cesse alors d'être comparable d'un site
+#'   à l'autre.
 #' @return Un `sf` de `LINESTRING` avec `source = "detectee"` et `p_desserte`.
-#'   Sans `dessertR`, une couche vide et un message — jamais d'échec.
+#'   Sans `dessertR`, une couche vide et un message — jamais d'échec. L'attribut
+#'   **`canal_surface`** (logique) dit si le canal de surface a réellement été
+#'   calculé : il est présent sur **toute** sortie, vide comprise, pour qu'un
+#'   résultat nul se lise sans ambiguïté.
 #' @seealso [detecter_desserte_balayage()], [qualifier_desserte()],
 #'   [acquire_desserte_osm()], `specs/026`.
 #' @export
 detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
                               seuil = 0.6, buffer_ref = 15, long_min = 30,
-                              emprise = NULL, dtm_res = 1) {
+                              emprise = NULL, dtm_res = 1,
+                              specs = specs_desserte_calibrees()) {
   checkmate::assert_number(seuil, lower = 0, upper = 1)
-  vide <- sf::st_sf(source = character(0), p_desserte = numeric(0),
-    geometry = sf::st_sfc())
+  # `canal_surface` porte sur TOUTES les sorties, y compris vides : un appelant
+  # qui recoit zero lineaire doit pouvoir distinguer « rien detecte » de « rien
+  # detecte, et sans le canal que dessertR pondere double ».
+  vide <- function(canal = FALSE) {
+    v <- sf::st_sf(source = character(0), p_desserte = numeric(0),
+      geometry = sf::st_sfc())
+    attr(v, "canal_surface") <- canal
+    v
+  }
   if (!.dessertr_dispo()) {
     cli::cli_inform(c(
       "!" = "Detection indisponible ({.pkg dessertR} absent) : couche vide.",
       "i" = "{.code remotes::install_github(\"pobsteta/dessertR\")}"
     ))
-    return(vide)
+    return(vide())
   }
   # nocov start : chemin dessertR, hors CI (valide sur dalle reelle).
   r <- .as_raster(mnt, "mnt")
@@ -82,17 +171,46 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
     ))
   }
   grille <- .dsr("dsr_grille_reference")(r, res = dtm_res)
-  pile <- .dsr("dsr_layers_dtm")(r, grille = grille)
-  sigma_geo <- .dsr("dsr_conductivite")(pile)
+  # `c_vessel` ancre la vesselness AVANT toute appartenance : `dsr_frangi()`
+  # derive sinon son `c` du maximum de l'image, en amont des bornes, et aucune
+  # borne ne le rattrape. Relaye jusqu'ici depuis dessertR 1.1.0 -- d'ou la
+  # garde : sur une 1.0.x, `dsr_layers_dtm(c_vessel = )` echouerait sur un
+  # argument inconnu, et un repli SILENCIEUX rendrait une detection relative a
+  # l'emprise sans que rien ne le dise.
+  ancrable <- !is.null(specs) && !is.null(specs$c_vessel) &&
+    "c_vessel" %in% names(formals(.dsr("dsr_layers_dtm")))
+  if (!is.null(specs) && !is.null(specs$c_vessel) && !ancrable) {
+    cli::cli_warn(c(
+      "!" = "{.pkg dessertR} {utils::packageVersion(.PKG_DESSERTR)} n'expose pas
+             {.arg c_vessel} : la vesselness reste relative a l'emprise.",
+      "i" = "Installer {.pkg dessertR} >= 1.1.0 pour que {.arg seuil} soit
+             comparable d'un site a l'autre."
+    ))
+  }
+  pile <- if (ancrable) {
+    .dsr("dsr_layers_dtm")(r, grille = grille, c_vessel = specs$c_vessel)
+  } else {
+    .dsr("dsr_layers_dtm")(r, grille = grille)
+  }
+  # Les bornes CALIBREES sont ce qui rend `seuil` absolu. Sans elles,
+  # `dsr_appartenance()` ancre chaque canal sur les quantiles de l'emprise
+  # fournie, et le meme terrain rend des detections differentes selon le
+  # decoupage (mesure : 116 m sur 0,25 km2 analyses seuls, 0 m sur la meme
+  # fenetre dans 4 km2). `specs = NULL` restaure le comportement dessertR.
+  sigma_geo <- if (is.null(specs)) {
+    .dsr("dsr_conductivite")(pile)
+  } else {
+    .dsr("dsr_conductivite")(pile, specs = specs$geomorpho)
+  }
   vess <- if ("vesselness" %in% names(pile)) pile[["vesselness"]] else NULL
 
-  # Canal de surface : c'est LUI qui porte le signal. Sans nuage, dessertR
-  # previent que la detection est « nettement moins sure ».
+  # Canal de surface : c'est LUI qui porte le signal -- AUC 0,870 sur
+  # `taux_penetration`, le meilleur des quatre canaux calibres.
   sigma_surf <- NULL
   if (!is.null(las_source)) {
     dalles <- tryCatch(.dsr("dsr_catalog")(laz = las_source), error = function(e) NULL)
     laz <- if (!is.null(dalles) && !is.null(dalles$laz)) as.character(dalles$laz) else character(0)
-    sigma_surf <- .dsr_canaux_dalles(laz, grille)$sigma_surf
+    sigma_surf <- .dsr_canaux_dalles(laz, grille, specs = specs$surface)$sigma_surf
   }
   if (is.null(sigma_surf)) {
     # Pas de guillemets francais ICI : R CMD check refuse le non-ASCII dans un
@@ -114,14 +232,23 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
     }
   )
   if (is.null(det) || nrow(sf::st_as_sf(det)) == 0) {
-    return(vide)
+    return(vide(!is.null(sigma_surf)))
   }
   out <- sf::st_as_sf(det)
   out$source <- "detectee"
   if (!("p_desserte" %in% names(out))) {
     out$p_desserte <- NA_real_
   }
-  out[, c("source", "p_desserte"), drop = FALSE]
+  out <- out[, c("source", "p_desserte"), drop = FALSE]
+  # L'attribut, pas seulement l'avertissement : `cli_warn` produit une condition
+  # que R DIFFERE jusqu'au retour au niveau superieur. Dans un `Rscript`, le
+  # « Detection sans canal de surface » n'apparait donc qu'a la toute fin -- le
+  # balayage wsfi du 2026-07-31 a tourne 82 min sans qu'on puisse savoir, en
+  # cours de route, si le canal pondere DOUBLE etait la. Un banc doit pouvoir
+  # l'affirmer, pas le supposer d'apres la presence de fichiers .laz sur le
+  # disque (un invariant qui passe a vide, cf. lecon Phase B).
+  attr(out, "canal_surface") <- !is.null(sigma_surf)
+  out
   # nocov end
 }
 
