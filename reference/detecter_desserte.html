@@ -63,6 +63,7 @@ pistes anciennes, cloisonnements, tracés effacés du couvert. Rend une couche
 <span>  long_min <span class="op">=</span> <span class="fl">30</span>,</span>
 <span>  emprise <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  methode <span class="op">=</span> <span class="st">"squelette"</span>,</span>
 <span>  specs <span class="op">=</span> <span class="fu"><a href="specs_desserte_calibrees.html">specs_desserte_calibrees</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -109,6 +110,17 @@ dénominateur du taux de faux positifs vers les zones déjà intéressantes — 
 
 <dt id="arg-dtm-res">dtm_res<a class="anchor" aria-label="anchor" href="#arg-dtm-res"></a></dt>
 <dd><p>Résolution (m) de la grille de référence. Défaut 1.</p></dd>
+
+
+<dt id="arg-methode">methode<a class="anchor" aria-label="anchor" href="#arg-methode"></a></dt>
+<dd><p>Vectoriseur, passé tel quel à <code>dessertR::dsr_detecter()</code>.
+<strong>Défaut <code>"squelette"</code>, nommé et non subi</strong> : depuis dessertR 1.1.0,
+<code>"auto"</code> résout vers <code>"agent"</code>, mais l'agent ne peut pas s'amorcer quand
+<code>buffer_ref &gt; 0</code> — <code>dsr_amorces()</code> filtre ses amorces sur <code>!is.na(p)</code> à
+l'extrémité des tronçons de référence, qui est précisément la zone que
+<code>dsr_indice_detection()</code> vient de masquer. <code>"auto"</code> replierait donc sur le
+squelette <strong>en silence</strong>, et la chaîne mesurée changerait sans préavis au
+jour où l'amont corrigera. Voir <code>specs/026</code> §6.0.1 (précondition P5).</p></dd>
 
 
 <dt id="arg-specs">specs<a class="anchor" aria-label="anchor" href="#arg-specs"></a></dt>

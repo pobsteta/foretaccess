@@ -16,6 +16,7 @@ detecter_desserte(
   long_min = 30,
   emprise = NULL,
   dtm_res = 1,
+  methode = "squelette",
   specs = specs_desserte_calibrees()
 )
 ```
@@ -63,6 +64,18 @@ detecter_desserte(
 - dtm_res:
 
   Résolution (m) de la grille de référence. Défaut 1.
+
+- methode:
+
+  Vectoriseur, passé tel quel à `dessertR::dsr_detecter()`. **Défaut
+  `"squelette"`, nommé et non subi** : depuis dessertR 1.1.0, `"auto"`
+  résout vers `"agent"`, mais l'agent ne peut pas s'amorcer quand
+  `buffer_ref > 0` — `dsr_amorces()` filtre ses amorces sur `!is.na(p)`
+  à l'extrémité des tronçons de référence, qui est précisément la zone
+  que `dsr_indice_detection()` vient de masquer. `"auto"` replierait
+  donc sur le squelette **en silence**, et la chaîne mesurée changerait
+  sans préavis au jour où l'amont corrigera. Voir `specs/026` §6.0.1
+  (précondition P5).
 
 - specs:
 
