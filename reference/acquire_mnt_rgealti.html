@@ -63,7 +63,8 @@ provenant du RGE Alti 5m converti en 32bit »</em>, téléchargé par départeme
 <span>  res_m <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  crs <span class="op">=</span> <span class="fl">2154</span>,</span>
 <span>  cache_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  politique_cache <span class="op">=</span> <span class="st">"reacquerir"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -93,6 +94,14 @@ provenant du RGE Alti 5m converti en 32bit »</em>, téléchargé par départeme
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
 <dd><p>Re-télécharger même si le cache existe. Défaut <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-politique-cache">politique_cache<a class="anchor" aria-label="anchor" href="#arg-politique-cache"></a></dt>
+<dd><p>Que faire d'un cache produit avec <strong>d'autres
+paramètres</strong> ? <code>"reacquerir"</code> (défaut) refait l'acquisition, <code>"avertir"</code> sert
+le cache en nommant ce qui diverge, <code>"echouer"</code> interrompt, <code>"ignorer"</code>
+désactive le contrôle. Un cache <strong>sans provenance</strong> (antérieur à la v1.29.0)
+compte comme divergent. Cf. <code><a href="cache_utilisable.html">cache_utilisable()</a></code> et <code>specs/027</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

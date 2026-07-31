@@ -15,7 +15,8 @@ detecter_desserte(
   buffer_ref = 15,
   long_min = 30,
   emprise = NULL,
-  dtm_res = 1
+  dtm_res = 1,
+  specs = specs_desserte_calibrees()
 )
 ```
 
@@ -63,10 +64,21 @@ detecter_desserte(
 
   Résolution (m) de la grille de référence. Défaut 1.
 
+- specs:
+
+  Bornes d'appartenance, voir
+  [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
+  (défaut). **`NULL` restaure les specs de dessertR**, dont les bornes
+  sont dérivées par quantiles de l'emprise — le `seuil` cesse alors
+  d'être comparable d'un site à l'autre.
+
 ## Value
 
 Un `sf` de `LINESTRING` avec `source = "detectee"` et `p_desserte`. Sans
-`dessertR`, une couche vide et un message — jamais d'échec.
+`dessertR`, une couche vide et un message — jamais d'échec. L'attribut
+**`canal_surface`** (logique) dit si le canal de surface a réellement
+été calculé : il est présent sur **toute** sortie, vide comprise, pour
+qu'un résultat nul se lise sans ambiguïté.
 
 ## Details
 

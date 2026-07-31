@@ -62,7 +62,8 @@ pistes anciennes, cloisonnements, tracés effacés du couvert. Rend une couche
 <span>  buffer_ref <span class="op">=</span> <span class="fl">15</span>,</span>
 <span>  long_min <span class="op">=</span> <span class="fl">30</span>,</span>
 <span>  emprise <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  dtm_res <span class="op">=</span> <span class="fl">1</span></span>
+<span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  specs <span class="op">=</span> <span class="fu"><a href="specs_desserte_calibrees.html">specs_desserte_calibrees</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -109,11 +110,21 @@ dénominateur du taux de faux positifs vers les zones déjà intéressantes — 
 <dt id="arg-dtm-res">dtm_res<a class="anchor" aria-label="anchor" href="#arg-dtm-res"></a></dt>
 <dd><p>Résolution (m) de la grille de référence. Défaut 1.</p></dd>
 
+
+<dt id="arg-specs">specs<a class="anchor" aria-label="anchor" href="#arg-specs"></a></dt>
+<dd><p>Bornes d'appartenance, voir <code><a href="specs_desserte_calibrees.html">specs_desserte_calibrees()</a></code> (défaut).
+<strong><code>NULL</code> restaure les specs de dessertR</strong>, dont les bornes sont dérivées par
+quantiles de l'emprise — le <code>seuil</code> cesse alors d'être comparable d'un site
+à l'autre.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Un <code>sf</code> de <code>LINESTRING</code> avec <code>source = "detectee"</code> et <code>p_desserte</code>.
-Sans <code>dessertR</code>, une couche vide et un message — jamais d'échec.</p>
+Sans <code>dessertR</code>, une couche vide et un message — jamais d'échec. L'attribut
+<strong><code>canal_surface</code></strong> (logique) dit si le canal de surface a réellement été
+calculé : il est présent sur <strong>toute</strong> sortie, vide comprise, pour qu'un
+résultat nul se lise sans ambiguïté.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

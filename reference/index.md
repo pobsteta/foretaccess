@@ -279,6 +279,9 @@ OpenStreetMap).
 - [`detecter_desserte_balayage()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte_balayage.md)
   : Balayage de seuils pour la détection (spec 026, CA-26.5)
 
+- [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
+  : Calibration de référence de la détection (spec 026)
+
 - [`comparer_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/comparer_desserte_osm.md)
   : Compare une desserte OSM à la BD TOPO (spec 028)
 
