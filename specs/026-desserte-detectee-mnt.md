@@ -123,6 +123,14 @@ raccrochable au tarif réouverture.
       chiffre la fonction n'est pas livrable : on ajouterait du réseau fantôme à
       un modèle qu'on vient de rendre conforme à ACCESSFOR.
 
+      **NON EXERÇABLE SUR L'AOI ORACLE** (mesure du 2026-07-31). Le balayage rend
+      **3 linéaires à 0,4 (134 m) et ZÉRO au-delà** : la dalle porte déjà 44
+      tronçons BD TOPO sur 1 km², et un corridor de 15 m autour de chacun ne
+      laisse presque plus de surface à explorer. Deux explications restent
+      indistinguables — dalle réellement bien cartographiée, ou détection qui
+      sous-performe. **Il faut une seconde AOI, moins densément desservie**, pour
+      trancher. Chastel-Nouvel n'est pas un banc valable pour cette spec.
+
 ## 7. Décisions prises (2026-07-29)
 
 1. **Seuil : balayage `0,4 → 0,8`, courbe publiée.** On ne pose pas un seuil, on
@@ -163,6 +171,27 @@ raccrochable au tarif réouverture.
    limites) ? Ça chiffre une part des faux positifs sans annotation humaine.
    **L'annotation reste nécessaire pour le reste** — ce recoupement la réduit, il
    ne la remplace pas, et le CA-26.5 n'est pas satisfait sans elle.
+
+5. **L'annotation se fait sur l'ortho HISTORIQUE, pas seulement l'actuelle**
+   (2026-07-31). Une piste effacée du couvert ne se voit **plus** aujourd'hui —
+   sinon la BD TOPO la porterait. Sur une photo prise quand le peuplement était
+   plus jeune, elle peut apparaître **en service**. L'IGN diffuse ces millésimes
+   par WMS (`https://data.geopf.fr/wms-r/wms`) :
+
+   | couche | usage |
+   |---|---|
+   | `ORTHOIMAGERY.ORTHOPHOTOS.1950-1965` | **la preuve décisive** : la piste en service |
+   | `ORTHOIMAGERY.ORTHOPHOTOS.1965-1980` | millésime intermédiaire |
+   | `ORTHOIMAGERY.ORTHOPHOTOS.BDORTHO` | état actuel du terrain |
+   | `ORTHOIMAGERY.ORTHOPHOTOS.IRC-EXPRESS.<année>` | infrarouge, la végétation ressort |
+
+   Un linéaire détecté dans le micro-relief **et** visible sur une photo de 1960
+   est une piste ancienne, sans discussion. Détecté sans rien sur aucun millésime,
+   il reste douteux — terrasse, limite parcellaire, trace fossile.
+
+   Corollaire de méthode : **ne pas regarder `tracktype` avant de trancher**.
+   Renseigné une fois sur deux (§CA-28.2), le connaître oriente le jugement.
+   Annoter sur l'image, comparer ensuite.
 
 ## 8. Ce que ça n'est PAS
 
