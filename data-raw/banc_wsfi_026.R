@@ -145,11 +145,14 @@ corr <- if (!is.null(connus)) {
 }
 cat("\n=== balayage :", paste(SEUILS, collapse = ", "), "===\n")
 t0 <- proc.time()[["elapsed"]]
-lignes <- lapply(SEUILS, function(s) {
+canal <- rep(NA, length(SEUILS))
+lignes <- lapply(seq_along(SEUILS), function(i) {
+  s <- SEUILS[[i]]
   ts <- proc.time()[["elapsed"]]
   d <- detecter_desserte(MNT, reference = desserte, las_source = LAZ,
     seuil = s, buffer_ref = BUFFER_REF, long_min = 30, emprise = NULL,
     dtm_res = 1)
+  canal[[i]] <<- isTRUE(attr(d, "canal_surface"))
   km <- if (nrow(d)) sum(as.numeric(st_length(d))) / 1000 else 0
   km_rec <- if (nrow(d) && !is.null(corr)) {
     g <- st_intersection(st_geometry(d), corr)
@@ -176,8 +179,14 @@ print(bal)
 cat("\n--- invariants ---\n")
 inv <- c(
   "MNT a 1,5 m ou plus fin" = res_mnt <= 1.5,
-  "canal de surface fourni" = dir.exists(LAZ) &&
-    length(list.files(LAZ, pattern = "\\.(laz|las|copc\\.laz)$")) > 0,
+  # CONSOMME, pas « fourni ». La premiere redaction verifiait que des .laz
+  # existaient sur le disque -- un invariant qui passe A VIDE : les fichiers
+  # peuvent etre la et le canal absent (lecture echouee, `dsr_sigma_surf` en
+  # erreur, catalogue sans colonne `laz`), chacun etant un repli SILENCIEUX de
+  # `.dsr_canaux_dalles()`. On lit desormais l'attribut que la detection pose
+  # elle-meme. Meme lecon qu'en Phase B : un invariant de domaine passe a vide
+  # sur du tout-NA.
+  "canal de surface CONSOMME" = all(canal),
   "regime complet (emprise NULL)" = TRUE,
   "reference non vide" = nrow(desserte) > 0,
   "surface explorable > 50 %" = km2_hors / aire_km2 > 0.5,

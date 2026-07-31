@@ -292,15 +292,24 @@ couverture globale à **97,91 %** (`R/io.R`, `R/validate.R`, `R/terrain.R` et
 `v0.13.0`. Une « prochaine étape » périmée est pire qu'absente : elle envoie rejouer un chantier
 déjà livré.)*
 
-1. **Jouer le banc `wsfi`** (`data-raw/banc_wsfi_026.R`) pour trancher le **CA-26.5**. C'est le
-   seul blocage de la spec 026, et il commande l'injection de la desserte détectée dans
-   `reseau_desserte()`. Le banc mesure sur MNT **0,50 m** avec canal de surface (4 dalles COPC),
-   là où Chastel-Nouvel n'offrait que 5 m.
-2. **Couper la release `1.29.0`** sur la spec 027, complète depuis que le CA-27.1 est
+1. **Re-vérifier l'invariance contre l'API amont.** La preuve tenue (indice `p` à 0,092 % des deux
+   côtés) a été obtenue avec notre contournement, pas avec `dsr_c_vessel()` /
+   `dsr_calibrer_specs(bornes = TRUE)`. ~30 min.
+2. **Sonder le vectoriseur `agent`.** Depuis dessertR 1.1.0, `methode = "auto"` résout vers
+   **`agent`** et non plus vers le squelette, et le poids du canal de surface passe de 2 à 0,5.
+   **Aucune de nos mesures ne porte sur cette chaîne** — ni résultat, ni temps. Sonder avant
+   d'engager un balayage complet.
+3. **Réécrire le protocole du CA-26.5**, qui balayait `seuil` en tenant l'emprise pour neutre.
+4. **Couper la release `1.29.0`** sur la spec 027, complète depuis que le CA-27.1 est
    effectivement tenu. Elle emporte aussi 025 et 028, déjà mergées.
-3. **Selon le verdict du CA-26.5** : injection dans `reseau_desserte()` au tarif de réouverture
+5. **Selon le verdict du CA-26.5** : injection dans `reseau_desserte()` au tarif de réouverture
    (spec 026 §5.4) → `1.30.0`, ou troisième banc plus vaste (bloc `ltcp`, 25 dalles) si `wsfi`
    ne tranche pas.
+
+**Question de fond non tranchée** : la calibration de référence est figée sur **un** massif
+(Chastel-Nouvel, 1 km², Lozère). C'est ce qui rend `seuil` comparable entre sites, mais une dalle
+de montagne n'est pas un jeu national — et elle recouvre `wsfi` à 54 %, donc `wsfi` n'est pas un
+banc indépendant. dessertR 1.1.0 calibre sur **deux** massifs.
 
 Le portage Rust des moteurs **terrestres** reste **après le tuilage** : à l'échelle du
 département, le Lot 7 suffit (cf. § performance).
@@ -429,16 +438,42 @@ d'autres paramètres (aucun des cinq incidents du §1 n'aurait été pris par un
 donc ré-acquis au défaut. Choix conforté par la perte irréversible d'une entrée de banc le
 2026-07-31 : **le code ne supprime pas de données d'entrée.**
 
-**Spec 026 — la première explication du 0/0 était fausse.** Le balayage sur Chastel-Nouvel rend
-3 linéaires à 0,4 (134 m) et **zéro au-delà**. L'explication d'abord retenue — « le corridor de
-15 m ne laisse plus de surface à explorer » — est **réfutée** : hors corridor, il reste
-**6,03 km² sur 7,21, soit 83,7 %** de l'emprise. (La densité invoquée à l'appui, « 44 tronçons sur
-1 km² », mélangeait le linéaire — 44,64 km — et un décompte d'objets ; la valeur réelle est
-197 objets sur 7,21 km².) **La cause probable est la résolution du MNT** : aucun MNT plus fin que
-5 m n'existe pour Chastel-Nouvel, et `detecter_desserte()` **avertit lui-même au-delà de 1,5 m**.
-Le balayage a tourné à 3,3× le seuil de son propre garde-fou — le motif exact du faux négatif
-ALSroads (0/22 à 5 m, 22/22 à 1 m) : **conclure à l'échec d'un détecteur qu'on n'a jamais
-alimenté correctement.**
+**Spec 026 — trois explications successives du 0/0, les deux premières fausses.**
+
+1. « Le corridor de 15 m ne laisse plus de surface à explorer » — **réfuté** : hors corridor, il
+   reste 6,03 km² sur 7,21, soit **83,7 %**. (La densité invoquée, « 44 tronçons sur 1 km² »,
+   mélangeait le linéaire — 44,64 km — et un décompte d'objets ; la valeur réelle est 197 objets
+   sur 7,21 km².)
+2. « La cause est la résolution du MNT à 5 m, 3,3× le seuil du garde-fou » — **non confirmé**.
+   Le banc `wsfi` (MNT **0,50 m**, canal de surface, bloc de calibrage de dessertR) rend **zéro
+   aux cinq seuils** en 82 min. Dix fois plus fin, et moins de détections qu'à 5 m.
+3. **La cause réelle : la détection dépendait de l'emprise qu'on lui passait.** La même fenêtre de
+   0,25 km² rend **116 m** analysée seule et **0 m** analysée dans 4 km². Deux mécanismes
+   indépendants, aucun suffisant seul — `dsr_appartenance()` dérive ses bornes des quantiles de la
+   donnée reçue (aucune spec par défaut ne les fournit), et `dsr_frangi()` dérive son `c` du
+   maximum de norme de Hessien **de l'image**, en amont des appartenances, donc hors de portée de
+   toute borne. Le `seuil` n'était pas une quantité absolue mais un **rang dans l'emprise**.
+
+**Ce que ça invalide.** Le protocole du CA-26.5 balaye `seuil` de 0,4 à 0,8 en tenant l'emprise
+pour neutre : il mesurait un artefact. Les 82 min de balayage, le balayage `long_min` et la
+comparaison Chastel-Nouvel / `wsfi` « au même seuil » **ne sont pas commensurables** et sont à
+refaire. Le protocole lui-même est à réécrire.
+
+**Corrigé en amont le jour même.** L'audit a été porté à dessertR, qui a livré la **1.1.0** :
+`dsr_calibrer_specs(bornes = TRUE)` rend désormais les bornes, `dsr_c_vessel()` + `dsr_layers_dtm(
+c_vessel = )` exposent le `c` de Frangi par échelle. Le commit amont crédite « un audit
+ForêtAccess sur le commit `cb9376c` ». Notre contournement (`.vesselness_ancree()`, bornes codées
+à la main) est **retiré** : `specs_desserte_calibrees()` ne porte plus que la calibration de
+référence produite par l'amont, sur Chastel-Nouvel. Trace d'audit :
+`docs/brief-dessertR-ancrage-emprise.md`.
+
+**Deux erreurs de méthode à retenir.** (a) J'ai diagnostiqué sur un **extrait** pour économiser du
+temps de calcul, et l'extrait n'était pas transposable — c'était précisément la variable en cause.
+(b) J'ai travaillé contre `dessertR` **1.0.0 installé** sans vérifier que la source était en
+1.0.0.9000, puis 1.1.0 : une partie du travail (détection du sens, rejet de canaux, poids)
+**réimplémentait `dsr_calibrer_specs()`**, qui existait déjà et fait mieux — 11 canaux mesurés
+contre mes 4, dont `densite_sol` (AUC 0,796) que je n'avais pas vu. **Vérifier la version d'un
+dépendant avant de l'auditer**, et chercher l'API existante avant d'en écrire une.
 
 ### 2026-07-29 — CA-24.5 atteint, RGE ALTI par WMS **banni**, deux diagnostics
 

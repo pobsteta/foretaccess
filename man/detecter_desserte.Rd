@@ -12,7 +12,8 @@ detecter_desserte(
   buffer_ref = 15,
   long_min = 30,
   emprise = NULL,
-  dtm_res = 1
+  dtm_res = 1,
+  specs = specs_desserte_calibrees()
 )
 }
 \arguments{
@@ -39,10 +40,18 @@ dénominateur du taux de faux positifs vers les zones déjà intéressantes — 
 \code{corridor} en production.}
 
 \item{dtm_res}{Résolution (m) de la grille de référence. Défaut 1.}
+
+\item{specs}{Bornes d'appartenance, voir \code{\link[=specs_desserte_calibrees]{specs_desserte_calibrees()}} (défaut).
+\strong{\code{NULL} restaure les specs de dessertR}, dont les bornes sont dérivées par
+quantiles de l'emprise — le \code{seuil} cesse alors d'être comparable d'un site
+à l'autre.}
 }
 \value{
 Un \code{sf} de \code{LINESTRING} avec \code{source = "detectee"} et \code{p_desserte}.
-Sans \code{dessertR}, une couche vide et un message — jamais d'échec.
+Sans \code{dessertR}, une couche vide et un message — jamais d'échec. L'attribut
+\strong{\code{canal_surface}} (logique) dit si le canal de surface a réellement été
+calculé : il est présent sur \strong{toute} sortie, vide comprise, pour qu'un
+résultat nul se lise sans ambiguïté.
 }
 \description{
 Cherche dans le \strong{micro-relief} les linéaires que la BD TOPO ne porte pas :

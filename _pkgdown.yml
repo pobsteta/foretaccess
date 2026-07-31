@@ -105,6 +105,7 @@ reference:
   - acquire_desserte_osm
   - detecter_desserte
   - detecter_desserte_balayage
+  - specs_desserte_calibrees
   - comparer_desserte_osm
   - acquire_desserte_lidar
   - qualifier_desserte
