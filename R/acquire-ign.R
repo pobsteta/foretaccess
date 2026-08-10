@@ -529,10 +529,18 @@ acquire_mnt <- function(aoi, res_m = 5, crs = 2154, cache_dir = tempdir(),
 #'   faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
 #'   buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
 #'   nécessaire mais **permet de garder un réseau intègre** ». Ils sont donc
-#'   conservés pour la **topologie**, et exclus du **débardage** par
-#'   [preprocess()], qui ne connaît que les classes de
-#'   `.classes_desserte()`. `FALSE` reproduit la couche Sylvaccess stricte
-#'   (classes 1/2/3 seulement).
+#'   conservés pour la **topologie** et exclus de l'**exploitation**.
+#'
+#'   Le consommateur qui en tire le bénéfice est
+#'   [verifier_integrite_desserte()] (spec 025), qui construit son graphe sur la
+#'   couche `sf` **sans filtrer `classe`** : ces tronçons y soudent les
+#'   composantes. Ils ne franchissent en revanche aucune rasterisation —
+#'   [preprocess()] les retire explicitement avant `terra::rasterize()`, de la
+#'   desserte comme des sources DFCI. Les sorties de [preprocess()] sont donc
+#'   **invariantes** sous ce paramètre ; il ne change que ce que voit le
+#'   diagnostic d'intégrité (et ce que l'on relit dans le GeoPackage).
+#'
+#'   `FALSE` reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).
 #' @param politique_cache Que faire d'un cache produit avec **d'autres
 #'   paramètres** ? `"reacquerir"` (défaut) refait l'acquisition, `"avertir"` sert
 #'   le cache en nommant ce qui diverge, `"echouer"` interrompt, `"ignorer"`
@@ -573,11 +581,14 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   d$largeur <- .largeur_desserte(d)
   d <- d[, c("classe", "largeur")]
   # CL_SVAC = 0 : ces troncons ne sont PAS de la desserte forestiere (la couche
-  # Sylvaccess d'ACCESSFOR ne contient que 1/2/3). On les retire, sans quoi ils
-  # deviendraient des pistes praticables. Ils ne sont PAS ajoutes a
-  # `.classes_desserte()` : `.rasteriser_desserte()` code les classes par leur
-  # RANG et prend le `max` (la barriere l'emporte) -- une 5e classe passerait
-  # devant `reseau_public`.
+  # Sylvaccess d'ACCESSFOR ne contient que 1/2/3), mais ils portent la
+  # connectivite. On les garde par defaut, pour `verifier_integrite_desserte()`.
+  #
+  # Ils ne sont PAS ajoutes a `.classes_desserte()` : `.rasteriser_desserte()`
+  # code les classes par leur RANG et prend le `max` (la barriere l'emporte) --
+  # une 5e classe passerait devant `reseau_public`. Ils sont acceptes en entree
+  # (`.classes_desserte_connues()`) puis retires avant chaque rasterisation
+  # (`.sans_hors_desserte()`), sans quoi ils deviendraient des pistes praticables.
   hd <- d$classe == "hors_desserte"
   if (any(hd) && !isTRUE(garder_hors_desserte)) {
     cli::cli_inform(c(
