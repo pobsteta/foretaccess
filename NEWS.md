@@ -1,3 +1,52 @@
+# foretaccess 2.0.1 (2026-08-10)
+
+Correctif : `preprocess()` **rejetait** les tronçons `hors_desserte` que
+`acquire_desserte()` produit désormais par défaut. Les deux moitiés de la v2.0.0
+étaient incompatibles — **aucun appelant ne pouvait consommer le nouveau
+défaut**, et tout onglet ou script enchaînant `acquire_desserte()` →
+`preprocess()` échouait immédiatement.
+
+## Le piège du correctif évident
+
+Relâcher le validateur ne suffisait **pas**, et l'échec aurait été silencieux.
+`terra::rasterize(field = ...)` grave la sentinelle entière `-2147483648` dans
+les cellules atteintes par une géométrie dont le champ vaut `NA`, au lieu de les
+laisser vides — et cette sentinelle **écrase la classe valide** d'une cellule
+partagée, **malgré `fun = "max"`**. Se reposer sur le `NA` de `match()` aurait
+donc amputé le réseau **à ses jonctions**, précisément là où un sentier rejoint
+une route : mesuré sur DABO à 5 m, 440 cellules sur 24 259 (1,8 %), et 95
+cellules à la sentinelle sur le seul jeu jouet. Une erreur bruyante serait
+devenue une amputation silencieuse, dans le sens inverse de l'intention.
+
+Le correctif **filtre en amont**, il ne se contente pas de tolérer.
+
+## Changements
+
+* `.valider_desserte()` accepte `hors_desserte` comme valeur **connue**
+  (`.classes_desserte_connues()`, distincte du vocabulaire de **débardage**
+  `.classes_desserte()`), et continue de rejeter tout le reste.
+* `.rasteriser_desserte()` retire les tronçons hors débardage **avant**
+  `terra::rasterize()` (`.sans_hors_desserte()`). Une desserte entièrement
+  `hors_desserte` donne un raster vide typé, plus une erreur.
+* `.rasteriser_dfci_source()` applique la même règle : sans quoi un `CL_SVAC = 0`
+  apparié à une piste DFCI par `flag_dfci()` (voie OSM) aurait ouvert une
+  cellule-source du camion sur une non-desserte.
+* `places_depot()` n'échantillonne plus de candidate sur un `hors_desserte` — un
+  sentier n'est pas une place de dépôt. Sans rapport avec le critère d'accès
+  écarté sur ColduPre, qui portait sur `classe == "piste"` / `dfci == 0`.
+
+**Invariant garanti et testé** : les sorties de `preprocess()` sont désormais
+**identiques** avec et sans `garder_hors_desserte`. Ce paramètre ne change plus
+que ce que voit le diagnostic d'intégrité.
+
+## Où les `hors_desserte` servent réellement
+
+La doc de la v2.0.0 affirmait qu'ils étaient conservés « pour la topologie »
+sans nommer le consommateur. C'est `verifier_integrite_desserte()` (spec 025),
+qui construit son graphe sur la couche `sf` **sans filtrer `classe`** : ces
+tronçons y soudent les composantes, en amont de toute rasterisation. La doc
+d'`acquire_desserte()` le dit maintenant explicitement.
+
 # foretaccess 2.0.0 (2026-07-31)
 
 Deuxième version **majeure**. Le sens du bump n'est pas « périmètre atteint »
