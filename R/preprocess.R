@@ -278,6 +278,21 @@ preprocess <- function(mnt,
 # dfci = 3, reseau_public = 4.
 .rasteriser_desserte <- function(desserte, mnt) {
   classes <- .classes_desserte()
+  niveaux <- data.frame(value = seq_along(classes), classe = classes)
+
+  # Les troncons hors debardage (`hors_desserte`) sortent AVANT la rasterisation.
+  # Ne pas se reposer sur le `NA` de `match()` : terra graverait la sentinelle
+  # -2147483648 sur les cellules de jonction et ecraserait la classe valide.
+  # Cf. `.sans_hors_desserte()`, qui porte la mesure.
+  desserte <- .sans_hors_desserte(desserte)
+  if (nrow(desserte) == 0) {
+    r <- terra::rast(mnt)
+    terra::values(r) <- NA_integer_
+    levels(r) <- niveaux
+    names(r) <- "desserte"
+    return(r)
+  }
+
   v <- terra::vect(desserte)
   v$code_classe <- match(as.character(desserte$classe), classes)
 
@@ -292,7 +307,7 @@ preprocess <- function(mnt,
   # route (1) < piste (2) < dfci (3) < reseau_public (4), donc le reseau public
   # gagne sur tout.
   r <- terra::rasterize(v, mnt, field = "code_classe", fun = "max", touches = TRUE)
-  levels(r) <- data.frame(value = seq_along(classes), classe = classes)
+  levels(r) <- niveaux
   names(r) <- "desserte"
   r
 }
@@ -310,6 +325,14 @@ preprocess <- function(mnt,
     terra::values(m) <- 0
     names(m) <- "dfci_source_mask"
     m
+  }
+  # Meme regle que la desserte : `hors_desserte` porte la topologie, jamais une
+  # couche d'exploitation. Sans ce retrait, un troncon CL_SVAC = 0 apparie a une
+  # piste DFCI par `flag_dfci()` (voie OSM) deviendrait une cellule-source du
+  # camion, et `preprocess()` ne serait plus invariant sous `garder_hors_desserte`.
+  desserte <- .sans_hors_desserte(desserte)
+  if (nrow(desserte) == 0) {
+    return(vide())
   }
   # Flag explicite CL_DFCI (voie principale, oracle) ; a defaut, la classe heritee
   # `dfci` (pont de compatibilite pour les jeux qui ne portent pas le flag).

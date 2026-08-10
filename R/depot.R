@@ -268,6 +268,26 @@ places_depot <- function(desserte,
   }
   des <- des[grepl("LINE", types), ]
   des$troncon <- seq_len(nrow(des))
+
+  # `hors_desserte` (CL_SVAC = 0) porte la topologie, pas l'exploitation : un
+  # sentier ou une bretelle de rond-point n'est pas une place de depot. Retire
+  # APRES la numerotation, pour que `troncon` reste l'index de la couche fournie.
+  #
+  # Ce n'est PAS le critere d'acces ecarte sur ColduPre (cf. `.acces_camion()`) :
+  # celui-la rejetait sur `classe == "piste"` / `dfci == 0`, des attributs de
+  # QUALITE, et eliminait une vraie place sur deux. Ici la classe dit que le
+  # troncon n'est pas de la desserte du tout.
+  n_hd <- nrow(des)
+  des <- .sans_hors_desserte(des)
+  n_hd <- n_hd - nrow(des)
+  if (n_hd > 0) {
+    cli::cli_inform(c(
+      "i" = "{n_hd} troncon{?s} {.val hors_desserte} ecarte{?s}
+             (hors exploitation, CL_SVAC = 0)."
+    ))
+  }
+  .arreter_si_vide(des, "classe de desserte", "desserte")
+
   des <- suppressWarnings(sf::st_cast(des, "LINESTRING"))
 
   # Troncons de longueur nulle : ni abscisse, ni pente en long. ColduPre en

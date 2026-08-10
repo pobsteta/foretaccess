@@ -357,8 +357,10 @@ test_that("hors_desserte est conserve pour la TOPOLOGIE mais exclu du debardage"
   # Les retirer coupe le reseau (mesure : 15 -> 21 infractions a 1600 m de
   # buffer). L'annexe ACCESSFOR le dit du rond-point : « non necessaire mais
   # permet de garder un reseau integre ». On les garde donc dans la couche, et
-  # c'est `.rasteriser_desserte()` qui les ecarte -- `match()` sur
-  # `.classes_desserte()` leur donne NA, donc aucune cellule de desserte.
+  # c'est `.rasteriser_desserte()` qui les ecarte -- par un filtrage EXPLICITE
+  # en amont (`.sans_hors_desserte()`), et surtout PAS en se reposant sur le
+  # `NA` de `match()` : terra graverait alors la sentinelle -2147483648 sur les
+  # cellules de jonction. Cf. test-hors-desserte-preprocess.R, qui la controle.
   seg <- function(a, b) sf::st_linestring(rbind(a, b))
   d <- sf::st_sf(classe = c("piste", "route", "hors_desserte"),
     geometry = sf::st_sfc(seg(c(0, 0), c(100, 100)), seg(c(100, 100), c(200, 200)),

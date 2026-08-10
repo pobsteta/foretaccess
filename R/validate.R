@@ -69,6 +69,35 @@ valider_entrees <- function(mnt,
 # skidder, entierement dans le sens optimiste (mesure sur le jeu ColduPre).
 .classes_desserte <- function() c("route", "piste", "dfci", "reseau_public")
 
+# Classes ACCEPTEES EN ENTREE. A distinguer de `.classes_desserte()`, qui est le
+# vocabulaire de DEBARDAGE : `hors_desserte` (CL_SVAC = 0) est une valeur connue
+# et legitime, conservee par `acquire_desserte()` depuis le 2026-07-30 parce
+# qu'elle porte la CONNECTIVITE du reseau (rond-points, liaisons), exploitee par
+# `verifier_integrite_desserte()`. Elle n'entre PAS dans les couches
+# d'exploitation : chaque rasterisation la retire explicitement en amont.
+#
+# Ne JAMAIS l'ajouter a `.classes_desserte()` : les classes y sont codees par
+# leur RANG et `.rasteriser_desserte()` prend le `max` (la barriere l'emporte) --
+# une 5e classe passerait devant `reseau_public`.
+.classes_desserte_connues <- function() c(.classes_desserte(), "hors_desserte")
+
+# Retire les troncons hors debardage. A appeler AVANT toute rasterisation.
+#
+# Indispensable, et pas seulement cosmetique : `terra::rasterize(field = ...)`
+# grave la sentinelle entiere -2147483648 dans les cellules atteintes par une
+# geometrie dont le champ vaut `NA`, au lieu de les laisser vides -- et cette
+# sentinelle ECRASE la classe valide d'une cellule partagee, MALGRE `fun = "max"`.
+# Se reposer sur le `NA` de `match()` amputerait donc le reseau a ses JONCTIONS
+# (mesure DABO, grille 5 m : 440 cellules sur 24 259, soit 1,8 %), exactement la
+# ou un sentier rejoint une route.
+.sans_hors_desserte <- function(desserte) {
+  if (is.null(desserte[["classe"]])) {
+    return(desserte)
+  }
+  garde <- as.character(desserte$classe) %in% .classes_desserte()
+  desserte[garde, , drop = FALSE]
+}
+
 # Classes qui accueillent effectivement le bois debarde : le reseau public
 # (barriere, cf. ci-dessus) n'en fait pas partie.
 .classes_livraison <- function() c("route", "piste", "dfci")
@@ -116,7 +145,9 @@ valider_entrees <- function(mnt,
     cli::cli_abort("Le champ {.field classe} de la desserte contient des {.val NA}.")
   }
 
-  attendues <- .classes_desserte()
+  # `hors_desserte` est ACCEPTE (il porte la topologie) mais ne sera pas
+  # rasterise ; toute autre valeur reste une erreur.
+  attendues <- .classes_desserte_connues()
   inconnues <- setdiff(unique(valeurs), attendues)
   if (length(inconnues)) {
     cli::cli_abort(c(

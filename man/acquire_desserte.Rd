@@ -42,10 +42,18 @@ Les retirer \strong{coupe le réseau} : mesuré sur l'AOI oracle, leur suppressi
 faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
 buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
 nécessaire mais \strong{permet de garder un réseau intègre} ». Ils sont donc
-conservés pour la \strong{topologie}, et exclus du \strong{débardage} par
-\code{\link[=preprocess]{preprocess()}}, qui ne connaît que les classes de
-\code{.classes_desserte()}. \code{FALSE} reproduit la couche Sylvaccess stricte
-(classes 1/2/3 seulement).}
+conservés pour la \strong{topologie} et exclus de l'\strong{exploitation}.
+
+Le consommateur qui en tire le bénéfice est
+\code{\link[=verifier_integrite_desserte]{verifier_integrite_desserte()}} (spec 025), qui construit son graphe sur la
+couche \code{sf} \strong{sans filtrer \code{classe}} : ces tronçons y soudent les
+composantes. Ils ne franchissent en revanche aucune rasterisation —
+\code{\link[=preprocess]{preprocess()}} les retire explicitement avant \code{terra::rasterize()}, de la
+desserte comme des sources DFCI. Les sorties de \code{\link[=preprocess]{preprocess()}} sont donc
+\strong{invariantes} sous ce paramètre ; il ne change que ce que voit le
+diagnostic d'intégrité (et ce que l'on relit dans le GeoPackage).
+
+\code{FALSE} reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).}
 
 \item{politique_cache}{Que faire d'un cache produit avec \strong{d'autres
 paramètres} ? \code{"reacquerir"} (défaut) refait l'acquisition, \code{"avertir"} sert
