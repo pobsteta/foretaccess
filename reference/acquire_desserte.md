@@ -61,10 +61,24 @@ acquire_desserte(
   les infractions de connectivité de 15 à 21 à 1600 m de buffer.
   L'annexe ACCESSFOR le dit elle-même du rond-point — « non nécessaire
   mais **permet de garder un réseau intègre** ». Ils sont donc conservés
-  pour la **topologie**, et exclus du **débardage** par
-  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
-  qui ne connaît que les classes de `.classes_desserte()`. `FALSE`
-  reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).
+  pour la **topologie** et exclus de l'**exploitation**.
+
+  Le consommateur qui en tire le bénéfice est
+  [`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
+  (spec 025), qui construit son graphe sur la couche `sf` **sans filtrer
+  `classe`** : ces tronçons y soudent les composantes. Ils ne
+  franchissent en revanche aucune rasterisation —
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  les retire explicitement avant
+  [`terra::rasterize()`](https://rspatial.github.io/terra/reference/rasterize.html),
+  de la desserte comme des sources DFCI. Les sorties de
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  sont donc **invariantes** sous ce paramètre ; il ne change que ce que
+  voit le diagnostic d'intégrité (et ce que l'on relit dans le
+  GeoPackage).
+
+  `FALSE` reproduit la couche Sylvaccess stricte (classes 1/2/3
+  seulement).
 
 - politique_cache:
 

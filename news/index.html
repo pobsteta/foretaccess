@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,31 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.0.1" id="foretaccess-201-2026-08-10">foretaccess 2.0.1 (2026-08-10)<a class="anchor" aria-label="anchor" href="#foretaccess-201-2026-08-10"></a></h2>
+<p>Correctif : <code><a href="../reference/preprocess.html">preprocess()</a></code> <strong>rejetait</strong> les tronçons <code>hors_desserte</code> que <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> produit désormais par défaut. Les deux moitiés de la v2.0.0 étaient incompatibles — <strong>aucun appelant ne pouvait consommer le nouveau défaut</strong>, et tout onglet ou script enchaînant <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> → <code><a href="../reference/preprocess.html">preprocess()</a></code> échouait immédiatement.</p>
+<div class="section level3">
+<h3 id="le-piège-du-correctif-évident-2-0-1">Le piège du correctif évident<a class="anchor" aria-label="anchor" href="#le-pi%C3%A8ge-du-correctif-%C3%A9vident-2-0-1"></a></h3>
+<p>Relâcher le validateur ne suffisait <strong>pas</strong>, et l’échec aurait été silencieux. <code>terra::rasterize(field = ...)</code> grave la sentinelle entière <code>-2147483648</code> dans les cellules atteintes par une géométrie dont le champ vaut <code>NA</code>, au lieu de les laisser vides — et cette sentinelle <strong>écrase la classe valide</strong> d’une cellule partagée, <strong>malgré <code>fun = "max"</code></strong>. Se reposer sur le <code>NA</code> de <code><a href="https://rdrr.io/r/base/match.html" class="external-link">match()</a></code> aurait donc amputé le réseau <strong>à ses jonctions</strong>, précisément là où un sentier rejoint une route : mesuré sur DABO à 5 m, 440 cellules sur 24 259 (1,8 %), et 95 cellules à la sentinelle sur le seul jeu jouet. Une erreur bruyante serait devenue une amputation silencieuse, dans le sens inverse de l’intention.</p>
+<p>Le correctif <strong>filtre en amont</strong>, il ne se contente pas de tolérer.</p>
+</div>
+<div class="section level3">
+<h3 id="changements-2-0-1">Changements<a class="anchor" aria-label="anchor" href="#changements-2-0-1"></a></h3>
+<ul><li>
+<code>.valider_desserte()</code> accepte <code>hors_desserte</code> comme valeur <strong>connue</strong> (<code>.classes_desserte_connues()</code>, distincte du vocabulaire de <strong>débardage</strong> <code>.classes_desserte()</code>), et continue de rejeter tout le reste.</li>
+<li>
+<code>.rasteriser_desserte()</code> retire les tronçons hors débardage <strong>avant</strong> <code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code> (<code>.sans_hors_desserte()</code>). Une desserte entièrement <code>hors_desserte</code> donne un raster vide typé, plus une erreur.</li>
+<li>
+<code>.rasteriser_dfci_source()</code> applique la même règle : sans quoi un <code>CL_SVAC = 0</code> apparié à une piste DFCI par <code><a href="../reference/flag_dfci.html">flag_dfci()</a></code> (voie OSM) aurait ouvert une cellule-source du camion sur une non-desserte.</li>
+<li>
+<code><a href="../reference/places_depot.html">places_depot()</a></code> n’échantillonne plus de candidate sur un <code>hors_desserte</code> — un sentier n’est pas une place de dépôt. Sans rapport avec le critère d’accès écarté sur ColduPre, qui portait sur <code>classe == "piste"</code> / <code>dfci == 0</code>.</li>
+</ul><p><strong>Invariant garanti et testé</strong> : les sorties de <code><a href="../reference/preprocess.html">preprocess()</a></code> sont désormais <strong>identiques</strong> avec et sans <code>garder_hors_desserte</code>. Ce paramètre ne change plus que ce que voit le diagnostic d’intégrité.</p>
+</div>
+<div class="section level3">
+<h3 id="où-les-hors_desserte-servent-réellement-2-0-1">Où les <code>hors_desserte</code> servent réellement<a class="anchor" aria-label="anchor" href="#o%C3%B9-les-hors_desserte-servent-r%C3%A9ellement-2-0-1"></a></h3>
+<p>La doc de la v2.0.0 affirmait qu’ils étaient conservés « pour la topologie » sans nommer le consommateur. C’est <code><a href="../reference/verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> (spec 025), qui construit son graphe sur la couche <code>sf</code> <strong>sans filtrer <code>classe</code></strong> : ces tronçons y soudent les composantes, en amont de toute rasterisation. La doc d’<code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> le dit maintenant explicitement.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.0" id="foretaccess-200-2026-07-31">foretaccess 2.0.0 (2026-07-31)<a class="anchor" aria-label="anchor" href="#foretaccess-200-2026-07-31"></a></h2>
 <p>Deuxième version <strong>majeure</strong>. Le sens du bump n’est pas « périmètre atteint » mais <strong>« les résultats antérieurs ne sont plus reproductibles »</strong> — dans la tradition de <code>v1.0.0</code>, qui signifiait « validée contre le vrai moteur ». Deux défauts d’acquisition, chacun capable de fausser un banc entier sans rien signaler, sont corrigés. <strong>Tout cache antérieur est invalide, et tout chiffre publié avec est suspect.</strong></p>

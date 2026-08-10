@@ -9,7 +9,7 @@ classe attendu par preprocess()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -106,10 +106,16 @@ Les retirer <strong>coupe le réseau</strong> : mesuré sur l'AOI oracle, leur s
 faisait passer les infractions de connectivité de 15 à 21 à 1600 m de
 buffer. L'annexe ACCESSFOR le dit elle-même du rond-point — « non
 nécessaire mais <strong>permet de garder un réseau intègre</strong> ». Ils sont donc
-conservés pour la <strong>topologie</strong>, et exclus du <strong>débardage</strong> par
-<code><a href="preprocess.html">preprocess()</a></code>, qui ne connaît que les classes de
-<code>.classes_desserte()</code>. <code>FALSE</code> reproduit la couche Sylvaccess stricte
-(classes 1/2/3 seulement).</p></dd>
+conservés pour la <strong>topologie</strong> et exclus de l'<strong>exploitation</strong>.</p>
+<p>Le consommateur qui en tire le bénéfice est
+<code><a href="verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> (spec 025), qui construit son graphe sur la
+couche <code>sf</code> <strong>sans filtrer <code>classe</code></strong> : ces tronçons y soudent les
+composantes. Ils ne franchissent en revanche aucune rasterisation —
+<code><a href="preprocess.html">preprocess()</a></code> les retire explicitement avant <code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code>, de la
+desserte comme des sources DFCI. Les sorties de <code><a href="preprocess.html">preprocess()</a></code> sont donc
+<strong>invariantes</strong> sous ce paramètre ; il ne change que ce que voit le
+diagnostic d'intégrité (et ce que l'on relit dans le GeoPackage).</p>
+<p><code>FALSE</code> reproduit la couche Sylvaccess stricte (classes 1/2/3 seulement).</p></dd>
 
 
 <dt id="arg-politique-cache">politique_cache<a class="anchor" aria-label="anchor" href="#arg-politique-cache"></a></dt>

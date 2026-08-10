@@ -324,6 +324,21 @@
   \#139), **028** (OSM source complémentaire, \#139) et **026**
   (desserte détectée sur MNT, \#140, **partielle**). Release visée :
   **`1.29.0`** sur la spec 027, qui est la seule complète.
+- **`v2.0.1` posée** (2026-08-10) : correctif de compatibilité interne à
+  la v2.0.0.
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  rejetait les `hors_desserte` que
+  [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+  produit par défaut — chaîne acquisition → prétraitement cassée pour
+  tout appelant. Filtrage explicite en amont de chaque rasterisation (la
+  sentinelle `-2147483648` de
+  [`terra::rasterize()`](https://rspatial.github.io/terra/reference/rasterize.html)
+  écrasait sinon les cellules de **jonction**).
+  [`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+  est désormais **invariant** sous `garder_hors_desserte`. Le
+  consommateur topologique réel est
+  [`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
+  (spec 025), maintenant nommé dans la doc.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code.
   [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
   et
@@ -566,6 +581,73 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-08-10 — `v2.0.1` : les deux moitiés de la v2.0.0 étaient incompatibles
+
+Brief reçu de la session `nemetonshiny`
+(`BRIEF-foretaccess-hors-desserte-preprocess.md`) : **l’onglet
+Accessibilité est entièrement bloqué**, tous chemins, tous projets.
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+conserve les `hors_desserte` par défaut depuis le 2026-07-30, et
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+les **rejette**. Aucun appelant ne pouvait consommer le nouveau défaut ;
+[`valider_entrees()`](https://pobsteta.github.io/foretaccess/reference/valider_entrees.md)
+étant exportée, le blocage valait pour tout code utilisateur. Le brief
+est exact sur tous les points vérifiables, y compris le diagnostic du
+piège ci-dessous.
+
+**Le correctif évident était faux, et silencieusement.**
+`terra::rasterize(field = ...)` grave la sentinelle `-2147483648` dans
+les cellules atteintes par une géométrie à champ `NA` — et elle **survit
+à `fun = "max"`**, écrasant la classe valide d’une cellule partagée. Se
+reposer sur le `NA` de [`match()`](https://rdrr.io/r/base/match.html)
+aurait amputé le réseau **à ses jonctions**, là où un sentier rejoint
+une route : 440 cellules sur 24 259 mesurées sur DABO à 5 m, et **95
+cellules à la sentinelle, 3 valides écrasées, sur le seul jeu jouet**
+(vérifié ici avant de coder). On aurait transformé une erreur bruyante
+en amputation silencieuse, dans le sens **inverse** de l’intention de la
+bascule.
+
+Correctif : **filtrer en amont, pas seulement tolérer**. Vocabulaire
+d’entrée (`.classes_desserte_connues()`) séparé du vocabulaire de
+débardage (`.classes_desserte()`) ; `.sans_hors_desserte()` appliqué
+avant *chaque* rasterisation. Deux consommateurs que le brief n’avait
+pas identifiés y passent aussi : `.rasteriser_dfci_source()` (un
+`CL_SVAC = 0` apparié à une piste DFCI par la voie OSM de
+[`flag_dfci()`](https://pobsteta.github.io/foretaccess/reference/flag_dfci.md)
+serait devenu cellule-source du camion) et
+[`places_depot()`](https://pobsteta.github.io/foretaccess/reference/places_depot.md)
+(un sentier n’est pas une place de dépôt).
+
+**Invariant désormais garanti et testé** : les sorties de
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md)
+sont identiques avec et sans `garder_hors_desserte`. Le paramètre ne
+change plus que ce que voit le diagnostic d’intégrité.
+
+**Question ouverte du brief (§4.4) — tranchée.** La doc v2.0.0 disait
+les `hors_desserte` conservés « pour la topologie » sans nommer le
+consommateur. Ce consommateur existe bien :
+[`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
+(spec 025) construit son graphe sur la couche `sf` **sans filtrer
+`classe`** (`.troncons_linestring_tous()`), ces tronçons y soudent les
+composantes. Le bénéfice est donc réel, mais **en amont** de
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md),
+et la doc
+d’[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+le dit maintenant.
+
+Le test de non-régression existant (`test-acquire-ign.R:356`) était
+**vacant** : il ne contrôlait que
+[`levels()`](https://rdrr.io/r/base/levels.html) et `sum(!is.na())`, et
+son commentaire affirmait l’hypothèse fausse («
+[`match()`](https://rdrr.io/r/base/match.html) leur donne NA »).
+Corrigé, et doublé d’un fichier dédié qui contrôle la sentinelle
+explicitement.
+
+**Côté app** : rien à corriger dans `nemetonshiny`, qui appelait
+conformément au contrat documenté. Le plancher `foretaccess (>= 1.20.0)`
+de son `DESCRIPTION` est à bumper en `>= 2.0.1` une fois cette release
+publiée (point annexe du brief).
 
 ### 2026-07-31 — `v2.0.0` : les résultats antérieurs ne sont plus reproductibles
 
