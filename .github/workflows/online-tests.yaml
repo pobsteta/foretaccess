@@ -20,22 +20,27 @@
 
 # CADENCE ET BUDGET -- lire avant de resserrer.
 #
-# Mesure locale du 2026-08-11 : `test-acquire-online.R` tournait encore apres
-# 1 h 01 sans rendre la main, et n'a pas ete mene a terme. La duree reelle est
-# donc INCONNUE, seulement minoree. L'acquisition du MNT passe par les dalles
-# departementales RGE ALTI (le WMS ayant ete banni en v2.0.0), qui se comptent
-# en centaines de Mo -- c'est la piste la plus probable.
+# Mesure locale du 2026-08-11, menee a terme : le test PASSE (7 assertions,
+# 0 saut) en un peu plus d'une heure.
+#
+# Le temps ne vient PAS du MNT, contrairement a ce qu'une premiere lecture
+# laissait croire : il vient d'**Overpass (OSM) en HTTP 429**, qui declenche 16
+# reprises espacees de 60 s -- 16 minutes de pure attente -- puis un repli
+# d'instance. Consequence a anticiper : depuis un runner GitHub, l'IP est
+# partagee avec le reste du monde et le 429 sera *plus* probable qu'en local.
 #
 # Consequences assumees ici :
-#   * cadence HEBDOMADAIRE, pas quotidienne : plus d'une heure de telechargement
-#     IGN par nuit serait disproportionne pour un test de non-regression de
-#     contrat, et impoli envers un service public gratuit ;
-#   * `timeout-minutes` a 120, au-dessus du minorant mesure. Un premier run qui
-#     s'y heurterait dirait quelque chose d'utile : que ce test n'est pas
-#     industrialisable tel quel et qu'il faut reduire l'AOI.
+#   * cadence HEBDOMADAIRE : une heure de sollicitation IGN + Overpass par nuit
+#     serait disproportionnee pour un test de contrat, et impolie envers deux
+#     services gratuits -- dont un finance par des dons ;
+#   * `timeout-minutes` a 120, soit le double du temps local. Si un run s'y
+#     heurte, la reponse n'est pas d'augmenter le plafond mais de retirer OSM du
+#     test (`dfci = FALSE` dans `acquire_inputs()`), quitte a perdre la
+#     couverture du flag CL_DFCI.
 #
-# TANT QUE CE WORKFLOW N'A PAS TOURNE VERT UNE FOIS, il est a considerer comme
-# NON VALIDE.
+# ANGLE MORT CONNU du test lui-meme : il PASSE alors qu'OSM etait injoignable et
+# que le flag CL_DFCI n'a donc pas ete pose -- l'echec n'est qu'un warning, rien
+# ne l'asserte. Un vert ici ne prouve pas que la voie DFCI fonctionne.
 on:
   schedule:
     # Lundi 04:17 UTC (heure creuse, decalee de l'heure ronde pour ne pas tomber
