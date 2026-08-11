@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -358,6 +358,7 @@
 <p><strong>Invariant désormais garanti et testé</strong> : les sorties de <code><a href="reference/preprocess.html">preprocess()</a></code> sont identiques avec et sans <code>garder_hors_desserte</code>. Le paramètre ne change plus que ce que voit le diagnostic d’intégrité.</p>
 <p><strong>Question ouverte du brief (§4.4) — tranchée.</strong> La doc v2.0.0 disait les <code>hors_desserte</code> conservés « pour la topologie » sans nommer le consommateur. Ce consommateur existe bien : <code><a href="reference/verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> (spec 025) construit son graphe sur la couche <code>sf</code> <strong>sans filtrer <code>classe</code></strong> (<code>.troncons_linestring_tous()</code>), ces tronçons y soudent les composantes. Le bénéfice est donc réel, mais <strong>en amont</strong> de <code><a href="reference/preprocess.html">preprocess()</a></code>, et la doc d’<code><a href="reference/acquire_desserte.html">acquire_desserte()</a></code> le dit maintenant.</p>
 <p>Le test de non-régression existant (<code>test-acquire-ign.R:356</code>) était <strong>vacant</strong> : il ne contrôlait que <code><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels()</a></code> et <code>sum(!is.na())</code>, et son commentaire affirmait l’hypothèse fausse (« <code><a href="https://rdrr.io/r/base/match.html" class="external-link">match()</a></code> leur donne NA »). Corrigé, et doublé d’un fichier dédié qui contrôle la sentinelle explicitement.</p>
+<p><strong>Confronté au cache DABO réel après la release</strong> (1032 tronçons, 320 <code>hors_desserte</code>, MNT 5 m), sur les trois couches — <code>desserte.gpkg</code>, <code>desserte_corrigee</code> (NDP 1, 710) et <code>desserte_origine</code>. Le correctif naïf y aurait gravé <strong>10 812 cellules à la sentinelle et écrasé 450 cellules valides sur 24 228 (1,86 %)</strong> ; le correctif livré en grave <strong>0</strong>, rend une couche <strong>identique au bit près</strong> à la desserte strictement filtrée, et <code><a href="reference/preprocess.html">preprocess()</a></code> s’exécute de bout en bout avec <strong>invariance sur les cinq couches</strong>. Les chiffres du brief (440 / 24 259, 310 / 19 957) sont reproduits à ~2 % près — écart de grille, pas de nature. La répartition des classes est identique au brief.</p>
 <p><strong>Côté app</strong> : rien à corriger dans <code>nemetonshiny</code>, qui appelait conformément au contrat documenté. Le plancher <code>foretaccess (&gt;= 1.20.0)</code> de son <code>DESCRIPTION</code> est à bumper en <code>&gt;= 2.0.1</code> une fois cette release publiée (point annexe du brief).</p>
 </div>
 <div class="section level3">
