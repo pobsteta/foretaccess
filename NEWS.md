@@ -1,3 +1,44 @@
+# foretaccess 2.0.2 (2026-08-11)
+
+Version de **documentation** : aucun changement de code fonctionnel depuis la
+`2.0.1`. Elle fige deux traces qui méritaient d'être citables à une version.
+
+## Le correctif `hors_desserte` confronté aux données réelles
+
+La `2.0.1` était validée sur le jeu jouet. Elle l'est désormais sur le cache
+**DABO** (MNT 5 m, emprise de 741 312 cellules), sur les **trois** couches de
+desserte — brute (1032 tronçons, 320 `hors_desserte`), corrigée LiDAR NDP 1 (710)
+et origine (1032) :
+
+| | correctif naïf | correctif livré |
+|---|---:|---:|
+| cellules à la sentinelle `-2147483648` | 10 812 | **0** |
+| cellules valides écrasées | **450** / 24 228 (1,86 %) | **0** |
+| `preprocess()` de bout en bout | — | **OK**, invariance sur les 5 couches |
+
+Les chiffres du hand-off d'origine (440 / 24 259) sont reproduits à ~2 % près —
+un écart de grille, pas de nature. La répartition des classes est identique.
+
+## Où passent les minutes de `reseau_desserte()`
+
+`docs/brief-nemetonshiny-skidding-desserte.md` documente une mesure qui vaut
+au-delà de son destinataire : le moteur glouton reçoit **toutes les cellules de
+parcelle** comme sources (309 726 sur DABO, pour 4 parcelles), et à
+`skidding_m = 0` — le **défaut** — chacune hors route déclenche son propre tracé
+A\*. Le `@section Performance` de `reseau_desserte()` le disait déjà ; la mesure
+le chiffre :
+
+| `skidding_m` | durée | routes tracées |
+|---:|---:|---:|
+| 0 (défaut) | > 22 min, jamais fini | — |
+| 100 m | 174 s | 39 |
+| 300 m | 70 s | 0 |
+| 500 m | 115 s | 0 |
+
+Pour référence, la table de voisinage seule coûte **38,4 s** sur cette emprise.
+**Renseigner `skidding_m` n'est pas un réglage de performance** : c'est un
+paramètre métier qui change le résultat, pas seulement la durée.
+
 # foretaccess 2.0.1 (2026-08-10)
 
 Correctif : `preprocess()` **rejetait** les tronçons `hors_desserte` que

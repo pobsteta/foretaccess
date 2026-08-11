@@ -1,6 +1,6 @@
 Package: foretaccess
 Title: Cartographie de l'Accessibilité des Forêts (Réimplémentation de Sylvaccess)
-Version: 2.0.1.9000
+Version: 2.0.2
 Authors@R:
     person("Pascal", "Obstetar", email = "pascal.obstetar@gmail.com",
            role = c("aut", "cre"))
