@@ -1,4 +1,5 @@
 # Spec 029 -- cout de terrassement. On teste contre la FORME FERMEE, pas contre
+
 # une sortie de reference : sur un profil en travers plan, les sections en
 # deblai et en remblai s'ecrivent analytiquement, et c'est le meme oracle que
 # celui des tests de cubature de dessertR.
@@ -103,4 +104,63 @@ test_that("garde-fous", {
   cfg <- foretaccess_config()
   cfg$desserte$cout$terrassement <- NULL
   expect_error(cout_terrassement(30, largeur_m = 4, config = cfg), "terrassement")
+})
+
+
+# --- Branchement dans la surface de cout (spec 029 sec.6) --------------------
+# Fixture locale : testthat isole chaque fichier, `fake_pre` de
+# test-desserte-cout.R n'est pas visible ici. Reduite aux champs que
+# `surface_cout_construction()` lit.
+pre_pente <- function(slope_pct, nrow = 4, ncol = 4) {
+  mnt <- terra::rast(nrows = nrow, ncols = ncol, xmin = 0, xmax = ncol * 5,
+                     ymin = 0, ymax = nrow * 5, crs = "EPSG:2154")
+  terra::values(mnt) <- 100; names(mnt) <- "mnt"
+  sp <- terra::rast(mnt); terra::values(sp) <- slope_pct
+  names(sp) <- "slope_pct"
+  ob <- terra::rast(mnt); terra::values(ob) <- 0
+  names(ob) <- "obstacles_complets_mask"
+  structure(list(mnt = mnt, slope_pct = sp, obstacles_complets_mask = ob),
+            class = "foretaccess_preprocessing")
+}
+
+test_that("methode_pente bascule le terme de pente sans toucher au reste", {
+  skip_if_not_installed("terra")
+  pre <- pre_pente(30)
+  cfg <- foretaccess_config()
+
+  bar <- surface_cout_construction(pre, cfg)                       # defaut
+  ter <- surface_cout_construction(pre, cfg, methode_pente = "terrassement")
+
+  base <- cfg$desserte$cout$cout_base_m
+  v_bar <- terra::values(bar$cout, mat = FALSE)[1]
+  v_ter <- terra::values(ter$cout, mat = FALSE)[1]
+  # A 30 % : bareme = 25 EUR/m de surcout ; terrassement = la forme fermee.
+  expect_equal(v_bar, base + 25)
+  expect_equal(v_ter, base + cout_terrassement(30, largeur_m = 4, config = cfg))
+})
+
+test_that("le terrassement rend infranchissable ce qu'il declare impossible", {
+  skip_if_not_installed("terra")
+  # 120 % : au-dela du talus de deblai. Le bareme, lui, y met Inf. Les deux
+  # doivent aboutir a une cellule infranchissable -- un NA se propagerait en
+  # silence dans la somme et laisserait passer le solveur.
+  pre <- pre_pente(120)
+  ter <- surface_cout_construction(pre, methode_pente = "terrassement")
+  expect_true(all(!terra::values(ter$franchissable, mat = FALSE), na.rm = TRUE))
+})
+
+test_that("la largeur de plateforme ne joue que sur le terrassement", {
+  skip_if_not_installed("terra")
+  pre <- pre_pente(30)
+  large <- surface_cout_construction(pre, methode_pente = "terrassement",
+                                     largeur_m = 6)
+  etroit <- surface_cout_construction(pre, methode_pente = "terrassement",
+                                      largeur_m = 3)
+  expect_gt(terra::values(large$cout, mat = FALSE)[1],
+            terra::values(etroit$cout, mat = FALSE)[1])
+  # Le bareme, lui, est aveugle a la largeur : c'est la raison de la spec 029.
+  b6 <- surface_cout_construction(pre, largeur_m = 6)
+  b3 <- surface_cout_construction(pre, largeur_m = 3)
+  expect_equal(terra::values(b6$cout, mat = FALSE)[1],
+               terra::values(b3$cout, mat = FALSE)[1])
 })

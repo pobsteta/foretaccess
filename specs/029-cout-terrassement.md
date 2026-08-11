@@ -1,7 +1,8 @@
 # specs/029 — Coût de terrassement : déblai / remblai dans la surface de coût
 
-> **Statut** : **spécifiée, implémentation amorcée** — `cout_terrassement()` (§4) écrite et testée ;
-> le branchement dans `surface_cout_construction()` reste à faire (§6).
+> **Statut** : **implémentée, non activée par défaut** — `cout_terrassement()` (§4) et le
+> branchement `surface_cout_construction(methode_pente = "terrassement")` sont écrits et testés ;
+> le barème reste le défaut tant que le banc du §6 n'a pas tourné.
 > **Lot** : extension du Lot 14 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 1 (`preprocess()` : pente du terrain), spec 014 (structure additive du coût).
 > **Sert** : Lot 15 (solveur A\*) et Lot 16 (réseau MTAP), via `pondere_cout = TRUE`.
@@ -145,11 +146,15 @@ cellules — la structure est déjà là (ADR-008, graphe étendu), mais c'est u
 |---|---|---|
 | `cout_terrassement()` + oracle analytique en test | 2 j | **fait** |
 | Prix en config + validation `checkmate` | 0,5 j | **fait** |
-| Branchement dans `surface_cout_construction()` (`methode = "bareme" \| "terrassement"`) | 1 j | reste |
+| Branchement dans `surface_cout_construction()` (`methode_pente = "bareme" \| "terrassement"`) | 1 j | **fait** |
 | Banc de comparaison barème / terrassement sur un massif réel | 2 j | reste |
 | Coût porté sur les arêtes (lève §5) | 1,5 sem | non arbitré |
 
-Le branchement est laissé en second temps **délibérément** : changer le terme de pente change tous
-les tracés produits, et la comparaison des deux méthodes sur un massif réel doit précéder la
-bascule du défaut. La fonction est écrite, testée et appelable ; `surface_cout_construction()` ne
-l'utilise pas encore.
+**Le défaut reste `"bareme"`, délibérément** : changer le terme de pente change tous les tracés
+produits, et la comparaison des deux méthodes sur un massif réel doit précéder la bascule. La
+méthode est écrite, testée et appelable — elle n'est pas activée.
+
+Un point que le branchement a révélé : le barème rend `Inf` là où la construction est impossible,
+le terrassement rend `NA`. Les deux doivent aboutir au même endroit — une cellule
+infranchissable — alors qu'un `NA` se propagerait en silence dans la somme et laisserait passer le
+solveur. La conversion est faite au branchement, et testée.

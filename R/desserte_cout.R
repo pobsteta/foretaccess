@@ -27,6 +27,13 @@
 #' @param interdit Optional forbidden-area layer (`SpatRaster` `> 0` or `sf`
 #'   polygons): those cells are not crossable.
 #' @param surcout Optional free additional surcharge (`SpatRaster`, €/m).
+#' @param methode_pente How the slope term is priced: `"bareme"` (default, the
+#'   Lot 14 step function) or `"terrassement"` (spec 029, cut-and-fill volumes
+#'   priced per cubic metre -- continuous, and sensitive to platform width).
+#'   The default is deliberate: switching the slope term changes every route the
+#'   solver produces, so a side-by-side run on a real massif must come first.
+#' @param largeur_m Target platform width (m), used by
+#'   `methode_pente = "terrassement"` only. Default 4.
 #' @return A `foretaccess_cout_construction` object: a list of two `SpatRaster`
 #'   aligned on the DEM — `cout` (€/m, `NA` outside the crossable zone) and
 #'   `franchissable` (logical).
@@ -34,8 +41,11 @@
 surface_cout_construction <- function(pre, config = foretaccess_config(),
                                        plan_eau = NULL, cours_eau = NULL,
                                        sol = NULL, interdit = NULL,
-                                       surcout = NULL) {
+                                       surcout = NULL,
+                                       methode_pente = c("bareme", "terrassement"),
+                                       largeur_m = 4) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
+  methode_pente <- match.arg(methode_pente)
   validate_config(config)
   co <- config$desserte$cout
   grille <- pre$mnt
@@ -43,10 +53,28 @@ surface_cout_construction <- function(pre, config = foretaccess_config(),
   # 1. Cout de base : constant sur la grille, NA hors MNT.
   cout <- terra::mask(terra::setValues(grille, co$cout_base_m), grille)
 
-  # 2. Surcout de pente : bareme par classes [min, max) -> surcout. Un surcout
-  #    Inf (pente non constructible) rend la cellule infranchissable (etape 8).
-  rcl <- as.matrix(co$bareme_pente[, c("min", "max", "surcout")])
-  s_pente <- terra::classify(pre$slope_pct, rcl, right = FALSE)
+  # 2. Terme de pente. Deux methodes, meme place dans la somme.
+  #
+  #    "bareme" (defaut) : classes [min, max) -> surcout. Un surcout Inf (pente
+  #    non constructible) rend la cellule infranchissable (etape 8).
+  #
+  #    "terrassement" (spec 029) : volume de deblai/remblai chiffre au m3,
+  #    continu et sensible a la largeur de plateforme. Le defaut reste le bareme
+  #    DELIBEREMENT : changer ce terme change tous les traces produits, et la
+  #    comparaison des deux methodes sur un massif reel doit preceder la
+  #    bascule.
+  s_pente <- if (identical(methode_pente, "terrassement")) {
+    cout_terrassement(pre$slope_pct, largeur_m = largeur_m, config = config)
+  } else {
+    rcl <- as.matrix(co$bareme_pente[, c("min", "max", "surcout")])
+    terra::classify(pre$slope_pct, rcl, right = FALSE)
+  }
+  # Le terrassement rend NA la ou la construction est impossible, la ou le
+  # bareme rend Inf. Les deux doivent aboutir au meme endroit -- une cellule
+  # infranchissable -- alors qu'un NA se propagerait en silence dans la somme.
+  if (identical(methode_pente, "terrassement")) {
+    s_pente <- terra::ifel(is.na(s_pente) & !is.na(grille), Inf, s_pente)
+  }
   cout <- cout + s_pente
 
   # 3. Surcout de sol : table classe -> surcout (optionnel).
