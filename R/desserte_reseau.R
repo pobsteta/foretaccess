@@ -204,13 +204,13 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
     return(invisible(FALSE))
   }
   cli::cli_warn(c(
-    "!" = "La surface de coût fournie est {.strong ignorée} :
-           {.code pondere_cout = FALSE} (défaut) n'en garde que le masque
+    "!" = "La surface de cout fournie est {.strong ignoree} :
+           {.code pondere_cout = FALSE} (defaut) n'en garde que le masque
            {.field franchissable}.",
-    "i" = "Le tracé sera purement géométrique (parité SylvaRoad),
+    "i" = "Le trace sera purement geometrique (parite SylvaRoad),
            alors que {.arg cout} porte {length(unique(v))} valeurs distinctes.",
-    "v" = "Pour pondérer : {.code pondere_cout = TRUE}. Pour garder la
-           géométrie sans cet avertissement : {.code pondere_cout = FALSE}
+    "v" = "Pour ponderer : {.code pondere_cout = TRUE}. Pour garder la
+           geometrie sans cet avertissement : {.code pondere_cout = FALSE}
            explicitement."
   ))
   invisible(TRUE)
