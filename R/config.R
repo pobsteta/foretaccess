@@ -272,7 +272,25 @@ foretaccess_config <- function(skidder = list(),
         cout_buse_m = 120, # surcoût maximal par densité de cours d'eau (cellule pleine)
         # Surcoût de sol : table nommée `classe (chr) -> surcout (EUR/m)`. `NULL`
         # = aucun (couche de sol ignorée).
-        bareme_sol = NULL
+        bareme_sol = NULL,
+        # Coût de TERRASSEMENT (spec 029). Alternative continue au barème de
+        # pente ci-dessus : les sections de déblai et de remblai ont une forme
+        # fermée sur un profil en travers plan, donc un €/m par cellule.
+        #
+        # Les PRIX N'ONT AUCUNE VALEUR DÉFENDABLE PAR DÉFAUT — un devis de
+        # terrassement dépend du massif, de l'accès et de l'année. Ceux-ci sont
+        # des ordres de grandeur pour que la fonction tourne, à remplacer par
+        # un barème du gestionnaire avant tout usage métier.
+        terrassement = list(
+          prix_deblai_m3 = 6,       # extraction et mise en place
+          prix_remblai_m3 = 4,      # compactage du remblai
+          prix_evacuation_m3 = 12,  # transport hors site : le poste qui pique
+          talus_deblai = 1.0,       # pente du talus amont (1 = 100 %)
+          talus_remblai = 0.6,      # pente du talus aval, plus doux
+          # Seuils de bascule déblai/remblai, repris de dessertR::dsr_cubature().
+          ripage_min = 0.35,
+          ripage_max = 0.60
+        )
       ),
       # Paramètres du solveur de tracé A* (Lot 15, portage SylvaRoad ;
       # défauts de `SylvaRoaD_0_param.py`). Le tracé minimise sa longueur sous
@@ -439,6 +457,21 @@ validate_config <- function(cfg) {
   checkmate::assert_number(co$fraction_reouverture, lower = 0, upper = 1)
   checkmate::assert_number(co$cout_pont_m, lower = 0, finite = TRUE)
   checkmate::assert_number(co$cout_buse_m, lower = 0, finite = TRUE)
+  # Terrassement (spec 029). Les talus doivent etre STRICTEMENT positifs : un
+  # talus de pente nulle ne recoupe jamais le terrain et fait diverger le volume.
+  te <- co$terrassement
+  if (!is.null(te)) {
+    for (nm in c("prix_deblai_m3", "prix_remblai_m3", "prix_evacuation_m3")) {
+      checkmate::assert_number(te[[nm]], lower = 0, finite = TRUE, .var.name = nm)
+    }
+    checkmate::assert_number(te$talus_deblai, lower = 1e-6, finite = TRUE)
+    checkmate::assert_number(te$talus_remblai, lower = 1e-6, finite = TRUE)
+    checkmate::assert_number(te$ripage_min, lower = 0, finite = TRUE)
+    checkmate::assert_number(te$ripage_max, lower = 0, finite = TRUE)
+    if (te$ripage_min >= te$ripage_max) {
+      stop("`terrassement$ripage_min` doit etre inferieur a `ripage_max`.", call. = FALSE)
+    }
+  }
   checkmate::assert_data_frame(co$bareme_pente, min.rows = 1)
   checkmate::assert_names(names(co$bareme_pente), must.include = c("min", "max", "surcout"))
   checkmate::assert_numeric(co$bareme_pente$min, lower = 0, any.missing = FALSE, sorted = TRUE)
