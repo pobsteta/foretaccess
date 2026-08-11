@@ -1,0 +1,107 @@
+# Tests d'integration RESEAU (opt-in) : appels reels IGN / OSM sur une micro-AOI.
+#
+# Pourquoi un workflow SEPARE, et pas `FORETACCESS_RUN_ONLINE_TESTS=TRUE` dans
+# `R-CMD-check` : ces tests dependent de la disponibilite du WFS IGN et d'OSM.
+# Les brancher sur les pull requests ferait echouer la CI -- et bloquerait les
+# merges -- a chaque panne d'un service tiers, pour une raison etrangere au code
+# soumis. Ils tournent donc sur planification et a la demande, la ou un echec est
+# un SIGNAL a instruire et non un barrage.
+#
+# Ce qu'ils couvrent, et que rien d'autre ne couvre : la chaine complete
+# `acquire_inputs()` -> `preprocess()`. C'est precisement le contrat qui s'est
+# casse en v2.0.0 (`acquire_desserte()` produisant des `hors_desserte` que
+# `preprocess()` rejetait). Le test existait deja mais, garde par un flag
+# qu'aucun workflow ne posait, il n'a jamais tourne : le defaut est parti en
+# production. Cf. `docs/adr/` et NEWS 2.0.1.
+#
+# Le verrou HORS-LIGNE de la meme faute (les vocabulaires de classe qui derivent)
+# vit dans `tests/testthat/test-hors-desserte-preprocess.R` et tourne, lui, a
+# chaque PR. Celui-ci est la ceinture ; l'autre sont les bretelles.
+
+# CADENCE ET BUDGET -- lire avant de resserrer.
+#
+# Mesure locale du 2026-08-11 : `test-acquire-online.R` tournait encore apres
+# 1 h 01 sans rendre la main, et n'a pas ete mene a terme. La duree reelle est
+# donc INCONNUE, seulement minoree. L'acquisition du MNT passe par les dalles
+# departementales RGE ALTI (le WMS ayant ete banni en v2.0.0), qui se comptent
+# en centaines de Mo -- c'est la piste la plus probable.
+#
+# Consequences assumees ici :
+#   * cadence HEBDOMADAIRE, pas quotidienne : plus d'une heure de telechargement
+#     IGN par nuit serait disproportionne pour un test de non-regression de
+#     contrat, et impoli envers un service public gratuit ;
+#   * `timeout-minutes` a 120, au-dessus du minorant mesure. Un premier run qui
+#     s'y heurterait dirait quelque chose d'utile : que ce test n'est pas
+#     industrialisable tel quel et qu'il faut reduire l'AOI.
+#
+# TANT QUE CE WORKFLOW N'A PAS TOURNE VERT UNE FOIS, il est a considerer comme
+# NON VALIDE.
+on:
+  schedule:
+    # Lundi 04:17 UTC (heure creuse, decalee de l'heure ronde pour ne pas tomber
+    # avec la foule des crons GitHub).
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # Uniquement quand l'acquisition elle-meme bouge : inutile de solliciter
+    # l'IGN parce qu'on a touche au moteur cable.
+    paths:
+      - "R/acquire*.R"
+      - "R/datasources.R"
+      - "R/preprocess.R"
+      - "R/validate.R"
+      - "tests/testthat/test-acquire-online.R"
+      - "tests/testthat/helper-acquire.R"
+      - ".github/workflows/online-tests.yaml"
+
+name: online-tests
+
+permissions: read-all
+
+jobs:
+  online-tests:
+    runs-on: ubuntu-latest
+    # Un service tiers peut etre lent : on borne, sans etrangler.
+    timeout-minutes: 120
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      FORETACCESS_RUN_ONLINE_TESTS: "TRUE"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      # `happign` et `osmdata` sont en Suggests : sans eux, `skip_if_no_online()`
+      # SAUTE le test. Un workflow qui installe le paquet sans ses suggests
+      # afficherait donc un vert trompeur -- il n'aurait rien teste.
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::happign, any::osmdata, any::testthat, any::pkgload, local::.
+          needs: check
+
+      - name: Tests reseau (IGN / OSM)
+        shell: Rscript {0}
+        run: |
+          res <- testthat::test_local(filter = "acquire-online",
+                                      reporter = "summary",
+                                      stop_on_failure = FALSE)
+          df <- as.data.frame(res)
+          # Un SKIP est un echec ici : ce workflow existe pour que ces tests
+          # tournent. S'ils se sautent (paquet suggest absent, `skip_if_offline`
+          # negatif), le vert ne prouverait rien -- exactement le piege qui a
+          # laisse passer la regression 2.0.0.
+          n_skip <- sum(df$skipped)
+          if (n_skip > 0) {
+            cat("ECHEC : ", n_skip, " test(s) SAUTE(S) -- le workflow reseau",
+                " n'a rien verifie.\n", sep = "")
+            quit(save = "no", status = 1L)
+          }
+          if (sum(df$failed) > 0 || any(df$error)) {
+            quit(save = "no", status = 1L)
+          }
+          cat("Tests reseau OK (", nrow(df), " bloc(s), aucun saut).\n", sep = "")
