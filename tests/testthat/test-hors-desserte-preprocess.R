@@ -127,6 +127,29 @@ test_that("un hors_desserte flagge CL_DFCI ne devient pas source du camion", {
   expect_true(all(terra::values(m, mat = FALSE) == 0))
 })
 
+# Le VERROU de contrat. L'incompatibilite de la v2.0.0 est nee de la derive de
+# deux vocabulaires : `.mapper_classe_desserte()` s'est mis a emettre
+# `hors_desserte`, que `.valider_desserte()` refusait. Chacun etait teste de son
+# cote ; RIEN ne testait qu'ils parlaient la meme langue.
+#
+# Ce test echoue des qu'un mappeur emet une classe que le validateur rejette --
+# c'est-a-dire au moment ou la chaine acquisition -> pretraitement se casse, et
+# non plusieurs semaines plus tard chez un appelant.
+test_that("tout ce que produit acquire_desserte() est accepte par preprocess()", {
+  x <- data.frame(
+    nature = c("Route à 2 chaussées", "Route à 1 chaussée", "Route empierrée",
+               "Chemin", "Sentier", "Rond-point", "Escalier", "Bac ou liaison maritime"),
+    importance = c(1L, 3L, 4L, 5L, 6L, 5L, 6L, 6L),
+    liens_vers_route_nommee = c(NA, NA, NA, "ROUTNOMM01", NA, NA, NA, NA)
+  )
+  for (classification in c("accessfor", "clsvac", "heuristique")) {
+    cl <- foretaccess:::.mapper_classe_desserte(x, classification, "ROUTNOMM01")
+    inconnues <- setdiff(unique(cl), .classes_desserte_connues())
+    expect_identical(inconnues, character(0),
+      info = paste("classification", classification, "emet", toString(inconnues)))
+  }
+})
+
 test_that("places_depot() ne propose pas de candidate sur un hors_desserte", {
   des <- foretaccess:::.desserte_lignes(
     ajouter_hors_desserte(toy_desserte(), seg(c(0, 250), c(250, 0))),
