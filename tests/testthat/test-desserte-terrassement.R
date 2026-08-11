@@ -41,11 +41,17 @@ test_that("le cout est croissant partout, et continu la ou l'on construit", {
   fini <- is.finite(v)
   expect_true(all(diff(v[fini]) >= -1e-9))      # croissant
 
-  # Continuite sur la plage ou une desserte se construit reellement : aucun
-  # saut brutal, contrairement au bareme en escalier qui bondit de 65 EUR/m
-  # entre 34,9 % et 35,1 %.
-  usuel <- cout_terrassement(seq(0, 50, by = 0.5), largeur_m = 4)
-  expect_lt(max(abs(diff(usuel))), 5)
+  # Continuite la ou le bareme est le plus brutal : il bondit de 65 EUR/m entre
+  # 34,9 % et 35,1 %, quand le terrassement monte de 1 EUR/m au plus par pas de
+  # 0,5 point sur toute la plage 0-35 %.
+  doux <- cout_terrassement(seq(0, 35, by = 0.5), largeur_m = 4)
+  expect_lt(max(abs(diff(doux))), 5)
+
+  # Au-dela, la montee est raide mais REGULIERE. Le critere devient relatif :
+  # un critere absolu dependrait des prix, que le calage a multiplies par 2,79
+  # (cf. spec 029, section Prix) sans rien changer a la forme de la courbe.
+  raide <- cout_terrassement(seq(5, 50, by = 0.5), largeur_m = 4)
+  expect_lt(max(diff(raide) / raide[-1]), 0.15)
 })
 
 test_that("le cout diverge en approchant la pente du talus de deblai", {

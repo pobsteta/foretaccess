@@ -106,8 +106,61 @@ coût_terrassement(€/m) = v_déblai · prix_déblai_m3
 ```
 
 où les `v` sont les sections en m² (donc des m³ par mètre linéaire de route). Les prix vont en
-config, `desserte$cout$terrassement`, et sont **à caler avec un gestionnaire** : aucune valeur par
-défaut n'est défendable sans devis régional.
+config, `desserte$cout$terrassement`.
+
+### Calage des prix par inversion d'un plafond (2026-08-11)
+
+**Aucune source publique ne donne de €/m³ de terrassement forestier.** Les barèmes de subvention
+donnent des coûts *tout compris* au kilomètre — 65 000 €/km en création empierrée, 45 000 en mise
+au gabarit, 20 000 en terrain naturel ; 30 000 €/km dans le massif vosgien, 50 000 sur plateau
+calcaire, 60 à 70 000 sur plateau lorrain. Les prix de terrassement du BTP existent (30–70 €/m³ en
+déblai-remblai, 40–110 une fois la mise en décharge incluse) mais décrivent un chantier de
+bâtiment où le matériau part en décharge, alors qu'en desserte il est **réemployé sur place**.
+
+On inverse donc le plafond. À la pente médiane de DABO (28,2 %) et 4 m de plateforme, le modèle
+déplace **1,49 m³ par mètre linéaire** ; le barème y demande 25 €/m de surcoût — valeur ancrée sur
+les 45 000 €/km de la « mise au gabarit », comme `fraction_reouverture`. Le facteur qui égalise les
+deux vaut **2,79** :
+
+| | avant | après calage |
+|---|---:|---:|
+| déblai | 6 €/m³ | **17 €/m³** |
+| remblai | 4 €/m³ | **11 €/m³** |
+| évacuation | 12 €/m³ | **33 €/m³** |
+
+**Contrôle indépendant** : 17 €/m³ de déblai tombe au milieu de la fourchette BTP « déblai seul,
+10–32 €/m³ », qui n'a pas servi au calcul.
+
+### Le calage redistribue, il ne remet pas à l'échelle
+
+C'est le fait le plus utile de l'opération, et il n'était pas prévu. Les deux courbes se croisent
+**quatre fois** (14,9 %, 28,1 %, 34,9 %, 42,2 %) :
+
+| pente | terrassement | barème |
+|---:|---:|---:|
+| 10 % | 6,4 €/m | 0 |
+| 20 % | 15,1 €/m | 25 |
+| 30 % | 27,8 €/m | 25 |
+| 34,9 % | 36,6 €/m | 25 |
+| 35,1 % | 37,0 €/m | **90** |
+| 45 % | 131,9 €/m | 90 |
+| 59 % | 550,3 €/m | 90 |
+
+Le barème est **gratuit sous 15 %** là où tout terrassement coûte quelque chose, **surtaxe la
+pente moyenne** par sa marche à 35 %, et **sous-tarifie massivement le raide** — 90 €/m à 59 %
+quand le terrassement en demande 550. Un calage qui n'aurait fait que multiplier une échelle
+n'aurait rien changé aux tracés ; celui-ci change l'ordre relatif des cellules, donc les tracés.
+
+### Ce que ce calage ne règle pas
+
+1. Il cale le terrassement sur le **barème**, c'est-à-dire sur le proxy que cette spec veut
+   remplacer. Le raisonnement n'est pas circulaire — le barème est lui-même ancré sur des plafonds
+   d'État — mais il transporte l'erreur du barème **à la pente médiane**.
+2. **Un point de calage ne contraint que la somme pondérée des trois prix.** Leur rapport reste
+   arbitraire : il faudrait un second massif, raide, où l'évacuation domine, pour les séparer.
+3. Un plafond de subvention **majore** un coût observé.
+
+Un devis de gestionnaire reste supérieur à tout ceci.
 
 ## 4. Interface
 
@@ -151,7 +204,9 @@ cellules — la structure est déjà là (ADR-008, graphe étendu), mais c'est u
 | Prix en config + validation `checkmate` | 0,5 j | **fait** |
 | Branchement dans `surface_cout_construction()` (`methode_pente = "bareme" \| "terrassement"`) | 1 j | **fait** |
 | Banc de comparaison barème / terrassement sur un massif réel | 2 j | **fait** (§7) |
+| Prix au m³ calés par inversion de plafond | 0,5 j | **fait** (§Prix) |
 | Barème de prix au m³ d'un gestionnaire | — | **reste — bloquant pour la bascule** |
+| Refaire le banc du §7 aux prix calés | 0,5 j | **reste** |
 | Coût porté sur les arêtes (lève §5) | 1,5 sem | non arbitré |
 
 **Le défaut reste `"bareme"`, délibérément** : changer le terme de pente change tous les tracés
@@ -166,6 +221,14 @@ solveur. La conversion est faite au branchement, et testée.
 ---
 
 ## 7. Banc barème / terrassement sur massif réel (2026-08-11)
+
+> ⚠️ **Mesuré AVANT le calage des prix** (§Prix), aux valeurs 6 / 4 / 12 €/m³.
+> Ce qui tient : le §7.1 — le *feasible set* ne dépend que de la géométrie des talus, pas des
+> prix. Ce qui ne tient plus : les coûts du §7.2, à multiplier par 2,79 côté terrassement, ce qui
+> aligne sa médiane sur celle du barème **par construction** et fait disparaître le « × 0,63 ».
+> Les tracés du §7.3 sont à **refaire** : le calage redistribue au lieu de remettre à l'échelle,
+> donc il change l'ordre relatif des cellules.
+
 
 Massif **DABO** : emprise de 737 870 cellules à 5 m, pente médiane 28,2 %, p90 53,7 %.
 4 parcelles / 774 ha, desserte existante réelle, `skidding_m = 100`, `pondere_cout = TRUE`,
