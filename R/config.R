@@ -471,6 +471,18 @@ validate_config <- function(cfg) {
     if (te$ripage_min >= te$ripage_max) {
       stop("`terrassement$ripage_min` doit etre inferieur a `ripage_max`.", call. = FALSE)
     }
+    # INVARIANT PORTANT. La continuite du cout en `p -> talus_remblai` ne tient
+    # que si le ripage est PLEIN a ce moment-la : la demi-largeur remblayee
+    # `b = L/2 (1 - r)` doit s'annuler au moins aussi vite que `(B - p)`, sans
+    # quoi `s_remblai = (p b)^2 / 2(B - p)` diverge juste avant la bascule en NA.
+    # Mesure avec ripage_max = 0,80 et talus_remblai = 0,60 : 5 737 EUR/m a
+    # 59,99 %, contre 216 EUR/m avec le defaut -- la discontinuite meme que le
+    # modele a assiette asymetrique est cense avoir supprimee.
+    if (te$ripage_max > te$talus_remblai) {
+      stop("`terrassement$ripage_max` (", te$ripage_max, ") ne peut depasser ",
+           "`talus_remblai` (", te$talus_remblai, ") : le cout divergerait ",
+           "juste sous la pente du talus aval.", call. = FALSE)
+    }
   }
   checkmate::assert_data_frame(co$bareme_pente, min.rows = 1)
   checkmate::assert_names(names(co$bareme_pente), must.include = c("min", "max", "surcout"))

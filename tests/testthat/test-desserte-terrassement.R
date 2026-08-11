@@ -164,3 +164,41 @@ test_that("la largeur de plateforme ne joue que sur le terrassement", {
   expect_equal(terra::values(b6$cout, mat = FALSE)[1],
                terra::values(b3$cout, mat = FALSE)[1])
 })
+
+# --- Ajouts de la relecture (2026-08-11) ------------------------------------
+
+test_that("l'invariant ripage_max <= talus_remblai est IMPOSE", {
+  # La continuite mesuree au test precedent ne tient que parce que le defaut
+  # pose `ripage_max == talus_remblai`. Decouples, la demi-largeur remblayee ne
+  # s'annule plus assez vite et `s_remblai` diverge juste sous `talus_remblai` :
+  # 5 737 EUR/m a 59,99 % (contre 216 avec le defaut), puis NA a 60 %. C'est la
+  # discontinuite que l'assiette asymetrique est censee avoir supprimee, et rien
+  # ne l'interdisait en config.
+  te <- list(prix_deblai_m3 = 6, prix_remblai_m3 = 4, prix_evacuation_m3 = 12,
+             talus_deblai = 1.0, talus_remblai = 0.6,
+             ripage_min = 0.35, ripage_max = 0.80)
+  expect_error(
+    validate_config(foretaccess_config(desserte = list(cout = list(terrassement = te)))),
+    "ripage_max"
+  )
+
+  # L'egalite (le defaut) reste licite : c'est elle qui rend le cout continu.
+  te$ripage_max <- te$talus_remblai
+  expect_no_error(validate_config(
+    foretaccess_config(desserte = list(cout = list(terrassement = te)))))
+
+  # Le garde-fou NUMERIQUE de `.cout_terrassement_num()` (`r0 < 1 & p >= B`)
+  # reste utile en defense de profondeur : `cout_terrassement()` ne valide pas
+  # la config, et le test « terrain plus raide que les talus » ci-dessus s'en
+  # sert encore avec un `ripage_max` que `validate_config()` refuse desormais.
+  expect_true(is.na(cout_terrassement(60, largeur_m = 4, config = local({
+    cfg <- foretaccess_config()
+    cfg$desserte$cout$terrassement$ripage_max <- 0.9
+    cfg
+  }))))
+})
+
+test_that("le defaut de config satisfait l'invariant", {
+  te <- foretaccess_config()$desserte$cout$terrassement
+  expect_lte(te$ripage_max, te$talus_remblai)
+})

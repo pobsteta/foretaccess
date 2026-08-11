@@ -11,7 +11,9 @@ surface_cout_construction(
   cours_eau = NULL,
   sol = NULL,
   interdit = NULL,
-  surcout = NULL
+  surcout = NULL,
+  methode_pente = c("bareme", "terrassement"),
+  largeur_m = 4
 )
 }
 \arguments{
@@ -35,6 +37,15 @@ polygons with a \code{classe} field); mapped through \code{config$desserte$cout$
 polygons): those cells are not crossable.}
 
 \item{surcout}{Optional free additional surcharge (\code{SpatRaster}, €/m).}
+
+\item{methode_pente}{How the slope term is priced: \code{"bareme"} (default, the
+Lot 14 step function) or \code{"terrassement"} (spec 029, cut-and-fill volumes
+priced per cubic metre -- continuous, and sensitive to platform width).
+The default is deliberate: switching the slope term changes every route the
+solver produces, so a side-by-side run on a real massif must come first.}
+
+\item{largeur_m}{Target platform width (m), used by
+\code{methode_pente = "terrassement"} only. Default 4.}
 }
 \value{
 A \code{foretaccess_cout_construction} object: a list of two \code{SpatRaster}

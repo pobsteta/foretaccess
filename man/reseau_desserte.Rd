@@ -21,7 +21,9 @@ reseau_desserte(
 \arguments{
 \item{pre}{A \code{foretaccess_preprocessing} object (DEM, terrain slope).}
 
-\item{cout}{A \code{foretaccess_cout_construction} object (Lot 14): crossability.}
+\item{cout}{A \code{foretaccess_cout_construction} object (Lot 14): crossability
+mask, and -- \strong{only if \code{pondere_cout = TRUE}} -- the euros/m surface. At the
+\code{FALSE} default the surface is computed and discarded; see \code{pondere_cout}.}
 
 \item{parcelles}{An \code{sf} POLYGON of the areas to serve.}
 
@@ -51,7 +53,14 @@ same column for both.}
 
 \item{pondere_cout}{If \code{TRUE}, weights the trace by the Lot 14 construction
 cost surface (\code{cout$cout}, euros/m) instead of pure geometric distance; the
-trace then minimises monetary cost. Default \code{FALSE} (SylvaRoad behaviour).}
+trace then minimises monetary cost. Default \code{FALSE} (SylvaRoad behaviour).
+
+\strong{At \code{FALSE}, the euros/m surface of \code{cout} is not read at all} -- only its
+\code{franchissable} mask is. A varying cost surface left unweighted therefore
+raises a warning, since building one is rarely done for its mask; pass
+\code{pondere_cout = FALSE} \strong{explicitly} to keep pure geometry silently. The
+default is unchanged on purpose: flipping it would break the Lot 15 SylvaRoad
+parity and alter every trace produced so far.}
 
 \item{config}{A \code{foretaccess_config}; the solver settings live in
 \code{config$desserte$trace}.}

@@ -12,7 +12,9 @@
 #' -> tree). A parcel cell already within `skidding_m` of a road needs no road.
 #'
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
-#' @param cout A `foretaccess_cout_construction` object (Lot 14): crossability.
+#' @param cout A `foretaccess_cout_construction` object (Lot 14): crossability
+#'   mask, and -- **only if `pondere_cout = TRUE`** -- the euros/m surface. At the
+#'   `FALSE` default the surface is computed and discarded; see `pondere_cout`.
 #' @param parcelles An `sf` POLYGON of the areas to serve.
 #' @param desserte_existante An `sf` LINESTRING of the network to connect to.
 #' @param heuristique Ordering of parcels: `"plus_proche"` (closest first),
@@ -33,6 +35,13 @@
 #' @param pondere_cout If `TRUE`, weights the trace by the Lot 14 construction
 #'   cost surface (`cout$cout`, euros/m) instead of pure geometric distance; the
 #'   trace then minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
+#'
+#'   **At `FALSE`, the euros/m surface of `cout` is not read at all** -- only its
+#'   `franchissable` mask is. A varying cost surface left unweighted therefore
+#'   raises a warning, since building one is rarely done for its mask; pass
+#'   `pondere_cout = FALSE` **explicitly** to keep pure geometry silently. The
+#'   default is unchanged on purpose: flipping it would break the Lot 15 SylvaRoad
+#'   parity and alter every trace produced so far.
 #' @param config A `foretaccess_config`; the solver settings live in
 #'   `config$desserte$trace`.
 #' @param graine Optional integer seed for the `"aleatoire"` ordering.
@@ -119,6 +128,7 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
   heuristique <- match.arg(heuristique)
   mode <- match.arg(mode)
   validate_config(config)
+  .avertir_cout_ignore(cout, pondere_cout, !missing(pondere_cout))
 
   ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config, pondere_cout)
   res <- if (mode == "steiner") {
@@ -164,6 +174,46 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
     return(rep(1, terra::ncell(grille)))
   }
   as.numeric(terra::values(cout$cout))
+}
+
+# `pondere_cout = FALSE` (le defaut, parite SylvaRoad) n'utilise de `cout` que le
+# masque `franchissable` : la surface EUR/m est calculee, payee, et JETEE. Un
+# appelant qui construit une surface de cout ne le fait pourtant pas pour son
+# masque -- et rien ne le lui disait. Cf. `specs/029` et le brief dessertR du
+# 2026-08-11 : le defaut a produit des traces purement geometriques pendant des
+# mois chez un appelant qui croyait ponderer.
+#
+# On avertit seulement quand les trois conditions tiennent :
+#   * le drapeau n'a pas ete passe EXPLICITEMENT (le silence n'est pas un choix) ;
+#   * la surface VARIE (une surface constante ne changerait aucun trace, le
+#     solveur minimisant un cout relatif : avertir serait du bruit) ;
+#   * il reste au moins deux valeurs finies a comparer.
+#
+# Ni erreur ni bascule de defaut : basculer casserait la parite SylvaRoad du
+# Lot 15 et changerait tous les traces existants sans que personne l'ait demande.
+.avertir_cout_ignore <- function(cout, pondere_cout, explicite) {
+  if (isTRUE(pondere_cout) || isTRUE(explicite)) {
+    return(invisible(FALSE))
+  }
+  if (!inherits(cout, "foretaccess_cout_construction") || is.null(cout$cout)) {
+    return(invisible(FALSE))
+  }
+  v <- as.numeric(terra::values(cout$cout))
+  v <- v[is.finite(v)]
+  if (length(v) == 0 || length(unique(v)) < 2L) {
+    return(invisible(FALSE))
+  }
+  cli::cli_warn(c(
+    "!" = "La surface de coût fournie est {.strong ignorée} :
+           {.code pondere_cout = FALSE} (défaut) n'en garde que le masque
+           {.field franchissable}.",
+    "i" = "Le tracé sera purement géométrique (parité SylvaRoad),
+           alors que {.arg cout} porte {length(unique(v))} valeurs distinctes.",
+    "v" = "Pour pondérer : {.code pondere_cout = TRUE}. Pour garder la
+           géométrie sans cet avertissement : {.code pondere_cout = FALSE}
+           explicitement."
+  ))
+  invisible(TRUE)
 }
 
 # Assemblage de l'objet `foretaccess_reseau` a partir des chemins/couts retenus
