@@ -2,9 +2,9 @@
 
 > **Statut** : **implémentée, non activée par défaut** — `cout_terrassement()` (§4) et le
 > branchement `surface_cout_construction(methode_pente = "terrassement")` sont écrits et testés ;
-> le barème reste le défaut. Le banc sur massif réel a tourné (**§7**) : il montre que la bascule
-> **agrandit l'ensemble des cellules constructibles** (+4,45 % sur DABO, entre 60 % et 100 % de
-> pente) et **déplace la moitié du tracé**. Elle demande donc un arbitrage explicite sur le seuil de
+> le barème reste le défaut. Le banc sur massif réel a tourné deux fois (**§7**), avant et après le
+> calage des prix : il montre que la bascule **agrandit l'ensemble des cellules constructibles**
+> (+5,02 % sur DABO, entre 60 % et 100 % de pente) et **déplace plus de la moitié du tracé**. Elle demande donc un arbitrage explicite sur le seuil de
 > constructibilité, plus un barème de prix de gestionnaire — pas un simple changement de défaut.
 > **Lot** : extension du Lot 14 (roadmap [`docs/ROADMAP-desserte.md`](../docs/ROADMAP-desserte.md)).
 > **Dépend de** : Lot 1 (`preprocess()` : pente du terrain), spec 014 (structure additive du coût).
@@ -206,7 +206,7 @@ cellules — la structure est déjà là (ADR-008, graphe étendu), mais c'est u
 | Banc de comparaison barème / terrassement sur un massif réel | 2 j | **fait** (§7) |
 | Prix au m³ calés par inversion de plafond | 0,5 j | **fait** (§Prix) |
 | Barème de prix au m³ d'un gestionnaire | — | **reste — bloquant pour la bascule** |
-| Refaire le banc du §7 aux prix calés | 0,5 j | **reste** |
+| Refaire le banc du §7 aux prix calés, et le rendre rejouable | 0,5 j | **fait** (§7) |
 | Coût porté sur les arêtes (lève §5) | 1,5 sem | non arbitré |
 
 **Le défaut reste `"bareme"`, délibérément** : changer le terme de pente change tous les tracés
@@ -220,71 +220,78 @@ solveur. La conversion est faite au branchement, et testée.
 
 ---
 
-## 7. Banc barème / terrassement sur massif réel (2026-08-11)
+## 7. Banc barème / terrassement sur massif réel
 
-> ⚠️ **Mesuré AVANT le calage des prix** (§Prix), aux valeurs 6 / 4 / 12 €/m³.
-> Ce qui tient : le §7.1 — le *feasible set* ne dépend que de la géométrie des talus, pas des
-> prix. Ce qui ne tient plus : les coûts du §7.2, à multiplier par 2,79 côté terrassement, ce qui
-> aligne sa médiane sur celle du barème **par construction** et fait disparaître le « × 0,63 ».
-> Les tracés du §7.3 sont à **refaire** : le calage redistribue au lieu de remettre à l'échelle,
-> donc il change l'ordre relatif des cellules.
+Rejouable : [`data-raw/banc_029_terrassement.R`](../data-raw/banc_029_terrassement.R).
+Le premier passage (2026-08-11, prix 6 / 4 / 12) avait été conduit à la main et n'a laissé que ses
+résultats ; **il n'était pas reproductible**, et il a fallu le refaire après le calage des prix.
+D'où le script. C'est la leçon du premier tour, autant que ses chiffres.
 
+Passage de référence : **DABO / xpdk**, emprise `emprise_1000m`, 1 348 212 cellules à 5 m, pente
+médiane 30,3 %, p90 54,5 %, 3 122 tronçons existants, 4 parcelles / 774 ha, `skidding_m = 100`,
+`largeur_m = 4`, `pondere_cout = TRUE`, moteur glouton, prix calés (17 / 11 / 33).
 
-Massif **DABO** : emprise de 737 870 cellules à 5 m, pente médiane 28,2 %, p90 53,7 %.
-4 parcelles / 774 ha, desserte existante réelle, `skidding_m = 100`, `pondere_cout = TRUE`,
-`largeur_m = 4`.
+> **Les deux passages ne portent pas sur la même emprise** — le premier annonçait 737 870 cellules
+> et une pente médiane de 28,2 %, contre 1 348 212 et 30,3 % ici. Son extraction n'ayant pas été
+> scriptée, elle n'est pas reconstituable. **Aucune comparaison chiffrée entre les deux passages
+> n'est licite** ; seules les comparaisons barème / terrassement *à l'intérieur* d'un passage le
+> sont. Les deux concordent qualitativement sur les trois résultats.
 
-### 7.1 Le résultat qui doit décider : le *feasible set* change
+### 7.1 Le résultat qui décide : le *feasible set* s'agrandit
 
 | | barème | terrassement |
 |---|---:|---:|
-| cellules franchissables | 704 905 | **737 770** |
-| **ouvertes** par le terrassement | — | **32 865 (4,45 % du MNT)** |
-| fermées par le terrassement | — | 0 |
+| cellules franchissables | 1 275 143 | **1 342 775** |
+| **ouvertes** par le terrassement | — | **67 632 (5,02 % du MNT)** |
+| fermées | — | **0** |
 
-Les cellules ouvertes sont **entre 60 % et 100 % de pente** — précisément la classe que le barème
-déclare non constructible (`surcout = Inf`). Le terrassement y rend un coût **fini**, de 236 à
-**1 334 168 €/m**.
+Cellules ouvertes : **60 à 100 % de pente**, exactement la classe que le barème déclare non
+constructible. Le terrassement y rend un coût fini, de **620 à 57 478 755 €/m**.
 
-C'est le point le plus important du banc, et il n'est pas de nature comptable : **basculer la
-méthode ne re-tarife pas un ensemble de tracés possibles, il l'agrandit.** Un coût de 1,3 M€/m est
-dissuasif, pas interdit : dans un corridor sans alternative, le solveur le prendra. Le barème
-répondait « on ne construit pas au-dessus de 60 % » ; le terrassement répond « on construit, et
-voici le prix ». Les deux réponses sont défendables — ce n'est pas au modèle de coût de trancher
-en silence.
+Ce résultat **ne dépend pas des prix** — la borne vient de la géométrie des talus — et il est le
+seul des trois dans ce cas. Basculer la méthode n'est donc pas re-tarifer : c'est **agrandir
+l'ensemble des tracés possibles**. 57 M€/m est dissuasif, pas interdit : dans un corridor sans
+alternative, le solveur le prendra. Le barème répond « on ne construit pas au-dessus de 60 % », le
+terrassement « on construit, et voici le prix ». Les deux sont défendables — ce n'est pas au modèle
+de coût de trancher en silence.
 
-**Conséquence pour la bascule** : elle ne peut pas être un simple changement de défaut. Il faut
-décider séparément d'un **seuil de constructibilité**, et le poser explicitement — soit en gardant
-la borne à 60 % du barème, soit en l'assumant plus haut avec l'accord d'un gestionnaire.
+**La bascule demande donc un arbitrage séparé du seuil de constructibilité**, pas un changement de
+défaut.
 
-### 7.2 Les coûts, sur le domaine commun
+### 7.2 Les coûts : le calage a fait son travail, la queue reste divergente
 
-Sur les cellules franchissables par les deux méthodes :
+Sur le domaine commun aux deux méthodes :
 
 | | médiane | moyenne |
 |---|---:|---:|
-| barème | 45 €/m | 61,7 €/m |
-| terrassement | 28,5 €/m | 46,5 €/m |
+| barème | 45,0 €/m | 64,6 €/m |
+| terrassement | 46,4 €/m | **99,0 €/m** |
 
-Le terrassement est **moins cher en médiane (× 0,63)** aux prix par défaut. Ce chiffre ne vaut
-rien en soi — les prix au m³ sont des ordres de grandeur, cf. §Prix — mais il dit que les deux
-échelles ne sont pas comparables telles quelles : un massif tarifé au terrassement paraîtra moins
-coûteux à construire, sans qu'aucune information nouvelle ne le justifie.
+Rapport des médianes : **× 1,03**. Le « × 0,63 » du premier passage a disparu — c'était l'effet
+attendu du calage, et il vaut vérification plus que découverte : les prix ont été choisis pour
+égaliser ces médianes.
 
-### 7.3 Les tracés
+**Les moyennes, elles, divergent d'un facteur 1,5.** C'est le résultat non trivial du §2 : le
+calage aligne le centre et laisse la queue s'écarter, parce qu'il redistribue au lieu de remettre à
+l'échelle. Le terrassement est plus lourd sur les fortes pentes, où le barème plafonne à 90 €/m.
+
+### 7.3 Les tracés : les agrégats se ressemblent, la géométrie non
 
 | | barème | terrassement |
 |---|---:|---:|
-| routes créées | 38 | 41 |
-| longueur totale | 7 535 m | 7 640 m |
-| coût total | 408 043 | 381 103 |
-| durée | 117 s | 149 s |
+| routes créées | 37 | 40 |
+| longueur totale | 6 931 m | 7 550 m |
+| coût total | 359 269 | 691 860 |
+| durée | 243 s | 226 s |
 
-**Recouvrement des deux tracés : 50,1 %** (part du tracé barème reprise à moins d'une cellule par
-le tracé terrassement). C'est la réponse à « quels tracés changent, et de combien » : **la moitié
-du réseau change de position.** Les agrégats se ressemblent — longueur à 1,4 % près, nombre de
-routes à 3 près — et masquent une refonte géométrique de moitié. Comparer deux méthodes sur leurs
-totaux aurait conclu à tort qu'elles sont équivalentes.
+**Recouvrement : 44,1 %** du tracé barème repris à moins d'une cellule par le tracé terrassement,
+**40,8 %** dans l'autre sens. Moins de la moitié du réseau est commune, pour une longueur totale à
+9 % près et trois routes d'écart. Comparer deux méthodes sur leurs totaux conclurait à
+l'équivalence ; c'est faux.
+
+Le coût total du terrassement est 1,9 fois celui du barème alors que leurs médianes s'égalent :
+son tracé passe donc par des cellules plus chères, c'est-à-dire plus raides. Il achète de la
+longueur en terrain difficile là où le barème l'évite — cohérent avec le §7.1.
 
 ### 7.4 Ce que le banc ne dit pas
 
