@@ -13,7 +13,8 @@ surface_cout_construction(
   interdit = NULL,
   surcout = NULL,
   methode_pente = c("bareme", "terrassement"),
-  largeur_m = 4
+  largeur_m = 4,
+  pente_max_pct = NULL
 )
 }
 \arguments{
@@ -46,6 +47,15 @@ solver produces, so a side-by-side run on a real massif must come first.}
 
 \item{largeur_m}{Target platform width (m), used by
 \code{methode_pente = "terrassement"} only. Default 4.}
+
+\item{pente_max_pct}{Constructibility ceiling: cells at or above this terrain
+slope (percent) are not crossable, \strong{whichever pricing method is used}.
+\code{NULL} (default) takes the ceiling the step function already implies -- the
+first class priced \code{Inf}, i.e. 60 \% with the shipped scale -- so that
+switching method changes only the pricing. \code{Inf} gives the earthwork model
+its full reach, which on the DABO bench opens 5 \% of the massif between
+60 \% and 100 \% of slope. That is a separate decision from the pricing one,
+and it is meant to be taken separately.}
 }
 \value{
 A \code{foretaccess_cout_construction} object: a list of two \code{SpatRaster}
