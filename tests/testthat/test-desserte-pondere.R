@@ -43,7 +43,12 @@ test_that("pondere_cout = FALSE reproduit le trace geometrique (defaut)", {
     terra::cellFromRowCol(s$pre$mnt, 3, 1),
     terra::cellFromRowCol(s$pre$mnt, 3, 9)
   )
-  t_neu <- tracer_desserte(s$pre, s$cout, wps, config = s$config)
+  # `pondere_cout = FALSE` EXPLICITE : c'est la sortie documentee pour demander
+  # la geometrie pure sans declencher l'avertissement « surface de cout ignoree »
+  # (la surface de cette fixture varie, donc le defaut implicite avertirait --
+  # a juste titre : ici on veut vraiment jeter la surface).
+  t_neu <- tracer_desserte(s$pre, s$cout, wps, pondere_cout = FALSE,
+                           config = s$config)
   expect_true(t_neu$faisable)
   # Sans ponderation, le trace direct reste sur sa ligne (n'a aucune raison de
   # remonter vers le corridor bon marche).

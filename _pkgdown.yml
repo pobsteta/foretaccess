@@ -131,6 +131,7 @@ reference:
     optimisation multi-start (Lot 18).
   contents:
   - surface_cout_construction
+  - cout_terrassement
   - tracer_desserte
   - reseau_desserte
   - contracter_lignes

@@ -272,7 +272,50 @@ foretaccess_config <- function(skidder = list(),
         cout_buse_m = 120, # surcoût maximal par densité de cours d'eau (cellule pleine)
         # Surcoût de sol : table nommée `classe (chr) -> surcout (EUR/m)`. `NULL`
         # = aucun (couche de sol ignorée).
-        bareme_sol = NULL
+        bareme_sol = NULL,
+        # Coût de TERRASSEMENT (spec 029). Alternative continue au barème de
+        # pente ci-dessus : les sections de déblai et de remblai ont une forme
+        # fermée sur un profil en travers plan, donc un €/m par cellule.
+        #
+        # PRIX CALÉS PAR INVERSION D'UN PLAFOND, PAS RELEVÉS SUR DEVIS
+        # (2026-08-11). Aucune source publique ne donne de €/m³ de terrassement
+        # forestier : les barèmes de subvention donnent des coûts TOUT COMPRIS
+        # au kilomètre, et les prix de terrassement du BTP (30-70 €/m³ en
+        # déblai-remblai, 40-110 avec mise en décharge) décrivent un chantier de
+        # bâtiment où le matériau part en décharge — alors qu'en desserte il est
+        # réemployé sur place.
+        #
+        # On inverse donc le plafond. À la pente médiane de DABO (28,2 %) et 4 m
+        # de plateforme, le modèle déplace 1,49 m³ par mètre linéaire ; le barème
+        # y demande 25 €/m de surcoût, valeur elle-même ancrée sur les 45 000
+        # €/km de la « mise au gabarit » (cf. `fraction_reouverture`). Le facteur
+        # qui égalise les deux vaut 2,79, d'où les prix ci-dessous.
+        #
+        # CONTRÔLE INDÉPENDANT : 17 €/m³ de déblai tombe au milieu de la
+        # fourchette BTP « déblai seul, 10 à 32 €/m³ », qui n'a pas servi au
+        # calcul. Les valeurs précédentes (6 / 4 / 12) n'avaient aucune
+        # corroboration de ce genre.
+        #
+        # CE QUE CE CALAGE NE RÈGLE PAS. (1) Il cale le terrassement sur le
+        # barème, c'est-à-dire sur le proxy que la spec 029 veut remplacer — le
+        # raisonnement n'est pas circulaire, le barème étant lui-même ancré sur
+        # des plafonds d'État, mais il transporte l'erreur du barème à la pente
+        # médiane. (2) UN point de calage ne contraint que la SOMME pondérée des
+        # trois prix ; leur rapport reste arbitraire, et il faudrait un second
+        # massif, raide, où l'évacuation domine, pour les séparer. (3) Un plafond
+        # de subvention majore un coût observé.
+        #
+        # Un devis de gestionnaire reste supérieur à tout ceci.
+        terrassement = list(
+          prix_deblai_m3 = 17,      # extraction et mise en place
+          prix_remblai_m3 = 11,     # compactage du remblai
+          prix_evacuation_m3 = 33,  # transport hors site : le poste qui pique
+          talus_deblai = 1.0,       # pente du talus amont (1 = 100 %)
+          talus_remblai = 0.6,      # pente du talus aval, plus doux
+          # Seuils de bascule déblai/remblai, repris de dessertR::dsr_cubature().
+          ripage_min = 0.35,
+          ripage_max = 0.60
+        )
       ),
       # Paramètres du solveur de tracé A* (Lot 15, portage SylvaRoad ;
       # défauts de `SylvaRoaD_0_param.py`). Le tracé minimise sa longueur sous
@@ -439,6 +482,33 @@ validate_config <- function(cfg) {
   checkmate::assert_number(co$fraction_reouverture, lower = 0, upper = 1)
   checkmate::assert_number(co$cout_pont_m, lower = 0, finite = TRUE)
   checkmate::assert_number(co$cout_buse_m, lower = 0, finite = TRUE)
+  # Terrassement (spec 029). Les talus doivent etre STRICTEMENT positifs : un
+  # talus de pente nulle ne recoupe jamais le terrain et fait diverger le volume.
+  te <- co$terrassement
+  if (!is.null(te)) {
+    for (nm in c("prix_deblai_m3", "prix_remblai_m3", "prix_evacuation_m3")) {
+      checkmate::assert_number(te[[nm]], lower = 0, finite = TRUE, .var.name = nm)
+    }
+    checkmate::assert_number(te$talus_deblai, lower = 1e-6, finite = TRUE)
+    checkmate::assert_number(te$talus_remblai, lower = 1e-6, finite = TRUE)
+    checkmate::assert_number(te$ripage_min, lower = 0, finite = TRUE)
+    checkmate::assert_number(te$ripage_max, lower = 0, finite = TRUE)
+    if (te$ripage_min >= te$ripage_max) {
+      stop("`terrassement$ripage_min` doit etre inferieur a `ripage_max`.", call. = FALSE)
+    }
+    # INVARIANT PORTANT. La continuite du cout en `p -> talus_remblai` ne tient
+    # que si le ripage est PLEIN a ce moment-la : la demi-largeur remblayee
+    # `b = L/2 (1 - r)` doit s'annuler au moins aussi vite que `(B - p)`, sans
+    # quoi `s_remblai = (p b)^2 / 2(B - p)` diverge juste avant la bascule en NA.
+    # Mesure avec ripage_max = 0,80 et talus_remblai = 0,60 : 5 737 EUR/m a
+    # 59,99 %, contre 216 EUR/m avec le defaut -- la discontinuite meme que le
+    # modele a assiette asymetrique est cense avoir supprimee.
+    if (te$ripage_max > te$talus_remblai) {
+      stop("`terrassement$ripage_max` (", te$ripage_max, ") ne peut depasser ",
+           "`talus_remblai` (", te$talus_remblai, ") : le cout divergerait ",
+           "juste sous la pente du talus aval.", call. = FALSE)
+    }
+  }
   checkmate::assert_data_frame(co$bareme_pente, min.rows = 1)
   checkmate::assert_names(names(co$bareme_pente), must.include = c("min", "max", "surcout"))
   checkmate::assert_numeric(co$bareme_pente$min, lower = 0, any.missing = FALSE, sorted = TRUE)

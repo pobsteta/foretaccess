@@ -26,7 +26,9 @@ optimiser_reseau(
 \arguments{
 \item{pre}{A \code{foretaccess_preprocessing} object (DEM, terrain slope).}
 
-\item{cout}{A \code{foretaccess_cout_construction} object (Lot 14).}
+\item{cout}{A \code{foretaccess_cout_construction} object (Lot 14). Its euros/m
+surface is read \strong{only if \code{pondere_cout = TRUE}}; at the \code{FALSE} default
+only the \code{franchissable} mask is used. See \code{pondere_cout}.}
 
 \item{parcelles}{An \code{sf} POLYGON of the areas to serve.}
 

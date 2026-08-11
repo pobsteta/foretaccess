@@ -32,6 +32,7 @@ tracer_desserte <- function(pre, cout, waypoints, pondere_cout = FALSE,
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   checkmate::assert_class(cout, "foretaccess_cout_construction")
   validate_config(config)
+  .avertir_cout_ignore(cout, pondere_cout, !missing(pondere_cout))
   tr <- config$desserte$trace
 
   grille <- pre$mnt

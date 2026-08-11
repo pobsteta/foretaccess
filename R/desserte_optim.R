@@ -24,7 +24,9 @@
 #' see [reseau_desserte()]), which governs the number of traces per build.
 #'
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
-#' @param cout A `foretaccess_cout_construction` object (Lot 14).
+#' @param cout A `foretaccess_cout_construction` object (Lot 14). Its euros/m
+#'   surface is read **only if `pondere_cout = TRUE`**; at the `FALSE` default
+#'   only the `franchissable` mask is used. See `pondere_cout`.
 #' @param parcelles An `sf` POLYGON of the areas to serve.
 #' @param desserte_existante An `sf` LINESTRING of the network to connect to.
 #' @param strategie Optimisation strategy: `"multistart"` (default), `"recuit"`
@@ -64,6 +66,7 @@ optimiser_reseau <- function(pre, cout, parcelles, desserte_existante,
   checkmate::assert_count(max_passes, positive = TRUE)
   checkmate::assert_count(graine)
   validate_config(config)
+  .avertir_cout_ignore(cout, pondere_cout, !missing(pondere_cout))
 
   ctx <- .reseau_preparer(pre, cout, parcelles, desserte_existante, config, pondere_cout)
 

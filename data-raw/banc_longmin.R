@@ -1,5 +1,15 @@
-# Banc `wsfi` -- balayage de `long_min` selon le protocole CA-26.5 REECRIT
-# (spec 026 sec.6.0, 2026-07-31).
+# Banc de balayage de `long_min` selon le protocole CA-26.5 (spec 026 sec.6.0).
+#
+# BLOC PARAMETRABLE (`FA_BLOC`) : le protocole exige un banc DISJOINT du jeu de
+# calibration (P6). `wsfi` ne l'est pas -- la dalle de calibration en est le quart
+# sud-ouest. `ltcp` l'est, et le banc doit pouvoir passer de l'un a l'autre.
+#
+# SOUS-EMPRISE (`FA_SOUS_EMPRISE`, en metres de cote) : depuis que l'indice est
+# ancre (bornes absolues + `c_vessel`), analyser une sous-emprise donne le MEME
+# resultat qu'analyser le tout -- c'est exactement la propriete qu'on a corrigee.
+# Decouper est donc devenu LEGITIME, ce qui ne l'etait pas le matin meme. On s'en
+# sert pour borner le cout : 25 km2 a 1 m font 25 M cellules et ~6 Go de nuage
+# relus a chaque appel.
 #
 # POURQUOI `long_min` ET NON `seuil`. L'ancien protocole balayait `seuil` en
 # tenant l'emprise pour neutre : il mesurait un artefact. La mesure a montre que
@@ -23,15 +33,29 @@ SEUIL <- 0.4          # bas de la plage : on cherche le VOLUME, pas la purete
 METHODE <- "squelette" # P5 : NOMME. `auto` replierait ici en silence.
 BUFFER_REF <- 15
 
-WSFI <- Sys.getenv("FA_WSFI",
+BLOC <- Sys.getenv("FA_BLOC",
   "/home/pascal/.local/share/nemeton/projects/20260717_101641_wsfi/cache/layers")
-MNT <- file.path(WSFI, "lidar_mnt_mosaic.tif")
-LAZ <- file.path(WSFI, "lidar_nuage")
-SORTIE <- normalizePath("data-raw/oracle/wsfi", mustWork = FALSE)
+NOM <- basename(dirname(dirname(BLOC)))
+MNT <- file.path(BLOC, "lidar_mnt_mosaic.tif")
+LAZ <- file.path(BLOC, "lidar_nuage")
+COTE <- suppressWarnings(as.numeric(Sys.getenv("FA_SOUS_EMPRISE", "")))
+SORTIE <- normalizePath(file.path("data-raw/oracle", NOM), mustWork = FALSE)
+dir.create(SORTIE, recursive = TRUE, showWarnings = FALSE)
 CACHE <- file.path(SORTIE, "cache")
 stopifnot(file.exists(MNT), dir.exists(LAZ))
 
-r <- rast(MNT)
+r0 <- rast(MNT)
+r <- if (is.finite(COTE)) {
+  cx <- (xmin(r0) + xmax(r0)) / 2; cy <- (ymin(r0) + ymax(r0)) / 2
+  f <- file.path(SORTIE, sprintf("mnt_sous_%dm.tif", as.integer(COTE)))
+  writeRaster(crop(r0, ext(cx - COTE/2, cx + COTE/2, cy - COTE/2, cy + COTE/2)),
+    f, overwrite = TRUE)
+  MNT <- f
+  rast(f)
+} else {
+  r0
+}
+cat("bloc :", NOM, "|", if (is.finite(COTE)) sprintf("sous-emprise %d m", as.integer(COTE)) else "emprise complete", "\n")
 emprise <- st_as_sf(st_as_sfc(st_bbox(r)))
 aire <- as.numeric(st_area(emprise)) / 1e6
 ref <- acquire_desserte(emprise, cache_dir = CACHE, politique_cache = "echouer")
@@ -47,7 +71,11 @@ v_dsr <- as.character(utils::packageVersion("dessertR"))
 # La dalle de calibration : quart sud-ouest de wsfi. P6 mesure le recouvrement.
 dalle_cal <- st_as_sfc(st_bbox(c(xmin = 737000, ymin = 6384000,
   xmax = 738000, ymax = 6385000), crs = st_crs(2154)))
-rec <- as.numeric(st_area(st_intersection(st_geometry(emprise), dalle_cal))) / 1e6
+# `st_intersection` rend une geometrie VIDE quand les emprises sont disjointes,
+# donc `st_area()` rend numeric(0) -- pas 0. Sans cette garde, le banc echoue
+# exactement dans le cas pour lequel il existe : P6 satisfaite.
+inter_cal <- st_intersection(st_geometry(emprise), dalle_cal)
+rec <- if (length(inter_cal)) as.numeric(sum(st_area(inter_cal))) / 1e6 else 0
 
 P <- list(
   P1_mnt_1m5 = max(res(r)) <= 1.5,
@@ -65,6 +93,7 @@ cat(sprintf("  P4 bornes absolues (%d canaux)     : %s\n",
 cat(sprintf("  P5 vectoriseur = %-10s        : %s\n", METHODE, P$P5_vectoriseur_nomme))
 cat(sprintf("  P6 recouvrement calibration       : %.3f km2 sur %.2f -> %s\n",
   rec, aire, if (P$P6_banc_disjoint) "DISJOINT" else "NON DISJOINT"))
+cat(sprintf("  dessertR %s | seuil %.1f | methode %s\n", v_dsr, SEUIL, METHODE))
 cat(sprintf("\n  emprise %.2f km2 | explorable %.2f km2 (%.1f %%) | reference %d obj.\n",
   aire, km2_hors, 100 * km2_hors / aire, nrow(ref)))
 if (!P$P6_banc_disjoint) {
@@ -84,9 +113,12 @@ lignes <- lapply(LM, function(lm) {
   if (is.na(P$P2_canal_surface)) P$P2_canal_surface <<- isTRUE(attr(d, "canal_surface"))
   m <- if (nrow(d)) sum(as.numeric(st_length(d))) else 0
   # Score hors dalle de calibration : le seul non circulaire (P6).
-  m_hc <- if (nrow(d)) {
+  # Meme garde : `hors_cal` peut etre l'emprise entiere (banc disjoint).
+  m_hc <- if (nrow(d) && length(hors_cal)) {
     g <- st_intersection(st_geometry(d), hors_cal)
     if (length(g)) sum(as.numeric(st_length(g))) else 0
+  } else if (nrow(d)) {
+    sum(as.numeric(st_length(d)))
   } else 0
   if (nrow(d)) {
     st_write(d, file.path(SORTIE, sprintf("lm%02d_s0p4.gpkg", lm)),
