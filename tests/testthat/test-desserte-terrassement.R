@@ -208,3 +208,46 @@ test_that("le defaut de config satisfait l'invariant", {
   te <- foretaccess_config()$desserte$cout$terrassement
   expect_lte(te$ripage_max, te$talus_remblai)
 })
+
+
+# --- Plafond de constructibilite : deux decisions, pas une -------------------
+# Choisir la methode ne doit pas decider AUSSI jusqu'ou l'on construit.
+
+test_that("par defaut, changer de methode ne change pas le feasible set", {
+  skip_if_not_installed("terra")
+  # 70 % : au-dela de la derniere classe du bareme (60 %), en deca du talus de
+  # deblai (100 %). C'est exactement la plage ou les deux methodes divergeaient.
+  pre <- pre_pente(70)
+  bar <- surface_cout_construction(pre)
+  ter <- surface_cout_construction(pre, methode_pente = "terrassement")
+  expect_true(all(!terra::values(bar$franchissable, mat = FALSE), na.rm = TRUE))
+  expect_true(all(!terra::values(ter$franchissable, mat = FALSE), na.rm = TRUE))
+})
+
+test_that("le plafond se leve explicitement, et alors seulement", {
+  skip_if_not_installed("terra")
+  pre <- pre_pente(70)
+  ouvert <- surface_cout_construction(pre, methode_pente = "terrassement",
+                                      pente_max_pct = Inf)
+  expect_true(all(terra::values(ouvert$franchissable, mat = FALSE), na.rm = TRUE))
+  # Le cout y est fini : dissuasif, pas interdit.
+  expect_true(all(is.finite(terra::values(ouvert$cout, mat = FALSE))))
+
+  # Et la geometrie garde le dernier mot : au-dela du talus de deblai, aucun
+  # plafond ne rend la cellule constructible.
+  expect_true(all(!terra::values(
+    surface_cout_construction(pre_pente(120), methode_pente = "terrassement",
+                              pente_max_pct = Inf)$franchissable,
+    mat = FALSE), na.rm = TRUE))
+})
+
+test_that("le plafond s'applique aussi au bareme", {
+  skip_if_not_installed("terra")
+  # 40 % : constructible au bareme (classe 35-60), ferme par un plafond a 35 %.
+  pre <- pre_pente(40)
+  expect_true(all(terra::values(
+    surface_cout_construction(pre)$franchissable, mat = FALSE), na.rm = TRUE))
+  expect_true(all(!terra::values(
+    surface_cout_construction(pre, pente_max_pct = 35)$franchissable,
+    mat = FALSE), na.rm = TRUE))
+})

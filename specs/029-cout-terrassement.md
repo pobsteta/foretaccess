@@ -207,6 +207,7 @@ cellules — la structure est déjà là (ADR-008, graphe étendu), mais c'est u
 | Prix au m³ calés par inversion de plafond | 0,5 j | **fait** (§Prix) |
 | Barème de prix au m³ d'un gestionnaire | — | **reste — bloquant pour la bascule** |
 | Refaire le banc du §7 aux prix calés, et le rendre rejouable | 0,5 j | **fait** (§7) |
+| Plafond de constructibilité explicite (`pente_max_pct`) | 0,5 j | **fait** (§7.1 bis) |
 | Coût porté sur les arêtes (lève §5) | 1,5 sem | non arbitré |
 
 **Le défaut reste `"bareme"`, délibérément** : changer le terme de pente change tous les tracés
@@ -257,6 +258,26 @@ de coût de trancher en silence.
 
 **La bascule demande donc un arbitrage séparé du seuil de constructibilité**, pas un changement de
 défaut.
+
+### 7.1 bis — Les deux décisions sont désormais séparées (2026-08-11)
+
+Puisqu'on ne peut pas trancher à la place du gestionnaire, on lui rend la décision — mais il faut
+lui en rendre **deux**, pas une seule qui en cache une autre. `surface_cout_construction()` prend
+donc `pente_max_pct`, un plafond de constructibilité **commun aux deux méthodes** :
+
+- `NULL` (défaut) reprend le plafond **implicite du barème** — la première classe tarifée `Inf`,
+  soit 60 % avec l'échelle livrée. Changer de méthode ne change alors **que la tarification**, et
+  le tableau du §7.1 se réduit à zéro cellule ouverte ;
+- `Inf` rend au terrassement toute sa portée, et rouvre les 5 % du massif entre 60 et 100 %.
+  C'est un choix qui se pose, et qui se voit.
+
+La géométrie garde le dernier mot : au-delà de la pente du talus de déblai, aucun plafond ne rend
+une cellule constructible.
+
+Ce que cela change pour l'arbitrage : la question « faut-il basculer la méthode ? » redevient une
+question de **tarification seule**, sur laquelle le §7.2 et le §7.3 suffisent à instruire. La
+question « jusqu'où construit-on ? » se pose à part, se règle en un argument, et n'a plus besoin
+d'attendre la première.
 
 ### 7.2 Les coûts : le calage a fait son travail, la queue reste divergente
 

@@ -34,6 +34,14 @@
 #'   solver produces, so a side-by-side run on a real massif must come first.
 #' @param largeur_m Target platform width (m), used by
 #'   `methode_pente = "terrassement"` only. Default 4.
+#' @param pente_max_pct Constructibility ceiling: cells at or above this terrain
+#'   slope (percent) are not crossable, **whichever pricing method is used**.
+#'   `NULL` (default) takes the ceiling the step function already implies -- the
+#'   first class priced `Inf`, i.e. 60 % with the shipped scale -- so that
+#'   switching method changes only the pricing. `Inf` gives the earthwork model
+#'   its full reach, which on the DABO bench opens 5 % of the massif between
+#'   60 % and 100 % of slope. That is a separate decision from the pricing one,
+#'   and it is meant to be taken separately.
 #' @return A `foretaccess_cout_construction` object: a list of two `SpatRaster`
 #'   aligned on the DEM — `cout` (€/m, `NA` outside the crossable zone) and
 #'   `franchissable` (logical).
@@ -43,7 +51,7 @@ surface_cout_construction <- function(pre, config = foretaccess_config(),
                                        sol = NULL, interdit = NULL,
                                        surcout = NULL,
                                        methode_pente = c("bareme", "terrassement"),
-                                       largeur_m = 4) {
+                                       largeur_m = 4, pente_max_pct = NULL) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   methode_pente <- match.arg(methode_pente)
   validate_config(config)
@@ -63,6 +71,22 @@ surface_cout_construction <- function(pre, config = foretaccess_config(),
   #    DELIBEREMENT : changer ce terme change tous les traces produits, et la
   #    comparaison des deux methodes sur un massif reel doit preceder la
   #    bascule.
+  # PLAFOND DE CONSTRUCTIBILITE, commun aux deux methodes. Sans lui, choisir la
+  # methode deciderait AUSSI du plafond, sans le dire : le bareme s'arrete a
+  # 60 % par sa derniere classe, le terrassement va jusqu'a la pente du talus de
+  # deblai (100 % au defaut) et rendait donc constructibles 5 % du massif de
+  # plus sur le banc DABO. Deux decisions distinctes -- « comment tarifer » et
+  # « jusqu'ou construire » -- qui ne doivent pas etre prises d'un seul geste.
+  #
+  # Par defaut on reprend le plafond IMPLICITE du bareme, de sorte que changer
+  # de methode ne change que la tarification. `pente_max_pct = Inf` rend au
+  # terrassement toute sa portee -- explicitement.
+  if (is.null(pente_max_pct)) {
+    inf <- is.infinite(co$bareme_pente$surcout)
+    pente_max_pct <- if (any(inf)) min(co$bareme_pente$min[inf]) else Inf
+  }
+  checkmate::assert_number(pente_max_pct, lower = 0)
+
   s_pente <- if (identical(methode_pente, "terrassement")) {
     cout_terrassement(pre$slope_pct, largeur_m = largeur_m, config = config)
   } else {
@@ -74,6 +98,10 @@ surface_cout_construction <- function(pre, config = foretaccess_config(),
   # infranchissable -- alors qu'un NA se propagerait en silence dans la somme.
   if (identical(methode_pente, "terrassement")) {
     s_pente <- terra::ifel(is.na(s_pente) & !is.na(grille), Inf, s_pente)
+  }
+  # Le plafond ferme la cellule, quelle que soit la methode.
+  if (is.finite(pente_max_pct)) {
+    s_pente <- terra::ifel(pre$slope_pct >= pente_max_pct, Inf, s_pente)
   }
   cout <- cout + s_pente
 
