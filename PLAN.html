@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,6 +125,8 @@
 <strong>Cycle dev ouvert sur <code>v1.28.0.9000</code></strong> (dernière release <code>v1.28.0</code>, 2026-07-29). Quatre specs y sont mergées et <strong>non encore releasées</strong> : <strong>025</strong> (intégrité du réseau, #136), <strong>027</strong> (provenance des caches, #139), <strong>028</strong> (OSM source complémentaire, #139) et <strong>026</strong> (desserte détectée sur MNT, #140, <strong>partielle</strong>). Release visée : <strong><code>1.29.0</code></strong> sur la spec 027, qui est la seule complète.</li>
 <li>
 <strong><code>v2.0.1</code> posée</strong> (2026-08-10) : correctif de compatibilité interne à la v2.0.0. <code><a href="reference/preprocess.html">preprocess()</a></code> rejetait les <code>hors_desserte</code> que <code><a href="reference/acquire_desserte.html">acquire_desserte()</a></code> produit par défaut — chaîne acquisition → prétraitement cassée pour tout appelant. Filtrage explicite en amont de chaque rasterisation (la sentinelle <code>-2147483648</code> de <code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code> écrasait sinon les cellules de <strong>jonction</strong>). <code><a href="reference/preprocess.html">preprocess()</a></code> est désormais <strong>invariant</strong> sous <code>garder_hors_desserte</code>. Le consommateur topologique réel est <code><a href="reference/verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> (spec 025), maintenant nommé dans la doc.</li>
+<li>
+<strong><code>v2.0.2</code> posée</strong> (2026-08-11) : version de <strong>documentation</strong>, aucun changement de code depuis <code>2.0.1</code>. Fige la validation du correctif <code>hors_desserte</code> sur le cache DABO réel (0 sentinelle, invariance sur les 5 couches, 3 couches de desserte) et la mesure du glouton (<code>docs/brief-nemetonshiny-skidding-desserte.md</code>) : 309 726 cellules-source sur DABO, et <code>skidding_m = 0</code> (le défaut) = pire cas documenté — &gt; 22 min contre 70-174 s à distance de débardage réaliste.</li>
 <li>
 <strong>Spec 026 bloquée sur le CA-26.5</strong>, pas sur du code. <code><a href="reference/detecter_desserte.html">detecter_desserte()</a></code> et <code><a href="reference/detecter_desserte_balayage.html">detecter_desserte_balayage()</a></code> sont livrés (<code>R/desserte-detectee.R</code>) avec le tarif de réouverture (<code>config$desserte$cout$fraction_reouverture</code>) ; <strong>l’injection dans <code><a href="reference/reseau_desserte.html">reseau_desserte()</a></code> est délibérément non faite</strong> tant que le CA-26.5 n’est pas tranché — sans quoi on ajouterait du réseau fantôme à un modèle qu’on vient de rendre conforme à ACCESSFOR. Le banc est <strong><code>wsfi</code></strong> (MNT 0,50 m), Chastel-Nouvel étant disqualifié pour cause de MNT à 5 m.</li>
 </ul></div>

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,52 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.0.2" id="foretaccess-202-2026-08-11">foretaccess 2.0.2 (2026-08-11)<a class="anchor" aria-label="anchor" href="#foretaccess-202-2026-08-11"></a></h2>
+<p>Version de <strong>documentation</strong> : aucun changement de code fonctionnel depuis la <code>2.0.1</code>. Elle fige deux traces qui méritaient d’être citables à une version.</p>
+<div class="section level3">
+<h3 id="le-correctif-hors_desserte-confronté-aux-données-réelles-2-0-2">Le correctif <code>hors_desserte</code> confronté aux données réelles<a class="anchor" aria-label="anchor" href="#le-correctif-hors_desserte-confront%C3%A9-aux-donn%C3%A9es-r%C3%A9elles-2-0-2"></a></h3>
+<p>La <code>2.0.1</code> était validée sur le jeu jouet. Elle l’est désormais sur le cache <strong>DABO</strong> (MNT 5 m, emprise de 741 312 cellules), sur les <strong>trois</strong> couches de desserte — brute (1032 tronçons, 320 <code>hors_desserte</code>), corrigée LiDAR NDP 1 (710) et origine (1032) :</p>
+<table class="table"><colgroup><col width="27%"><col width="36%"><col width="36%"></colgroup><thead><tr><th></th>
+<th align="right">correctif naïf</th>
+<th align="right">correctif livré</th>
+</tr></thead><tbody><tr><td>cellules à la sentinelle <code>-2147483648</code>
+</td>
+<td align="right">10 812</td>
+<td align="right"><strong>0</strong></td>
+</tr><tr><td>cellules valides écrasées</td>
+<td align="right">
+<strong>450</strong> / 24 228 (1,86 %)</td>
+<td align="right"><strong>0</strong></td>
+</tr><tr><td>
+<code><a href="../reference/preprocess.html">preprocess()</a></code> de bout en bout</td>
+<td align="right">—</td>
+<td align="right">
+<strong>OK</strong>, invariance sur les 5 couches</td>
+</tr></tbody></table><p>Les chiffres du hand-off d’origine (440 / 24 259) sont reproduits à ~2 % près — un écart de grille, pas de nature. La répartition des classes est identique.</p>
+</div>
+<div class="section level3">
+<h3 id="où-passent-les-minutes-de-reseau_desserte-2-0-2">Où passent les minutes de <code>reseau_desserte()</code>
+<a class="anchor" aria-label="anchor" href="#o%C3%B9-passent-les-minutes-de-reseau_desserte-2-0-2"></a></h3>
+<p><code>docs/brief-nemetonshiny-skidding-desserte.md</code> documente une mesure qui vaut au-delà de son destinataire : le moteur glouton reçoit <strong>toutes les cellules de parcelle</strong> comme sources (309 726 sur DABO, pour 4 parcelles), et à <code>skidding_m = 0</code> — le <strong>défaut</strong> — chacune hors route déclenche son propre tracé A*. Le <code>@section Performance</code> de <code><a href="../reference/reseau_desserte.html">reseau_desserte()</a></code> le disait déjà ; la mesure le chiffre :</p>
+<table class="table"><thead><tr><th align="right"><code>skidding_m</code></th>
+<th align="right">durée</th>
+<th align="right">routes tracées</th>
+</tr></thead><tbody><tr><td align="right">0 (défaut)</td>
+<td align="right">&gt; 22 min, jamais fini</td>
+<td align="right">—</td>
+</tr><tr><td align="right">100 m</td>
+<td align="right">174 s</td>
+<td align="right">39</td>
+</tr><tr><td align="right">300 m</td>
+<td align="right">70 s</td>
+<td align="right">0</td>
+</tr><tr><td align="right">500 m</td>
+<td align="right">115 s</td>
+<td align="right">0</td>
+</tr></tbody></table><p>Pour référence, la table de voisinage seule coûte <strong>38,4 s</strong> sur cette emprise. <strong>Renseigner <code>skidding_m</code> n’est pas un réglage de performance</strong> : c’est un paramètre métier qui change le résultat, pas seulement la durée.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.1" id="foretaccess-201-2026-08-10">foretaccess 2.0.1 (2026-08-10)<a class="anchor" aria-label="anchor" href="#foretaccess-201-2026-08-10"></a></h2>
 <p>Correctif : <code><a href="../reference/preprocess.html">preprocess()</a></code> <strong>rejetait</strong> les tronçons <code>hors_desserte</code> que <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> produit désormais par défaut. Les deux moitiés de la v2.0.0 étaient incompatibles — <strong>aucun appelant ne pouvait consommer le nouveau défaut</strong>, et tout onglet ou script enchaînant <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> → <code><a href="../reference/preprocess.html">preprocess()</a></code> échouait immédiatement.</p>

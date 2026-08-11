@@ -339,6 +339,14 @@
   consommateur topologique réel est
   [`verifier_integrite_desserte()`](https://pobsteta.github.io/foretaccess/reference/verifier_integrite_desserte.md)
   (spec 025), maintenant nommé dans la doc.
+- **`v2.0.2` posée** (2026-08-11) : version de **documentation**, aucun
+  changement de code depuis `2.0.1`. Fige la validation du correctif
+  `hors_desserte` sur le cache DABO réel (0 sentinelle, invariance sur
+  les 5 couches, 3 couches de desserte) et la mesure du glouton
+  (`docs/brief-nemetonshiny-skidding-desserte.md`) : 309 726
+  cellules-source sur DABO, et `skidding_m = 0` (le défaut) = pire cas
+  documenté — \> 22 min contre 70-174 s à distance de débardage
+  réaliste.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code.
   [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
   et
