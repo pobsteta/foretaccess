@@ -18,7 +18,10 @@ surface_cout_construction(
   cours_eau = NULL,
   sol = NULL,
   interdit = NULL,
-  surcout = NULL
+  surcout = NULL,
+  methode_pente = c("bareme", "terrassement"),
+  largeur_m = 4,
+  pente_max_pct = NULL
 )
 ```
 
@@ -59,6 +62,31 @@ surface_cout_construction(
 - surcout:
 
   Optional free additional surcharge (`SpatRaster`, €/m).
+
+- methode_pente:
+
+  How the slope term is priced: `"bareme"` (default, the Lot 14 step
+  function) or `"terrassement"` (spec 029, cut-and-fill volumes priced
+  per cubic metre – continuous, and sensitive to platform width). The
+  default is deliberate: switching the slope term changes every route
+  the solver produces, so a side-by-side run on a real massif must come
+  first.
+
+- largeur_m:
+
+  Target platform width (m), used by `methode_pente = "terrassement"`
+  only. Default 4.
+
+- pente_max_pct:
+
+  Constructibility ceiling: cells at or above this terrain slope
+  (percent) are not crossable, **whichever pricing method is used**.
+  `NULL` (default) takes the ceiling the step function already implies –
+  the first class priced `Inf`, i.e. 60 % with the shipped scale – so
+  that switching method changes only the pricing. `Inf` gives the
+  earthwork model its full reach, which on the DABO bench opens 5 % of
+  the massif between 60 % and 100 % of slope. That is a separate
+  decision from the pricing one, and it is meant to be taken separately.
 
 ## Value
 

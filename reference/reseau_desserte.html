@@ -15,7 +15,7 @@ constrained solver, the new road growing the network for later parcels (reuse
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,7 +84,9 @@ constrained solver, the new road growing the network for later parcels (reuse
 
 
 <dt id="arg-cout">cout<a class="anchor" aria-label="anchor" href="#arg-cout"></a></dt>
-<dd><p>A <code>foretaccess_cout_construction</code> object (Lot 14): crossability.</p></dd>
+<dd><p>A <code>foretaccess_cout_construction</code> object (Lot 14): crossability
+mask, and – <strong>only if <code>pondere_cout = TRUE</code></strong> – the euros/m surface. At the
+<code>FALSE</code> default the surface is computed and discarded; see <code>pondere_cout</code>.</p></dd>
 
 
 <dt id="arg-parcelles">parcelles<a class="anchor" aria-label="anchor" href="#arg-parcelles"></a></dt>
@@ -128,7 +130,13 @@ same column for both.</p></dd>
 <dt id="arg-pondere-cout">pondere_cout<a class="anchor" aria-label="anchor" href="#arg-pondere-cout"></a></dt>
 <dd><p>If <code>TRUE</code>, weights the trace by the Lot 14 construction
 cost surface (<code>cout$cout</code>, euros/m) instead of pure geometric distance; the
-trace then minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behaviour).</p></dd>
+trace then minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behaviour).</p>
+<p><strong>At <code>FALSE</code>, the euros/m surface of <code>cout</code> is not read at all</strong> – only its
+<code>franchissable</code> mask is. A varying cost surface left unweighted therefore
+raises a warning, since building one is rarely done for its mask; pass
+<code>pondere_cout = FALSE</code> <strong>explicitly</strong> to keep pure geometry silently. The
+default is unchanged on purpose: flipping it would break the Lot 15 SylvaRoad
+parity and alter every trace produced so far.</p></dd>
 
 
 <dt id="arg-config">config<a class="anchor" aria-label="anchor" href="#arg-config"></a></dt>

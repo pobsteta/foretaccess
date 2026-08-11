@@ -40,7 +40,9 @@ optimiser_reseau(
 
 - cout:
 
-  A `foretaccess_cout_construction` object (Lot 14).
+  A `foretaccess_cout_construction` object (Lot 14). Its euros/m surface
+  is read **only if `pondere_cout = TRUE`**; at the `FALSE` default only
+  the `franchissable` mask is used. See `pondere_cout`.
 
 - parcelles:
 

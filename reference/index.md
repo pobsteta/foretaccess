@@ -345,6 +345,8 @@ typage des routes (Lot 17), optimisation multi-start (Lot 18).
 
 - [`surface_cout_construction()`](https://pobsteta.github.io/foretaccess/reference/surface_cout_construction.md)
   : Build the construction-cost surface of a new forest road
+- [`cout_terrassement()`](https://pobsteta.github.io/foretaccess/reference/cout_terrassement.md)
+  : Earthwork cost of one metre of forest road
 - [`tracer_desserte()`](https://pobsteta.github.io/foretaccess/reference/tracer_desserte.md)
   : Design the optimal route of a new forest road
 - [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)

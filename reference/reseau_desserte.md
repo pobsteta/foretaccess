@@ -33,7 +33,10 @@ reseau_desserte(
 
 - cout:
 
-  A `foretaccess_cout_construction` object (Lot 14): crossability.
+  A `foretaccess_cout_construction` object (Lot 14): crossability mask,
+  and – **only if `pondere_cout = TRUE`** – the euros/m surface. At the
+  `FALSE` default the surface is computed and discarded; see
+  `pondere_cout`.
 
 - parcelles:
 
@@ -80,6 +83,14 @@ reseau_desserte(
   If `TRUE`, weights the trace by the Lot 14 construction cost surface
   (`cout$cout`, euros/m) instead of pure geometric distance; the trace
   then minimises monetary cost. Default `FALSE` (SylvaRoad behaviour).
+
+  **At `FALSE`, the euros/m surface of `cout` is not read at all** –
+  only its `franchissable` mask is. A varying cost surface left
+  unweighted therefore raises a warning, since building one is rarely
+  done for its mask; pass `pondere_cout = FALSE` **explicitly** to keep
+  pure geometry silently. The default is unchanged on purpose: flipping
+  it would break the Lot 15 SylvaRoad parity and alter every trace
+  produced so far.
 
 - config:
 
