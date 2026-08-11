@@ -466,6 +466,16 @@ il ne contrôlait que `levels()` et `sum(!is.na())`, et son commentaire affirmai
 l'hypothèse fausse (« `match()` leur donne NA »). Corrigé, et doublé d'un fichier
 dédié qui contrôle la sentinelle explicitement.
 
+**Confronté au cache DABO réel après la release** (1032 tronçons, 320
+`hors_desserte`, MNT 5 m), sur les trois couches — `desserte.gpkg`,
+`desserte_corrigee` (NDP 1, 710) et `desserte_origine`. Le correctif naïf y
+aurait gravé **10 812 cellules à la sentinelle et écrasé 450 cellules valides sur
+24 228 (1,86 %)** ; le correctif livré en grave **0**, rend une couche **identique
+au bit près** à la desserte strictement filtrée, et `preprocess()` s'exécute de
+bout en bout avec **invariance sur les cinq couches**. Les chiffres du brief
+(440 / 24 259, 310 / 19 957) sont reproduits à ~2 % près — écart de grille, pas
+de nature. La répartition des classes est identique au brief.
+
 **Côté app** : rien à corriger dans `nemetonshiny`, qui appelait conformément au
 contrat documenté. Le plancher `foretaccess (>= 1.20.0)` de son `DESCRIPTION` est
 à bumper en `>= 2.0.1` une fois cette release publiée (point annexe du brief).
