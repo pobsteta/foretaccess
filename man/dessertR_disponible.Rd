@@ -10,12 +10,22 @@ dessertR_disponible()
 A single \code{logical}. \code{TRUE} if \code{dessertR} can be loaded.
 }
 \description{
-\code{dessertR} is an optional, non-CRAN backend (\code{Suggests} + \code{Remotes}). Four
-functions need it -- \code{\link[=qualifier_desserte]{qualifier_desserte()}}, \code{\link[=verifier_integrite_desserte]{verifier_integrite_desserte()}},
-\code{\link[=detecter_desserte]{detecter_desserte()}} and \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}} -- and they degrade or
-fail without it. Call this \strong{before} offering those actions, so a caller can
-say \emph{"not available"} instead of showing an empty result that reads like a
-clean bill of health.
+\code{dessertR} is an optional, non-CRAN backend. Four functions need it --
+\code{\link[=qualifier_desserte]{qualifier_desserte()}}, \code{\link[=verifier_integrite_desserte]{verifier_integrite_desserte()}}, \code{\link[=detecter_desserte]{detecter_desserte()}}
+and \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}} -- and they degrade or fail without it. Call
+this \strong{before} offering those actions, so a caller can say \emph{"not available"}
+instead of showing an empty result that reads like a clean bill of health.
+}
+\details{
+\strong{Why it is not declared in \code{Suggests}.} \code{dessertR} depends on \code{rlas}, which
+is \strong{archived on CRAN}: declaring it (with a \verb{Remotes:} entry) makes \code{pak}
+resolve the chain and stop at \emph{"rlas: Can't find package called rlas"}, which
+breaks installation of \code{foretaccess} \strong{for everyone}, including users who
+never touch \code{dessertR}. Verified on CI, 2026-08-12: four jobs failed in 90
+seconds. It will be declared the day \code{rlas} returns to CRAN.
+
+Installing it therefore takes two steps -- \code{rlas} from the CRAN archive (or
+from source), then \code{remotes::install_github("pobsteta/dessertR")}.
 }
 \examples{
 if (dessertR_disponible()) {
