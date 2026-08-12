@@ -120,7 +120,8 @@ verifier_integrite_desserte <- function(desserte, aoi = NULL, tol_noeud = 1,
   if (length(manque)) {
     cli::cli_warn(c(
       "!" = "Integrite {.strong NON CONTROLEE} : {.pkg {manque}} absent{?s}.",
-      "x" = "Le resultat n'est pas « aucune infraction », c'est « on ne sait pas ».",
+      "x" = "Le resultat n'est pas {.strong aucune infraction} : c'est
+             {.strong on ne sait pas}.",
       "i" = "{.code remotes::install_github(\"pobsteta/dessertR\")}",
       "i" = "Tester d'avance avec {.fn dessertR_disponible}."
     ))
@@ -255,7 +256,8 @@ print.foretaccess_integrite <- function(x, ...) {
     cli::cli_text("{r[['n_troncons']]} troncon{?s}.")
     cli::cli_alert_danger("Diagnostic {.strong NON EFFECTUE}
                           {if (!is.na(x$raison)) paste0('(', x$raison, ')') else ''}.")
-    cli::cli_alert_info("Ce n'est pas « aucune infraction » : c'est « on ne sait pas ».")
+    cli::cli_alert_info("Ce n'est pas {.strong aucune infraction} : c'est
+                         {.strong on ne sait pas}.")
     return(invisible(x))
   }
   cli::cli_text("{r[['n_troncons']]} troncon{?s}, {r[['n_composants']]} composante{?s},
