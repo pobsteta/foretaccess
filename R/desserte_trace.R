@@ -11,6 +11,13 @@
 #' around the Rust A\* solver (`desserte_trace`, spec 015): R flattens the DEM,
 #' crossability and terrain slope, calls the solver and rebuilds the polyline.
 #'
+#' @section Performance:
+#' Un seul trace A\* entre les waypoints, **borne au corridor** qu'ils
+#' definissent (cf. [reseau_desserte()] *Performance*) : de quelques dizaines de
+#' millisecondes a quelques secondes pour deux points proches, et d'autant plus
+#' cher qu'ils sont eloignes -- la fenetre grandit avec leur distance. Sans
+#' commune mesure avec [reseau_desserte()], qui enchaine un trace PAR CELLULE de
+#' parcelle.
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
 #' @param cout A `foretaccess_cout_construction` object (Lot 14): supplies the
 #'   crossability mask (`franchissable`) and, if `pondere_cout = TRUE`, the

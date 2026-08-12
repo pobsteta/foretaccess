@@ -89,3 +89,19 @@ dominant lever remains \strong{\code{skidding_m}} (set it to the real skidding d
 see \code{\link[=reseau_desserte]{reseau_desserte()}}), which governs the number of traces per build.
 }
 
+\section{Surface publique}{
+
+\strong{\code{optimiser_reseau()} est la seule facade supportee.} Les bindings
+\code{desserte_reseau_multistart()}, \code{desserte_reseau_recuit()} et
+\code{desserte_reseau_riprute()} sont exportes parce qu'extendr exporte ce qu'il
+compile, pas parce qu'ils constituent une API : ils prennent des vecteurs
+aplatis (\code{alt}, \code{obs}, \code{nr}, \code{nc}, indices 0-based) dont la construction et la
+coherence sont precisement ce que cette fonction garantit. Les appeler
+directement, c'est reimplementer \code{.reseau_preparer()} -- et se tromper d'un
+cran d'indice sans que rien ne le signale.
+
+Meme statut pour \code{desserte_dist_to_end()} : primitive du solveur (distance
+geodesique a la cible dans la zone franchissable, heuristique de l'A\*), sans
+usage propre hors de ce contexte.
+}
+

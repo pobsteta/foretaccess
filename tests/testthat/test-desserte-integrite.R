@@ -36,13 +36,20 @@ test_that("sans dessertR/igraph : diagnostic vide, colonnes presentes, pas d'ech
     geometry = sf::st_sfc(
       sf::st_linestring(rbind(c(0, 0), c(10, 10))),
       sf::st_linestring(rbind(c(10, 10), c(20, 20))), crs = 2154))
-  out <- suppressMessages(verifier_integrite_desserte(d))
+  # La degradation AVERTIT desormais : un `cli_inform` se perdait dans le log
+  # d'un worker, et l'appelant rendait un resume tout en NA qui se lit comme
+  # « aucune infraction ». C'est l'objet du brief nemetonshiny du 2026-08-12.
+  expect_warning(out <- verifier_integrite_desserte(d), "NON CONTROLEE")
   expect_s3_class(out, "foretaccess_integrite")
   # CA-25.1 : degradation PROPRE -- les colonnes existent, a NA.
   expect_true(all(c("composant", "connecte_public", "viole_contrainte", "cause")
     %in% names(out$troncons)))
   expect_true(all(is.na(out$troncons$viole_contrainte)))
   expect_equal(unname(out$resume[["n_troncons"]]), 2L)
+  # ... et elle se DECLARE, pour que l'appelant puisse distinguer « on ne sait
+  # pas » de « rien a signaler » sans lire un message.
+  expect_false(out$disponible)
+  expect_match(out$raison, "dessertR")
 })
 
 test_that("verifier_integrite_desserte exige le champ classe", {

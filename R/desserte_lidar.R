@@ -25,15 +25,39 @@
   "apte_grumier", "motif_inaptitude"
 )
 
-# dessertR installe ? Dependance OPTIONNELLE et hors CRAN : on ne la DECLARE pas
-# (ni Imports ni Suggests) pour ne pas forcer son installation en CI ni alourdir
-# le paquet. Le nom est passe en VARIABLE a requireNamespace/getExportedValue : le
-# chemin reel ne s'exerce que si l'utilisateur l'a installe, et R CMD check ne le
-# compte pas comme dependance non declaree. Requirement documente dans @details.
+# dessertR : dependance OPTIONNELLE et hors CRAN, DECLAREE en `Suggests` +
+# `Remotes` depuis le 2026-08-12. Elle ne l'etait pas, au motif que le nom passe
+# en VARIABLE a requireNamespace/getExportedValue suffit a satisfaire R CMD check.
+# C'etait vrai du check, et faux de l'utilisateur : installer foretaccess
+# n'installait pas dessertR, et quatre fonctions cassaient sur un poste neuf
+# (`qualifier_desserte`, `verifier_integrite_desserte`, `detecter_desserte`,
+# `acquire_desserte_lidar`). `Suggests` n'installe toujours pas par defaut, mais
+# `Remotes` donne la source, et `install.packages(dependencies = TRUE)` la suit.
 .PKG_DESSERTR <- "dessertR"
 
 .dessertr_dispo <- function() {
   requireNamespace(.PKG_DESSERTR, quietly = TRUE)
+}
+
+#' Is the optional dessertR backend available?
+#'
+#' `dessertR` is an optional, non-CRAN backend (`Suggests` + `Remotes`). Four
+#' functions need it -- [qualifier_desserte()], [verifier_integrite_desserte()],
+#' [detecter_desserte()] and [acquire_desserte_lidar()] -- and they degrade or
+#' fail without it. Call this **before** offering those actions, so a caller can
+#' say *"not available"* instead of showing an empty result that reads like a
+#' clean bill of health.
+#'
+#' @return A single `logical`. `TRUE` if `dessertR` can be loaded.
+#' @seealso [verifier_integrite_desserte()], whose `disponible` field reports the
+#'   same thing for a diagnostic that has already run.
+#' @export
+#' @examples
+#' if (dessertR_disponible()) {
+#'   message("Diagnostic d'integrite disponible.")
+#' }
+dessertR_disponible <- function() {
+  .dessertr_dispo()
 }
 
 # Moteur effectivement retenu selon `moteur` et ce qui est installe. "auto" et

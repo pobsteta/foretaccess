@@ -50,6 +50,20 @@ saisie qu'une découverte.
 confondrait sinon « le serveur refuse » et « il n'y a rien ici ». C'est la
 confusion qui a masqué l'absence de DFCI pendant une journée entière.
 }
+\section{Performance}{
+
+Une requete Overpass par emprise, sans pavage : le cout suit la densite de
+voirie, pas la surface. \strong{5,9 s a froid} sur une AOI de 31 ha (mesure
+nemetonshiny, 2026-08-12).
+
+\strong{Le risque n'est pas le calcul, c'est le debit.} Overpass bride les requetes
+et repond \verb{HTTP 429} ; le client attend alors \strong{60 s par reprise}. Mesures :
+\strong{plus de 10 minutes} pour la meme requete un jour de bride, et 16 reprises
+consecutives -- soit 16 minutes de pure attente -- lors d'un test
+d'integration. Un bouton qui appelle cette fonction doit donc etre asynchrone
+et annulable : l'ordre de grandeur nominal ne dit rien du pire cas.
+}
+
 \seealso{
 \code{\link[=comparer_desserte_osm]{comparer_desserte_osm()}}, \code{\link[=acquire_desserte]{acquire_desserte()}} (la référence),
 \code{specs/028}.

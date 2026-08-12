@@ -51,10 +51,23 @@ l'extrémité des tronçons de référence, qui est précisément la zone que
 squelette \strong{en silence}, et la chaîne mesurée changerait sans préavis au
 jour où l'amont corrigera. Voir \code{specs/026} §6.0.1 (précondition P5).}
 
-\item{specs}{Bornes d'appartenance, voir \code{\link[=specs_desserte_calibrees]{specs_desserte_calibrees()}} (défaut).
-\strong{\code{NULL} restaure les specs de dessertR}, dont les bornes sont dérivées par
+\item{specs}{Bornes d'appartenance. \strong{Quatre formes acceptées} :
+\itemize{
+\item \code{\link[=specs_desserte_calibrees]{specs_desserte_calibrees()}} (défaut) — bornes figées, imbriquées
+(\code{geomorpho}/\code{surface}/\code{c_vessel}) ;
+\item \code{"auto"} — \strong{calibre sur place} avec \code{dessertR::dsr_calibrer_specs()},
+à partir du MNT et de la \code{reference} fournis. C'est la réponse au conseil
+de dessertR quand les bornes figées saturent (« des bornes calibrées sur
+un AUTRE massif ne se transportent pas ») : l'appelant suit ce conseil
+sans avoir à connaître deux vocabulaires de specs. \strong{Exige \code{reference}.}
+\code{surface} et \code{c_vessel} restent figés, une calibration ne les produisant
+pas ;
+\item la sortie \strong{plate} de \code{dsr_calibrer_specs()$specs} — reconnue à sa forme
+et promue en \code{geomorpho}, cf. \code{\link[=specs_depuis_calibration]{specs_depuis_calibration()}} ;
+\item \code{NULL} — \strong{restaure les specs de dessertR}, dont les bornes sont dérivées par
 quantiles de l'emprise — le \code{seuil} cesse alors d'être comparable d'un site
-à l'autre.}
+à l'autre.
+}}
 }
 \value{
 Un \code{sf} de \code{LINESTRING} avec \code{source = "detectee"} et \code{p_desserte}.
@@ -84,6 +97,39 @@ couvert mais lisible au sol} ; \code{\link[=acquire_desserte_osm]{acquire_desser
 \strong{Éloigne d'ACCESSFOR délibérément} : ACCESSFOR consomme la BD TOPO seule.
 Ne jamais activer dans une comparaison ACCESSFOR.
 }
+\section{Performance}{
+
+\strong{La fonction la plus couteuse du paquet.} Mesure nemetonshiny du
+2026-08-12 : \strong{729 s et plus de 8 Go de pic} sur 1 855 ha, MNT LiDAR 0,5 m.
+
+Deux postes, qui ne se compensent pas :
+\itemize{
+\item la \strong{pile de couches} (\code{dsr_layers_dtm()}) tient toute l'emprise en memoire
+a la resolution du MNT -- d'ou le pic, proportionnel a la surface DIVISEE par
+le carre de la resolution ;
+\item le \strong{canal de surface} relit le nuage LiDAR dalle par dalle : compter la
+taille du nuage en plus.
+}
+
+Ne jamais cabler cette fonction sur un bouton synchrone ; prevoir un worker
+separe. Et \strong{borner l'emprise, pas la resolution} : passer de 0,5 m a 5 m ne
+fait pas gagner du temps, cela fait perdre le signal -- 0 canal retenu sur 7 a
+5 m contre 5 sur 7 a 0,5 m (mesure nemetonshiny). Sur un poste de 31 Go
+partage, une emprise de l'ordre de 2 000 ha est deja le plafond raisonnable.
+}
+
+\section{Place dans le flux}{
+
+\code{\link[=detecter_desserte]{detecter_desserte()}} et \code{\link[=qualifier_desserte]{qualifier_desserte()}} sont \strong{sequentielles, pas
+exclusives} : la premiere trouve l'ABSENT (des linéaires candidats hors du
+réseau connu), la seconde requalifie l'EXISTANT (largeur, état, portance
+mesurés au LiDAR). L'enchaînement naturel est
+\code{acquire_desserte()} -> \code{detecter_desserte()} -> fusion -> \code{qualifier_desserte()},
+car la sortie de détection est \strong{candidate} : sans largeur ni portance, elle
+n'est pas consommable par \code{\link[=preprocess]{preprocess()}}. Les enchaîner dans l'autre sens
+qualifierait un réseau auquel il manque encore ce qu'on cherche.
+}
+
 \seealso{
 \code{\link[=detecter_desserte_balayage]{detecter_desserte_balayage()}}, \code{\link[=qualifier_desserte]{qualifier_desserte()}},
 \code{\link[=acquire_desserte_osm]{acquire_desserte_osm()}}, \code{specs/026}.

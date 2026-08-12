@@ -19,8 +19,15 @@
 
 .PKG_IGRAPH <- "igraph"
 
-# Diagnostic vide, meme colonnes : sans dessertR on degrade proprement (CA-25.1).
-.integrite_vide <- function(desserte) {
+# Diagnostic NON EFFECTUE, mêmes colonnes (CA-25.1).
+#
+# La dégradation reste douce -- l'objet garde sa forme, les appelants qui lisent
+# `troncons` ne cassent pas -- mais elle ne doit plus être SILENCIEUSE. Un résumé
+# à `n_infractions = NA` rendu dans une interface **se lit comme « aucune
+# infraction »** : une fausse réassurance sur exactement la question posée. Le
+# champ `disponible` porte donc le fait, et `raison` le pourquoi ; `print()` le
+# dit en toutes lettres au lieu d'omettre la ligne.
+.integrite_vide <- function(desserte, raison = NA_character_) {
   d <- sf::st_as_sf(desserte)
   d$composant <- NA_integer_
   d$connecte_public <- NA
@@ -32,7 +39,9 @@
       resume = c(n_troncons = nrow(d), n_infractions = NA_integer_,
                  longueur_infraction_m = NA_real_, n_composants = NA_integer_,
                  n_composants_orphelins = NA_integer_),
-      courbe = NULL
+      courbe = NULL,
+      disponible = FALSE,
+      raison = raison
     ),
     class = "foretaccess_integrite"
   )
@@ -80,9 +89,18 @@
 #'   1003 et fragmentait le graphe en 69 composantes dont 34 isolées, fabriquant
 #'   21 fausses infractions.
 #' @return Un objet `foretaccess_integrite` : `troncons` (`sf` avec `composant`,
-#'   `connecte_public`, `viole_contrainte`, `cause`), `resume` (compteurs), et
-#'   `courbe` (`NULL` ici, renseigné par [integrite_buffer_adaptatif()]).
-#' @seealso [integrite_buffer_adaptatif()], [acquire_desserte()], `specs/025`.
+#'   `connecte_public`, `viole_contrainte`, `cause`), `resume` (compteurs),
+#'   `courbe` (`NULL` ici, renseigné par [integrite_buffer_adaptatif()]),
+#'   `disponible` et `raison`.
+#'
+#'   **Lire `disponible` avant `resume`.** Sans `dessertR`/`igraph`, ou si
+#'   `dsr_reseau()` n'aboutit pas, le diagnostic n'est pas effectué : `resume`
+#'   est alors tout en `NA` et un avertissement est émis. Un `n_infractions` à
+#'   `NA` signifie **« on ne sait pas »**, jamais « aucune infraction » — ne
+#'   l'affichez pas comme un verdict. [dessertR_disponible()] permet de poser la
+#'   question *avant* de lancer le calcul.
+#' @seealso [dessertR_disponible()], [integrite_buffer_adaptatif()],
+#'   [acquire_desserte()], `specs/025`.
 #' @export
 verifier_integrite_desserte <- function(desserte, aoi = NULL, tol_noeud = 1,
                                         tol_test_topologie = 5,
@@ -92,19 +110,37 @@ verifier_integrite_desserte <- function(desserte, aoi = NULL, tol_noeud = 1,
   if (!("classe" %in% names(d))) {
     cli::cli_abort("{.arg desserte} doit porter un champ {.field classe}.")
   }
-  if (!.dessertr_dispo() || !requireNamespace(.PKG_IGRAPH, quietly = TRUE)) {
-    cli::cli_inform(c(
-      "!" = "Diagnostic d'integrite indisponible ({.pkg dessertR} ou
-             {.pkg igraph} absent) : colonnes a {.val NA}.",
-      "i" = "{.code remotes::install_github(\"pobsteta/dessertR\")}"
+  # AVERTISSEMENT, pas information : un diagnostic non effectue rendu tel quel se
+  # lit comme un diagnostic sans infraction. `cli_inform` se perd dans un log de
+  # worker ; un warning se voit, se capture (`withCallingHandlers`) et remonte.
+  manque <- c(
+    if (!.dessertr_dispo()) .PKG_DESSERTR,
+    if (!requireNamespace(.PKG_IGRAPH, quietly = TRUE)) .PKG_IGRAPH
+  )
+  if (length(manque)) {
+    cli::cli_warn(c(
+      "!" = "Integrite {.strong NON CONTROLEE} : {.pkg {manque}} absent{?s}.",
+      "x" = "Le resultat n'est pas « aucune infraction », c'est « on ne sait pas ».",
+      "i" = "{.code remotes::install_github(\"pobsteta/dessertR\")}",
+      "i" = "Tester d'avance avec {.fn dessertR_disponible}."
     ))
-    return(.integrite_vide(d))
+    return(.integrite_vide(d, paste0("paquet absent : ", toString(manque))))
   }
   # nocov start : chemin dessertR/igraph, hors CI (valide sur l'AOI oracle).
   res <- .integrite_calculer(d, tol_noeud, largeur_dedupe)
   if (is.null(res)) {
-    return(.integrite_vide(d))
+    # dessertR est la, mais `dsr_reseau` a echoue (couche degeneree, geometries
+    # inexploitables). Ce chemin ne disait RIEN du tout : pire que l'absence de
+    # paquet, puisque rien ne signalait meme l'indisponibilite.
+    cli::cli_warn(c(
+      "!" = "Integrite {.strong NON CONTROLEE} : {.fn dsr_reseau} n'a pas abouti.",
+      "i" = "Couche degeneree ou geometries inexploitables (lignes nulles,
+             {.val NA}, auto-intersections)."
+    ))
+    return(.integrite_vide(d, "dsr_reseau n'a pas abouti"))
   }
+  res$disponible <- TRUE
+  res$raison <- NA_character_
   res$troncons$cause <- .integrite_causes(res$troncons, d, aoi,
     tol_noeud, tol_test_topologie, marge_bord_m, largeur_dedupe)
   res
@@ -213,6 +249,15 @@ verifier_integrite_desserte <- function(desserte, aoi = NULL, tol_noeud = 1,
 print.foretaccess_integrite <- function(x, ...) {
   r <- x$resume
   cli::cli_h3("Integrite du reseau de desserte (spec 025)")
+  # Un diagnostic non effectue se DIT. Auparavant la ligne « Infractions » etait
+  # simplement omise, et un lecteur presse y voyait un reseau sans infraction.
+  if (isFALSE(x$disponible)) {
+    cli::cli_text("{r[['n_troncons']]} troncon{?s}.")
+    cli::cli_alert_danger("Diagnostic {.strong NON EFFECTUE}
+                          {if (!is.na(x$raison)) paste0('(', x$raison, ')') else ''}.")
+    cli::cli_alert_info("Ce n'est pas « aucune infraction » : c'est « on ne sait pas ».")
+    return(invisible(x))
+  }
   cli::cli_text("{r[['n_troncons']]} troncon{?s}, {r[['n_composants']]} composante{?s},
                  dont {r[['n_composants_orphelins']]} orpheline{?s}.")
   if (!is.na(r[["n_infractions"]])) {

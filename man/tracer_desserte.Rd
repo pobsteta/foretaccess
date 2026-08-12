@@ -43,3 +43,13 @@ turning radius, controlled hairpins, terrain-compatible profile. Thin R wrapper
 around the Rust A\* solver (\code{desserte_trace}, spec 015): R flattens the DEM,
 crossability and terrain slope, calls the solver and rebuilds the polyline.
 }
+\section{Performance}{
+
+Un seul trace A\* entre les waypoints, \strong{borne au corridor} qu'ils
+definissent (cf. \code{\link[=reseau_desserte]{reseau_desserte()}} \emph{Performance}) : de quelques dizaines de
+millisecondes a quelques secondes pour deux points proches, et d'autant plus
+cher qu'ils sont eloignes -- la fenetre grandit avec leur distance. Sans
+commune mesure avec \code{\link[=reseau_desserte]{reseau_desserte()}}, qui enchaine un trace PAR CELLULE de
+parcelle.
+}
+

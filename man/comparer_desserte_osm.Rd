@@ -29,6 +29,13 @@ présente, une trace erronée, ou un chemin non carrossable. Le chiffre à en
 retenir est un \strong{gisement à instruire}, et le CA-28.5 exige de le confronter
 d'abord aux objets BD TOPO connus, puis à une annotation.
 }
+\section{Performance}{
+
+Recoupement geometrique de deux couches, tempere par l'index spatial de \code{sf}.
+\strong{104 s} pour 3 122 x 544 troncons (mesure nemetonshiny, 2026-08-12).
+Purement local : aucun acces reseau, aucune surprise de debit.
+}
+
 \seealso{
 \code{\link[=acquire_desserte_osm]{acquire_desserte_osm()}}, \code{specs/028}.
 }

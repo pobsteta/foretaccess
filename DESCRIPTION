@@ -27,7 +27,9 @@ Imports:
     tools,
     yaml
 Suggests:
+    dessertR,
     happign,
+    igraph,
     knitr,
     osmdata,
     pkgload,
@@ -35,6 +37,8 @@ Suggests:
     RPostgres,
     testthat (>= 3.0.0),
     withr
+Remotes:
+    pobsteta/dessertR
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/pobsteta/foretaccess, https://pobsteta.github.io/foretaccess

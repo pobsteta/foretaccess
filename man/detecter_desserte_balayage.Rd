@@ -49,6 +49,15 @@ une desserte — ce peut être une terrasse, une limite parcellaire non
 cartographiée, ou une trace fossile. Le CA-26.5 n'est pas satisfait sans la
 part annotée.
 }
+\section{Performance}{
+
+\strong{\code{length(seuils)} fois le cout de \code{\link[=detecter_desserte]{detecter_desserte()}}} : la pile de
+couches et le canal de surface sont rebatis a chaque seuil, rien n'est
+memoise. Avec le defaut a cinq seuils, compter \strong{cinq fois} la mesure citee
+par \code{\link[=detecter_desserte]{detecter_desserte()}}, pour le meme pic memoire. Outil de calage hors
+ligne : ne jamais le cabler sur une action interactive.
+}
+
 \seealso{
 \code{\link[=detecter_desserte]{detecter_desserte()}}, \code{specs/026}.
 }
