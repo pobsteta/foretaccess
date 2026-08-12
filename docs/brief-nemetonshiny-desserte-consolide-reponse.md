@@ -70,22 +70,38 @@ les bornes figées par défaut. Mélanger un `geomorpho` calibré localement ave
 `surface` figé est un **compromis assumé**, pas un oubli : c'est encore mieux que
 des bornes figées qui saturent. `surface = NULL` permet d'y renoncer.
 
-### B.6 — je n'ai pas la réponse, et je ne vais pas l'inventer
+### B.6 — répondu, et la réponse déplace la question
 
-Vous demandiez si `specs = NULL` rend non-vide là où le défaut rend 0. **Mon
-essai est dégénéré et ne conclut rien** : faute des 8 Go et des 12 minutes, j'ai
-borné à une sous-emprise de 600 m sur `wsfi`, où la référence locale est tombée à
-0 m de linéaire et où aucun nuage n'était fourni. Les trois formes y rendent 0 —
-ce qui ne prouve rien du tout.
+*(Mesuré après coup, sur données valides — mon premier essai était dégénéré et je
+l'avais dit. Ce résultat n'est donc pas dans la `v2.1.0`.)*
 
-Ce que l'essai valide, en revanche : **`specs = "auto"` fonctionne contre le vrai
-`dessertR` 1.3.0**, 4 canaux retenus (`svf`, `pente`, `openness_neg`,
-`openness_pos`). La mécanique est bonne ; c'est le jeu d'essai qui ne valait rien.
+Sur **ForetAccess** (`wsfi`), MNT LiDAR 0,5 m, 3 590 730 cellules, référence
+réelle de 3 299 tronçons, nuage LiDAR effectivement lu (`canal_surface = TRUE`
+dans les trois cas) :
 
-**Avec `"auto"`, la question B.6 perd d'ailleurs son intérêt** : elle demandait si
-un repli dégradé (bornes par quantiles) valait mieux que rien. Vous avez
-maintenant mieux que le repli. Si vous voulez tout de même le chiffre, l'essai
-coûte désormais un argument, sur votre AOI et votre nuage.
+| forme de `specs` | durée | tronçons détectés |
+|---|---:|---:|
+| défaut (bornes figées) | 930,2 s | **0** |
+| `specs = NULL` (quantiles dessertR) | 569,4 s | **0** |
+| `specs = "auto"` (calibré sur place) | 877,3 s | **0** |
+
+**Non, `specs = NULL` ne rend pas non-vide** — il n'y a donc pas de contournement
+immédiat, et il n'y en avait pas besoin.
+
+`"auto"` a retenu **5 canaux** (`rugosite`, `openness_pos`, `vesselness`,
+`pente`, `openness_neg`) : exactement le 5/7 que vous mesuriez avec
+`dsr_calibrer_specs()`. La calibration fonctionne, elle voit le même signal que
+vous — et la détection rend quand même zéro.
+
+**Ce ne sont donc pas les bornes.** Trois stratégies indépendantes, dont une
+calibrée sur ces données mêmes, convergent vers zéro. Cela tranche le B.7, que
+vous laissiez ouvert à juste titre : entre « bornes inadaptées » et « rien à
+trouver », c'est **rien à trouver** — ou rien que ce modèle sache voir sur ces
+31 ha de forêt privée.
+
+L'impasse d'API que vous décriviez était réelle et elle est levée. Mais elle ne
+masquait pas de gisement : votre hypothèse du B.7 (« c'est plausible qu'il n'y
+ait rien ») était la bonne.
 
 ## C — vos mesures sont dans la doc
 
@@ -166,7 +182,8 @@ plus plausible. Ce second point ne viendra pas du cœur.
 
 ## Ce que je n'ai pas fait
 
-* **B.6 n'est pas répondu empiriquement** (essai dégénéré, cf. plus haut).
+* **B.6 est répondu** (cf. plus haut) — les trois formes rendent zéro. La
+  mesure est postérieure à la `v2.1.0`.
 * **Aucun test ne couvre le chemin `dessertR` réel** : nos tests d'intégrité et
   de détection sont soit hors CI (`nocov`), soit sur données jouet. Le paquet est
   déclaré, sa présence est testable, mais ce qu'il *produit* n'est vérifié que par

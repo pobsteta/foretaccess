@@ -460,3 +460,37 @@ nommer `methode = "squelette"`** plutôt que de subir le repli.
   [Zimmer — coût des routes forestières](https://www.zimmersa.com/blog-forestier/des-routes-forestieres-quoi-comment-et-a-quel-prix--n125),
   [CNPF, fiche desserte](https://ifc.cnpf.fr/sites/socle/files/cnpf-old/441060_fiche33_desserte_ok_1.pdf).
 - `R/desserte_reseau.R` (`reseau_desserte()`), `R/config.R` (`desserte$cout`).
+
+---
+
+## Mesure du 2026-08-12 — ce ne sont pas les bornes
+
+Sur **ForetAccess** (`wsfi`), MNT LiDAR 0,5 m, **3 590 730 cellules**, référence réelle de
+3 299 tronçons, nuage LiDAR effectivement lu (`canal_surface = TRUE` dans les trois cas) :
+
+| forme de `specs` | durée | tronçons détectés |
+|---|---:|---:|
+| défaut (bornes figées, §Calibration) | 930,2 s | **0** |
+| `specs = NULL` (quantiles dessertR) | 569,4 s | **0** |
+| `specs = "auto"` (calibré sur place) | 877,3 s | **0** |
+
+`"auto"` retient **5 canaux sur 7** — `rugosite`, `openness_pos`, `vesselness`, `pente`,
+`openness_neg` — soit exactement ce que `dsr_calibrer_specs()` mesure de son côté. **La
+calibration voit donc bien un signal, et la détection rend quand même zéro.**
+
+**Trois stratégies de bornes indépendantes convergent vers zéro**, dont une calibrée sur ces
+données mêmes. L'hypothèse « bornes figées inadaptées au massif » est donc **écartée pour ce
+jeu** : soit il n'y a rien à détecter sur ces 31 ha de forêt privée, soit le modèle ne sait pas
+le voir.
+
+**Conséquence pour le CA-26.5.** Le protocole du §6.0 balaie `long_min` en supposant qu'il existe
+un jeu de paramètres rendant du linéaire. Sur `wsfi`, aucun réglage de **bornes** n'y suffit — le
+balayage doit donc porter sur un bloc où l'on a établi indépendamment qu'il **y a** quelque chose
+à trouver, sans quoi on mesure la sensibilité d'un détecteur à un signal absent. C'est un
+argument de plus pour le bloc `ltcp`, disjoint du jeu de calibration (cf. `data-raw/banc_longmin.R`
+et son `FA_BLOC`).
+
+**Ce que la mesure ne dit pas** : elle ne prouve pas qu'il n'y a rien. Une détection à zéro sur
+un massif ne distingue pas « absence de gisement » de « détecteur aveugle à ce type de gisement ».
+Trancher demanderait une annotation sur orthophoto — la part que le CA-26.5 exige et qui n'a
+toujours pas été produite.
