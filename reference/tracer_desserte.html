@@ -17,7 +17,7 @@ crossability and terrain slope, calls the solver and rebuilds the polyline."></h
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,6 +108,17 @@ road minimises monetary cost. Default <code>FALSE</code> (SylvaRoad behaviour).<
     <p>A <code>foretaccess_trace</code> object: a list with <code>ligne</code> (an <code>sf</code> LINESTRING
 of the route), <code>cout</code> (total cost), <code>faisable</code> (did every segment reach its
 target), <code>waypoints</code> (the cell numbers) and the <code>config</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p>Un seul trace A\* entre les waypoints, <strong>borne au corridor</strong> qu'ils
+definissent (cf. <code><a href="reseau_desserte.html">reseau_desserte()</a></code> <em>Performance</em>) : de quelques dizaines de
+millisecondes a quelques secondes pour deux points proches, et d'autant plus
+cher qu'ils sont eloignes – la fenetre grandit avec leur distance. Sans
+commune mesure avec <code><a href="reseau_desserte.html">reseau_desserte()</a></code>, qui enchaine un trace PAR CELLULE de
+parcelle.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

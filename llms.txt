@@ -405,6 +405,12 @@ OpenStreetMap).
 - [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
   : Calibration de référence de la détection (spec 026)
 
+- [`specs_depuis_calibration()`](https://pobsteta.github.io/foretaccess/reference/specs_depuis_calibration.md)
+  : Turn a dessertR calibration into detection specs
+
+- [`dessertR_disponible()`](https://pobsteta.github.io/foretaccess/reference/dessertR_disponible.md)
+  : Is the optional dessertR backend available?
+
 - [`comparer_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/comparer_desserte_osm.md)
   : Compare une desserte OSM à la BD TOPO (spec 028)
 

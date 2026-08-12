@@ -54,3 +54,15 @@ tracer_desserte(
 A `foretaccess_trace` object: a list with `ligne` (an `sf` LINESTRING of
 the route), `cout` (total cost), `faisable` (did every segment reach its
 target), `waypoints` (the cell numbers) and the `config`.
+
+## Performance
+
+Un seul trace A\\ entre les waypoints, **borne au corridor** qu'ils
+definissent (cf.
+[`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+*Performance*) : de quelques dizaines de millisecondes a quelques
+secondes pour deux points proches, et d'autant plus cher qu'ils sont
+eloignes – la fenetre grandit avec leur distance. Sans commune mesure
+avec
+[`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md),
+qui enchaine un trace PAR CELLULE de parcelle.

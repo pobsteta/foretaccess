@@ -51,6 +51,15 @@ elles ancrent, elles ne généralisent pas. `specs = NULL` dans
 [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
 restaure les défauts dessertR.
 
+**Constantes a LIRE, pas a afficher.** Cette fonction est exportee pour
+que le defaut de
+[`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
+soit inspectable et surchargeable, pas pour etre presentee a un
+utilisateur : ses bornes n'ont de sens que pour qui lit
+`dsr_appartenance()`. Une interface qui veut offrir un choix expose
+plutot les formes de `specs` (fige / `"auto"` / `NULL`), pas leurs
+valeurs.
+
 ## See also
 
 [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md),

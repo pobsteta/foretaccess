@@ -79,11 +79,29 @@ detecter_desserte(
 
 - specs:
 
-  Bornes d'appartenance, voir
-  [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
-  (défaut). **`NULL` restaure les specs de dessertR**, dont les bornes
-  sont dérivées par quantiles de l'emprise — le `seuil` cesse alors
-  d'être comparable d'un site à l'autre.
+  Bornes d'appartenance. **Quatre formes acceptées** :
+
+  - [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
+    (défaut) — bornes figées, imbriquées
+    (`geomorpho`/`surface`/`c_vessel`) ;
+
+  - `"auto"` — **calibre sur place** avec
+    `dessertR::dsr_calibrer_specs()`, à partir du MNT et de la
+    `reference` fournis. C'est la réponse au conseil de dessertR quand
+    les bornes figées saturent (« des bornes calibrées sur un AUTRE
+    massif ne se transportent pas ») : l'appelant suit ce conseil sans
+    avoir à connaître deux vocabulaires de specs. **Exige `reference`.**
+    `surface` et `c_vessel` restent figés, une calibration ne les
+    produisant pas ;
+
+  - la sortie **plate** de `dsr_calibrer_specs()$specs` — reconnue à sa
+    forme et promue en `geomorpho`, cf.
+    [`specs_depuis_calibration()`](https://pobsteta.github.io/foretaccess/reference/specs_depuis_calibration.md)
+    ;
+
+  - `NULL` — **restaure les specs de dessertR**, dont les bornes sont
+    dérivées par quantiles de l'emprise — le `seuil` cesse alors d'être
+    comparable d'un site à l'autre.
 
 ## Value
 
@@ -112,6 +130,45 @@ couche candidate, avec `source` distinct.
 
 **Éloigne d'ACCESSFOR délibérément** : ACCESSFOR consomme la BD TOPO
 seule. Ne jamais activer dans une comparaison ACCESSFOR.
+
+## Performance
+
+**La fonction la plus couteuse du paquet.** Mesure nemetonshiny du
+2026-08-12 : **729 s et plus de 8 Go de pic** sur 1 855 ha, MNT LiDAR
+0,5 m.
+
+Deux postes, qui ne se compensent pas :
+
+- la **pile de couches** (`dsr_layers_dtm()`) tient toute l'emprise en
+  memoire a la resolution du MNT – d'ou le pic, proportionnel a la
+  surface DIVISEE par le carre de la resolution ;
+
+- le **canal de surface** relit le nuage LiDAR dalle par dalle : compter
+  la taille du nuage en plus.
+
+Ne jamais cabler cette fonction sur un bouton synchrone ; prevoir un
+worker separe. Et **borner l'emprise, pas la resolution** : passer de
+0,5 m a 5 m ne fait pas gagner du temps, cela fait perdre le signal – 0
+canal retenu sur 7 a 5 m contre 5 sur 7 a 0,5 m (mesure nemetonshiny).
+Sur un poste de 31 Go partage, une emprise de l'ordre de 2 000 ha est
+deja le plafond raisonnable.
+
+## Place dans le flux
+
+`detecter_desserte()` et
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+sont **sequentielles, pas exclusives** : la premiere trouve l'ABSENT
+(des linéaires candidats hors du réseau connu), la seconde requalifie
+l'EXISTANT (largeur, état, portance mesurés au LiDAR). L'enchaînement
+naturel est
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+-\> `detecter_desserte()` -\> fusion -\>
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md),
+car la sortie de détection est **candidate** : sans largeur ni portance,
+elle n'est pas consommable par
+[`preprocess()`](https://pobsteta.github.io/foretaccess/reference/preprocess.md).
+Les enchaîner dans l'autre sens qualifierait un réseau auquel il manque
+encore ce qu'on cherche.
 
 ## See also
 

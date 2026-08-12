@@ -59,8 +59,17 @@ verifier_integrite_desserte(
 
 Un objet `foretaccess_integrite` : `troncons` (`sf` avec `composant`,
 `connecte_public`, `viole_contrainte`, `cause`), `resume` (compteurs),
-et `courbe` (`NULL` ici, renseigné par
-[`integrite_buffer_adaptatif()`](https://pobsteta.github.io/foretaccess/reference/integrite_buffer_adaptatif.md)).
+`courbe` (`NULL` ici, renseigné par
+[`integrite_buffer_adaptatif()`](https://pobsteta.github.io/foretaccess/reference/integrite_buffer_adaptatif.md)),
+`disponible` et `raison`.
+
+**Lire `disponible` avant `resume`.** Sans `dessertR`/`igraph`, ou si
+`dsr_reseau()` n'aboutit pas, le diagnostic n'est pas effectué :
+`resume` est alors tout en `NA` et un avertissement est émis. Un
+`n_infractions` à `NA` signifie **« on ne sait pas »**, jamais « aucune
+infraction » — ne l'affichez pas comme un verdict.
+[`dessertR_disponible()`](https://pobsteta.github.io/foretaccess/reference/dessertR_disponible.md)
+permet de poser la question *avant* de lancer le calcul.
 
 ## Details
 
@@ -85,6 +94,7 @@ contente d'avertir.
 
 ## See also
 
+[`dessertR_disponible()`](https://pobsteta.github.io/foretaccess/reference/dessertR_disponible.md),
 [`integrite_buffer_adaptatif()`](https://pobsteta.github.io/foretaccess/reference/integrite_buffer_adaptatif.md),
 [`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md),
 `specs/025`.

@@ -41,6 +41,13 @@ chiffre à en retenir est un **gisement à instruire**, et le CA-28.5
 exige de le confronter d'abord aux objets BD TOPO connus, puis à une
 annotation.
 
+## Performance
+
+Recoupement geometrique de deux couches, tempere par l'index spatial de
+`sf`. **104 s** pour 3 122 x 544 troncons (mesure nemetonshiny,
+2026-08-12). Purement local : aucun acces reseau, aucune surprise de
+debit.
+
 ## See also
 
 [`acquire_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_osm.md),

@@ -68,6 +68,17 @@ n'est pas pour autant une desserte — ce peut être une terrasse, une
 limite parcellaire non cartographiée, ou une trace fossile. Le CA-26.5
 n'est pas satisfait sans la part annotée.
 
+## Performance
+
+**`length(seuils)` fois le cout de
+[`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)**
+: la pile de couches et le canal de surface sont rebatis a chaque seuil,
+rien n'est memoise. Avec le defaut a cinq seuils, compter **cinq fois**
+la mesure citee par
+[`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md),
+pour le meme pic memoire. Outil de calage hors ligne : ne jamais le
+cabler sur une action interactive.
+
 ## See also
 
 [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md),

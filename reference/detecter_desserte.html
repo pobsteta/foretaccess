@@ -11,7 +11,7 @@ candidate, jamais une desserte utilisable."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,10 +124,21 @@ jour où l'amont corrigera. Voir <code>specs/026</code> §6.0.1 (précondition P
 
 
 <dt id="arg-specs">specs<a class="anchor" aria-label="anchor" href="#arg-specs"></a></dt>
-<dd><p>Bornes d'appartenance, voir <code><a href="specs_desserte_calibrees.html">specs_desserte_calibrees()</a></code> (défaut).
-<strong><code>NULL</code> restaure les specs de dessertR</strong>, dont les bornes sont dérivées par
+<dd><p>Bornes d'appartenance. <strong>Quatre formes acceptées</strong> :</p><ul><li><p><code><a href="specs_desserte_calibrees.html">specs_desserte_calibrees()</a></code> (défaut) — bornes figées, imbriquées
+(<code>geomorpho</code>/<code>surface</code>/<code>c_vessel</code>) ;</p></li>
+<li><p><code>"auto"</code> — <strong>calibre sur place</strong> avec <code>dessertR::dsr_calibrer_specs()</code>,
+à partir du MNT et de la <code>reference</code> fournis. C'est la réponse au conseil
+de dessertR quand les bornes figées saturent (« des bornes calibrées sur
+un AUTRE massif ne se transportent pas ») : l'appelant suit ce conseil
+sans avoir à connaître deux vocabulaires de specs. <strong>Exige <code>reference</code>.</strong>
+<code>surface</code> et <code>c_vessel</code> restent figés, une calibration ne les produisant
+pas ;</p></li>
+<li><p>la sortie <strong>plate</strong> de <code>dsr_calibrer_specs()$specs</code> — reconnue à sa forme
+et promue en <code>geomorpho</code>, cf. <code><a href="specs_depuis_calibration.html">specs_depuis_calibration()</a></code> ;</p></li>
+<li><p><code>NULL</code> — <strong>restaure les specs de dessertR</strong>, dont les bornes sont dérivées par
 quantiles de l'emprise — le <code>seuil</code> cesse alors d'être comparable d'un site
-à l'autre.</p></dd>
+à l'autre.</p></li>
+</ul></dd>
 
 </dl></div>
     <div class="section level2">
@@ -152,6 +163,36 @@ couvert mais lisible au sol</em> ; <code><a href="acquire_desserte_osm.html">acq
 <code>source</code> distinct.</p>
 <p><strong>Éloigne d'ACCESSFOR délibérément</strong> : ACCESSFOR consomme la BD TOPO seule.
 Ne jamais activer dans une comparaison ACCESSFOR.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p><strong>La fonction la plus couteuse du paquet.</strong> Mesure nemetonshiny du
+2026-08-12 : <strong>729 s et plus de 8 Go de pic</strong> sur 1 855 ha, MNT LiDAR 0,5 m.</p>
+<p>Deux postes, qui ne se compensent pas :</p><ul><li><p>la <strong>pile de couches</strong> (<code>dsr_layers_dtm()</code>) tient toute l'emprise en memoire
+a la resolution du MNT – d'ou le pic, proportionnel a la surface DIVISEE par
+le carre de la resolution ;</p></li>
+<li><p>le <strong>canal de surface</strong> relit le nuage LiDAR dalle par dalle : compter la
+taille du nuage en plus.</p></li>
+</ul><p>Ne jamais cabler cette fonction sur un bouton synchrone ; prevoir un worker
+separe. Et <strong>borner l'emprise, pas la resolution</strong> : passer de 0,5 m a 5 m ne
+fait pas gagner du temps, cela fait perdre le signal – 0 canal retenu sur 7 a
+5 m contre 5 sur 7 a 0,5 m (mesure nemetonshiny). Sur un poste de 31 Go
+partage, une emprise de l'ordre de 2 000 ha est deja le plafond raisonnable.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="place-dans-le-flux">Place dans le flux<a class="anchor" aria-label="anchor" href="#place-dans-le-flux"></a></h2>
+
+
+<p><code>detecter_desserte()</code> et <code><a href="qualifier_desserte.html">qualifier_desserte()</a></code> sont <strong>sequentielles, pas
+exclusives</strong> : la premiere trouve l'ABSENT (des linéaires candidats hors du
+réseau connu), la seconde requalifie l'EXISTANT (largeur, état, portance
+mesurés au LiDAR). L'enchaînement naturel est
+<code><a href="acquire_desserte.html">acquire_desserte()</a></code> -&gt; <code>detecter_desserte()</code> -&gt; fusion -&gt; <code><a href="qualifier_desserte.html">qualifier_desserte()</a></code>,
+car la sortie de détection est <strong>candidate</strong> : sans largeur ni portance, elle
+n'est pas consommable par <code><a href="preprocess.html">preprocess()</a></code>. Les enchaîner dans l'autre sens
+qualifierait un réseau auquel il manque encore ce qu'on cherche.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

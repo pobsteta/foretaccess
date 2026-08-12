@@ -11,7 +11,7 @@ un objet BD TOPO connu — des faux positifs quantifiés sans annotation."></hea
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -113,6 +113,16 @@ la réduit. Un linéaire qui ne recoupe aucun objet connu n'est pas pour autant
 une desserte — ce peut être une terrasse, une limite parcellaire non
 cartographiée, ou une trace fossile. Le CA-26.5 n'est pas satisfait sans la
 part annotée.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p><strong><code>length(seuils)</code> fois le cout de <code><a href="detecter_desserte.html">detecter_desserte()</a></code></strong> : la pile de
+couches et le canal de surface sont rebatis a chaque seuil, rien n'est
+memoise. Avec le defaut a cinq seuils, compter <strong>cinq fois</strong> la mesure citee
+par <code><a href="detecter_desserte.html">detecter_desserte()</a></code>, pour le meme pic memoire. Outil de calage hors
+ligne : ne jamais le cabler sur une action interactive.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

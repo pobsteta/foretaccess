@@ -11,7 +11,7 @@ avant d'entrer dans une conception de réseau."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,6 +111,20 @@ saisie qu'une découverte.</p>
 <p><strong>Overpass injoignable lève une erreur</strong>, jamais une couche vide : un appelant
 confondrait sinon « le serveur refuse » et « il n'y a rien ici ». C'est la
 confusion qui a masqué l'absence de DFCI pendant une journée entière.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>
+
+
+<p>Une requete Overpass par emprise, sans pavage : le cout suit la densite de
+voirie, pas la surface. <strong>5,9 s a froid</strong> sur une AOI de 31 ha (mesure
+nemetonshiny, 2026-08-12).</p>
+<p><strong>Le risque n'est pas le calcul, c'est le debit.</strong> Overpass bride les requetes
+et repond <code>HTTP 429</code> ; le client attend alors <strong>60 s par reprise</strong>. Mesures :
+<strong>plus de 10 minutes</strong> pour la meme requete un jour de bride, et 16 reprises
+consecutives – soit 16 minutes de pure attente – lors d'un test
+d'integration. Un bouton qui appelle cette fonction doit donc etre asynchrone
+et annulable : l'ordre de grandeur nominal ne dit rien du pire cas.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

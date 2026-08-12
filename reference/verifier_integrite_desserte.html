@@ -13,7 +13,7 @@ sont signalés, jamais retirés."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -110,8 +110,15 @@ mesuré sur l'AOI oracle à 1600 m de buffer, elle retirait 260 tronçons sur
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Un objet <code>foretaccess_integrite</code> : <code>troncons</code> (<code>sf</code> avec <code>composant</code>,
-<code>connecte_public</code>, <code>viole_contrainte</code>, <code>cause</code>), <code>resume</code> (compteurs), et
-<code>courbe</code> (<code>NULL</code> ici, renseigné par <code><a href="integrite_buffer_adaptatif.html">integrite_buffer_adaptatif()</a></code>).</p>
+<code>connecte_public</code>, <code>viole_contrainte</code>, <code>cause</code>), <code>resume</code> (compteurs),
+<code>courbe</code> (<code>NULL</code> ici, renseigné par <code><a href="integrite_buffer_adaptatif.html">integrite_buffer_adaptatif()</a></code>),
+<code>disponible</code> et <code>raison</code>.</p>
+<p><strong>Lire <code>disponible</code> avant <code>resume</code>.</strong> Sans <code>dessertR</code>/<code>igraph</code>, ou si
+<code>dsr_reseau()</code> n'aboutit pas, le diagnostic n'est pas effectué : <code>resume</code>
+est alors tout en <code>NA</code> et un avertissement est émis. Un <code>n_infractions</code> à
+<code>NA</code> signifie <strong>« on ne sait pas »</strong>, jamais « aucune infraction » — ne
+l'affichez pas comme un verdict. <code><a href="dessertR_disponible.html">dessertR_disponible()</a></code> permet de poser la
+question <em>avant</em> de lancer le calcul.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -129,7 +136,8 @@ diagnostic se trompe. Sylvaccess lui-même se contente d'avertir.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="integrite_buffer_adaptatif.html">integrite_buffer_adaptatif()</a></code>, <code><a href="acquire_desserte.html">acquire_desserte()</a></code>, <code>specs/025</code>.</p></div>
+    <div class="dont-index"><p><code><a href="dessertR_disponible.html">dessertR_disponible()</a></code>, <code><a href="integrite_buffer_adaptatif.html">integrite_buffer_adaptatif()</a></code>,
+<code><a href="acquire_desserte.html">acquire_desserte()</a></code>, <code>specs/025</code>.</p></div>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -17,7 +17,7 @@ annealing) and "riprute" (rip-up &amp;amp; reroute) are planned (Lot 18b/18c).'>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -177,6 +177,22 @@ the same wall-clock as one greedy build. Reasonable exposable defaults:
 <code>n_start</code> 8-32, <code>n_iter</code> 100-300 – no hard cap is needed below those. The
 dominant lever remains <strong><code>skidding_m</code></strong> (set it to the real skidding distance;
 see <code><a href="reseau_desserte.html">reseau_desserte()</a></code>), which governs the number of traces per build.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="surface-publique">Surface publique<a class="anchor" aria-label="anchor" href="#surface-publique"></a></h2>
+
+
+<p><strong><code>optimiser_reseau()</code> est la seule facade supportee.</strong> Les bindings
+<code><a href="desserte_reseau_multistart.html">desserte_reseau_multistart()</a></code>, <code><a href="desserte_reseau_recuit.html">desserte_reseau_recuit()</a></code> et
+<code><a href="desserte_reseau_riprute.html">desserte_reseau_riprute()</a></code> sont exportes parce qu'extendr exporte ce qu'il
+compile, pas parce qu'ils constituent une API : ils prennent des vecteurs
+aplatis (<code>alt</code>, <code>obs</code>, <code>nr</code>, <code>nc</code>, indices 0-based) dont la construction et la
+coherence sont precisement ce que cette fonction garantit. Les appeler
+directement, c'est reimplementer <code>.reseau_preparer()</code> – et se tromper d'un
+cran d'indice sans que rien ne le signale.</p>
+<p>Meme statut pour <code><a href="desserte_dist_to_end.html">desserte_dist_to_end()</a></code> : primitive du solveur (distance
+geodesique a la cible dans la zone franchissable, heuristique de l'A\*), sans
+usage propre hors de ce contexte.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

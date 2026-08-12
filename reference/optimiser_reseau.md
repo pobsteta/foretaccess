@@ -126,3 +126,23 @@ one greedy build. Reasonable exposable defaults: `n_start` 8-32,
 remains **`skidding_m`** (set it to the real skidding distance; see
 [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)),
 which governs the number of traces per build.
+
+## Surface publique
+
+**`optimiser_reseau()` est la seule facade supportee.** Les bindings
+[`desserte_reseau_multistart()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_multistart.md),
+[`desserte_reseau_recuit()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_recuit.md)
+et
+[`desserte_reseau_riprute()`](https://pobsteta.github.io/foretaccess/reference/desserte_reseau_riprute.md)
+sont exportes parce qu'extendr exporte ce qu'il compile, pas parce
+qu'ils constituent une API : ils prennent des vecteurs aplatis (`alt`,
+`obs`, `nr`, `nc`, indices 0-based) dont la construction et la coherence
+sont precisement ce que cette fonction garantit. Les appeler
+directement, c'est reimplementer `.reseau_preparer()` – et se tromper
+d'un cran d'indice sans que rien ne le signale.
+
+Meme statut pour
+[`desserte_dist_to_end()`](https://pobsteta.github.io/foretaccess/reference/desserte_dist_to_end.md)
+: primitive du solveur (distance geodesique a la cible dans la zone
+franchissable, heuristique de l'A\\), sans usage propre hors de ce
+contexte.

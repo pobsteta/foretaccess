@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,40 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.1.0" id="foretaccess-210-2026-08-12">foretaccess 2.1.0 (2026-08-12)<a class="anchor" aria-label="anchor" href="#foretaccess-210-2026-08-12"></a></h2>
+<p>Version <strong>mineure</strong> : trois fonctions exportées de plus, aucune rupture. Elle publie deux chantiers menés en parallèle — le <strong>coût de terrassement</strong> (spec 029) et la <strong>desserte détectée / diagnostiquée</strong> — plus deux défauts silencieux corrigés. Le fil commun est celui-là : <strong>rendre visible ce qui se taisait</strong>.</p>
+<div class="section level3">
+<h3 id="trois-silences-rompus-2-1-0">Trois silences rompus<a class="anchor" aria-label="anchor" href="#trois-silences-rompus-2-1-0"></a></h3>
+<p><strong><code>pondere_cout = FALSE</code> jetait la surface de coût sans le dire.</strong> Le défaut (parité SylvaRoad) n’utilise de <code>cout</code> que le masque <code>franchissable</code> : la surface €/m était calculée, payée, et jetée. Un appelant qui construit une surface de coût ne le fait pourtant pas pour son masque. Le défaut <strong>ne change pas</strong> — basculer casserait la parité du Lot 15 — mais il <strong>avertit</strong> désormais, sauf si <code>pondere_cout = FALSE</code> est passé explicitement.</p>
+<p><strong><code><a href="../reference/verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> rendait un verdict vide qui se lisait comme un bon bulletin de santé.</strong> Sans <code>dessertR</code>/<code>igraph</code>, le résumé sortait tout en <code>NA</code> — et <code>n_infractions = NA</code> affiché dans une interface se lit « aucune infraction ». L’objet porte maintenant <code>disponible</code> et <code>raison</code>, <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> affiche « Diagnostic <strong>NON EFFECTUÉ</strong> », et un <strong>avertissement</strong> remplace le message informatif. Un second chemin, plus discret encore (<code>dessertR</code> présent mais <code>dsr_reseau()</code> en échec), ne disait rien du tout : il avertit aussi.</p>
+<p><strong><code><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">terra::rasterize()</a></code> gravait une sentinelle sur les cellules de jonction</strong> — corrigé en 2.0.1, confronté ici au cache DABO réel : 0 sentinelle, invariance sur les cinq couches.</p>
+</div>
+<div class="section level3">
+<h3 id="coût-de-terrassement-spec--écrit-testé-non-activé-2-1-0">Coût de terrassement (spec 029) — écrit, testé, <strong>non activé</strong>
+<a class="anchor" aria-label="anchor" href="#co%C3%BBt-de-terrassement-spec--%C3%A9crit-test%C3%A9-non-activ%C3%A9-2-1-0"></a></h3>
+<p><code><a href="../reference/cout_terrassement.html">cout_terrassement()</a></code> remplace le barème de pente en escalier par un coût de déblai/remblai au m³, <strong>continu</strong> et sensible à la largeur de plateforme (le volume croît comme son carré). Accessible via <code>surface_cout_construction(methode_pente = "terrassement", largeur_m = )</code>.</p>
+<p><strong>Le défaut reste <code>"bareme"</code></strong>, et le banc sur massif réel dit pourquoi (§7 de la spec) : le terrassement rend franchissables <strong>32 865 cellules que le barème interdit</strong> (4,45 % de DABO, entre 60 % et 100 % de pente), et <strong>déplace la moitié du tracé</strong> pour des agrégats qui se ressemblent. Basculer ne re-tarife pas un ensemble de tracés : <strong>il l’agrandit</strong>.</p>
+<p>D’où le troisième argument, <code>pente_max_pct</code> : le <strong>plafond de constructibilité</strong> est désormais séparé de la <strong>méthode de tarification</strong>. Par défaut il reprend le plafond implicite du barème, de sorte que changer de méthode ne change <em>que</em> la tarification.</p>
+</div>
+<div class="section level3">
+<h3 id="détection--la-calibration-locale-peut-enfin-atteindre-la-détection-2-1-0">Détection : la calibration locale peut enfin atteindre la détection<a class="anchor" aria-label="anchor" href="#d%C3%A9tection--la-calibration-locale-peut-enfin-atteindre-la-d%C3%A9tection-2-1-0"></a></h3>
+<p><code>dessertR</code> conseille de recalibrer quand ses bornes saturent — et la voie était fermée à qui arrive par <code>foretaccess</code>, les deux paquets appelant « specs » deux choses de forme différente. <code>detecter_desserte(specs =)</code> accepte maintenant <strong>quatre formes</strong> : les bornes figées, <code>"auto"</code> (calibre sur place, exige <code>reference</code>), la sortie plate de <code>dsr_calibrer_specs()</code> reconnue à sa forme, et <code>NULL</code>. <code><a href="../reference/specs_depuis_calibration.html">specs_depuis_calibration()</a></code> expose la conversion et documente ce qui ne s’y transporte pas.</p>
+</div>
+<div class="section level3">
+<h3 id="enveloppes-de-coût-2-1-0">Enveloppes de coût<a class="anchor" aria-label="anchor" href="#enveloppes-de-co%C3%BBt-2-1-0"></a></h3>
+<p>Cinq fonctions sans indication de coût en ont une : <code><a href="../reference/acquire_desserte_osm.html">acquire_desserte_osm()</a></code> (5,9 s à froid, <strong>mais &gt; 10 min sous bride Overpass</strong>), <code><a href="../reference/comparer_desserte_osm.html">comparer_desserte_osm()</a></code> (104 s), <code><a href="../reference/detecter_desserte.html">detecter_desserte()</a></code> (<strong>729 s et &gt; 8 Go sur 1 855 ha</strong>), <code><a href="../reference/detecter_desserte_balayage.html">detecter_desserte_balayage()</a></code>, <code><a href="../reference/tracer_desserte.html">tracer_desserte()</a></code>. Avec un point que la mesure établit et qui n’était écrit nulle part : <strong>dégrader la résolution ne fait pas gagner du temps, cela fait perdre le signal</strong> — la seule variable d’ajustement est l’emprise.</p>
+</div>
+<div class="section level3">
+<h3 id="ce-qui-nest-pas-fait-et-pourquoi-2-1-0">Ce qui n’est pas fait, et pourquoi<a class="anchor" aria-label="anchor" href="#ce-qui-nest-pas-fait-et-pourquoi-2-1-0"></a></h3>
+<ul><li>
+<strong><code>dessertR</code> n’est toujours pas déclaré en <code>Suggests</code>.</strong> Il en dépend <code>rlas</code>, <strong>archivé sur le CRAN</strong> : la déclaration a fait échouer les quatre jobs de CI en 90 secondes. Un <code>Remotes</code> vers un paquet dont une dépendance dure est introuvable casse l’installation pour <em>tous</em>, y compris ceux qui n’utilisent jamais <code>dessertR</code>. À redéclarer le jour où <code>rlas</code> revient.</li>
+<li>
+<strong>Les prix au m³ du terrassement ne sont pas un relevé de devis</strong> : ils sont calés par inversion d’un plafond de subvention. Le modèle est mieux formé, pas mieux calé.</li>
+<li>
+<strong>Personne n’a jugé lequel des deux jeux de tracés est le plus plausible</strong> sur le terrain. C’est un avis de gestionnaire, pas une propriété du modèle.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.2" id="foretaccess-202-2026-08-11">foretaccess 2.0.2 (2026-08-11)<a class="anchor" aria-label="anchor" href="#foretaccess-202-2026-08-11"></a></h2>
 <p>Version de <strong>documentation</strong> : aucun changement de code fonctionnel depuis la <code>2.0.1</code>. Elle fige deux traces qui méritaient d’être citables à une version.</p>

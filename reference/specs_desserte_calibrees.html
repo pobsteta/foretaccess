@@ -9,7 +9,7 @@ seuil de detecter_desserte() désigne la même chose d'un site à l'autre."></he
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,6 +86,11 @@ la présence d'une route, « une route recolonisée reste une route ».</p>
 bloc <code>wsfi</code> à 54 %. Ces valeurs sont <strong>provisoires</strong> : elles ancrent, elles ne
 généralisent pas. <code>specs = NULL</code> dans <code><a href="detecter_desserte.html">detecter_desserte()</a></code> restaure les
 défauts dessertR.</p>
+<p><strong>Constantes a LIRE, pas a afficher.</strong> Cette fonction est exportee pour que le
+defaut de <code><a href="detecter_desserte.html">detecter_desserte()</a></code> soit inspectable et surchargeable, pas pour
+etre presentee a un utilisateur : ses bornes n'ont de sens que pour qui lit
+<code>dsr_appartenance()</code>. Une interface qui veut offrir un choix expose plutot les
+formes de <code>specs</code> (fige / <code>"auto"</code> / <code>NULL</code>), pas leurs valeurs.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
