@@ -39,6 +39,35 @@
 #'   couvre tout le territoire, le résultat est exact partout. Sinon, la sortie porte
 #'   une couche `certifie` (spec 007 §4.3).
 #'
+#' @section Pourquoi une zone traversée par une piste ressort `non_accessible`:
+#' La question se pose devant chaque carte, et il y a **trois réponses**, très
+#' inégales. Mesuré sur l'AOI de Dabo (16 783 cellules `non_accessible`, dont
+#' 1 912 à moins de 25 m d'un linéaire BD TOPO) :
+#'
+#' 1. **Ce que vous voyez n'est pas une desserte pour le modèle — 93 % des cas.**
+#'    La classification ACCESSFOR ne retient que « Route à 1/2 chaussées »,
+#'    « Route empierrée » et « Chemin » ; **tout le reste** — au premier chef les
+#'    **sentiers**, mais aussi ronds-points, escaliers, bacs — devient
+#'    `hors_desserte` et sort du débardage. Sur Dabo cela fait 320 tronçons sur
+#'    1 032, soit **31 % du réseau visible sur une carte**. Ce n'est pas un
+#'    défaut : c'est la règle de l'annexe p. 51, et elle est délibérée. Un
+#'    gestionnaire qui juge ces sentiers praticables change de
+#'    `classification` dans [acquire_desserte()] — en sachant que `"accessfor"`
+#'    et `"clsvac"` divergent sur **42 %** des tronçons.
+#' 2. **La pente, pas la distance — 7 % des cas.** Les cellules restantes
+#'    touchent une vraie desserte, mais dépassent le seuil de roulage
+#'    (`pente_skidder_max_pct`, 30 %) ; l'essentiel tombe aussi dans
+#'    `exclusion_mask` (pente d'abattage). L'engin n'y roule pas et n'y travaille
+#'    pas : la proximité d'une piste n'y change rien.
+#' 3. **La piste est orpheline.** Une cellule rattachée à une desserte qui ne
+#'    rejoint **aucune route** est déclarée non accessible : le bois y arriverait
+#'    sans pouvoir en repartir. Ce motif n'explique aucune cellule sur Dabo, mais
+#'    il domine sur un réseau fragmenté — c'est ce que
+#'    [verifier_integrite_desserte()] diagnostique.
+#'
+#' Une cellule **non certifiée** est `NA` (`indetermine`), jamais rangée dans
+#' `non_accessible` : le doute se déclare, il ne se range pas (spec 007 §4.4).
+#'
 #' @return Un objet de classe `foretaccess_skidder` :
 #'   \describe{
 #'     \item{`accessibilite`}{`SpatRaster` catégoriel : `parcourable`,

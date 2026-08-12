@@ -274,6 +274,20 @@ specs_depuis_calibration <- function(calibration,
 #'   `dsr_indice_detection()` vient de masquer. `"auto"` replierait donc sur le
 #'   squelette **en silence**, et la chaîne mesurée changerait sans préavis au
 #'   jour où l'amont corrigera. Voir `specs/026` §6.0.1 (précondition P5).
+#' @param poids Poids des trois termes de la fusion, vecteur nommé
+#'   `c(geo=, surf=, vessel=)`. `NULL` (défaut) laisse ceux de `dsr_detecter()`.
+#'
+#'   **À connaître avant de régler quoi que ce soit** : `dsr_detecter()` fusionne
+#'   en **moyenne géométrique pondérée**, donc dominée par son plus **petit**
+#'   terme — un poids n'y dose pas une contribution, il arme un **veto**. Mesuré
+#'   sur le bloc `wsfi` (campagne CA-26.5) : le terme `vessel`, à son poids par
+#'   défaut de 1, ramène `p_desserte` de 0,210 à **0,001** sur des pistes
+#'   réelles, parce que `vesselness` est un détecteur de crêtes creux dont
+#'   1,62 % des cellules atteignent la rampe. `c(geo = 1, surf = 0.5, vessel = 0)`
+#'   neutralise ce veto.
+#' @param seuil_vessel Début de la rampe d'appartenance sur `vesselness`. `NULL`
+#'   (défaut) laisse celui de `dsr_detecter()` (0,3) — à comparer aux bornes
+#'   calibrées du même canal dans `specs$geomorpho`, qui saturent à 0,07.
 #' @param specs Bornes d'appartenance. **Quatre formes acceptées** :
 #'   * [specs_desserte_calibrees()] (défaut) — bornes figées, imbriquées
 #'     (`geomorpho`/`surface`/`c_vessel`) ;
@@ -301,7 +315,8 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
                               seuil = 0.6, buffer_ref = 15, long_min = 30,
                               emprise = NULL, dtm_res = 1,
                               methode = "squelette",
-                              specs = specs_desserte_calibrees()) {
+                              specs = specs_desserte_calibrees(),
+                              poids = NULL, seuil_vessel = NULL) {
   checkmate::assert_number(seuil, lower = 0, upper = 1)
   # `canal_surface` porte sur TOUTES les sorties, y compris vides : un appelant
   # qui recoit zero lineaire doit pouvoir distinguer « rien detecte » de « rien
@@ -398,7 +413,42 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
   } else {
     .dsr("dsr_conductivite")(pile, specs = specs$geomorpho)
   }
-  vess <- if ("vesselness" %in% names(pile)) pile[["vesselness"]] else NULL
+  # VESSELNESS N'EST PASSE EN VETO QUE S'IL N'EST PAS DEJA UN CANAL DE `sigma_geo`.
+  #
+  # `dsr_detecter()` fusionne ses termes en MOYENNE GEOMETRIQUE ponderee
+  # (`exp(sum(w log(mu)) / sum(w))`), donc dominee par son plus PETIT terme, et
+  # `vesselness` y pese 1 -- le double du canal de surface. Or il entre par une
+  # rampe demarrant a `seuil_vessel = 0,3`, alors que c'est un detecteur de
+  # cretes CREUX par nature : sur le bloc wsfi, 1,62 % des cellules seulement
+  # atteignent 0,3 (mediane 0,0023). Le terme vaut donc ~0 presque partout et
+  # ecrase `p_desserte`, quelle que soit la qualite de la geomorphologie.
+  #
+  # Et il etait compte DEUX FOIS : `specs_desserte_calibrees()$geomorpho` porte
+  # deja un canal `vesselness` de poids 2, calibre entre 0,00064 et 0,0708 --
+  # une borne haute 4,2 fois PLUS BASSE que le debut de la rampe du veto. Les
+  # deux lectures se contredisent, et le veto l'emporte.
+  #
+  # Mesure sur les 4 pistes annotees du bloc wsfi (campagne CA-26.5) : avec la
+  # geomorphologie seule, 50,2 % de leurs cellules passent le seuil 0,40 ; avec
+  # le veto, 0,0 %. C'est ce veto, et non les bornes, qui expliquait le rappel
+  # nul. Cf. `data-raw/annotation_wsfi/RESULTATS.md`.
+  vess_dans_specs <- !is.null(specs) && !is.null(specs$geomorpho) &&
+    "vesselness" %in% names(specs$geomorpho)
+  vess <- if (!vess_dans_specs && "vesselness" %in% names(pile)) {
+    pile[["vesselness"]]
+  } else {
+    NULL
+  }
+  if (vess_dans_specs) {
+    cli::cli_inform(c(
+      "i" = "{.field vesselness} est deja un canal de {.arg specs$geomorpho}
+             (poids {specs$geomorpho$vesselness$poids}) : il n'est pas repasse en
+             veto separe.",
+      "i" = "Le repasser le compterait deux fois, la seconde avec une rampe
+             {round(0.3 / specs$geomorpho$vesselness$b, 1)}x au-dessus de sa
+             propre borne calibree."
+    ))
+  }
 
   # Canal de surface : c'est LUI qui porte le signal -- AUC 0,870 sur
   # `taux_penetration`, le meilleur des quatre canaux calibres.
@@ -418,11 +468,14 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
 
   # `ref` est deja calcule en amont (le mode "auto" en a besoin pour calibrer).
   det <- tryCatch(
-    .dsr("dsr_detecter")(sigma_geo, reference = ref, vesselness = vess,
-      sigma_surf = sigma_surf, seuil = seuil, buffer_ref = buffer_ref,
-      methode = methode,
-      long_min = long_min, emprise = emprise,
-      regime = if (is.null(emprise)) "complet" else "corridor"),
+    do.call(.dsr("dsr_detecter"), c(
+      list(sigma_geo, reference = ref, vesselness = vess,
+        sigma_surf = sigma_surf, seuil = seuil, buffer_ref = buffer_ref,
+        methode = methode,
+        long_min = long_min, emprise = emprise,
+        regime = if (is.null(emprise)) "complet" else "corridor"),
+      if (!is.null(poids)) list(poids = poids),
+      if (!is.null(seuil_vessel)) list(seuil_vessel = seuil_vessel))),
     error = function(e) {
       cli::cli_warn("Detection echouee : {conditionMessage(e)}.")
       NULL

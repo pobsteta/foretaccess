@@ -492,6 +492,33 @@ le voir.
 >
 > **Le détecteur est aveugle, il n'y a pas « rien à trouver ».** La conclusion inverse, écrite ici
 > la veille, est réfutée.
+>
+> **Suite, le même jour — pourquoi, et le rappel une fois réparé.** Trois verrous en série, aucun
+> suffisant seul :
+> 1. **un veto `vesselness` compté deux fois.** `dsr_detecter()` fusionne en moyenne géométrique
+>    pondérée, donc dominée par son plus PETIT terme : un poids n'y dose pas une contribution,
+>    **il arme un veto**. `vesselness` y pèse 1 et entre par une rampe démarrant à 0,3, alors que
+>    1,62 % des cellules l'atteignent ici. Sur les cellules des 4 pistes, `p_desserte` passe de
+>    0,210 (géomorphologie seule) à **0,001**. Et il figurait déjà dans `specs$geomorpho`, calibré
+>    entre 0,00064 et 0,0708 — borne haute **4,2 fois plus basse** que la rampe du veto ;
+> 2. **`long_min = 30`.** Seules ~12 % des cellules d'une piste passent le seuil : le squelette se
+>    fragmente en morceaux de 5 à 7 m, et le filtre les élimine tous. Il ne filtrait pas le bruit,
+>    il filtrait le **signal fragmenté** ;
+> 3. **les bornes figées, faibles ici** — médiane 0,210 sur les pistes annotées, contre 0,403 avec
+>    des bornes recalibrées localement.
+>
+> | configuration | rappel | précision |
+> |---|:---:|:---:|
+> | origine | **0 / 4** | 0 / 2 |
+> | veto retiré + `long_min 10` | 2 / 4 | — |
+> | + bornes annotées, **leave-one-out** | **3 / 4 = 75 %** | **36 %** |
+>
+> Le leave-one-out donne le même chiffre que le test circulaire : la calibration **généralise**.
+> Le revers est la précision — 7 faux positifs sur 11 détections. Détail dans
+> `data-raw/annotation_wsfi/RESULTATS.md` §6.
+>
+> **Conséquence pour cette spec** : `long_min = 30` est un défaut à réexaminer, et la
+> `@section Performance` de la fusion mérite d'être lue avant tout réglage de poids.
 
 **Conséquence pour le CA-26.5.** Le protocole du §6.0 balaie `long_min` en supposant qu'il existe
 un jeu de paramètres rendant du linéaire. Sur `wsfi`, aucun réglage de **bornes** n'y suffit — le

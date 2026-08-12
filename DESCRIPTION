@@ -13,7 +13,6 @@ License: GPL-3
 Encoding: UTF-8
 Language: fr
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 SystemRequirements: Cargo (Rust's package manager), rustc
 Imports:
     checkmate,
@@ -43,3 +42,4 @@ BugReports: https://github.com/pobsteta/foretaccess/issues
 Config/rextendr/version: 0.5.0
 Depends: 
     R (>= 4.2)
+Config/roxygen2/version: 8.1.0

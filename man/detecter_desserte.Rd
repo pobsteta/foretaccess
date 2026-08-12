@@ -14,7 +14,9 @@ detecter_desserte(
   emprise = NULL,
   dtm_res = 1,
   methode = "squelette",
-  specs = specs_desserte_calibrees()
+  specs = specs_desserte_calibrees(),
+  poids = NULL,
+  seuil_vessel = NULL
 )
 }
 \arguments{
@@ -68,6 +70,22 @@ et promue en \code{geomorpho}, cf. \code{\link[=specs_depuis_calibration]{specs_
 quantiles de l'emprise — le \code{seuil} cesse alors d'être comparable d'un site
 à l'autre.
 }}
+
+\item{poids}{Poids des trois termes de la fusion, vecteur nommé
+\code{c(geo=, surf=, vessel=)}. \code{NULL} (défaut) laisse ceux de \code{dsr_detecter()}.
+
+\strong{À connaître avant de régler quoi que ce soit} : \code{dsr_detecter()} fusionne
+en \strong{moyenne géométrique pondérée}, donc dominée par son plus \strong{petit}
+terme — un poids n'y dose pas une contribution, il arme un \strong{veto}. Mesuré
+sur le bloc \code{wsfi} (campagne CA-26.5) : le terme \code{vessel}, à son poids par
+défaut de 1, ramène \code{p_desserte} de 0,210 à \strong{0,001} sur des pistes
+réelles, parce que \code{vesselness} est un détecteur de crêtes creux dont
+1,62 \% des cellules atteignent la rampe. \code{c(geo = 1, surf = 0.5, vessel = 0)}
+neutralise ce veto.}
+
+\item{seuil_vessel}{Début de la rampe d'appartenance sur \code{vesselness}. \code{NULL}
+(défaut) laisse celui de \code{dsr_detecter()} (0,3) — à comparer aux bornes
+calibrées du même canal dans \code{specs$geomorpho}, qui saturent à 0,07.}
 }
 \value{
 Un \code{sf} de \code{LINESTRING} avec \code{source = "detectee"} et \code{p_desserte}.
