@@ -225,6 +225,16 @@
   (`docs/brief-nemetonshiny-skidding-desserte.md`) : 309 726 cellules-source sur DABO, et
   `skidding_m = 0` (le défaut) = pire cas documenté — > 22 min contre 70-174 s à distance de
   débardage réaliste.
+- **`v2.1.0` posée** (2026-08-12) : version **mineure**, trois exports de plus, aucune rupture.
+  Publie le **coût de terrassement** (spec 029, `cout_terrassement()`, `methode_pente`,
+  `largeur_m`, `pente_max_pct`) — écrit, testé, **non activé**, le banc DABO ayant montré que
+  basculer *agrandit* l'ensemble des cellules constructibles (+4,45 %) et déplace la moitié du
+  tracé. Publie aussi les **quatre formes de `specs`** de `detecter_desserte()` (dont `"auto"`,
+  qui calibre sur place) et `specs_depuis_calibration()`. Corrige deux silences : `pondere_cout`
+  qui jetait la surface de coût sans le dire, et `verifier_integrite_desserte()` dont le verdict
+  vide se lisait comme « aucune infraction » (champs `disponible`/`raison`, `dessertR_disponible()`).
+  **`dessertR` reste non déclarable** : `rlas` est archivé sur le CRAN, la déclaration cassait
+  l'installation pour tous.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
