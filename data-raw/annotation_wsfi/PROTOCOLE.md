@@ -67,7 +67,8 @@ donne la fraction hors corridor).
 
 Dans chaque tuile, sur ortho (et sur ombrage LiDAR, qui montre le micro-relief) :
 
-1. **numériser** dans `a_numeriser` tout linéaire qui vous paraît être une
+1. **numériser** dans `a_numeriser` (couche **polyligne**, Lambert-93) tout
+   linéaire qui vous paraît être une
    desserte réelle **absente de `reference_bdtopo`** — piste ancienne,
    cloisonnement, plateforme effacée ;
 2. renseigner `id_tuile`, `type` (même vocabulaire qu'en A) et `certitude`

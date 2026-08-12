@@ -68,13 +68,16 @@ print(st_drop_geometry(sel)[, c("id_tuile", "strate", "pente_med", "part_libre")
 
 # --- Couche VIDE a numeriser -------------------------------------------------
 # Schema impose : c'est ce qui rendra l'annotation exploitable sans reprise.
+# Un `st_sfc()` VIDE n'a pas de type : GDAL ecrit alors « Unknown (any) » et QGIS
+# refuse d'y numeriser. On part donc d'une LINESTRING vide -- c'est la classe
+# `sfc_LINESTRING` que sf traduit en type OGR -- puis on retire la ligne.
 a_num <- st_sf(
-  id = integer(0), id_tuile = integer(0),
-  type = character(0),        # piste | cloisonnement | fosse | limite | terrasse | autre
-  certitude = character(0),   # sure | probable | douteuse
-  commentaire = character(0),
-  geometry = st_sfc(crs = crs_l)
-)
+  id = 1L, id_tuile = NA_integer_,
+  type = NA_character_,        # piste | cloisonnement | fosse | limite | terrasse | autre
+  certitude = NA_character_,   # sure | probable | douteuse
+  commentaire = NA_character_,
+  geometry = st_sfc(st_linestring(), crs = crs_l)
+)[0, ]
 
 # --- Ecriture ----------------------------------------------------------------
 cands <- st_read(GPKG, layer = "candidats", quiet = TRUE)
