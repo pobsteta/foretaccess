@@ -44,9 +44,24 @@ c'est une information.
 
 ### B. Chercher ce qui MANQUE — couches `tuiles_a_scruter` et `a_numeriser`
 
-**10 tuiles de 1 ha**, tirées au hasard dans 80 tuiles candidates, stratifiées par
-pente médiane : 3 douces (15–20°), 3 moyennes (22–25°), 4 raides (26–30°). Seules
-les tuiles analysables à ≥ 60 % ont été tirées — inutile de chercher du
+**12 tuiles de 1 ha**, de deux natures qu'il ne faut surtout pas mélanger :
+
+* **10 tuiles `origine = "aleatoire"`** (`id_tuile` 1 à 10), tirées au hasard dans
+  80 tuiles candidates, stratifiées par pente médiane : 3 douces (15–20°),
+  3 moyennes (22–25°), 4 raides (26–30°). **Ce sont les seules qui comptent pour
+  le rappel et l'extrapolation** — leur tirage est aléatoire, donc sans biais ;
+* **2 tuiles `origine = "porte_candidat"`** (`id_tuile` 101 et 102), ajoutées
+  parce qu'elles contiennent les 2 candidats détectés. Le tirage aléatoire ne les
+  avait pas retenues — ce qui n'a rien d'anormal : 10 tuiles sur 80, la
+  probabilité que deux objets tombent tous deux à côté est de 73 %. Elles
+  permettent de voir la sortie du détecteur **dans son contexte**.
+
+  **Elles sont exclues de tout calcul de rappel.** Une tuile choisie *parce que*
+  le détecteur y a réagi n'est pas représentative : l'y inclure gonflerait
+  mécaniquement le rappel. Annotez-les comme les autres, elles seront traitées à
+  part.
+
+Seules les tuiles analysables à ≥ 60 % ont été retenues — inutile de chercher du
 non-détecté dans le corridor de 15 m où le détecteur ne regarde pas (`part_libre`
 donne la fraction hors corridor).
 
@@ -59,6 +74,9 @@ Dans chaque tuile, sur ortho (et sur ombrage LiDAR, qui montre le micro-relief) 
    (`sure` · `probable` · `douteuse`) ;
 3. dans `tuiles_a_scruter`, mettre `fait = "oui"` et `n_trouve` = le nombre de
    linéaires numérisés — **y compris 0**.
+
+Les 12 tuiles s'annotent de la même façon ; c'est au dépouillement que les deux
+`origine` sont séparées.
 
 **Le zéro est le résultat le plus important.** Une tuile scrutée où vous ne voyez
 rien est une donnée ; une tuile non scrutée n'en est pas une. Sans `fait = "oui"`,
