@@ -64,7 +64,9 @@ pistes anciennes, cloisonnements, tracés effacés du couvert. Rend une couche
 <span>  emprise <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dtm_res <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  methode <span class="op">=</span> <span class="st">"squelette"</span>,</span>
-<span>  specs <span class="op">=</span> <span class="fu"><a href="specs_desserte_calibrees.html">specs_desserte_calibrees</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  specs <span class="op">=</span> <span class="fu"><a href="specs_desserte_calibrees.html">specs_desserte_calibrees</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  poids <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  seuil_vessel <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -139,6 +141,25 @@ et promue en <code>geomorpho</code>, cf. <code><a href="specs_depuis_calibration
 quantiles de l'emprise — le <code>seuil</code> cesse alors d'être comparable d'un site
 à l'autre.</p></li>
 </ul></dd>
+
+
+<dt id="arg-poids">poids<a class="anchor" aria-label="anchor" href="#arg-poids"></a></dt>
+<dd><p>Poids des trois termes de la fusion, vecteur nommé
+<code>c(geo=, surf=, vessel=)</code>. <code>NULL</code> (défaut) laisse ceux de <code>dsr_detecter()</code>.</p>
+<p><strong>À connaître avant de régler quoi que ce soit</strong> : <code>dsr_detecter()</code> fusionne
+en <strong>moyenne géométrique pondérée</strong>, donc dominée par son plus <strong>petit</strong>
+terme — un poids n'y dose pas une contribution, il arme un <strong>veto</strong>. Mesuré
+sur le bloc <code>wsfi</code> (campagne CA-26.5) : le terme <code>vessel</code>, à son poids par
+défaut de 1, ramène <code>p_desserte</code> de 0,210 à <strong>0,001</strong> sur des pistes
+réelles, parce que <code>vesselness</code> est un détecteur de crêtes creux dont
+1,62 % des cellules atteignent la rampe. <code>c(geo = 1, surf = 0.5, vessel = 0)</code>
+neutralise ce veto.</p></dd>
+
+
+<dt id="arg-seuil-vessel">seuil_vessel<a class="anchor" aria-label="anchor" href="#arg-seuil-vessel"></a></dt>
+<dd><p>Début de la rampe d'appartenance sur <code>vesselness</code>. <code>NULL</code>
+(défaut) laisse celui de <code>dsr_detecter()</code> (0,3) — à comparer aux bornes
+calibrées du même canal dans <code>specs$geomorpho</code>, qui saturent à 0,07.</p></dd>
 
 </dl></div>
     <div class="section level2">

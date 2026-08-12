@@ -154,6 +154,35 @@ cellule que les deux premières ont atteinte.</p>
 comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
 Voir <code>specs/002-skidder.md</code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="pourquoi-une-zone-travers-e-par-une-piste-ressort-non-accessible">Pourquoi une zone traversée par une piste ressort <code>non_accessible</code><a class="anchor" aria-label="anchor" href="#pourquoi-une-zone-travers-e-par-une-piste-ressort-non-accessible"></a></h2>
+
+
+<p>La question se pose devant chaque carte, et il y a <strong>trois réponses</strong>, très
+inégales. Mesuré sur l'AOI de Dabo (16 783 cellules <code>non_accessible</code>, dont
+1 912 à moins de 25 m d'un linéaire BD TOPO) :</p><ol><li><p><strong>Ce que vous voyez n'est pas une desserte pour le modèle — 93 % des cas.</strong>
+La classification ACCESSFOR ne retient que « Route à 1/2 chaussées »,
+« Route empierrée » et « Chemin » ; <strong>tout le reste</strong> — au premier chef les
+<strong>sentiers</strong>, mais aussi ronds-points, escaliers, bacs — devient
+<code>hors_desserte</code> et sort du débardage. Sur Dabo cela fait 320 tronçons sur
+1 032, soit <strong>31 % du réseau visible sur une carte</strong>. Ce n'est pas un
+défaut : c'est la règle de l'annexe p. 51, et elle est délibérée. Un
+gestionnaire qui juge ces sentiers praticables change de
+<code>classification</code> dans <code><a href="acquire_desserte.html">acquire_desserte()</a></code> — en sachant que <code>"accessfor"</code>
+et <code>"clsvac"</code> divergent sur <strong>42 %</strong> des tronçons.</p></li>
+<li><p><strong>La pente, pas la distance — 7 % des cas.</strong> Les cellules restantes
+touchent une vraie desserte, mais dépassent le seuil de roulage
+(<code>pente_skidder_max_pct</code>, 30 %) ; l'essentiel tombe aussi dans
+<code>exclusion_mask</code> (pente d'abattage). L'engin n'y roule pas et n'y travaille
+pas : la proximité d'une piste n'y change rien.</p></li>
+<li><p><strong>La piste est orpheline.</strong> Une cellule rattachée à une desserte qui ne
+rejoint <strong>aucune route</strong> est déclarée non accessible : le bois y arriverait
+sans pouvoir en repartir. Ce motif n'explique aucune cellule sur Dabo, mais
+il domine sur un réseau fragmenté — c'est ce que
+<code><a href="verifier_integrite_desserte.html">verifier_integrite_desserte()</a></code> diagnostique.</p></li>
+</ol><p>Une cellule <strong>non certifiée</strong> est <code>NA</code> (<code>indetermine</code>), jamais rangée dans
+<code>non_accessible</code> : le doute se déclare, il ne se range pas (spec 007 §4.4).</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

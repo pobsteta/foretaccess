@@ -17,7 +17,9 @@ detecter_desserte(
   emprise = NULL,
   dtm_res = 1,
   methode = "squelette",
-  specs = specs_desserte_calibrees()
+  specs = specs_desserte_calibrees(),
+  poids = NULL,
+  seuil_vessel = NULL
 )
 ```
 
@@ -102,6 +104,27 @@ detecter_desserte(
   - `NULL` — **restaure les specs de dessertR**, dont les bornes sont
     dérivées par quantiles de l'emprise — le `seuil` cesse alors d'être
     comparable d'un site à l'autre.
+
+- poids:
+
+  Poids des trois termes de la fusion, vecteur nommé
+  `c(geo=, surf=, vessel=)`. `NULL` (défaut) laisse ceux de
+  `dsr_detecter()`.
+
+  **À connaître avant de régler quoi que ce soit** : `dsr_detecter()`
+  fusionne en **moyenne géométrique pondérée**, donc dominée par son
+  plus **petit** terme — un poids n'y dose pas une contribution, il arme
+  un **veto**. Mesuré sur le bloc `wsfi` (campagne CA-26.5) : le terme
+  `vessel`, à son poids par défaut de 1, ramène `p_desserte` de 0,210 à
+  **0,001** sur des pistes réelles, parce que `vesselness` est un
+  détecteur de crêtes creux dont 1,62 % des cellules atteignent la
+  rampe. `c(geo = 1, surf = 0.5, vessel = 0)` neutralise ce veto.
+
+- seuil_vessel:
+
+  Début de la rampe d'appartenance sur `vesselness`. `NULL` (défaut)
+  laisse celui de `dsr_detecter()` (0,3) — à comparer aux bornes
+  calibrées du même canal dans `specs$geomorpho`, qui saturent à 0,07.
 
 ## Value
 
