@@ -94,10 +94,15 @@ immédiat, et il n'y en avait pas besoin.
 vous — et la détection rend quand même zéro.
 
 **Ce ne sont donc pas les bornes.** Trois stratégies indépendantes, dont une
-calibrée sur ces données mêmes, convergent vers zéro. Cela tranche le B.7, que
-vous laissiez ouvert à juste titre : entre « bornes inadaptées » et « rien à
-trouver », c'est **rien à trouver** — ou rien que ce modèle sache voir sur ces
-31 ha de forêt privée.
+calibrée sur ces données mêmes, convergent vers zéro.
+
+> **Correction du 2026-08-12.** J'avais poursuivi en concluant « c'est *rien à
+> trouver* ». **C'est faux, et la campagne d'annotation l'a montré**
+> (`data-raw/annotation_wsfi/RESULTATS.md`) : 4 pistes réelles sûres absentes de
+> la BD TOPO sur 8,91 ha scrutés, toutes **hors du corridor d'exclusion**, dont
+> **aucune détectée** — rappel 0 %, précision 0 %. Votre B.7 posait la bonne
+> alternative ; c'est la branche « détecteur aveugle » qui est la bonne, pas la
+> mienne. Extrapolation : ~31 dessertes non cartographiées sur l'emprise.
 
 L'impasse d'API que vous décriviez était réelle et elle est levée. Mais elle ne
 masquait pas de gisement : votre hypothèse du B.7 (« c'est plausible qu'il n'y

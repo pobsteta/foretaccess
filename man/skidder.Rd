@@ -77,6 +77,38 @@ comptent comme routes), et l'option de modélisation 2 n'est pas implémentée.
 Voir \code{specs/002-skidder.md}.
 }
 
+\section{Pourquoi une zone traversée par une piste ressort \code{non_accessible}}{
+
+La question se pose devant chaque carte, et il y a \strong{trois réponses}, très
+inégales. Mesuré sur l'AOI de Dabo (16 783 cellules \code{non_accessible}, dont
+1 912 à moins de 25 m d'un linéaire BD TOPO) :
+\enumerate{
+\item \strong{Ce que vous voyez n'est pas une desserte pour le modèle — 93 \% des cas.}
+La classification ACCESSFOR ne retient que « Route à 1/2 chaussées »,
+« Route empierrée » et « Chemin » ; \strong{tout le reste} — au premier chef les
+\strong{sentiers}, mais aussi ronds-points, escaliers, bacs — devient
+\code{hors_desserte} et sort du débardage. Sur Dabo cela fait 320 tronçons sur
+1 032, soit \strong{31 \% du réseau visible sur une carte}. Ce n'est pas un
+défaut : c'est la règle de l'annexe p. 51, et elle est délibérée. Un
+gestionnaire qui juge ces sentiers praticables change de
+\code{classification} dans \code{\link[=acquire_desserte]{acquire_desserte()}} — en sachant que \code{"accessfor"}
+et \code{"clsvac"} divergent sur \strong{42 \%} des tronçons.
+\item \strong{La pente, pas la distance — 7 \% des cas.} Les cellules restantes
+touchent une vraie desserte, mais dépassent le seuil de roulage
+(\code{pente_skidder_max_pct}, 30 \%) ; l'essentiel tombe aussi dans
+\code{exclusion_mask} (pente d'abattage). L'engin n'y roule pas et n'y travaille
+pas : la proximité d'une piste n'y change rien.
+\item \strong{La piste est orpheline.} Une cellule rattachée à une desserte qui ne
+rejoint \strong{aucune route} est déclarée non accessible : le bois y arriverait
+sans pouvoir en repartir. Ce motif n'explique aucune cellule sur Dabo, mais
+il domine sur un réseau fragmenté — c'est ce que
+\code{\link[=verifier_integrite_desserte]{verifier_integrite_desserte()}} diagnostique.
+}
+
+Une cellule \strong{non certifiée} est \code{NA} (\code{indetermine}), jamais rangée dans
+\code{non_accessible} : le doute se déclare, il ne se range pas (spec 007 §4.4).
+}
+
 \examples{
 toy <- system.file("extdata/toy", package = "foretaccess")
 pre <- preprocess(file.path(toy, "mnt.tif"), file.path(toy, "desserte.gpkg"),
