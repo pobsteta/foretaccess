@@ -483,6 +483,16 @@ données mêmes. L'hypothèse « bornes figées inadaptées au massif » est don
 jeu** : soit il n'y a rien à détecter sur ces 31 ha de forêt privée, soit le modèle ne sait pas
 le voir.
 
+> **TRANCHÉ le 2026-08-12 — c'est la seconde branche.** La campagne d'annotation
+> (`data-raw/annotation_wsfi/RESULTATS.md`) a trouvé **4 pistes réelles sûres** absentes de la
+> BD TOPO sur 8,91 ha analysables scrutés, toutes **à 100 % hors du corridor d'exclusion** — le
+> détecteur avait donc le droit de les voir. Il n'en a trouvé aucune : **rappel 0 %**, candidat
+> le plus proche à 170 m. Ses 2 seuls candidats sont dans une tuile où l'annotateur n'a rien vu :
+> **précision 0 %**. Extrapolation : ~31 dessertes non cartographiées (IC95 8–79) sur l'emprise.
+>
+> **Le détecteur est aveugle, il n'y a pas « rien à trouver ».** La conclusion inverse, écrite ici
+> la veille, est réfutée.
+
 **Conséquence pour le CA-26.5.** Le protocole du §6.0 balaie `long_min` en supposant qu'il existe
 un jeu de paramètres rendant du linéaire. Sur `wsfi`, aucun réglage de **bornes** n'y suffit — le
 balayage doit donc porter sur un bloc où l'on a établi indépendamment qu'il **y a** quelque chose
