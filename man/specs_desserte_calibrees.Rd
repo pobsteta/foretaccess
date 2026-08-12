@@ -44,6 +44,12 @@ la présence d'une route, « une route recolonisée reste une route ».
 bloc \code{wsfi} à 54 \%. Ces valeurs sont \strong{provisoires} : elles ancrent, elles ne
 généralisent pas. \code{specs = NULL} dans \code{\link[=detecter_desserte]{detecter_desserte()}} restaure les
 défauts dessertR.
+
+\strong{Constantes a LIRE, pas a afficher.} Cette fonction est exportee pour que le
+defaut de \code{\link[=detecter_desserte]{detecter_desserte()}} soit inspectable et surchargeable, pas pour
+etre presentee a un utilisateur : ses bornes n'ont de sens que pour qui lit
+\code{dsr_appartenance()}. Une interface qui veut offrir un choix expose plutot les
+formes de \code{specs} (fige / \code{"auto"} / \code{NULL}), pas leurs valeurs.
 }
 \seealso{
 \code{\link[=detecter_desserte]{detecter_desserte()}}, \code{dessertR::dsr_calibrer_specs()},

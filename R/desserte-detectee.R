@@ -50,6 +50,12 @@
 #' généralisent pas. `specs = NULL` dans [detecter_desserte()] restaure les
 #' défauts dessertR.
 #'
+#' **Constantes a LIRE, pas a afficher.** Cette fonction est exportee pour que le
+#' defaut de [detecter_desserte()] soit inspectable et surchargeable, pas pour
+#' etre presentee a un utilisateur : ses bornes n'ont de sens que pour qui lit
+#' `dsr_appartenance()`. Une interface qui veut offrir un choix expose plutot les
+#' formes de `specs` (fige / `"auto"` / `NULL`), pas leurs valeurs.
+#'
 #' @return Une liste : `geomorpho` (pour `dessertR::dsr_conductivite()`),
 #'   `surface` (pour `dessertR::dsr_sigma_surf()`) et `c_vessel` (pour
 #'   `dessertR::dsr_layers_dtm()`, une valeur par échelle).
@@ -89,6 +95,114 @@ specs_desserte_calibrees <- function() {
   )
 }
 
+#' Turn a dessertR calibration into detection specs
+#'
+#' `dessertR::dsr_calibrer_specs()` returns bounds calibrated **on your own
+#' data**, and advises using them when the frozen ones saturate. Its `$specs` is
+#' a **flat** list of channels; [detecter_desserte()] expects the **nested**
+#' shape of [specs_desserte_calibrees()] (`geomorpho` / `surface` / `c_vessel`).
+#' Two contracts for one word -- this bridges them.
+#'
+#' @details
+#' The flat calibration *is* the `geomorpho` group: `$specs` is documented as
+#' "directement utilisable" by `dsr_conductivite()`, which is exactly what
+#' [detecter_desserte()] feeds with `specs$geomorpho`.
+#'
+#' **What a calibration cannot give you**, and why the other two groups keep
+#' their frozen defaults:
+#' * `surface` -- those channels (`taux_penetration`, `densite_sol`,
+#'   `h_couvert`) come from the **point cloud**, not from the DEM stack that was
+#'   calibrated. `dsr_calibrer_specs()` never sees them.
+#' * `c_vessel` -- the Frangi anchor, produced by `dessertR::dsr_c_vessel()`, not
+#'   by the calibration. Without it the vesselness channel is rescaled on
+#'   whatever extent you pass, and `seuil` stops being comparable between sites.
+#'
+#' Mixing locally calibrated `geomorpho` bounds with frozen `surface` bounds is a
+#' **deliberate compromise**, not an oversight: it is still better than frozen
+#' bounds that saturate on your massif. Pass `surface = NULL` to opt out and let
+#' dessertR derive them, at the cost of extent-relative results.
+#'
+#' @param calibration Either the full `dsr_calibrer_specs()` result or its
+#'   `$specs` element directly. Both are accepted.
+#' @param surface Bounds for the point-cloud channels. Defaults to the frozen
+#'   ones; `NULL` leaves them to dessertR.
+#' @param c_vessel Frangi anchor. Defaults to the frozen one; `NULL` makes the
+#'   vesselness extent-relative.
+#' @return A list shaped like [specs_desserte_calibrees()], usable as the `specs`
+#'   argument of [detecter_desserte()].
+#' @seealso [detecter_desserte()], [specs_desserte_calibrees()],
+#'   `dessertR::dsr_calibrer_specs()`, `specs/026`.
+#' @export
+#' @examples
+#' # Forme attendue, sans appeler dessertR :
+#' plat <- list(rugosite = list(type = "croissante", a = 0.04, b = 0.17, poids = 2))
+#' str(specs_depuis_calibration(plat)$geomorpho)
+specs_depuis_calibration <- function(calibration,
+                                     surface = specs_desserte_calibrees()$surface,
+                                     c_vessel = specs_desserte_calibrees()$c_vessel) {
+  sp <- if (is.list(calibration) && !is.null(calibration$specs)) {
+    calibration$specs
+  } else {
+    calibration
+  }
+  if (!is.list(sp) || length(sp) == 0 || is.null(names(sp))) {
+    cli::cli_abort(c(
+      "{.arg calibration} n'a pas la forme attendue.",
+      "i" = "Passer {.code dsr_calibrer_specs(...)} ou son element {.field $specs}."
+    ))
+  }
+  if (!.specs_est_plate(sp)) {
+    cli::cli_abort(c(
+      "{.arg calibration} n'est pas une liste PLATE de canaux.",
+      "i" = "Chaque element doit porter {.field type}, {.field a} et {.field b}.",
+      "x" = "Recu : {.val {names(sp)}}."
+    ))
+  }
+  list(geomorpho = sp, surface = surface, c_vessel = c_vessel)
+}
+
+# Une liste de canaux est PLATE si chacun de ses elements est une regle
+# d'appartenance (`type`/`a`/`b`). C'est ce qui distingue la sortie de
+# `dsr_calibrer_specs()` de la forme imbriquee de `specs_desserte_calibrees()`,
+# dont les elements sont des GROUPES.
+.specs_est_plate <- function(sp) {
+  if (!is.list(sp) || length(sp) == 0) {
+    return(FALSE)
+  }
+  all(vapply(sp, function(x) {
+    is.list(x) && all(c("type", "a", "b") %in% names(x))
+  }, logical(1)))
+}
+
+# Accepte les DEUX vocabulaires de specs, sans que l'appelant ait a les connaitre.
+.specs_normaliser <- function(specs) {
+  if (is.null(specs)) {
+    return(NULL)
+  }
+  groupes <- c("geomorpho", "surface", "c_vessel")
+  if (any(names(specs) %in% groupes)) {
+    return(specs)                       # forme imbriquee, deja bonne
+  }
+  if (.specs_est_plate(specs)) {
+    # Forme PLATE : c'est une sortie de `dsr_calibrer_specs()`. On la promeut
+    # sans rien demander -- l'appelant a suivi le conseil de dessertR, il n'a pas
+    # a decouvrir qu'un second vocabulaire existe.
+    cli::cli_inform(c(
+      "v" = "Calibration {.pkg dessertR} reconnue ({length(specs)} canau{?x}) :
+             promue en {.field geomorpho}.",
+      "i" = "{.field surface} et {.field c_vessel} gardent les bornes figees --
+             une calibration ne les produit pas. Cf. {.fn specs_depuis_calibration}."
+    ))
+    return(specs_depuis_calibration(specs))
+  }
+  cli::cli_abort(c(
+    "{.arg specs} n'a aucune des formes reconnues.",
+    "i" = "Attendu : {.fn specs_desserte_calibrees} (imbriquee),
+           {.code dsr_calibrer_specs(...)$specs} (plate), {.val auto} ou {.val NULL}.",
+    "x" = "Recu une liste de : {.val {names(specs)}}."
+  ))
+}
+
 #' Détecte la desserte absente de la référence, sur le MNT (spec 026)
 #'
 #' Cherche dans le **micro-relief** les linéaires que la BD TOPO ne porte pas :
@@ -111,6 +225,31 @@ specs_desserte_calibrees <- function() {
 #' **Éloigne d'ACCESSFOR délibérément** : ACCESSFOR consomme la BD TOPO seule.
 #' Ne jamais activer dans une comparaison ACCESSFOR.
 #'
+#' @section Performance:
+#' **La fonction la plus couteuse du paquet.** Mesure nemetonshiny du
+#' 2026-08-12 : **729 s et plus de 8 Go de pic** sur 1 855 ha, MNT LiDAR 0,5 m.
+#'
+#' Deux postes, qui ne se compensent pas :
+#' * la **pile de couches** (`dsr_layers_dtm()`) tient toute l'emprise en memoire
+#'   a la resolution du MNT -- d'ou le pic, proportionnel a la surface DIVISEE par
+#'   le carre de la resolution ;
+#' * le **canal de surface** relit le nuage LiDAR dalle par dalle : compter la
+#'   taille du nuage en plus.
+#'
+#' Ne jamais cabler cette fonction sur un bouton synchrone ; prevoir un worker
+#' separe. Et **borner l'emprise, pas la resolution** : passer de 0,5 m a 5 m ne
+#' fait pas gagner du temps, cela fait perdre le signal -- 0 canal retenu sur 7 a
+#' 5 m contre 5 sur 7 a 0,5 m (mesure nemetonshiny). Sur un poste de 31 Go
+#' partage, une emprise de l'ordre de 2 000 ha est deja le plafond raisonnable.
+#' @section Place dans le flux:
+#' [detecter_desserte()] et [qualifier_desserte()] sont **sequentielles, pas
+#' exclusives** : la premiere trouve l'ABSENT (des linéaires candidats hors du
+#' réseau connu), la seconde requalifie l'EXISTANT (largeur, état, portance
+#' mesurés au LiDAR). L'enchaînement naturel est
+#' `acquire_desserte()` -> `detecter_desserte()` -> fusion -> `qualifier_desserte()`,
+#' car la sortie de détection est **candidate** : sans largeur ni portance, elle
+#' n'est pas consommable par [preprocess()]. Les enchaîner dans l'autre sens
+#' qualifierait un réseau auquel il manque encore ce qu'on cherche.
 #' @param mnt Modèle numérique de terrain (`SpatRaster`/chemin), **1 m ou plus
 #'   fin** — le micro-relief d'une plateforme ancienne ne survit pas à 5 m.
 #' @param reference Desserte connue à exclure (sortie d'[acquire_desserte()]).
@@ -135,8 +274,19 @@ specs_desserte_calibrees <- function() {
 #'   `dsr_indice_detection()` vient de masquer. `"auto"` replierait donc sur le
 #'   squelette **en silence**, et la chaîne mesurée changerait sans préavis au
 #'   jour où l'amont corrigera. Voir `specs/026` §6.0.1 (précondition P5).
-#' @param specs Bornes d'appartenance, voir [specs_desserte_calibrees()] (défaut).
-#'   **`NULL` restaure les specs de dessertR**, dont les bornes sont dérivées par
+#' @param specs Bornes d'appartenance. **Quatre formes acceptées** :
+#'   * [specs_desserte_calibrees()] (défaut) — bornes figées, imbriquées
+#'     (`geomorpho`/`surface`/`c_vessel`) ;
+#'   * `"auto"` — **calibre sur place** avec `dessertR::dsr_calibrer_specs()`,
+#'     à partir du MNT et de la `reference` fournis. C'est la réponse au conseil
+#'     de dessertR quand les bornes figées saturent (« des bornes calibrées sur
+#'     un AUTRE massif ne se transportent pas ») : l'appelant suit ce conseil
+#'     sans avoir à connaître deux vocabulaires de specs. **Exige `reference`.**
+#'     `surface` et `c_vessel` restent figés, une calibration ne les produisant
+#'     pas ;
+#'   * la sortie **plate** de `dsr_calibrer_specs()$specs` — reconnue à sa forme
+#'     et promue en `geomorpho`, cf. [specs_depuis_calibration()] ;
+#'   * `NULL` — **restaure les specs de dessertR**, dont les bornes sont dérivées par
 #'   quantiles de l'emprise — le `seuil` cesse alors d'être comparable d'un site
 #'   à l'autre.
 #' @return Un `sf` de `LINESTRING` avec `source = "detectee"` et `p_desserte`.
@@ -170,6 +320,22 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
     return(vide())
   }
   # nocov start : chemin dessertR, hors CI (valide sur dalle reelle).
+  # `specs = "auto"` : on calibre SUR PLACE. C'est ce que dessertR conseille quand
+  # ses bornes saturent -- « des bornes calibrees sur un AUTRE massif ne se
+  # transportent pas » -- et l'appelant n'a aucune raison de connaitre deux
+  # vocabulaires de specs pour suivre ce conseil.
+  auto <- identical(specs, "auto")
+  if (auto && is.null(reference)) {
+    cli::cli_abort(c(
+      "{.code specs = \"auto\"} exige une {.arg reference}.",
+      "i" = "La calibration apprend a separer desserte et non-desserte : sans
+             desserte connue, il n'y a rien a apprendre.",
+      "v" = "Fournir {.arg reference}, ou {.code specs = NULL} pour les bornes
+             par quantiles de dessertR."
+    ))
+  }
+  specs <- if (auto) specs_desserte_calibrees() else .specs_normaliser(specs)
+  ref <- if (!is.null(reference)) sf::st_geometry(sf::st_as_sf(reference)) else NULL
   r <- .as_raster(mnt, "mnt")
   res_max <- max(terra::res(r))
   if (res_max > 1.5) {
@@ -201,6 +367,27 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
   } else {
     .dsr("dsr_layers_dtm")(r, grille = grille)
   }
+  # Calibration sur place, une fois la pile construite : `dsr_calibrer_specs()`
+  # veut exactement ces couches et la reference. On garde `surface` et
+  # `c_vessel` figes -- la calibration ne les produit pas (cf.
+  # `specs_depuis_calibration()`), et rebatir la pile pour un `c_vessel` local
+  # couterait un second passage sur toute l'emprise.
+  if (auto) {
+    cal <- tryCatch(.dsr("dsr_calibrer_specs")(pile, reference = ref),
+                    error = function(e) NULL)
+    if (is.null(cal) || is.null(cal$specs) || length(cal$specs) == 0) {
+      cli::cli_warn(c(
+        "!" = "Calibration automatique sans resultat : bornes figees conservees.",
+        "i" = "Aucun canal ne separait la reference du reste -- MNT trop grossier
+               (viser {.strong 1 m ou plus fin}) ou reference trop courte."
+      ))
+    } else {
+      specs <- specs_depuis_calibration(cal, surface = specs$surface,
+                                        c_vessel = specs$c_vessel)
+      cli::cli_inform("Calibration automatique : {length(cal$specs)} canau{?x} retenu{?s}
+                       ({.val {names(cal$specs)}}).")
+    }
+  }
   # Les bornes CALIBREES sont ce qui rend `seuil` absolu. Sans elles,
   # `dsr_appartenance()` ancre chaque canal sur les quantiles de l'emprise
   # fournie, et le meme terrain rend des detections differentes selon le
@@ -229,7 +416,7 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
                    sure (cf. {.fn dsr_indice_detection}).")
   }
 
-  ref <- if (!is.null(reference)) sf::st_geometry(sf::st_as_sf(reference)) else NULL
+  # `ref` est deja calcule en amont (le mode "auto" en a besoin pour calibrer).
   det <- tryCatch(
     .dsr("dsr_detecter")(sigma_geo, reference = ref, vesselness = vess,
       sigma_surf = sigma_surf, seuil = seuil, buffer_ref = buffer_ref,
@@ -275,6 +462,12 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
 #' cartographiée, ou une trace fossile. Le CA-26.5 n'est pas satisfait sans la
 #' part annotée.
 #'
+#' @section Performance:
+#' **`length(seuils)` fois le cout de [detecter_desserte()]** : la pile de
+#' couches et le canal de surface sont rebatis a chaque seuil, rien n'est
+#' memoise. Avec le defaut a cinq seuils, compter **cinq fois** la mesure citee
+#' par [detecter_desserte()], pour le meme pic memoire. Outil de calage hors
+#' ligne : ne jamais le cabler sur une action interactive.
 #' @inheritParams detecter_desserte
 #' @param seuils Seuils balayés. Défaut `seq(0.4, 0.8, by = 0.1)`, la plage
 #'   prescrite par la spec 026 §7.1.

@@ -1,3 +1,82 @@
+# foretaccess 2.1.0 (2026-08-12)
+
+Version **mineure** : trois fonctions exportées de plus, aucune rupture. Elle
+publie deux chantiers menés en parallèle — le **coût de terrassement** (spec 029)
+et la **desserte détectée / diagnostiquée** — plus deux défauts silencieux
+corrigés. Le fil commun est celui-là : **rendre visible ce qui se taisait**.
+
+## Trois silences rompus
+
+**`pondere_cout = FALSE` jetait la surface de coût sans le dire.** Le défaut
+(parité SylvaRoad) n'utilise de `cout` que le masque `franchissable` : la surface
+€/m était calculée, payée, et jetée. Un appelant qui construit une surface de
+coût ne le fait pourtant pas pour son masque. Le défaut **ne change pas** —
+basculer casserait la parité du Lot 15 — mais il **avertit** désormais, sauf si
+`pondere_cout = FALSE` est passé explicitement.
+
+**`verifier_integrite_desserte()` rendait un verdict vide qui se lisait comme un
+bon bulletin de santé.** Sans `dessertR`/`igraph`, le résumé sortait tout en `NA`
+— et `n_infractions = NA` affiché dans une interface se lit « aucune
+infraction ». L'objet porte maintenant `disponible` et `raison`, `print()`
+affiche « Diagnostic **NON EFFECTUÉ** », et un **avertissement** remplace le
+message informatif. Un second chemin, plus discret encore (`dessertR` présent
+mais `dsr_reseau()` en échec), ne disait rien du tout : il avertit aussi.
+
+**`terra::rasterize()` gravait une sentinelle sur les cellules de jonction** —
+corrigé en 2.0.1, confronté ici au cache DABO réel : 0 sentinelle, invariance sur
+les cinq couches.
+
+## Coût de terrassement (spec 029) — écrit, testé, **non activé**
+
+`cout_terrassement()` remplace le barème de pente en escalier par un coût de
+déblai/remblai au m³, **continu** et sensible à la largeur de plateforme (le
+volume croît comme son carré). Accessible via
+`surface_cout_construction(methode_pente = "terrassement", largeur_m = )`.
+
+**Le défaut reste `"bareme"`**, et le banc sur massif réel dit pourquoi (§7 de la
+spec) : le terrassement rend franchissables **32 865 cellules que le barème
+interdit** (4,45 % de DABO, entre 60 % et 100 % de pente), et **déplace la moitié
+du tracé** pour des agrégats qui se ressemblent. Basculer ne re-tarife pas un
+ensemble de tracés : **il l'agrandit**.
+
+D'où le troisième argument, `pente_max_pct` : le **plafond de constructibilité**
+est désormais séparé de la **méthode de tarification**. Par défaut il reprend le
+plafond implicite du barème, de sorte que changer de méthode ne change *que* la
+tarification.
+
+## Détection : la calibration locale peut enfin atteindre la détection
+
+`dessertR` conseille de recalibrer quand ses bornes saturent — et la voie était
+fermée à qui arrive par `foretaccess`, les deux paquets appelant « specs » deux
+choses de forme différente. `detecter_desserte(specs =)` accepte maintenant
+**quatre formes** : les bornes figées, `"auto"` (calibre sur place, exige
+`reference`), la sortie plate de `dsr_calibrer_specs()` reconnue à sa forme, et
+`NULL`. `specs_depuis_calibration()` expose la conversion et documente ce qui ne
+s'y transporte pas.
+
+## Enveloppes de coût
+
+Cinq fonctions sans indication de coût en ont une : `acquire_desserte_osm()`
+(5,9 s à froid, **mais > 10 min sous bride Overpass**), `comparer_desserte_osm()`
+(104 s), `detecter_desserte()` (**729 s et > 8 Go sur 1 855 ha**),
+`detecter_desserte_balayage()`, `tracer_desserte()`. Avec un point que la mesure
+établit et qui n'était écrit nulle part : **dégrader la résolution ne fait pas
+gagner du temps, cela fait perdre le signal** — la seule variable d'ajustement
+est l'emprise.
+
+## Ce qui n'est pas fait, et pourquoi
+
+* **`dessertR` n'est toujours pas déclaré en `Suggests`.** Il en dépend `rlas`,
+  **archivé sur le CRAN** : la déclaration a fait échouer les quatre jobs de CI en
+  90 secondes. Un `Remotes` vers un paquet dont une dépendance dure est
+  introuvable casse l'installation pour *tous*, y compris ceux qui n'utilisent
+  jamais `dessertR`. À redéclarer le jour où `rlas` revient.
+* **Les prix au m³ du terrassement ne sont pas un relevé de devis** : ils sont
+  calés par inversion d'un plafond de subvention. Le modèle est mieux formé, pas
+  mieux calé.
+* **Personne n'a jugé lequel des deux jeux de tracés est le plus plausible** sur
+  le terrain. C'est un avis de gestionnaire, pas une propriété du modèle.
+
 # foretaccess 2.0.2 (2026-08-11)
 
 Version de **documentation** : aucun changement de code fonctionnel depuis la

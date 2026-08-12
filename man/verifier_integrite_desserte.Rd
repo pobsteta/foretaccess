@@ -40,8 +40,16 @@ mesuré sur l'AOI oracle à 1600 m de buffer, elle retirait 260 tronçons sur
 }
 \value{
 Un objet \code{foretaccess_integrite} : \code{troncons} (\code{sf} avec \code{composant},
-\code{connecte_public}, \code{viole_contrainte}, \code{cause}), \code{resume} (compteurs), et
-\code{courbe} (\code{NULL} ici, renseigné par \code{\link[=integrite_buffer_adaptatif]{integrite_buffer_adaptatif()}}).
+\code{connecte_public}, \code{viole_contrainte}, \code{cause}), \code{resume} (compteurs),
+\code{courbe} (\code{NULL} ici, renseigné par \code{\link[=integrite_buffer_adaptatif]{integrite_buffer_adaptatif()}}),
+\code{disponible} et \code{raison}.
+
+\strong{Lire \code{disponible} avant \code{resume}.} Sans \code{dessertR}/\code{igraph}, ou si
+\code{dsr_reseau()} n'aboutit pas, le diagnostic n'est pas effectué : \code{resume}
+est alors tout en \code{NA} et un avertissement est émis. Un \code{n_infractions} à
+\code{NA} signifie \strong{« on ne sait pas »}, jamais « aucune infraction » — ne
+l'affichez pas comme un verdict. \code{\link[=dessertR_disponible]{dessertR_disponible()}} permet de poser la
+question \emph{avant} de lancer le calcul.
 }
 \description{
 Applique les deux contraintes de l'annexe ACCESSFOR (rapport février 2025,
@@ -67,5 +75,6 @@ fait à la main, et l'automatiser retirerait de la desserte réelle dès que le
 diagnostic se trompe. Sylvaccess lui-même se contente d'avertir.
 }
 \seealso{
-\code{\link[=integrite_buffer_adaptatif]{integrite_buffer_adaptatif()}}, \code{\link[=acquire_desserte]{acquire_desserte()}}, \code{specs/025}.
+\code{\link[=dessertR_disponible]{dessertR_disponible()}}, \code{\link[=integrite_buffer_adaptatif]{integrite_buffer_adaptatif()}},
+\code{\link[=acquire_desserte]{acquire_desserte()}}, \code{specs/025}.
 }

@@ -23,6 +23,20 @@
 #' dominant lever remains **`skidding_m`** (set it to the real skidding distance;
 #' see [reseau_desserte()]), which governs the number of traces per build.
 #'
+#' @section Surface publique:
+#' **`optimiser_reseau()` est la seule facade supportee.** Les bindings
+#' `desserte_reseau_multistart()`, `desserte_reseau_recuit()` et
+#' `desserte_reseau_riprute()` sont exportes parce qu'extendr exporte ce qu'il
+#' compile, pas parce qu'ils constituent une API : ils prennent des vecteurs
+#' aplatis (`alt`, `obs`, `nr`, `nc`, indices 0-based) dont la construction et la
+#' coherence sont precisement ce que cette fonction garantit. Les appeler
+#' directement, c'est reimplementer `.reseau_preparer()` -- et se tromper d'un
+#' cran d'indice sans que rien ne le signale.
+#'
+#' Meme statut pour `desserte_dist_to_end()` : primitive du solveur (distance
+#' geodesique a la cible dans la zone franchissable, heuristique de l'A\*), sans
+#' usage propre hors de ce contexte.
+#'
 #' @param pre A `foretaccess_preprocessing` object (DEM, terrain slope).
 #' @param cout A `foretaccess_cout_construction` object (Lot 14). Its euros/m
 #'   surface is read **only if `pondere_cout = TRUE`**; at the `FALSE` default

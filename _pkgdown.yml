@@ -106,6 +106,8 @@ reference:
   - detecter_desserte
   - detecter_desserte_balayage
   - specs_desserte_calibrees
+  - specs_depuis_calibration
+  - dessertR_disponible
   - comparer_desserte_osm
   - acquire_desserte_lidar
   - qualifier_desserte

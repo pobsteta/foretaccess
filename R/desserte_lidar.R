@@ -25,15 +25,61 @@
   "apte_grumier", "motif_inaptitude"
 )
 
-# dessertR installe ? Dependance OPTIONNELLE et hors CRAN : on ne la DECLARE pas
-# (ni Imports ni Suggests) pour ne pas forcer son installation en CI ni alourdir
-# le paquet. Le nom est passe en VARIABLE a requireNamespace/getExportedValue : le
-# chemin reel ne s'exerce que si l'utilisateur l'a installe, et R CMD check ne le
-# compte pas comme dependance non declaree. Requirement documente dans @details.
+# dessertR : dependance OPTIONNELLE, hors CRAN, et NON DECLARABLE aujourd'hui.
+#
+# Le constat de depart est juste : installer foretaccess n'installe pas dessertR,
+# et quatre fonctions cassent sur un poste neuf (`qualifier_desserte`,
+# `verifier_integrite_desserte`, `detecter_desserte`, `acquire_desserte_lidar`).
+# Le declarer en `Suggests` + `Remotes: pobsteta/dessertR` a donc ete tente le
+# 2026-08-12. **La CI a echoue en 90 secondes, sur les quatre jobs.**
+#
+# Cause, et elle n'est pas chez nous : `dessertR` depend de `rlas`, qui est
+# ARCHIVE sur le CRAN. `pak` resout la chaine et s'arrete net --
+# « rlas: Can't find package called rlas ». Un `Remotes` vers un paquet dont une
+# dependance dure est introuvable ne rend service a personne : il casse
+# l'installation de foretaccess pour TOUS, y compris ceux qui n'utilisent pas
+# dessertR, au lieu de la faciliter pour quelques-uns.
+#
+# On reste donc sur la resolution a l'appel (`requireNamespace` sur un nom passe
+# en VARIABLE, invisible de R CMD check), et on compense la ou ca compte : par la
+# VISIBILITE de l'indisponibilite, cf. `dessertR_disponible()` et le champ
+# `disponible` de `verifier_integrite_desserte()`. A redeclarer le jour ou `rlas`
+# revient sur le CRAN, ou ou dessertR s'en passe.
 .PKG_DESSERTR <- "dessertR"
 
 .dessertr_dispo <- function() {
   requireNamespace(.PKG_DESSERTR, quietly = TRUE)
+}
+
+#' Is the optional dessertR backend available?
+#'
+#' `dessertR` is an optional, non-CRAN backend. Four functions need it --
+#' [qualifier_desserte()], [verifier_integrite_desserte()], [detecter_desserte()]
+#' and [acquire_desserte_lidar()] -- and they degrade or fail without it. Call
+#' this **before** offering those actions, so a caller can say *"not available"*
+#' instead of showing an empty result that reads like a clean bill of health.
+#'
+#' @details
+#' **Why it is not declared in `Suggests`.** `dessertR` depends on `rlas`, which
+#' is **archived on CRAN**: declaring it (with a `Remotes:` entry) makes `pak`
+#' resolve the chain and stop at *"rlas: Can't find package called rlas"*, which
+#' breaks installation of `foretaccess` **for everyone**, including users who
+#' never touch `dessertR`. Verified on CI, 2026-08-12: four jobs failed in 90
+#' seconds. It will be declared the day `rlas` returns to CRAN.
+#'
+#' Installing it therefore takes two steps -- `rlas` from the CRAN archive (or
+#' from source), then `remotes::install_github("pobsteta/dessertR")`.
+#'
+#' @return A single `logical`. `TRUE` if `dessertR` can be loaded.
+#' @seealso [verifier_integrite_desserte()], whose `disponible` field reports the
+#'   same thing for a diagnostic that has already run.
+#' @export
+#' @examples
+#' if (dessertR_disponible()) {
+#'   message("Diagnostic d'integrite disponible.")
+#' }
+dessertR_disponible <- function() {
+  .dessertr_dispo()
 }
 
 # Moteur effectivement retenu selon `moteur` et ce qui est installe. "auto" et

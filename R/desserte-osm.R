@@ -37,6 +37,17 @@
 #' confondrait sinon « le serveur refuse » et « il n'y a rien ici ». C'est la
 #' confusion qui a masqué l'absence de DFCI pendant une journée entière.
 #'
+#' @section Performance:
+#' Une requete Overpass par emprise, sans pavage : le cout suit la densite de
+#' voirie, pas la surface. **5,9 s a froid** sur une AOI de 31 ha (mesure
+#' nemetonshiny, 2026-08-12).
+#'
+#' **Le risque n'est pas le calcul, c'est le debit.** Overpass bride les requetes
+#' et repond `HTTP 429` ; le client attend alors **60 s par reprise**. Mesures :
+#' **plus de 10 minutes** pour la meme requete un jour de bride, et 16 reprises
+#' consecutives -- soit 16 minutes de pure attente -- lors d'un test
+#' d'integration. Un bouton qui appelle cette fonction doit donc etre asynchrone
+#' et annulable : l'ordre de grandeur nominal ne dit rien du pire cas.
 #' @inheritParams acquire_desserte
 #' @param types Valeurs de `highway` retenues. Défaut : `track`,
 #'   `unclassified`, `service`.
@@ -101,6 +112,10 @@ acquire_desserte_osm <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' retenir est un **gisement à instruire**, et le CA-28.5 exige de le confronter
 #' d'abord aux objets BD TOPO connus, puis à une annotation.
 #'
+#' @section Performance:
+#' Recoupement geometrique de deux couches, tempere par l'index spatial de `sf`.
+#' **104 s** pour 3 122 x 544 troncons (mesure nemetonshiny, 2026-08-12).
+#' Purement local : aucun acces reseau, aucune surprise de debit.
 #' @param bdtopo Desserte de référence (sortie d'[acquire_desserte()]).
 #' @param osm Desserte candidate (sortie d'[acquire_desserte_osm()]).
 #' @param corridor_m Demi-largeur du corridor (m). Défaut 15, la valeur de
