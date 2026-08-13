@@ -42,12 +42,18 @@
 #' voirie, pas la surface. **5,9 s a froid** sur une AOI de 31 ha (mesure
 #' nemetonshiny, 2026-08-12).
 #'
-#' **Le risque n'est pas le calcul, c'est le debit.** Overpass bride les requetes
-#' et repond `HTTP 429` ; le client attend alors **60 s par reprise**. Mesures :
-#' **plus de 10 minutes** pour la meme requete un jour de bride, et 16 reprises
-#' consecutives -- soit 16 minutes de pure attente -- lors d'un test
-#' d'integration. Un bouton qui appelle cette fonction doit donc etre asynchrone
-#' et annulable : l'ordre de grandeur nominal ne dit rien du pire cas.
+#' **Le pire cas est desormais BORNE** (ADR-010). Auparavant, une instance bridee
+#' faisait boucler `osmdata` en backoff de 60 s sans plafond -- 16 reprises
+#' consecutives mesurees, soit 16 minutes de pure attente, et plus de 10 minutes
+#' pour une requete ordinaire un jour de bride. Le transport passe maintenant par
+#' [osm_overpass()], dont la duree ne peut pas depasser
+#' `timeout * length(serveurs) * (1 + max_reprises)`, soit **18 minutes au pire
+#' absolu** avec les defauts (90 s x 4 instances x 3 essais) et quelques secondes
+#' en nominal. Sur `429`, un `Retry-After` n'est honore que s'il est court
+#' (< 10 s) ; au-dela on change d'instance plutot que d'attendre.
+#'
+#' Cela reste long pour une interface : un bouton qui appelle cette fonction doit
+#' etre **asynchrone et annulable**. Ce qui change, c'est qu'il termine.
 #' @inheritParams acquire_desserte
 #' @param types Valeurs de `highway` retenues. Défaut : `track`,
 #'   `unclassified`, `service`.

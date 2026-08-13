@@ -17,6 +17,7 @@ SystemRequirements: Cargo (Rust's package manager), rustc
 Imports:
     checkmate,
     cli,
+    curl,
     DBI,
     jsonlite,
     mirai,
@@ -29,7 +30,6 @@ Suggests:
     happign,
     igraph,
     knitr,
-    osmdata,
     pkgload,
     rmarkdown,
     RPostgres,

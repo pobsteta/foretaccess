@@ -5,8 +5,15 @@
 
 test_that("acquire_dfci recupere les pistes DFCI OSM (ref:FR:DFCI)", {
   withr::with_tempdir({
+    # Depuis l'ADR-010, les TROIS cles de reference DFCI partent en UNE seule
+    # requete (union de filtres Overpass) : le mock recoit donc une LISTE de
+    # filtres, non plus une cle par appel. Overpass plafonne le nombre de
+    # requetes, pas la surface -- c'est le gain 3 -> 1 du brief.
+    appels <- 0L
     testthat::local_mocked_bindings(.fetch_osm = function(bbox_wgs, key, value = NULL) {
-      if (identical(key, "ref:FR:DFCI")) {
+      appels <<- appels + 1L
+      cles <- if (is.list(key)) vapply(key, function(f) f$cle, character(1)) else key
+      if ("ref:FR:DFCI" %in% cles) {
         osmdata_dfci_fixture()
       } else {
         list(osm_points = NULL, osm_lines = NULL, osm_polygons = NULL, osm_multipolygons = NULL)
@@ -14,6 +21,8 @@ test_that("acquire_dfci recupere les pistes DFCI OSM (ref:FR:DFCI)", {
     })
     d <- acquire_dfci(aoi_test(), cache_dir = "cache")
 
+    # CA-8.2 du brief : 3 requetes -> 1.
+    expect_equal(appels, 1L)
     expect_s3_class(d, "sf")
     expect_gt(nrow(d), 0)
     expect_true("ref" %in% names(d))

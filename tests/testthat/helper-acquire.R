@@ -33,12 +33,17 @@ polys_fixture <- function() {
 }
 
 # Retour osmdata_sf simule : un batiment (polygone) et une voie (ligne).
+# Les colonnes de TAG (`building`, ...) ne sont pas decoratives depuis l'ADR-010 :
+# la requete etant groupee, le type d'obstacle ne se deduit plus de QUELLE requete
+# a repondu, mais du TAG porte par l'objet. C'est aussi ce que rend le driver OSM
+# de GDAL, `other_tags` deplie compris -- la fixture colle donc au reel.
 osmdata_fixture <- function() {
-  poly <- sf::st_sf(osm_id = "1", geometry = sf::st_sfc(sf::st_polygon(list(rbind(
-    c(700400, 6600400), c(700600, 6600400),
-    c(700600, 6600600), c(700400, 6600600), c(700400, 6600400)
-  ))), crs = 2154))
-  line <- sf::st_sf(osm_id = "2", geometry = sf::st_sfc(
+  poly <- sf::st_sf(osm_id = "1", building = "yes",
+    geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+      c(700400, 6600400), c(700600, 6600400),
+      c(700600, 6600600), c(700400, 6600600), c(700400, 6600400)
+    ))), crs = 2154))
+  line <- sf::st_sf(osm_id = "2", building = "yes", geometry = sf::st_sfc(
     sf::st_linestring(rbind(c(700100, 6600500), c(700900, 6600500))), crs = 2154))
   list(osm_points = NULL, osm_lines = line, osm_polygons = poly, osm_multipolygons = NULL)
 }

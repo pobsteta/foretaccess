@@ -105,6 +105,8 @@ reference:
   - acquire_desserte_osm
   - detecter_desserte
   - detecter_desserte_balayage
+  - osm_overpass
+  - osm_provenance
   - specs_desserte_calibrees
   - specs_depuis_calibration
   - dessertR_disponible

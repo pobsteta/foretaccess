@@ -1,4 +1,7 @@
-# Acquisition des obstacles depuis OpenStreetMap via osmdata (Lot 10).
+# Acquisition des obstacles depuis OpenStreetMap (Lot 10).
+#
+# Le transport passe par le client canonique `osm_overpass()` (ADR-010) depuis le
+# 2026-08-13 ; `osmdata` a ete retire des Suggests, plus aucun appel ne subsistant.
 #
 # L'appel reseau reel est isole dans .fetch_osm (point de mock). Les obstacles
 # par defaut (spec 010 Q3) : bati, surfaces d'eau, voies ferrees, falaises.
@@ -13,60 +16,106 @@
   cliff    = list(list(key = "natural", value = "cliff"))
 )
 
-# Wrapper reseau (point de mock) : renvoie l'objet osmdata_sf pour une (cle,
-# valeur) sur une bbox WGS84.
-# Instances Overpass, essayees dans l'ordre. L'instance principale limite
-# agressivement le debit : une session un peu active se fait refuser jusqu'au
-# `status` (HTTP 504 puis echec de overpass_status), et osmdata boucle alors en
-# backoff 60 s sans jamais aboutir. Les miroirs n'ont pas les memes quotas.
-# Mesure du 2026-07-30 : apres une journee de requetes, l'instance par defaut
-# refusait toute requete tandis qu'un miroir repondait immediatement.
-.SERVEURS_OVERPASS <- c(
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass.osm.ch/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter"
-)
-
-.fetch_osm <- function(bbox_wgs, key, value = NULL, timeout = 120,
-                       serveurs = .SERVEURS_OVERPASS) {
-  .require_pkg("osmdata")
-  urls <- unique(c(osmdata::get_overpass_url(), serveurs))
-  initial <- osmdata::get_overpass_url()
-  # PIEGE : `set_overpass_url()` appelle `overpass_status()`, donc il TAPE le
-  # reseau. Quand l'instance est saturee, c'est le CHANGEMENT d'instance qui
-  # echoue, pas la requete -- et une rotation naive meurt avant d'avoir essaye
-  # le moindre miroir. On l'enveloppe donc, restauration finale comprise.
-  basculer <- function(u) {
-    isTRUE(tryCatch({
-      osmdata::set_overpass_url(u)
-      TRUE
-    }, error = function(e) FALSE, warning = function(w) TRUE))
+# Wrapper reseau (POINT DE MOCK des tests). Depuis l'ADR-010 il n'est plus qu'un
+# ADAPTATEUR au-dessus d'`osm_overpass()` : il rend la forme attendue par les
+# appelants historiques (`osm_lines`/`osm_polygons`/`osm_multipolygons`) pour ne
+# rien casser, mais tout le transport -- borne libcurl, rotation d'instances sans
+# appel reseau, distinction refus/vide -- vit desormais dans le client canonique.
+#
+# `cle` accepte une LISTE de filtres : les regrouper en une union Overpass est
+# l'optimisation qui fait passer `acquire_obstacles()` de 5 requetes a 1 et
+# `acquire_dfci()` de 3 a 1. Overpass plafonne le nombre de requetes, pas la
+# surface -- multiplier les appels est exactement ce qui declenche le 429.
+.fetch_osm <- function(bbox_wgs, key, value = NULL, timeout = 90,
+                       serveurs = OSM_SERVEURS_OVERPASS) {
+  d <- .osm_bissecter(bbox_wgs, key, value, timeout, serveurs)
+  g <- if (nrow(d)) sf::st_geometry(d) else NULL
+  est <- function(types) {
+    if (is.null(g)) return(NULL)
+    k <- as.character(sf::st_geometry_type(d)) %in% types
+    if (!any(k)) NULL else d[k, , drop = FALSE]
   }
-  on.exit(basculer(initial), add = TRUE)
-  derniere <- NULL
-  for (u in urls) {
-    if (!basculer(u)) {
-      next
-    }
-    q <- osmdata::opq(bbox = bbox_wgs, timeout = timeout)
-    q <- osmdata::add_osm_feature(q, key = key, value = value)
-    res <- tryCatch(osmdata::osmdata_sf(q), error = function(e) e)
-    if (!inherits(res, "error")) {
-      if (!identical(u, initial)) {
-        cli::cli_inform("OSM : instance {.val {initial}} indisponible, repli sur
-                         {.val {u}}.")
-      }
-      return(res)
-    }
-    derniere <- res
-  }
-  # Toutes les instances ont echoue : on relaie l'erreur plutot que de rendre un
-  # resultat vide, qu'un appelant confondrait avec « rien a cet endroit ».
-  stop(derniere) # nocov
+  list(
+    osm_lines = est(c("LINESTRING", "MULTILINESTRING")),
+    osm_polygons = est("POLYGON"),
+    osm_multipolygons = est("MULTIPOLYGON")
+  )
 }
 
-# Geometries pertinentes d'un objet osmdata_sf : polygones, multipolygones et
+# UNE requete par AOI ; la bissection n'est qu'un REPLI (brief §3).
+#
+# Le tuilage systematique -- 1 km chez `dsr_osm()` -- transforme une AOI de
+# 10 x 10 km en 100 requetes plus 100 s de pause, soit precisement le
+# comportement qui declenche le 429 que le reste du code s'efforce d'eviter. Il
+# induit en prime une redondance : `(._;>;)` rapatrie tous les noeuds de chaque
+# way a chaque dalle traversee.
+#
+# On bissecte donc en quadrants SEULEMENT sur un refus de VOLUME ou de TIMEOUT --
+# jamais sur un 429, qui appelle une rotation d'instance et non un decoupage.
+.osm_bissecter <- function(bbox_wgs, key, value = NULL, timeout = 90,
+                           serveurs = OSM_SERVEURS_OVERPASS, profondeur = 0L) {
+  out <- tryCatch(
+    osm_overpass(bbox_wgs, key, value, timeout = timeout, serveurs = serveurs),
+    error = function(e) e
+  )
+  if (!inherits(out, "error")) {
+    return(out)
+  }
+  msg <- conditionMessage(out)
+  volume <- grepl("timeout|tronque|504|memoire|memory", msg, ignore.case = TRUE)
+  if (!volume || profondeur >= .OSM_PROFONDEUR_MAX) {
+    stop(out)
+  }
+  cli::cli_inform("OSM : requete trop lourde, bissection en quadrants
+                   (profondeur {profondeur + 1L}).")
+  parts <- lapply(.osm_quadrants(bbox_wgs), function(q) {
+    .osm_bissecter(q, key, value, timeout, serveurs, profondeur + 1L)
+  })
+  parts <- parts[vapply(parts, nrow, integer(1)) > 0]
+  if (!length(parts)) {
+    return(sf::st_sf(osm_id = character(0), geometry = sf::st_sfc(crs = 4326)))
+  }
+  cols <- Reduce(union, lapply(parts, names))
+  parts <- lapply(parts, function(d) {
+    for (n in setdiff(cols, names(d))) d[[n]] <- NA
+    d[, cols]
+  })
+  fus <- do.call(rbind, parts)
+  # Dedoublonnage a la fusion : un way traversant deux quadrants revient deux fois.
+  if ("osm_id" %in% names(fus)) fus <- fus[!duplicated(fus$osm_id), ]
+  fus
+}
+
+# Profondeur 3 = 64 sous-emprises au pire ; au-dela, l'erreur est plus honnete
+# qu'un decoupage qui n'aboutira pas.
+.OSM_PROFONDEUR_MAX <- 3L
+
+.osm_quadrants <- function(b) {
+  mx <- (b[["xmin"]] + b[["xmax"]]) / 2
+  my <- (b[["ymin"]] + b[["ymax"]]) / 2
+  f <- function(x1, y1, x2, y2) {
+    c(xmin = x1, ymin = y1, xmax = x2, ymax = y2)
+  }
+  list(f(b[["xmin"]], b[["ymin"]], mx, my), f(mx, b[["ymin"]], b[["xmax"]], my),
+       f(b[["xmin"]], my, mx, b[["ymax"]]), f(mx, my, b[["xmax"]], b[["ymax"]]))
+}
+
+
+# Dispatch LOCAL du type d'obstacle : la requete groupee rapatrie tout en un
+# appel, c'est ici qu'on retrouve quel filtre a matche. Premier filtre satisfait
+# gagne, dans l'ordre de `.OBSTACLES_OSM`.
+.osm_type_obstacle <- function(d, filtres) {
+  t <- rep(NA_character_, nrow(d))
+  for (f in filtres) {
+    if (!f$cle %in% names(d)) next
+    v <- as.character(d[[f$cle]])
+    ok <- if (is.null(f$valeur)) !is.na(v) else !is.na(v) & v == f$valeur[1]
+    t[is.na(t) & ok] <- f$type
+  }
+  t
+}
+
+# Geometries pertinentes d'une reponse OSM : polygones, multipolygones et
 # lignes, en une seule sfc (types mixtes admis).
 .geoms_osm <- function(od) {
   parts <- list(od$osm_polygons, od$osm_multipolygons, od$osm_lines)
@@ -114,17 +163,30 @@ acquire_obstacles <- function(aoi, features = c("building", "water", "railway", 
   aoi_wgs <- sf::st_transform(aoi, 4326)
   bbox_wgs <- sf::st_bbox(aoi_wgs)
 
-  types <- character(0)
-  geoms <- NULL
+  # UNE SEULE requete pour tous les types : union de filtres Overpass, puis
+  # dispatch LOCAL par tag. Auparavant une requete par couple (cle, valeur), soit
+  # 5 appels pour les 4 types par defaut -- et Overpass plafonne le nombre de
+  # requetes, pas la surface. Gain direct : 5 -> 1.
+  filtres <- list()
   for (feat in features) {
     for (req in .OBSTACLES_OSM[[feat]]) {
-      od <- .fetch_osm(bbox_wgs, key = req$key, value = req$value)
-      g <- .geoms_osm(od)
-      if (!is.null(g)) {
-        geoms <- if (is.null(geoms)) g else do.call(c, list(geoms, g))
-        types <- c(types, rep(feat, length(g)))
-      }
+      filtres[[length(filtres) + 1L]] <- list(cle = req$key, valeur = req$value,
+                                              type = feat)
     }
+  }
+  od <- .fetch_osm(bbox_wgs, key = lapply(filtres, function(f) {
+    list(cle = f$cle, valeur = f$valeur)
+  }))
+  types <- character(0)
+  geoms <- NULL
+  for (p in list(od$osm_polygons, od$osm_multipolygons, od$osm_lines)) {
+    if (is.null(p) || nrow(p) == 0) next
+    t <- .osm_type_obstacle(p, filtres)
+    garde <- !is.na(t)
+    if (!any(garde)) next
+    g <- sf::st_geometry(p)[garde]
+    geoms <- if (is.null(geoms)) g else do.call(c, list(geoms, g))
+    types <- c(types, t[garde])
   }
 
   crs_obj <- sf::st_crs(crs)
@@ -178,16 +240,28 @@ acquire_dfci <- function(aoi, crs = 2154, cache_dir = tempdir(), overwrite = FAL
   aoi_wgs <- sf::st_transform(aoi, 4326)
   bbox_wgs <- sf::st_bbox(aoi_wgs)
 
+  # UNE requete pour les trois cles de reference DFCI (union de filtres), au lieu
+  # de trois appels successifs. Gain : 3 -> 1.
+  od <- .fetch_osm(bbox_wgs, key = lapply(.CLES_DFCI_OSM, function(k) {
+    list(cle = k, valeur = NULL)
+  }))
   refs <- character(0)
   geoms <- NULL
-  for (cle in .CLES_DFCI_OSM) {
-    od <- .fetch_osm(bbox_wgs, key = cle, value = NULL)
-    lignes <- od$osm_lines
-    if (!is.null(lignes) && nrow(lignes) > 0) {
-      g <- sf::st_geometry(lignes)
-      r <- if (cle %in% names(lignes)) as.character(lignes[[cle]]) else rep(NA_character_, length(g))
-      geoms <- if (is.null(geoms)) g else do.call(c, list(geoms, g))
-      refs <- c(refs, r)
+  lignes <- od$osm_lines
+  if (!is.null(lignes) && nrow(lignes) > 0) {
+    # La reference peut venir de n'importe laquelle des trois cles : on prend la
+    # premiere renseignee, dans l'ordre de `.CLES_DFCI_OSM`.
+    r <- rep(NA_character_, nrow(lignes))
+    for (k in .CLES_DFCI_OSM) {
+      if (k %in% names(lignes)) {
+        v <- as.character(lignes[[k]])
+        r[is.na(r)] <- v[is.na(r)]
+      }
+    }
+    garde <- !is.na(r)
+    if (any(garde)) {
+      geoms <- sf::st_geometry(lignes)[garde]
+      refs <- r[garde]
     }
   }
 
