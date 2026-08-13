@@ -2,15 +2,17 @@
 
 test_that("acquire_obstacles assemble batiments et lignes avec un champ type", {
   withr::with_tempdir({
+    # Depuis l'ADR-010, TOUS les filtres partent en UNE requete groupee : le mock
+    # recoit une liste de filtres, et le type se lit ensuite sur le TAG de chaque
+    # objet, plus sur la requete qui a repondu. Gain du brief : 5 -> 1.
+    appels <- 0L
     testthat::local_mocked_bindings(.fetch_osm = function(bbox_wgs, key, value = NULL) {
-      # Ne renvoie des geometries que pour la 1ere requete (building), vide sinon.
-      if (identical(key, "building")) {
-        osmdata_fixture()
-      } else {
-        list(osm_points = NULL, osm_lines = NULL, osm_polygons = NULL, osm_multipolygons = NULL)
-      }
+      appels <<- appels + 1L
+      osmdata_fixture()
     })
     obs <- acquire_obstacles(aoi_test(), cache_dir = "cache")
+
+    expect_equal(appels, 1L)   # CA-8.2 : 5 requetes -> 1
 
     expect_s3_class(obs, "sf")
     expect_true("type" %in% names(obs))
@@ -36,11 +38,16 @@ test_that("aucun obstacle trouve -> sf vide valide", {
 test_that("le jeu d'obstacles est configurable", {
   withr::with_tempdir({
     vus <- character(0)
+    appels <- 0L
     testthat::local_mocked_bindings(.fetch_osm = function(bbox_wgs, key, value = NULL) {
-      vus <<- c(vus, key)
+      appels <<- appels + 1L
+      vus <<- c(vus, vapply(key, function(f) f$cle, character(1)))
       list(osm_points = NULL, osm_lines = NULL, osm_polygons = NULL, osm_multipolygons = NULL)
     })
     acquire_obstacles(aoi_test(), features = "railway", cache_dir = "cache")
+    # Le filtre demande part bien dans la requete, et les autres n'y sont pas :
+    # regrouper ne doit pas rapatrier ce qu'on n'a pas demande.
+    expect_equal(appels, 1L)
     expect_true("railway" %in% vus)
     expect_false("building" %in% vus)
   })
