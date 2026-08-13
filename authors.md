@@ -10,13 +10,13 @@ Source:
 [`DESCRIPTION`](https://github.com/pobsteta/foretaccess/blob/main/DESCRIPTION)
 
 Obstetar P (2026). *foretaccess: Cartographie de l'Accessibilité des
-Forêts (Réimplémentation de Sylvaccess)*. R package version 2.1.0.9000,
+Forêts (Réimplémentation de Sylvaccess)*. R package version 2.2.0,
 <https://github.com/pobsteta/foretaccess>.
 
     @Manual{,
       title = {foretaccess: Cartographie de l'Accessibilité des Forêts (Réimplémentation de Sylvaccess)},
       author = {Pascal Obstetar},
       year = {2026},
-      note = {R package version 2.1.0.9000},
+      note = {R package version 2.2.0},
       url = {https://github.com/pobsteta/foretaccess},
     }

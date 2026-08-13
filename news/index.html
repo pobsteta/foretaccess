@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,36 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.2.0" id="foretaccess-220-2026-08-13">foretaccess 2.2.0 (2026-08-13)<a class="anchor" aria-label="anchor" href="#foretaccess-220-2026-08-13"></a></h2>
+<p>Version <strong>mineure</strong> : deux fonctions exportées de plus, aucune rupture. Elle publie un client OpenStreetMap unifié et <strong>le résultat de deux campagnes d’annotation terrain</strong> — les premières du projet, et elles ont réfuté trois conclusions successives que la mesure seule avait produites.</p>
+<div class="section level3">
+<h3 id="un-client-overpass-qui-termine-2-2-0">Un client Overpass qui termine<a class="anchor" aria-label="anchor" href="#un-client-overpass-qui-termine-2-2-0"></a></h3>
+<p><code><a href="../reference/osm_overpass.html">osm_overpass()</a></code> remplace deux implémentations divergentes (ADR-010), en prenant le bon de chacune. Auparavant, une instance Overpass bridée faisait boucler <code>osmdata</code> en backoff de 60 s <strong>sans plafond</strong> : 16 reprises mesurées, 16 minutes d’attente pure. Et une instance saturée renvoyait un XML <em>bien formé</em>, HTTP 200, avec un <code>&lt;remark&gt;</code> — lu naïvement, cela disait « rien ici ». C’est l’erreur qui avait masqué l’absence de DFCI pendant une journée.</p>
+<p><strong>Trois issues, désormais jamais confondues</strong> : données, vide légitime, refus. Un refus ne devient jamais une couche vide. Et la durée est <strong>bornée</strong> par <code>timeout × serveurs × (1 + reprises)</code>, écrit dans la doc.</p>
+<p>Au passage, <code><a href="../reference/acquire_obstacles.html">acquire_obstacles()</a></code> passe de <strong>5 requêtes à 1</strong> et <code><a href="../reference/acquire_dfci.html">acquire_dfci()</a></code> de <strong>3 à 1</strong>, par union de filtres — Overpass plafonne le nombre de requêtes, pas la surface. <code>osmdata</code> sort des <code>Suggests</code>, <code>curl</code> entre en <code>Imports</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="détection--un-veto-annulait-tout-2-2-0">Détection : un veto annulait tout<a class="anchor" aria-label="anchor" href="#d%C3%A9tection--un-veto-annulait-tout-2-2-0"></a></h3>
+<p>Deux campagnes d’annotation sur le terrain (<code>wsfi</code>, montagne ; <code>ltcp</code>, plaine) ont établi que le détecteur avait un <strong>rappel de 0 %</strong> — et pourquoi.</p>
+<p><code>dsr_detecter()</code> fusionne ses termes en <strong>moyenne géométrique pondérée</strong>, donc dominée par le plus petit : un poids n’y dose pas une contribution, <strong>il arme un veto</strong>. <code>vesselness</code> y pesait 1 et entrait par une rampe démarrant à 0,3, alors que c’est un détecteur de crêtes creux — 1,62 % des cellules l’atteignent sur <code>wsfi</code>, <strong>0,00 %</strong> sur <code>ltcp</code>, où son maximum (0,1729) est sous le seuil. Et il était <strong>compté deux fois</strong>, la seconde avec une rampe 4 à 250 fois au-dessus de sa propre borne calibrée.</p>
+<p><code><a href="../reference/detecter_desserte.html">detecter_desserte()</a></code> ne le repasse plus en veto quand il est déjà un canal, et expose <code>poids</code> et <code>seuil_vessel</code> pour le neutraliser au besoin.</p>
+<p><strong>Résultat, mesuré et validé en leave-one-out sur les deux blocs : rappel 0 % → 75–78 %.</strong></p>
+</div>
+<div class="section level3">
+<h3 id="ce-que-les-campagnes-disent-aussi-et-qui-est-moins-agréable-2-2-0">Ce que les campagnes disent aussi, et qui est moins agréable<a class="anchor" aria-label="anchor" href="#ce-que-les-campagnes-disent-aussi-et-qui-est-moins-agr%C3%A9able-2-2-0"></a></h3>
+<p><strong>La précision plafonne à 23–36 %.</strong> Sur les deux terrains, deux tiers des détections ne sont pas des dessertes, et <strong>les limites parcellaires annotées sont détectées à chaque fois</strong> — le mode de faux positif que la spec 026 annonçait, confirmé sur vérité terrain et total. Une relecture humaine reste indispensable ; c’est désormais chiffré plutôt que supposé.</p>
+<p><strong>Les bornes ne se transportent pas.</strong> Calibrées en montagne, elles saturent en plaine (<code>svf</code> 99 %, <code>openness_pos</code> 98 %). <code>specs = "auto"</code> n’y est pas une option.</p>
+</div>
+<div class="section level3">
+<h3 id="divers-2-2-0">Divers<a class="anchor" aria-label="anchor" href="#divers-2-2-0"></a></h3>
+<ul><li>
+<code>.dalles_utiles()</code> : ne lire que les dalles LiDAR qui touchent la grille — 25 → 7 sur <code>ltcp</code>, et une détection qui passe de « plus de 46 min sans aboutir » à 846 s ;</li>
+<li>le générateur de campagne est paramétré par bloc, et <strong>détecte qu’une stratification par pente n’a aucun sens sur une plaine</strong> (étendue de 1,9°) ;</li>
+<li>
+<code>a_numeriser</code> est une vraie couche polyligne — sans type explicite, QGIS refusait d’y numériser.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.1.0" id="foretaccess-210-2026-08-12">foretaccess 2.1.0 (2026-08-12)<a class="anchor" aria-label="anchor" href="#foretaccess-210-2026-08-12"></a></h2>
 <p>Version <strong>mineure</strong> : trois fonctions exportées de plus, aucune rupture. Elle publie deux chantiers menés en parallèle — le <strong>coût de terrassement</strong> (spec 029) et la <strong>desserte détectée / diagnostiquée</strong> — plus deux défauts silencieux corrigés. Le fil commun est celui-là : <strong>rendre visible ce qui se taisait</strong>.</p>
