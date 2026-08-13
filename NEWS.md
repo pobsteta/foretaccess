@@ -1,3 +1,67 @@
+# foretaccess 2.2.0 (2026-08-13)
+
+Version **mineure** : deux fonctions exportées de plus, aucune rupture. Elle
+publie un client OpenStreetMap unifié et **le résultat de deux campagnes
+d'annotation terrain** — les premières du projet, et elles ont réfuté trois
+conclusions successives que la mesure seule avait produites.
+
+## Un client Overpass qui termine
+
+`osm_overpass()` remplace deux implémentations divergentes (ADR-010), en prenant
+le bon de chacune. Auparavant, une instance Overpass bridée faisait boucler
+`osmdata` en backoff de 60 s **sans plafond** : 16 reprises mesurées, 16 minutes
+d'attente pure. Et une instance saturée renvoyait un XML *bien formé*, HTTP 200,
+avec un `<remark>` — lu naïvement, cela disait « rien ici ». C'est l'erreur qui
+avait masqué l'absence de DFCI pendant une journée.
+
+**Trois issues, désormais jamais confondues** : données, vide légitime, refus.
+Un refus ne devient jamais une couche vide. Et la durée est **bornée** par
+`timeout × serveurs × (1 + reprises)`, écrit dans la doc.
+
+Au passage, `acquire_obstacles()` passe de **5 requêtes à 1** et `acquire_dfci()`
+de **3 à 1**, par union de filtres — Overpass plafonne le nombre de requêtes, pas
+la surface. `osmdata` sort des `Suggests`, `curl` entre en `Imports`.
+
+## Détection : un veto annulait tout
+
+Deux campagnes d'annotation sur le terrain (`wsfi`, montagne ; `ltcp`, plaine)
+ont établi que le détecteur avait un **rappel de 0 %** — et pourquoi.
+
+`dsr_detecter()` fusionne ses termes en **moyenne géométrique pondérée**, donc
+dominée par le plus petit : un poids n'y dose pas une contribution, **il arme un
+veto**. `vesselness` y pesait 1 et entrait par une rampe démarrant à 0,3, alors
+que c'est un détecteur de crêtes creux — 1,62 % des cellules l'atteignent sur
+`wsfi`, **0,00 %** sur `ltcp`, où son maximum (0,1729) est sous le seuil. Et il
+était **compté deux fois**, la seconde avec une rampe 4 à 250 fois au-dessus de
+sa propre borne calibrée.
+
+`detecter_desserte()` ne le repasse plus en veto quand il est déjà un canal, et
+expose `poids` et `seuil_vessel` pour le neutraliser au besoin.
+
+**Résultat, mesuré et validé en leave-one-out sur les deux blocs : rappel 0 % →
+75–78 %.**
+
+## Ce que les campagnes disent aussi, et qui est moins agréable
+
+**La précision plafonne à 23–36 %.** Sur les deux terrains, deux tiers des
+détections ne sont pas des dessertes, et **les limites parcellaires annotées sont
+détectées à chaque fois** — le mode de faux positif que la spec 026 annonçait,
+confirmé sur vérité terrain et total. Une relecture humaine reste indispensable ;
+c'est désormais chiffré plutôt que supposé.
+
+**Les bornes ne se transportent pas.** Calibrées en montagne, elles saturent en
+plaine (`svf` 99 %, `openness_pos` 98 %). `specs = "auto"` n'y est pas une option.
+
+## Divers
+
+* `.dalles_utiles()` : ne lire que les dalles LiDAR qui touchent la grille —
+  25 → 7 sur `ltcp`, et une détection qui passe de « plus de 46 min sans
+  aboutir » à 846 s ;
+* le générateur de campagne est paramétré par bloc, et **détecte qu'une
+  stratification par pente n'a aucun sens sur une plaine** (étendue de 1,9°) ;
+* `a_numeriser` est une vraie couche polyligne — sans type explicite, QGIS
+  refusait d'y numériser.
+
 # foretaccess 2.1.0 (2026-08-12)
 
 Version **mineure** : trois fonctions exportées de plus, aucune rupture. Elle
