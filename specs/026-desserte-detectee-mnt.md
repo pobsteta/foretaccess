@@ -536,6 +536,26 @@ le voir.
 >   disant ;
 > * les **bornes figées, calibrées en montagne, saturent en plaine** (`svf` 99 %, `openness_pos`
 >   98 %). `specs = "auto"` n'y est pas une option mais une nécessité.
+>
+> **Campagne `ltcp` dépouillée le 2026-08-13** (`data-raw/annotation_ltcp/RESULTATS.md`) :
+> 10 tuiles, 11 linéaires annotés dont 9 pistes réelles.
+>
+> | | `wsfi` (montagne) | `ltcp` (plaine) |
+> |---|---:|---:|
+> | rappel, config comparable | 50 % | **22 %** |
+> | rappel, bornes recalibrées | 75 % (leave-one-out) | **78 % (circulaire)** |
+> | précision | 36 % | **23–28 %** |
+> | gisement extrapolé | ~31 pistes | **~89 pistes** |
+>
+> **Trois faits pour la spec.** (1) Les pistes de plaine n'ont **aucun canal discriminant** : AUC
+> toutes entre 0,57 et 0,61, contre 0,780 pour `rugosite` sur `wsfi`. (2) Recalibrer remonte
+> quand même le rappel à 78 %, mais au prix de **2,3 fois plus de tronçons** — 28 % de précision.
+> (3) **Les 2 limites parcellaires annotées sont détectées, calibration ou pas** : le mode de faux
+> positif annoncé en en-tête de cette spec est confirmé sur vérité terrain, et il est total.
+>
+> **Conséquence** : la détection est utilisable en montagne avec relecture, et coûteuse en
+> précision ailleurs. `long_min` et le seuil restent des réglages de l'appelant ; les deux
+> campagnes donnent enfin de quoi les arbitrer.
 
 **Conséquence pour le CA-26.5.** Le protocole du §6.0 balaie `long_min` en supposant qu'il existe
 un jeu de paramètres rendant du linéaire. Sur `wsfi`, aucun réglage de **bornes** n'y suffit — le

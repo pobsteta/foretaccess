@@ -95,6 +95,25 @@ sel$fait <- NA_character_; sel$n_trouve <- NA_integer_
 dire("")
 print(st_drop_geometry(sel)[, c("id_tuile", "strate", "pente_med", "part_libre")])
 
+# Attribution d'un lineaire annote a SA tuile : par la PART DE LONGUEUR, jamais
+# par le premier intersect. Un objet peut effleurer le bord d'une tuile voisine
+# -- sur `ltcp`, une piste de 99 m entierement dans la tuile 7 se retrouvait
+# comptee en 3, et le depouillement signalait a tort deux incoherences dans
+# l'annotation. Le defaut etait dans le depouillement.
+tuile_dominante <- function(objets, tuiles) {
+  h <- sf::st_intersects(objets, tuiles)
+  vapply(seq_along(h), function(i) {
+    k <- h[[i]]
+    if (!length(k)) return(NA_integer_)
+    parts <- vapply(k, function(j) {
+      p <- suppressWarnings(sf::st_intersection(sf::st_geometry(objets)[i],
+                                                sf::st_geometry(tuiles)[j]))
+      if (!length(p)) 0 else as.numeric(sf::st_length(p))
+    }, numeric(1))
+    tuiles$id_tuile[k[which.max(parts)]]
+  }, integer(1))
+}
+
 # Couche a numeriser : LINESTRING explicite. Un `st_sfc()` vide n'a pas de type,
 # GDAL ecrit « Unknown (any) » et QGIS refuse d'y numeriser.
 a_num <- st_sf(id = 1L, id_tuile = NA_integer_, type = NA_character_,
