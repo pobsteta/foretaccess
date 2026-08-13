@@ -119,12 +119,17 @@ confusion qui a masqué l'absence de DFCI pendant une journée entière.</p>
 <p>Une requete Overpass par emprise, sans pavage : le cout suit la densite de
 voirie, pas la surface. <strong>5,9 s a froid</strong> sur une AOI de 31 ha (mesure
 nemetonshiny, 2026-08-12).</p>
-<p><strong>Le risque n'est pas le calcul, c'est le debit.</strong> Overpass bride les requetes
-et repond <code>HTTP 429</code> ; le client attend alors <strong>60 s par reprise</strong>. Mesures :
-<strong>plus de 10 minutes</strong> pour la meme requete un jour de bride, et 16 reprises
-consecutives – soit 16 minutes de pure attente – lors d'un test
-d'integration. Un bouton qui appelle cette fonction doit donc etre asynchrone
-et annulable : l'ordre de grandeur nominal ne dit rien du pire cas.</p>
+<p><strong>Le pire cas est desormais BORNE</strong> (ADR-010). Auparavant, une instance bridee
+faisait boucler <code>osmdata</code> en backoff de 60 s sans plafond – 16 reprises
+consecutives mesurees, soit 16 minutes de pure attente, et plus de 10 minutes
+pour une requete ordinaire un jour de bride. Le transport passe maintenant par
+<code><a href="osm_overpass.html">osm_overpass()</a></code>, dont la duree ne peut pas depasser
+<code>timeout * length(serveurs) * (1 + max_reprises)</code>, soit <strong>18 minutes au pire
+absolu</strong> avec les defauts (90 s x 4 instances x 3 essais) et quelques secondes
+en nominal. Sur <code>429</code>, un <code>Retry-After</code> n'est honore que s'il est court
+(&lt; 10 s) ; au-dela on change d'instance plutot que d'attendre.</p>
+<p>Cela reste long pour une interface : un bouton qui appelle cette fonction doit
+etre <strong>asynchrone et annulable</strong>. Ce qui change, c'est qu'il termine.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

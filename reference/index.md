@@ -279,6 +279,12 @@ OpenStreetMap).
 - [`detecter_desserte_balayage()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte_balayage.md)
   : Balayage de seuils pour la détection (spec 026, CA-26.5)
 
+- [`osm_overpass()`](https://pobsteta.github.io/foretaccess/reference/osm_overpass.md)
+  : Query the Overpass API for OpenStreetMap features
+
+- [`osm_provenance()`](https://pobsteta.github.io/foretaccess/reference/osm_provenance.md)
+  : Provenance of an Overpass response
+
 - [`specs_desserte_calibrees()`](https://pobsteta.github.io/foretaccess/reference/specs_desserte_calibrees.md)
   : Calibration de référence de la détection (spec 026)
 
