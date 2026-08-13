@@ -15,6 +15,34 @@
 # etant « faible ou noyee dans les traces fossiles ». La couche rendue est
 # CANDIDATE : elle doit passer `qualifier_desserte()` avant tout usage.
 
+
+# Dalles LiDAR dont l'emprise intersecte la grille. Sans colonnes d'emprise
+# exploitables (catalogue d'une autre convention de nommage), on rend TOUT :
+# mieux vaut un calcul lent qu'un canal de surface silencieusement ampute.
+.dalles_utiles <- function(dalles, grille) {
+  if (is.null(dalles) || is.null(dalles$laz)) {
+    return(character(0))
+  }
+  laz <- as.character(dalles$laz)
+  bornes <- c("xmin", "ymin", "xmax", "ymax")
+  if (!all(bornes %in% names(dalles))) {
+    return(laz)
+  }
+  e <- terra::ext(grille)
+  touche <- !(as.numeric(dalles$xmax) < e[1] | as.numeric(dalles$xmin) > e[2] |
+              as.numeric(dalles$ymax) < e[3] | as.numeric(dalles$ymin) > e[4])
+  touche[is.na(touche)] <- TRUE
+  garde <- laz[touche]
+  if (!length(garde)) {
+    return(laz)
+  }
+  if (length(garde) < length(laz)) {
+    cli::cli_inform("Nuage : {length(garde)}/{length(laz)} dalle{?s} retenue{?s}
+                     (les autres ne touchent pas l'emprise).")
+  }
+  garde
+}
+
 #' Calibration de référence de la détection (spec 026)
 #'
 #' Specs **absolues** et `c_vessel` figés sur un jeu de référence, pour que le
@@ -455,7 +483,13 @@ detecter_desserte <- function(mnt, reference = NULL, las_source = NULL,
   sigma_surf <- NULL
   if (!is.null(las_source)) {
     dalles <- tryCatch(.dsr("dsr_catalog")(laz = las_source), error = function(e) NULL)
-    laz <- if (!is.null(dalles) && !is.null(dalles$laz)) as.character(dalles$laz) else character(0)
+    # NE LIRE QUE LES DALLES QUI TOUCHENT LA GRILLE. `.dsr_canaux_dalles()` lit
+    # chaque fichier qu'on lui passe, sans verifier qu'il sert : sur le bloc
+    # `ltcp`, cela faisait relire 25 dalles couvrant 2 500 ha pour produire un
+    # raster de 100 ha -- plus de 46 min sans aboutir. Le catalogue porte deja
+    # l'emprise de chaque dalle (`xmin`/`ymin`/`xmax`/`ymax`), il suffit de s'en
+    # servir.
+    laz <- .dalles_utiles(dalles, grille)
     sigma_surf <- .dsr_canaux_dalles(laz, grille, specs = specs$surface)$sigma_surf
   }
   if (is.null(sigma_surf)) {

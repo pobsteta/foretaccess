@@ -519,6 +519,23 @@ le voir.
 >
 > **Conséquence pour cette spec** : `long_min = 30` est un défaut à réexaminer, et la
 > `@section Performance` de la fusion mérite d'être lue avant tout réglage de poids.
+>
+> **Second bloc, `ltcp`, préparé le 2026-08-13.** Le veto y était **absolu** — maximum de
+> vesselness 0,1729 pour une rampe démarrant à 0,30, soit **zéro cellule éligible sur 4 millions**
+> (contre 1,62 % sur `wsfi`) ; la rampe y serait 161,8 fois au-dessus de la borne calibrée du
+> canal, contre 4,2 fois sur `wsfi`. Le défaut n'était donc pas une particularité de `wsfi`.
+>
+> Une fois corrigé, la détection y rend **87 tronçons / 2 214 m** sur 100 ha, dont 13 dans les
+> tuiles à scruter — contre 2 tronçons sur `wsfi`. **Cet écart n'est pas interprétable sans
+> annotation** : plaine plus riche en linéaires anciens, ou faux positifs sur micro-relief de
+> drainage. Campagne prête (`data-raw/annotation_ltcp/`).
+>
+> Deux enseignements de méthode, obtenus en TRANSPORTANT le protocole plutôt qu'en le rejouant :
+> * la **stratification par pente** est vide de sens sur une plaine (étendue p10–p90 de 1,9° contre
+>   20° sur `wsfi`) — le générateur mesure désormais l'étendue et bascule en tirage simple en le
+>   disant ;
+> * les **bornes figées, calibrées en montagne, saturent en plaine** (`svf` 99 %, `openness_pos`
+>   98 %). `specs = "auto"` n'y est pas une option mais une nécessité.
 
 **Conséquence pour le CA-26.5.** Le protocole du §6.0 balaie `long_min` en supposant qu'il existe
 un jeu de paramètres rendant du linéaire. Sur `wsfi`, aucun réglage de **bornes** n'y suffit — le
