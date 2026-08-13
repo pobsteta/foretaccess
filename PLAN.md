@@ -235,6 +235,12 @@
   vide se lisait comme « aucune infraction » (champs `disponible`/`raison`, `dessertR_disponible()`).
   **`dessertR` reste non déclarable** : `rlas` est archivé sur le CRAN, la déclaration cassait
   l'installation pour tous.
+- **`v2.2.0` posée** (2026-08-13) : client Overpass unifié (`osm_overpass()`, ADR-010 — pire cas
+  borné, obstacles 5→1, dfci 3→1, `osmdata` retiré) et **résultat des deux premières campagnes
+  d'annotation terrain**. Le CA-26.5 est enfin instruit : rappel 0 % → 75–78 % après correction
+  d'un veto `vesselness` compté deux fois, validé en leave-one-out sur `wsfi` (montagne) ET
+  `ltcp` (plaine). **La précision plafonne à 23–36 %** et les limites parcellaires sont détectées
+  à chaque fois — c'est le chantier restant.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
