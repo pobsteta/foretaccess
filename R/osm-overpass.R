@@ -269,9 +269,10 @@ osm_provenance <- function(x) {
   ot <- as.character(d$other_tags)
   ot[is.na(ot)] <- ""
   for (t in tags) {
-    if (t %in% names(d) && !all(is.na(d[[t]]))) {
-      next
-    }
+    # NE PAS sauter une colonne partiellement remplie : le driver peut promouvoir
+    # `highway` pour un objet et le laisser dans `other_tags` pour un autre. Un
+    # `next` sur « la colonne existe et n'est pas toute vide » laissait alors des
+    # NA que `other_tags` savait combler -- trouve par le test, pas a la lecture.
     motif <- paste0("\"", t, "\"=>\"([^\"]*)\"")
     v <- ifelse(grepl(motif, ot), sub(paste0(".*", motif, ".*"), "\\1", ot),
                 NA_character_)

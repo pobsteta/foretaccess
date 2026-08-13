@@ -182,3 +182,91 @@ test_that("la reponse porte instance, requete et date", {
   expect_match(p$date_requete, "^\\d{4}-\\d{2}-\\d{2}T")
   expect_match(p$requete, "out body")
 })
+
+# --- Chemins que les trois issues ne traversaient pas -------------------------
+# Signales par la couverture du patch : le contrat principal etait teste, ses
+# bordures non. Ce sont elles qui se declenchent un jour de panne.
+
+test_that("une erreur de transport (socket, DNS) est un refus, pas un vide", {
+  # `.osm_curl` rend `erreur` quand libcurl echoue avant toute reponse HTTP.
+  testthat::local_mocked_bindings(.osm_curl = function(url, ql, timeout) {
+    list(status_code = -1L, content = raw(0), headers = raw(0),
+         erreur = "Timeout was reached")
+  })
+  expect_error(
+    osm_overpass(c(xmin = 6, ymin = 45, xmax = 6.01, ymax = 45.01), "highway",
+                 serveurs = "a", max_reprises = 0),
+    "Timeout"
+  )
+})
+
+test_that("un Retry-After COURT est honore, un long fait changer d'instance", {
+  # La regle du brief : au-dela de ~10 s, changer d'instance bat attendre. Le
+  # comportement a proscrire est celui d'`osmdata` -- 60 s en boucle, sans plafond.
+  entete <- function(s) charToRaw(paste0("HTTP/1.1 429\r\nRetry-After: ", s, "\r\n\r\n"))
+  expect_equal(foretaccess:::.osm_retry_after(entete(3)), 3)
+  expect_equal(foretaccess:::.osm_retry_after(entete(120)), 120)
+  expect_true(is.na(foretaccess:::.osm_retry_after(raw(0))))
+
+  # Court : on reessaie la MEME instance (2 appels sur un seul serveur).
+  n <- 0L
+  testthat::local_mocked_bindings(.osm_curl = function(url, ql, timeout) {
+    n <<- n + 1L
+    if (n == 1L) list(status_code = 429L, content = raw(0), headers = entete(0))
+    else rep_xml(xml_avec_way())
+  })
+  d <- osm_overpass(c(xmin = 6, ymin = 45, xmax = 6.01, ymax = 45.01), "highway",
+                    serveurs = "a", max_reprises = 1)
+  expect_gt(nrow(d), 0)
+  expect_equal(n, 2L)
+})
+
+test_that("un Retry-After LONG ne fait pas attendre : on passe au miroir", {
+  entete <- charToRaw("HTTP/1.1 429\r\nRetry-After: 300\r\n\r\n")
+  vues <- character(0)
+  testthat::local_mocked_bindings(.osm_curl = function(url, ql, timeout) {
+    vues <<- c(vues, url)
+    if (length(vues) == 1L) list(status_code = 429L, content = raw(0), headers = entete)
+    else rep_xml(xml_avec_way())
+  })
+  t <- system.time(suppressMessages(
+    osm_overpass(c(xmin = 6, ymin = 45, xmax = 6.01, ymax = 45.01), "highway",
+                 serveurs = c("a", "b"), max_reprises = 1)))
+  # Le test vaut par sa DUREE : 300 s d'attente auraient ete honorees par une
+  # implementation naive. On bascule, donc c'est instantane.
+  expect_lt(as.numeric(t[["elapsed"]]), 5)
+  expect_length(unique(vues), 2L)
+})
+
+test_that("les tags noyes dans other_tags sont deplies", {
+  # Le driver OSM de GDAL ne promeut en colonne que certains tags (selon
+  # `OSM_CONFIG_FILE`) ; le reste atterrit dans `other_tags`. Sans depliage,
+  # `tracktype`/`surface`/`access` -- documentes en sortie
+  # d'`acquire_desserte_osm()` -- disparaitraient SILENCIEUSEMENT.
+  d <- sf::st_sf(
+    osm_id = c("1", "2"),
+    highway = c("track", NA),
+    other_tags = c("\"tracktype\"=>\"grade3\",\"surface\"=>\"ground\"",
+                   "\"highway\"=>\"service\",\"access\"=>\"private\""),
+    geometry = sf::st_sfc(sf::st_point(c(6, 45)), sf::st_point(c(6.1, 45.1)),
+                          crs = 4326))
+  out <- foretaccess:::.osm_deplier_tags(d)
+  expect_equal(out$tracktype, c("grade3", NA))
+  expect_equal(out$surface, c("ground", NA))
+  expect_equal(out$access, c(NA, "private"))
+  # Une colonne DEJA renseignee n'est pas ecrasee ; un NA est complete.
+  expect_equal(out$highway, c("track", "service"))
+})
+
+test_that("la bissection s'arrete a la profondeur maximale, en le disant", {
+  # Profondeur 3 = 64 sous-emprises au pire. Au-dela, l'erreur est plus honnete
+  # qu'un decoupage qui n'aboutira pas.
+  testthat::local_mocked_bindings(
+    .osm_curl = function(url, ql, timeout) rep_xml(xml_remark()))
+  expect_error(
+    suppressMessages(foretaccess:::.osm_bissecter(
+      c(xmin = 6, ymin = 45, xmax = 6.01, ymax = 45.01), "highway",
+      serveurs = "a", timeout = 1)),
+    "remark"
+  )
+})
