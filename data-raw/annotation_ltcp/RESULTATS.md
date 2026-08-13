@@ -99,11 +99,27 @@ tronçons produits** (203 contre 87). Le détecteur retrouve les pistes en
 inondant l'emprise — 39 candidats dans les tuiles au lieu de 13, dont 28 faux
 positifs. Et **les 2 limites parcellaires restent détectées**, calibration ou pas.
 
-**Ce chiffre est un plafond, pas une performance.** Calibrer et évaluer sur les
-mêmes 9 pistes est circulaire : sur `wsfi`, le leave-one-out avait confirmé le
-circulaire (3/4 dans les deux cas), mais rien ne garantit qu'il en irait de même
-ici — avec des AUC aussi plates, le risque de mémorisation est plus élevé, pas
-moindre. Un leave-one-out honnête coûterait 9 runs, soit plus de deux heures.
+### Leave-one-out — le chiffre honnête
+
+Calibré sur 8 pistes, évalué sur la 9ᵉ, neuf fois. Aucune fuite entre
+apprentissage et évaluation.
+
+| | circulaire | **leave-one-out** |
+|---|---:|---:|
+| rappel | 7/9 = 78 % | **7/9 = 78 %** |
+| tronçons produits | 203 | 224 en moyenne par pli |
+
+**Identique.** J'avais annoncé avant le run que le risque de mémorisation était
+« plus élevé, pas moindre » qu'sur `wsfi`, les AUC y étant toutes plates.
+**Réfuté** : la calibration généralise ici comme là-bas. Six canaux faibles mais
+indépendants apprennent quelque chose de transportable d'une piste à l'autre.
+
+Les deux pistes manquées (52 m et 111 m) ne sont pas les plus courtes — la
+longueur n'explique donc pas l'échec.
+
+**Ce que cela confirme en revanche** : les ~224 tronçons par pli montrent que
+l'inondation est **systématique**, pas un artefact du montage circulaire. Le
+problème de précision est structurel.
 
 **Ce qu'il faut en retenir** : sur ce bloc, on peut avoir 78 % de rappel *ou*
 une précision utilisable, pas les deux. Le compromis est nettement moins

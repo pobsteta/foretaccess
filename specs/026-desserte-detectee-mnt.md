@@ -543,7 +543,7 @@ le voir.
 > | | `wsfi` (montagne) | `ltcp` (plaine) |
 > |---|---:|---:|
 > | rappel, config comparable | 50 % | **22 %** |
-> | rappel, bornes recalibrées | 75 % (leave-one-out) | **78 % (circulaire)** |
+> | rappel, bornes recalibrées | 75 % (leave-one-out) | **78 % (leave-one-out)** |
 > | précision | 36 % | **23–28 %** |
 > | gisement extrapolé | ~31 pistes | **~89 pistes** |
 >
