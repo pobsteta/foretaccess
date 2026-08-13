@@ -66,3 +66,28 @@ test_that("une borne NA ne fait pas ecarter la dalle", {
   u <- suppressMessages(foretaccess:::.dalles_utiles(cat, grille_test()))
   expect_true("flou.laz" %in% u)
 })
+
+# --- Attribution d'un lineaire annote a sa tuile -----------------------------
+# Bug de DEPOUILLEMENT, pas d'annotation : sur `ltcp`, une piste de 99 m
+# entierement dans la tuile 7 effleurait le bord de la 3, et l'attribution « au
+# premier intersect » la comptait en 3. Deux incoherences etaient alors
+# signalees a tort dans l'annotation de l'utilisateur.
+
+test_that("un lineaire a cheval revient a la tuile qui en porte le plus", {
+  carre <- function(x0, y0, c = 100) sf::st_polygon(list(rbind(
+    c(x0, y0), c(x0 + c, y0), c(x0 + c, y0 + c), c(x0, y0 + c), c(x0, y0))))
+  tuiles <- sf::st_sf(id_tuile = c(3L, 7L),
+    geometry = sf::st_sfc(carre(0, 0), carre(100, 0), crs = 2154))
+  # Ligne de 99 m dans la tuile 7, touchant le bord commun en x = 100.
+  ligne <- sf::st_sf(geometry = sf::st_sfc(
+    sf::st_linestring(rbind(c(100, 50), c(199, 50))), crs = 2154))
+  h <- sf::st_intersects(ligne, tuiles)
+  # Elle intersecte bien les DEUX (le bord compte) : c'est ce qui piegeait.
+  expect_length(h[[1]], 2L)
+  parts <- vapply(h[[1]], function(j) {
+    p <- suppressWarnings(sf::st_intersection(sf::st_geometry(ligne)[1],
+                                              sf::st_geometry(tuiles)[j]))
+    if (!length(p)) 0 else as.numeric(sf::st_length(p))
+  }, numeric(1))
+  expect_equal(tuiles$id_tuile[h[[1]][which.max(parts)]], 7L)
+})
