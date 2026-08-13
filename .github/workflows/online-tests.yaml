@@ -110,3 +110,15 @@ jobs:
             quit(save = "no", status = 1L)
           }
           cat("Tests reseau OK (", nrow(df), " bloc(s), aucun saut).\n", sep = "")
+
+      # La mesure nominale d'`acquire_desserte_osm()` est ecrite dans le resume du
+      # job par le test lui-meme (`GITHUB_STEP_SUMMARY`). Ce rappel garantit qu'un
+      # resume vide se remarque : une semaine sans mesure signifie que le test ne
+      # l'a pas produite, donc qu'il n'a pas appele Overpass.
+      - name: Rappel si aucune mesure n'a ete produite
+        if: always()
+        shell: bash
+        run: |
+          if ! grep -q "acquire_desserte_osm" "$GITHUB_STEP_SUMMARY" 2>/dev/null; then
+            echo "> Aucune mesure nominale produite cette semaine." >> "$GITHUB_STEP_SUMMARY"
+          fi
