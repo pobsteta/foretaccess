@@ -118,6 +118,12 @@ acquire_desserte_osm <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' retenir est un **gisement à instruire**, et le CA-28.5 exige de le confronter
 #' d'abord aux objets BD TOPO connus, puis à une annotation.
 #'
+#' Les **géométries** hors corridor sont rendues telles quelles, clippées : un
+#' tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié hors
+#' corridor, sans quoi on présenterait comme « absent de la BD TOPO » un linéaire
+#' qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
+#' déjà calculée pour mesurer le linéaire.
+#'
 #' @section Performance:
 #' Recoupement geometrique de deux couches, tempere par l'index spatial de `sf`.
 #' **104 s** pour 3 122 x 544 troncons (mesure nemetonshiny, 2026-08-12).
@@ -126,8 +132,19 @@ acquire_desserte_osm <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' @param osm Desserte candidate (sortie d'[acquire_desserte_osm()]).
 #' @param corridor_m Demi-largeur du corridor (m). Défaut 15, la valeur de
 #'   `dsr_detecter()` pour exclure le réseau de référence.
-#' @return Une liste : `osm` (linéaire OSM total et hors corridor, par type),
-#'   `bdtopo` (linéaire BD TOPO hors corridor OSM, par classe), et `resume`.
+#' @return Une liste de classe `foretaccess_osm_compare` :
+#'   \describe{
+#'     \item{`osm`}{linéaire OSM total et hors corridor, par type.}
+#'     \item{`bdtopo`}{linéaire BD TOPO hors corridor OSM, par classe.}
+#'     \item{`resume`}{les cinq totaux (`osm_km`, `osm_hors_km`,
+#'       `osm_couvert_pct`, `bdtopo_km`, `bdtopo_hors_km`).}
+#'     \item{`corridor_m`}{la demi-largeur employée.}
+#'     \item{`osm_hors_corridor`}{`sf` des tronçons OSM **amputés** de leur part
+#'       dans le corridor BD TOPO : attributs d'origine plus `hors_m` (m).
+#'       Géométrie homogène en `MULTILINESTRING`, CRS de l'entrée, `sf` à 0 ligne
+#'       si rien ne sort du corridor (jamais `NULL`).}
+#'     \item{`bdtopo_hors_corridor`}{le symétrique, BD TOPO hors corridor OSM.}
+#'   }
 #' @seealso [acquire_desserte_osm()], `specs/028`.
 #' @export
 comparer_desserte_osm <- function(bdtopo, osm, corridor_m = 15) {
@@ -135,25 +152,34 @@ comparer_desserte_osm <- function(bdtopo, osm, corridor_m = 15) {
   o <- sf::st_as_sf(.as_vector(osm, "osm"))
   checkmate::assert_number(corridor_m, lower = 0, finite = TRUE)
 
-  # Longueur de chaque troncon HORS d'un corridor donne. Calcul un a un :
-  # st_difference vectorise ne conserve pas l'appariement d'origine quand des
-  # entrees deviennent vides, et un mauvais appariement fausserait toute la table.
+  # Longueur de chaque troncon HORS d'un corridor donne, ET les morceaux
+  # correspondants. Calcul un a un : st_difference vectorise ne conserve pas
+  # l'appariement d'origine quand des entrees deviennent vides, et un mauvais
+  # appariement fausserait toute la table.
   hors <- function(x, corr) {
-    if (nrow(x) == 0 || is.null(corr)) {
-      return(rep(0, nrow(x)))
+    n <- nrow(x)
+    if (n == 0 || is.null(corr)) {
+      return(list(long = rep(0, n), parts = vector("list", n)))
     }
-    vapply(seq_len(nrow(x)), function(i) {
-      g <- sf::st_difference(sf::st_geometry(x)[i], corr)
-      if (length(g)) sum(as.numeric(sf::st_length(g))) else 0
-    }, numeric(1))
+    parts <- lapply(seq_len(n), function(i) sf::st_difference(sf::st_geometry(x)[i], corr))
+    long <- vapply(parts, function(g) if (length(g)) sum(as.numeric(sf::st_length(g))) else 0,
+                   numeric(1))
+    list(long = long, parts = parts)
   }
   corr_b <- if (nrow(b)) sf::st_union(sf::st_buffer(sf::st_geometry(b), corridor_m)) else NULL
   corr_o <- if (nrow(o)) sf::st_union(sf::st_buffer(sf::st_geometry(o), corridor_m)) else NULL
 
+  h_o <- hors(o, corr_b)
+  h_b <- hors(b, corr_o)
+  # Assemblage AVANT les colonnes de travail : elles n'ont rien a faire dans une
+  # couche destinee a la carte.
+  osm_hc <- .sf_hors(o, h_o)
+  bdtopo_hc <- .sf_hors(b, h_b)
+
   o$long_m <- if (nrow(o)) as.numeric(sf::st_length(o)) else numeric(0)
-  o$hors_m <- hors(o, corr_b)
+  o$hors_m <- h_o$long
   b$long_m <- if (nrow(b)) as.numeric(sf::st_length(b)) else numeric(0)
-  b$hors_m <- hors(b, corr_o)
+  b$hors_m <- h_b$long
 
   par_groupe <- function(x, champ) {
     if (nrow(x) == 0) {
@@ -180,10 +206,30 @@ comparer_desserte_osm <- function(bdtopo, osm, corridor_m = 15) {
         bdtopo_km = sum(b$long_m) / 1000,
         bdtopo_hors_km = sum(b$hors_m) / 1000
       ),
-      corridor_m = corridor_m
+      corridor_m = corridor_m,
+      osm_hors_corridor = osm_hc,
+      bdtopo_hors_corridor = bdtopo_hc
     ),
     class = "foretaccess_osm_compare"
   )
+}
+
+# Assemble les morceaux hors corridor en un `sf` : attributs d'origine + hors_m.
+# st_difference rend un LINESTRING quand rien n'est coupe et un MULTILINESTRING
+# quand le corridor coupe le troncon en deux ; sans le cast la couche porterait
+# DEUX types de geometrie et l'ecriture GeoPackage en aval deviendrait hasardeuse.
+.sf_hors <- function(x, h) {
+  crs <- sf::st_crs(x)
+  att <- sf::st_drop_geometry(x)
+  att <- att[, setdiff(names(att), c("long_m", "hors_m")), drop = FALSE]
+  att$hors_m <- h$long
+  keep <- which(h$long > 0)
+  g <- if (length(keep)) {
+    sf::st_cast(do.call(c, h$parts[keep]), "MULTILINESTRING")
+  } else {
+    sf::st_sfc(sf::st_multilinestring(), crs = crs)[0]
+  }
+  sf::st_sf(att[keep, , drop = FALSE], geometry = g, crs = crs)
 }
 
 #' @export
@@ -199,6 +245,9 @@ print.foretaccess_osm_compare <- function(x, ...) {
   print(x$osm, row.names = FALSE)
   cat("\n-- lineaire BD TOPO par classe (km) --\n")
   print(x$bdtopo, row.names = FALSE)
+  cat("\nGeometries clippees : $osm_hors_corridor (", nrow(x$osm_hors_corridor),
+      " troncons), $bdtopo_hors_corridor (", nrow(x$bdtopo_hors_corridor),
+      ").\n", sep = "")
   cat("\nUn lineaire hors corridor n'est PAS une desserte manquante prouvee :\n")
   cat("decalage de saisie, trace erronee, chemin non carrossable. Gisement a\n")
   cat("instruire (CA-28.5).\n")

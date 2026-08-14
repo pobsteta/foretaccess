@@ -251,6 +251,14 @@
   emprise égale à la plateforme. Publie aussi `classer_desserte()`, qui solde la dette de
   dépendance de `nemetonshiny` (appel direct à `dessertR::dsr_classer()` derrière un `tryCatch`
   muet).
+- **`v2.4.0` posée** (2026-08-14) : `comparer_desserte_osm()` rend la **géométrie hors corridor**
+  (`$osm_hors_corridor`, `$bdtopo_hors_corridor`), qu'elle calculait déjà et jetait. Ajout
+  strictement additif — trois tables, classe et coût de calcul inchangés. Géométrie **clippée**
+  (un tronçon à moitié dans le corridor n'est rendu que pour sa moitié dehors), attributs d'origine
+  plus `hors_m`, type homogène en `MULTILINESTRING` (seul piège réel : sans le cast la couche part
+  en GeoPackage avec deux types), couche vide en `sf` à 0 ligne. Débloque le calque « pistes OSM
+  hors BD TOPO » de `nemetonshiny`, qui écrivait jusqu'ici la couche OSM **brute**, doublons de la
+  BD TOPO compris.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
@@ -452,6 +460,44 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-08-14 — `v2.4.0` : la géométrie qu'on calculait puis jetait
+
+Brief reçu de la session `nemetonshiny`
+(`specs/brief-foretaccess-comparer-osm-geometries.md`), et il tenait en une
+observation : l'helper `hors()` de `comparer_desserte_osm()` calculait
+`st_difference(troncon, corridor)` — exactement le gisement, géométrie comprise —
+puis en prenait la longueur et **jetait l'objet**. Les 104 s du recoupement
+étaient déjà payées ; seul le résultat le plus utile ne sortait pas.
+
+**Ce n'était donc pas un arbitrage coût/valeur, mais une fuite.** `hors()` rend
+maintenant `list(long, parts)`, et `.sf_hors()` assemble les morceaux non vides en
+une `sf` — attributs d'origine plus `hors_m`, colonnes de travail exclues. Les
+trois tables, `resume` et la classe `foretaccess_osm_compare` ne bougent pas :
+c'est le test de non-régression qui compte, et les quatre valeurs déjà assertées
+tiennent au 1e-6 près.
+
+**Le seul piège est le type de géométrie.** `st_difference` rend un `LINESTRING`
+quand le corridor ne coupe rien et un `MULTILINESTRING` quand il coupe le tronçon
+en deux ; l'`sfc` assemblé porte alors **deux types** et l'écriture GeoPackage en
+aval devient hasardeuse. `st_cast(g, "MULTILINESTRING")` homogénéise. Vérifié
+aller-retour sur GeoPackage, couche vide comprise (0 ligne typée, CRS conservé,
+jamais `NULL`).
+
+**Le clip n'est pas cosmétique** : rendre le tronçon entier afficherait comme
+« absent de la BD TOPO » un linéaire qui y figure. Un test dédié prend un tronçon
+perpendiculaire coupé en deux par le corridor — 200 m d'origine, 170 m rendus.
+
+Ce que ça vaut est mesuré, pas espéré : le juge de paix CA-28.5 (annotation du
+2026-07-31 sur ortho IGN, 24 tronçons, 13,41 km) donne **92,9 % du linéaire hors
+corridor en desserte réelle** pour 4,4 % de faux positifs. La réserve du §1.1 de
+la spec 028 reste juste et le `print()` la répète mot pour mot — mais on ne
+refusait pas du bruit à l'utilisateur, on lui refusait un résultat.
+
+**CA-28.3 reste ouvert** : reproduire la table du §1 demande l'AOI oracle
+Chastel-Nouvel et un appel Overpass, hors de portée d'une session hors ligne. Les
+géométries donnent désormais de quoi le clore proprement — vérifier la table *et*
+inspecter ce qu'elle compte.
 
 ### 2026-08-14 — `v2.3.0` : le profil en travers, et ce que la vraie dalle a corrigé
 

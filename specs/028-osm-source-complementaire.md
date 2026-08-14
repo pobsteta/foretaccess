@@ -92,6 +92,12 @@ avec `source = "osm"`, `highway`, `tracktype`, `surface`, `access`.
 d'autre, par type et par classe : la table du §1, reproductible sur toute AOI.
 C'est le livrable de diagnostic, **antérieur** à toute intégration.
 
+Depuis `2.4.0`, elle rend aussi la **géométrie** hors corridor —
+`$osm_hors_corridor` et `$bdtopo_hors_corridor`, deux `sf` de tronçons
+**clippés** (attributs d'origine plus `hors_m`). Elle la calculait déjà pour
+mesurer le linéaire ; l'ajout ne coûte rien de plus, et il permet d'**inspecter**
+ce que la table compte, pas seulement de la lire (cf. CA-28.3).
+
 ### 4.3. Alimentation de la couche candidate de la spec 026
 
 Les tronçons OSM hors corridor rejoignent la **même couche candidate** que les
@@ -128,7 +134,10 @@ du taux de renseignement.
       laisserait la moitié du gisement sans information : utilisable comme
       **indice**, pas comme **filtre**. Valeurs présentes : 8 `grade2`,
       3 `grade3`, 1 `grade4`.
-- [ ] **CA-28.3** — `comparer_desserte_osm()` reproduit la table du §1.
+- [ ] **CA-28.3** — `comparer_desserte_osm()` reproduit la table du §1. *Toujours
+      ouvert* : la vérification demande l'AOI oracle Chastel-Nouvel et un appel
+      Overpass. Depuis `2.4.0` la fonction rend les **géométries** hors corridor,
+      donc de quoi vérifier la table **et** inspecter ce qu'elle compte.
 - [ ] **CA-28.4** — Aucun tronçon OSM n'entre dans `desserte_existante` sans
       qualification (invariant testé).
 - [x] **CA-28.5 (juge de paix) — ATTEINT** (annotation utilisateur du

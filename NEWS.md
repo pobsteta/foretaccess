@@ -1,3 +1,43 @@
+# foretaccess 2.4.0 (2026-08-14)
+
+Version **mineure**, purement additive : `comparer_desserte_osm()` rend enfin la
+**géométrie** hors corridor, qu'elle calculait déjà et jetait.
+
+## Deux couches de plus, aucun calcul de plus
+
+La valeur de retour gagne `$osm_hors_corridor` et `$bdtopo_hors_corridor`, deux
+`sf`. Les trois tables (`osm`, `bdtopo`, `resume`), la classe
+`foretaccess_osm_compare` et le coût de calcul sont **inchangés** — la différence
+géométrique servait déjà à mesurer le linéaire, on n'en jetait que le résultat le
+plus utile.
+
+- **Géométrie clippée**, pas le tronçon entier : un tronçon à moitié dans le
+  corridor n'est rendu que pour sa moitié hors corridor. Sans clip, on
+  présenterait comme « absent de la BD TOPO » un linéaire qui y figure.
+- **Attributs d'origine conservés** (`highway`, `source`, `tracktype`, `surface`,
+  `access` côté OSM ; `classe` côté BD TOPO) plus une colonne `hors_m`. Les
+  colonnes de travail (`long_m`) restent internes.
+- **Type de géométrie homogène** : `st_difference()` rend un `LINESTRING` quand
+  rien n'est coupé et un `MULTILINESTRING` quand le corridor coupe le tronçon en
+  deux ; sans le cast, la couche partirait en GeoPackage avec deux types.
+- **CRS conservé** ; couche vide rendue comme `sf` à 0 ligne, jamais `NULL`.
+- Fonction toujours **purement locale** : aucun accès réseau.
+
+## Pourquoi maintenant
+
+Le juge de paix CA-28.5 de la spec 028 a été tranché le 2026-07-31 par annotation
+sur ortho IGN (24 tronçons `track` hors corridor, 13,41 km) : **92,9 % du
+linéaire est de la desserte forestière réelle absente de la BD TOPO**, pour 4,4 %
+de faux positifs avérés. La réserve du §1.1 — *un linéaire hors corridor n'est pas
+une desserte manquante prouvée* — reste juste sur le principe et le `print()` la
+répète mot pour mot, mais le taux mesuré la borne à moins d'un vingtième. Faute de
+géométrie, l'aval ne pouvait cartographier que la couche OSM **brute**, doublons
+de la BD TOPO compris — soit tout autre chose que ce que l'utilisateur demande.
+
+Aucun argument pour désactiver : le volume est borné par celui des entrées et le
+calcul est déjà payé. Si une mesure sur une très grande AOI montrait un problème
+de mémoire, l'argument sera ajouté après, en `TRUE` par défaut.
+
 # foretaccess 2.3.0 (2026-08-14)
 
 Version **mineure** : deux fonctions exportées de plus, aucune rupture. Le profil

@@ -15,8 +15,19 @@ comparer_desserte_osm(bdtopo, osm, corridor_m = 15)
 \code{dsr_detecter()} pour exclure le réseau de référence.}
 }
 \value{
-Une liste : \code{osm} (linéaire OSM total et hors corridor, par type),
-\code{bdtopo} (linéaire BD TOPO hors corridor OSM, par classe), et \code{resume}.
+Une liste de classe \code{foretaccess_osm_compare} :
+\describe{
+\item{\code{osm}}{linéaire OSM total et hors corridor, par type.}
+\item{\code{bdtopo}}{linéaire BD TOPO hors corridor OSM, par classe.}
+\item{\code{resume}}{les cinq totaux (\code{osm_km}, \code{osm_hors_km},
+\code{osm_couvert_pct}, \code{bdtopo_km}, \code{bdtopo_hors_km}).}
+\item{\code{corridor_m}}{la demi-largeur employée.}
+\item{\code{osm_hors_corridor}}{\code{sf} des tronçons OSM \strong{amputés} de leur part
+dans le corridor BD TOPO : attributs d'origine plus \code{hors_m} (m).
+Géométrie homogène en \code{MULTILINESTRING}, CRS de l'entrée, \code{sf} à 0 ligne
+si rien ne sort du corridor (jamais \code{NULL}).}
+\item{\code{bdtopo_hors_corridor}}{le symétrique, BD TOPO hors corridor OSM.}
+}
 }
 \description{
 Mesure le linéaire de part et d'autre d'un \strong{corridor} autour de la
@@ -28,6 +39,12 @@ Un tronçon OSM hors corridor peut être un décalage de saisie sur une voie dé
 présente, une trace erronée, ou un chemin non carrossable. Le chiffre à en
 retenir est un \strong{gisement à instruire}, et le CA-28.5 exige de le confronter
 d'abord aux objets BD TOPO connus, puis à une annotation.
+
+Les \strong{géométries} hors corridor sont rendues telles quelles, clippées : un
+tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié hors
+corridor, sans quoi on présenterait comme « absent de la BD TOPO » un linéaire
+qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
+déjà calculée pour mesurer le linéaire.
 }
 \section{Performance}{
 
