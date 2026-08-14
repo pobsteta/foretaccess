@@ -11,7 +11,7 @@ résultat : un linéaire hors corridor n'est pas une desserte manquante prouvée
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,15 +76,41 @@ résultat : un linéaire hors corridor n'est pas une desserte manquante prouvée
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Une liste : <code>osm</code> (linéaire OSM total et hors corridor, par type),
-<code>bdtopo</code> (linéaire BD TOPO hors corridor OSM, par classe), et <code>resume</code>.</p>
-    </div>
+    <p>Une liste de classe <code>foretaccess_osm_compare</code> :</p><dl><dt><code>osm</code></dt>
+<dd><p>linéaire OSM total et hors corridor, par type.</p></dd>
+
+<dt><code>bdtopo</code></dt>
+<dd><p>linéaire BD TOPO hors corridor OSM, par classe.</p></dd>
+
+<dt><code>resume</code></dt>
+<dd><p>les cinq totaux (<code>osm_km</code>, <code>osm_hors_km</code>,
+<code>osm_couvert_pct</code>, <code>bdtopo_km</code>, <code>bdtopo_hors_km</code>).</p></dd>
+
+<dt><code>corridor_m</code></dt>
+<dd><p>la demi-largeur employée.</p></dd>
+
+<dt><code>osm_hors_corridor</code></dt>
+<dd><p><code>sf</code> des tronçons OSM <strong>amputés</strong> de leur part
+dans le corridor BD TOPO : attributs d'origine plus <code>hors_m</code> (m).
+Géométrie homogène en <code>MULTILINESTRING</code>, CRS de l'entrée, <code>sf</code> à 0 ligne
+si rien ne sort du corridor (jamais <code>NULL</code>).</p></dd>
+
+<dt><code>bdtopo_hors_corridor</code></dt>
+<dd><p>le symétrique, BD TOPO hors corridor OSM.</p></dd>
+
+
+</dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Un tronçon OSM hors corridor peut être un décalage de saisie sur une voie déjà
 présente, une trace erronée, ou un chemin non carrossable. Le chiffre à en
 retenir est un <strong>gisement à instruire</strong>, et le CA-28.5 exige de le confronter
 d'abord aux objets BD TOPO connus, puis à une annotation.</p>
+<p>Les <strong>géométries</strong> hors corridor sont rendues telles quelles, clippées : un
+tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié hors
+corridor, sans quoi on présenterait comme « absent de la BD TOPO » un linéaire
+qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
+déjà calculée pour mesurer le linéaire.</p>
     </div>
     <div class="section level2">
     <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>

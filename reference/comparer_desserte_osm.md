@@ -30,8 +30,35 @@ comparer_desserte_osm(bdtopo, osm, corridor_m = 15)
 
 ## Value
 
-Une liste : `osm` (linéaire OSM total et hors corridor, par type),
-`bdtopo` (linéaire BD TOPO hors corridor OSM, par classe), et `resume`.
+Une liste de classe `foretaccess_osm_compare` :
+
+- `osm`:
+
+  linéaire OSM total et hors corridor, par type.
+
+- `bdtopo`:
+
+  linéaire BD TOPO hors corridor OSM, par classe.
+
+- `resume`:
+
+  les cinq totaux (`osm_km`, `osm_hors_km`, `osm_couvert_pct`,
+  `bdtopo_km`, `bdtopo_hors_km`).
+
+- `corridor_m`:
+
+  la demi-largeur employée.
+
+- `osm_hors_corridor`:
+
+  `sf` des tronçons OSM **amputés** de leur part dans le corridor BD
+  TOPO : attributs d'origine plus `hors_m` (m). Géométrie homogène en
+  `MULTILINESTRING`, CRS de l'entrée, `sf` à 0 ligne si rien ne sort du
+  corridor (jamais `NULL`).
+
+- `bdtopo_hors_corridor`:
+
+  le symétrique, BD TOPO hors corridor OSM.
 
 ## Details
 
@@ -40,6 +67,12 @@ voie déjà présente, une trace erronée, ou un chemin non carrossable. Le
 chiffre à en retenir est un **gisement à instruire**, et le CA-28.5
 exige de le confronter d'abord aux objets BD TOPO connus, puis à une
 annotation.
+
+Les **géométries** hors corridor sont rendues telles quelles, clippées :
+un tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié
+hors corridor, sans quoi on présenterait comme « absent de la BD TOPO »
+un linéaire qui y figure. Elles ne coûtent rien de plus : la différence
+géométrique est déjà calculée pour mesurer le linéaire.
 
 ## Performance
 

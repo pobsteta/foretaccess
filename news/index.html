@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,28 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.4.0" id="foretaccess-240-2026-08-14">foretaccess 2.4.0 (2026-08-14)<a class="anchor" aria-label="anchor" href="#foretaccess-240-2026-08-14"></a></h2>
+<p>Version <strong>mineure</strong>, purement additive : <code><a href="../reference/comparer_desserte_osm.html">comparer_desserte_osm()</a></code> rend enfin la <strong>géométrie</strong> hors corridor, qu’elle calculait déjà et jetait.</p>
+<div class="section level3">
+<h3 id="deux-couches-de-plus-aucun-calcul-de-plus-2-4-0">Deux couches de plus, aucun calcul de plus<a class="anchor" aria-label="anchor" href="#deux-couches-de-plus-aucun-calcul-de-plus-2-4-0"></a></h3>
+<p>La valeur de retour gagne <code>$osm_hors_corridor</code> et <code>$bdtopo_hors_corridor</code>, deux <code>sf</code>. Les trois tables (<code>osm</code>, <code>bdtopo</code>, <code>resume</code>), la classe <code>foretaccess_osm_compare</code> et le coût de calcul sont <strong>inchangés</strong> — la différence géométrique servait déjà à mesurer le linéaire, on n’en jetait que le résultat le plus utile.</p>
+<ul><li>
+<strong>Géométrie clippée</strong>, pas le tronçon entier : un tronçon à moitié dans le corridor n’est rendu que pour sa moitié hors corridor. Sans clip, on présenterait comme « absent de la BD TOPO » un linéaire qui y figure.</li>
+<li>
+<strong>Attributs d’origine conservés</strong> (<code>highway</code>, <code>source</code>, <code>tracktype</code>, <code>surface</code>, <code>access</code> côté OSM ; <code>classe</code> côté BD TOPO) plus une colonne <code>hors_m</code>. Les colonnes de travail (<code>long_m</code>) restent internes.</li>
+<li>
+<strong>Type de géométrie homogène</strong> : <code>st_difference()</code> rend un <code>LINESTRING</code> quand rien n’est coupé et un <code>MULTILINESTRING</code> quand le corridor coupe le tronçon en deux ; sans le cast, la couche partirait en GeoPackage avec deux types.</li>
+<li>
+<strong>CRS conservé</strong> ; couche vide rendue comme <code>sf</code> à 0 ligne, jamais <code>NULL</code>.</li>
+<li>Fonction toujours <strong>purement locale</strong> : aucun accès réseau.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="pourquoi-maintenant-2-4-0">Pourquoi maintenant<a class="anchor" aria-label="anchor" href="#pourquoi-maintenant-2-4-0"></a></h3>
+<p>Le juge de paix CA-28.5 de la spec 028 a été tranché le 2026-07-31 par annotation sur ortho IGN (24 tronçons <code>track</code> hors corridor, 13,41 km) : <strong>92,9 % du linéaire est de la desserte forestière réelle absente de la BD TOPO</strong>, pour 4,4 % de faux positifs avérés. La réserve du §1.1 — <em>un linéaire hors corridor n’est pas une desserte manquante prouvée</em> — reste juste sur le principe et le <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> la répète mot pour mot, mais le taux mesuré la borne à moins d’un vingtième. Faute de géométrie, l’aval ne pouvait cartographier que la couche OSM <strong>brute</strong>, doublons de la BD TOPO compris — soit tout autre chose que ce que l’utilisateur demande.</p>
+<p>Aucun argument pour désactiver : le volume est borné par celui des entrées et le calcul est déjà payé. Si une mesure sur une très grande AOI montrait un problème de mémoire, l’argument sera ajouté après, en <code>TRUE</code> par défaut.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.3.0" id="foretaccess-230-2026-08-14">foretaccess 2.3.0 (2026-08-14)<a class="anchor" aria-label="anchor" href="#foretaccess-230-2026-08-14"></a></h2>
 <p>Version <strong>mineure</strong> : deux fonctions exportées de plus, aucune rupture. Le profil en travers d’un tronçon <strong>au clic</strong>, et le classement des linéaires détectés qui solde une dette de dépendance de l’application.</p>
