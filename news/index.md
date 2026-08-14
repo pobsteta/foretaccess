@@ -1,5 +1,67 @@
 # Changelog
 
+## foretaccess 2.3.0 (2026-08-14)
+
+Version **mineure** : deux fonctions exportées de plus, aucune rupture.
+Le profil en travers d’un tronçon **au clic**, et le classement des
+linéaires détectés qui solde une dette de dépendance de l’application.
+
+### `profil_travers()` — la coupe, points compris
+
+Un point, un réseau, un nuage, un MNT : la coupe transversale du tronçon
+le plus proche. Ce que le paquet ne savait pas faire, et qu’aucun moteur
+ne fournissait : `dessertR::dsr_profils()` échantillonne le **MNT**,
+donc une surface interpolée, et `dsr_layers_pc()` ne rend du nuage que
+des **rasters**. Rendre les **points** — un par écho, avec classe et
+intensité — demandait une extraction. C’est le seul vrai développement
+du lot ; le reste est de la géométrie.
+
+**Coût d’un clic** : on lit un rectangle de `epaisseur_m` ×
+2·`demi_largeur`, après avoir écarté les dalles par leur en-tête. Mesuré
+sur la dalle d’exemple dessertR (200 m × 200 m, 4,5 M points) : **0,42 s
+à froid**, 0,08 s en cache, ~550 points par coupe.
+
+**Cinq familles de bords, emboîtées par construction** —
+`drivable ⊆ road ⊆ rescue ⊆ right_of_way`, plus les deux accotements.
+L’ordre n’est pas espéré : `drivable` est écrêté par `road`, `rescue`
+part de `road`, `right_of_way` est une union avec `road`. Sur la dalle
+réelle, `road` tombe à **3,58 m** — la valeur exacte de `dsr_measure()`
+au même endroit.
+
+**Le point de conception qui a changé après mesure** : l’emprise se lit
+sur la bande de **troncs** (0,5–5 m), pas sur le couvert. La définition
+intuitive (« plage sans écho à plus de 2 m ») rend une emprise
+**strictement égale à la plateforme** sous futaie fermée — les houppiers
+se referment au-dessus d’une piste de 3,6 m. Les troncs, eux, s’écartent
+: 23 m au même endroit. Un test de non-régression tient cette décision.
+
+Le référentiel vertical est le sol **à l’axe**, jamais le sol sous
+chaque point : normaliser point par point aplatirait le bombement, or
+c’est lui que la parabole ajuste.
+
+Dégradés — pas de tronçon dans `tolerance_m`, pas de `rlas`, pas de
+dalle sous la station, coupe vide — tous rendus par `NULL` franc et un
+message qui dit lequel. Aucun graphique : le tracé appartient à
+l’appelant.
+
+### `classer_desserte()` — une dette de dépendance soldée
+
+`nemetonshiny` appelait `dessertR::dsr_classer()` **directement**, alors
+que `dessertR` n’est déclaré nulle part dans son `DESCRIPTION`, l’appel
+étant enveloppé dans un `tryCatch(error = function(e) NULL)` : sur un
+poste sans dessertR, le classement des tronçons détectés **disparaissait
+sans le dire**.
+
+Le sens des dépendances est : l’app dépend de `foretaccess`, jamais de
+son moteur.
+[`classer_desserte()`](https://pobsteta.github.io/foretaccess/reference/classer_desserte.md)
+enveloppe donc `dsr_classer()`, fait le recast `LINESTRING` une fois
+pour toutes, et rend l’indisponibilité **visible** — avertissement,
+colonnes présentes à `NA`, attribut `disponible = FALSE`. Un `NA` de
+classe signifie *non classé*, jamais *rien trouvé*.
+
+Détails : `specs/030`.
+
 ## foretaccess 2.2.0 (2026-08-13)
 
 Version **mineure** : deux fonctions exportées de plus, aucune rupture.

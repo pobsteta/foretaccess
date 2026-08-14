@@ -406,6 +406,20 @@ dans la section Acquisition.
   : Sky-view factor and openness (RVT micro-relief channels, spec 021
   J3).
 
+## Profil en travers au clic (spec 030)
+
+Coupe transversale d’un tronçon de desserte à une station : points LiDAR
+de la tranche, profil du terrain, parabole de chaussée et cinq familles
+de bords emboîtées (chaussée, plateforme, accotements, secours,
+emprise). Plus le classement des linéaires détectés, qui enveloppe
+`dessertR::dsr_classer()`.
+
+- [`profil_travers()`](https://pobsteta.github.io/foretaccess/reference/profil_travers.md)
+  : Cross-section of a road segment at a clicked point (spec 030)
+- [`classer_desserte()`](https://pobsteta.github.io/foretaccess/reference/classer_desserte.md)
+  : Classify detected linear features (desserte, skid trail,
+  firebreak...)
+
 ## Composite VAT archéo (spec 021)
 
 Visualization for Archaeological Topography (Kokalj & Somrak 2019) :

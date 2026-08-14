@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,27 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.3.0" id="foretaccess-230-2026-08-14">foretaccess 2.3.0 (2026-08-14)<a class="anchor" aria-label="anchor" href="#foretaccess-230-2026-08-14"></a></h2>
+<p>Version <strong>mineure</strong> : deux fonctions exportées de plus, aucune rupture. Le profil en travers d’un tronçon <strong>au clic</strong>, et le classement des linéaires détectés qui solde une dette de dépendance de l’application.</p>
+<div class="section level3">
+<h3 id="profil_travers--la-coupe-points-compris-2-3-0">
+<code>profil_travers()</code> — la coupe, points compris<a class="anchor" aria-label="anchor" href="#profil_travers--la-coupe-points-compris-2-3-0"></a></h3>
+<p>Un point, un réseau, un nuage, un MNT : la coupe transversale du tronçon le plus proche. Ce que le paquet ne savait pas faire, et qu’aucun moteur ne fournissait : <code>dessertR::dsr_profils()</code> échantillonne le <strong>MNT</strong>, donc une surface interpolée, et <code>dsr_layers_pc()</code> ne rend du nuage que des <strong>rasters</strong>. Rendre les <strong>points</strong> — un par écho, avec classe et intensité — demandait une extraction. C’est le seul vrai développement du lot ; le reste est de la géométrie.</p>
+<p><strong>Coût d’un clic</strong> : on lit un rectangle de <code>epaisseur_m</code> × 2·<code>demi_largeur</code>, après avoir écarté les dalles par leur en-tête. Mesuré sur la dalle d’exemple dessertR (200 m × 200 m, 4,5 M points) : <strong>0,42 s à froid</strong>, 0,08 s en cache, ~550 points par coupe.</p>
+<p><strong>Cinq familles de bords, emboîtées par construction</strong> — <code>drivable ⊆ road ⊆ rescue ⊆ right_of_way</code>, plus les deux accotements. L’ordre n’est pas espéré : <code>drivable</code> est écrêté par <code>road</code>, <code>rescue</code> part de <code>road</code>, <code>right_of_way</code> est une union avec <code>road</code>. Sur la dalle réelle, <code>road</code> tombe à <strong>3,58 m</strong> — la valeur exacte de <code>dsr_measure()</code> au même endroit.</p>
+<p><strong>Le point de conception qui a changé après mesure</strong> : l’emprise se lit sur la bande de <strong>troncs</strong> (0,5–5 m), pas sur le couvert. La définition intuitive (« plage sans écho à plus de 2 m ») rend une emprise <strong>strictement égale à la plateforme</strong> sous futaie fermée — les houppiers se referment au-dessus d’une piste de 3,6 m. Les troncs, eux, s’écartent : 23 m au même endroit. Un test de non-régression tient cette décision.</p>
+<p>Le référentiel vertical est le sol <strong>à l’axe</strong>, jamais le sol sous chaque point : normaliser point par point aplatirait le bombement, or c’est lui que la parabole ajuste.</p>
+<p>Dégradés — pas de tronçon dans <code>tolerance_m</code>, pas de <code>rlas</code>, pas de dalle sous la station, coupe vide — tous rendus par <code>NULL</code> franc et un message qui dit lequel. Aucun graphique : le tracé appartient à l’appelant.</p>
+</div>
+<div class="section level3">
+<h3 id="classer_desserte--une-dette-de-dépendance-soldée-2-3-0">
+<code>classer_desserte()</code> — une dette de dépendance soldée<a class="anchor" aria-label="anchor" href="#classer_desserte--une-dette-de-d%C3%A9pendance-sold%C3%A9e-2-3-0"></a></h3>
+<p><code>nemetonshiny</code> appelait <code>dessertR::dsr_classer()</code> <strong>directement</strong>, alors que <code>dessertR</code> n’est déclaré nulle part dans son <code>DESCRIPTION</code>, l’appel étant enveloppé dans un <code>tryCatch(error = function(e) NULL)</code> : sur un poste sans dessertR, le classement des tronçons détectés <strong>disparaissait sans le dire</strong>.</p>
+<p>Le sens des dépendances est : l’app dépend de <code>foretaccess</code>, jamais de son moteur. <code><a href="../reference/classer_desserte.html">classer_desserte()</a></code> enveloppe donc <code>dsr_classer()</code>, fait le recast <code>LINESTRING</code> une fois pour toutes, et rend l’indisponibilité <strong>visible</strong> — avertissement, colonnes présentes à <code>NA</code>, attribut <code>disponible = FALSE</code>. Un <code>NA</code> de classe signifie <em>non classé</em>, jamais <em>rien trouvé</em>.</p>
+<p>Détails : <code>specs/030</code>.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.2.0" id="foretaccess-220-2026-08-13">foretaccess 2.2.0 (2026-08-13)<a class="anchor" aria-label="anchor" href="#foretaccess-220-2026-08-13"></a></h2>
 <p>Version <strong>mineure</strong> : deux fonctions exportées de plus, aucune rupture. Elle publie un client OpenStreetMap unifié et <strong>le résultat de deux campagnes d’annotation terrain</strong> — les premières du projet, et elles ont réfuté trois conclusions successives que la mesure seule avait produites.</p>

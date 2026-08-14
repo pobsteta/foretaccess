@@ -374,6 +374,22 @@
   `wsfi` (montagne) ET `ltcp` (plaine). **La précision plafonne à 23–36
   %** et les limites parcellaires sont détectées à chaque fois — c’est
   le chantier restant.
+- **`v2.3.0` posée** (2026-08-14) : **profil en travers au clic** (spec
+  030,
+  [`profil_travers()`](https://pobsteta.github.io/foretaccess/reference/profil_travers.md))
+  — la coupe transversale d’un tronçon à une station, **points LiDAR
+  compris**, ce qu’aucun moteur ne rendait (`dsr_profils()`
+  échantillonne le MNT, `dsr_layers_pc()` ne rend que des rasters). Cinq
+  familles de bords **emboîtées par construction**
+  (`drivable ⊆ road ⊆ rescue ⊆ right_of_way`), 0,42 s par clic à froid
+  sur dalle réelle, `road` = 3,58 m contre 3,58 m pour `dsr_measure()`
+  au même endroit. **L’emprise se lit sur les troncs (0,5–5 m), pas sur
+  le couvert** : sous futaie fermée les houppiers se referment au-dessus
+  de la piste, et le critère « couvert » rend une emprise égale à la
+  plateforme. Publie aussi
+  [`classer_desserte()`](https://pobsteta.github.io/foretaccess/reference/classer_desserte.md),
+  qui solde la dette de dépendance de `nemetonshiny` (appel direct à
+  `dessertR::dsr_classer()` derrière un `tryCatch` muet).
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code.
   [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
   et
@@ -616,6 +632,54 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-08-14 — `v2.3.0` : le profil en travers, et ce que la vraie dalle a corrigé
+
+Brief reçu de la session `nemetonshiny`
+(`specs/BRIEF-profil-travers-desserte.md`) : un clic sur la carte, le
+profil en travers du tronçon le plus proche. Le brief posait lui-même la
+seule vraie question (§4) — *le nuage, ou le MNT ?* — et il avait raison
+de la poser : `dsr_profils()` échantillonne le **MNT**,
+`dsr_layers_pc()` ne rend du nuage que des **rasters**. Rendre les
+**points** demandait une extraction, qui n’existait nulle part. Le reste
+(accrochage, station, chaînage, profil du terrain) est de la géométrie ;
+l’écrire coûtait moins cher que de plier `dsr_profils()`, qui travaille
+par tronçon entier, à une station unique.
+
+**La conception qui a changé après mesure — et elle n’aurait pas changé
+sur des fixtures.** L’emprise (`right_of_way`) se définit intuitivement
+comme *« la plage sans écho à plus de 2 m du sol »*. Passée sur la dalle
+d’exemple `dessertR` (Lozère, futaie fermée, piste de 3,6 m), cette
+définition rend une trouée **nulle** : les houppiers se referment
+**au-dessus** de la piste. L’emprise tombait donc exactement sur la
+plateforme, à toutes les stations — une famille qui ne dit plus rien, et
+qu’aucun test synthétique n’aurait dénoncée (un nuage de synthèse «
+raisonnable » ne met pas de couvert au-dessus de la route). Les
+**troncs**, eux, s’écartent : 23 m de couloir libre à la même station.
+La bande de mesure est donc 0,5–5 m, et le jeu de synthèse porte
+désormais un couvert fermé **au-dessus** de la route, en test de
+non-régression de conception.
+
+**Ce que la dalle réelle a aussi confirmé** : `road` = 3,58 m, soit la
+valeur de `dsr_measure()` (`LARGEUR_ROULABLE_MED`, méthode chaussée) au
+même endroit, et `drivable` = 3,29 m contre 3,11 m à la station la plus
+proche. 10 stations sur 10 rendues le long du tronçon, emboîtement
+respecté partout, **0,42 s par clic** à froid (0,08 s en cache) — le
+budget « quelques secondes » tient parce qu’on lit un rectangle, jamais
+une dalle.
+
+**L’ordre des familles est construit, pas espéré.** `drivable` est
+écrêté par `road`, `rescue` part de `road` et s’arrête au talus,
+`right_of_way` est une union avec `road`. Un test vérifie l’emboîtement
+des **bords**, pas seulement des largeurs.
+
+**Dette de dépendance soldée dans le même lot** (brief §7) :
+[`classer_desserte()`](https://pobsteta.github.io/foretaccess/reference/classer_desserte.md)
+enveloppe `dsr_classer()`. L’app l’appelait directement, derrière un
+`tryCatch(NULL)`, sans jamais déclarer `dessertR` — le classement
+disparaissait en silence sur un poste sans le moteur. L’indisponibilité
+est désormais un avertissement et un attribut `disponible`, pas une
+absence.
 
 ### 2026-08-10 — `v2.0.1` : les deux moitiés de la v2.0.0 étaient incompatibles
 
