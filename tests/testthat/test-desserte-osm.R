@@ -129,6 +129,26 @@ test_that("un troncon qui traverse le corridor est CLIPPE, type homogene", {
   expect_equal(unique(as.character(sf::st_geometry_type(hc))), "MULTILINESTRING")
 })
 
+test_that("le print annonce les couches ET garde la reserve mot pour mot", {
+  # L'aval (nemetonshiny) doit porter CE texte a l'ecran, pas une reformulation :
+  # un lineaire hors corridor est un gisement a instruire, pas une preuve.
+  seg <- function(x0, y0, x1, y1) sf::st_linestring(rbind(c(x0, y0), c(x1, y1)))
+  bdt <- sf::st_sf(classe = "piste",
+    geometry = sf::st_sfc(seg(0, 0, 100, 0), crs = 2154))
+  osm <- sf::st_sf(source = "osm", highway = "track",
+    geometry = sf::st_sfc(seg(0, 500, 100, 500), crs = 2154))
+
+  cmp <- comparer_desserte_osm(bdt, osm)
+  # `cli` ecrit hors du flux standard : capture imbriquee, sortie ET messages.
+  msg <- utils::capture.output(
+    std <- utils::capture.output(print(cmp)), type = "message")
+  sortie <- paste(c(std, msg), collapse = "\n")
+  expect_match(sortie, "osm_hors_corridor", fixed = TRUE)
+  expect_match(sortie, "bdtopo_hors_corridor", fixed = TRUE)
+  expect_match(sortie, "n'est PAS une desserte manquante prouvee", fixed = TRUE)
+  expect_match(sortie, "CA-28.5", fixed = TRUE)
+})
+
 test_that("comparer_desserte_osm tient sur des couches vides", {
   vide_l <- sf::st_sf(classe = character(0),
     geometry = sf::st_sfc(crs = sf::st_crs(2154)))

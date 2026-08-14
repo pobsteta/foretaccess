@@ -245,9 +245,9 @@ print.foretaccess_osm_compare <- function(x, ...) {
   print(x$osm, row.names = FALSE)
   cat("\n-- lineaire BD TOPO par classe (km) --\n")
   print(x$bdtopo, row.names = FALSE)
-  cat("\nGeometries clippees : $osm_hors_corridor (", nrow(x$osm_hors_corridor),
-      " troncons), $bdtopo_hors_corridor (", nrow(x$bdtopo_hors_corridor),
-      ").\n", sep = "")
+  cat("\nGeometries clippees (troncons) : $osm_hors_corridor = ",
+      nrow(x$osm_hors_corridor), ", $bdtopo_hors_corridor = ",
+      nrow(x$bdtopo_hors_corridor), ".\n", sep = "")
   cat("\nUn lineaire hors corridor n'est PAS une desserte manquante prouvee :\n")
   cat("decalage de saisie, trace erronee, chemin non carrossable. Gisement a\n")
   cat("instruire (CA-28.5).\n")
