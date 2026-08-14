@@ -157,6 +157,15 @@ reference:
   contents:
   - micro_relief
   - rvt_svf_opns
+- title: Profil en travers au clic (spec 030)
+  desc: >
+    Coupe transversale d'un tronçon de desserte à une station : points LiDAR de
+    la tranche, profil du terrain, parabole de chaussée et cinq familles de
+    bords emboîtées (chaussée, plateforme, accotements, secours, emprise). Plus
+    le classement des linéaires détectés, qui enveloppe `dessertR::dsr_classer()`.
+  contents:
+  - profil_travers
+  - classer_desserte
 - title: Composite VAT archéo (spec 021)
   desc: >
     Visualization for Archaeological Topography (Kokalj & Somrak 2019) : fusion
