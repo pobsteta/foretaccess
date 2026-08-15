@@ -59,7 +59,10 @@ Unmeasured segments are never dropped.}
 An \code{sf} conforming to \code{\link[=acquire_desserte]{acquire_desserte()}} (fields \code{classe}, \code{largeur},
 geometry) with the LiDAR provenance columns of \code{\link[=acquire_desserte_lidar]{acquire_desserte_lidar()}}
 kept as extras, and a \code{largeur} filled from the measured drivable width where
-available. Attributes: \code{ndp} (\code{0L}/\code{1L}) and \code{qualifiee} (\code{TRUE}).
+available. Attributes: \code{ndp} (\code{0L}/\code{1L}) and \code{qualifiee} (\code{TRUE}), plus a
+per-row \code{qualifiee} column carrying the same mark. The \strong{column} is what
+\code{reseau_desserte()} checks (CA-28.4), because it survives subsetting and the
+merge with the declared BD TOPO network, whereas the layer attribute does not.
 }
 \description{
 Turns a \strong{declared} BD TOPO road network into a \strong{qualified} one, using

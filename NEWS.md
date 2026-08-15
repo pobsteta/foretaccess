@@ -1,3 +1,40 @@
+# foretaccess 2.5.0 (2026-08-15)
+
+Version **mineure** : la règle « aucun tronçon candidat n'entre dans le réseau
+existant sans qualification » devient une **erreur** (CA-28.4, specs 026 et 028).
+
+## Un invariant, plus une consigne
+
+`reseau_desserte()` et `optimiser_reseau()` refusent désormais une
+`desserte_existante` portant `source` `"osm"` ([`acquire_desserte_osm()`]) ou
+`"detectee"` ([`detecter_desserte()`]) dont les lignes ne sont pas marquées
+`qualifiee`. La règle était écrite dans la doc des deux specs et tenue par la
+seule discipline de l'appelant ; rien dans le code ne l'empêchait. Un candidat
+n'a ni largeur, ni état, ni portance mesurés : le laisser entrer, c'est ajouter
+du réseau fantôme à un modèle qu'on vient de rendre conforme à ACCESSFOR.
+
+Le contrôle est posé dans `.reseau_preparer()`, le passage commun des deux
+fonctions — l'invariant ne se contourne pas en passant par l'optimisation.
+
+## `qualifier_desserte()` marque aussi en colonne
+
+La marque `qualifiee` était un **attribut de couche**, que `sf` perd au premier
+sous-ensemble et à la première fusion. Or le flux réel est une fusion : on empile
+le candidat qualifié sur la BD TOPO. `qualifier_desserte()` pose donc désormais
+`qualifiee` **en colonne** en plus de l'attribut, et c'est la colonne que le
+contrôle lit en priorité. L'attribut reste accepté.
+
+## Ce qui ne change pas
+
+Une desserte BD TOPO pure n'a **pas** de colonne `source` : le contrôle sort
+immédiatement, sans effet sur les appels existants — un test le vérifie
+explicitement. **Limite assumée** : on vérifie que le tronçon est *passé par*
+`qualifier_desserte()`, pas que la mesure a abouti (sans LiDAR, NDP 0, cette
+fonction rend la couche telle quelle en la marquant qualifiée). La porte fermée
+ici est celle du candidat **brut** ; `preprocess(desserte = )` n'est pas gardée.
+
+**Spec 028 : tous les critères d'acceptation sont soldés.**
+
 # foretaccess 2.4.0 (2026-08-14)
 
 Version **mineure**, purement additive : `comparer_desserte_osm()` rend enfin la

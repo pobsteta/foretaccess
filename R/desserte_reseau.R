@@ -17,6 +17,11 @@
 #'   `FALSE` default the surface is computed and discarded; see `pondere_cout`.
 #' @param parcelles An `sf` POLYGON of the areas to serve.
 #' @param desserte_existante An `sf` LINESTRING of the network to connect to.
+#'   **Candidate segments must be qualified first** (CA-28.4): a layer carrying
+#'   `source` `"osm"` ([acquire_desserte_osm()]) or `"detectee"`
+#'   ([detecter_desserte()]) is rejected unless those rows are marked
+#'   `qualifiee` by [qualifier_desserte()]. A plain BD TOPO network has no
+#'   `source` column and is unaffected.
 #' @param heuristique Ordering of parcels: `"plus_proche"` (closest first),
 #'   `"plus_gros_volume"` (largest volume first) or `"aleatoire"` (random).
 #' @param skidding_m Skidding distance (m): a parcel cell within it of a road is
@@ -141,12 +146,66 @@ reseau_desserte <- function(pre, cout, parcelles, desserte_existante,
                     skidding_m, heuristique, mode, config)
 }
 
+# Sources CANDIDATES : ni l'une ni l'autre n'est de la desserte tant qu'elle n'a
+# pas ete qualifiee. `acquire_desserte_osm()` pose "osm", `detecter_desserte()`
+# pose "detectee" ; la BD TOPO d'`acquire_desserte()` n'a PAS de colonne `source`.
+.SOURCES_CANDIDATES <- c("osm", "detectee")
+
+# CA-28.4 (spec 028) et regle jumelle de la spec 026 : aucun troncon candidat
+# n'entre dans le reseau existant sans qualification.
+#
+# La regle etait ecrite dans la doc des deux specs et tenue par la seule
+# discipline de l'appelant. Ici elle devient une ERREUR -- c'est ce que « invariant
+# teste » veut dire. Un candidat n'a ni largeur ni portance mesurees : le laisser
+# entrer, c'est ajouter du reseau fantome a un modele qu'on vient de rendre
+# conforme a ACCESSFOR.
+#
+# Une desserte BD TOPO pure n'a pas de colonne `source` : le controle est alors un
+# no-op, donc sans effet sur les appels existants.
+#
+# LIMITE ASSUMEE : on verifie que le troncon est PASSE par `qualifier_desserte()`,
+# pas que la mesure a abouti. Sans LiDAR (NDP 0) cette fonction rend la couche
+# telle quelle en la marquant qualifiee -- contrat existant, anterieur a ce
+# controle. La porte fermee ici est celle du candidat BRUT.
+.exiger_qualification <- function(desserte, arg = "desserte_existante") {
+  if (!"source" %in% names(desserte)) {
+    return(invisible(desserte))
+  }
+  src <- as.character(desserte$source)
+  cand <- !is.na(src) & src %in% .SOURCES_CANDIDATES
+  if (!any(cand)) {
+    return(invisible(desserte))
+  }
+  # La marque par LIGNE d'abord : elle survit au sous-ensemble et a la fusion avec
+  # la BD TOPO, ce que l'attribut de couche ne fait pas.
+  qual <- if ("qualifiee" %in% names(desserte)) {
+    q <- as.logical(desserte$qualifiee)
+    !is.na(q) & q
+  } else {
+    rep(isTRUE(attr(desserte, "qualifiee")), length(src))
+  }
+  manque <- cand & !qual
+  if (any(manque)) {
+    cli::cli_abort(c(
+      "{.arg {arg}} contient {sum(manque)} troncon{?s} candidat{?s} NON
+       qualifie{?s} ({.val {sort(unique(src[manque]))}}).",
+      "i" = "Un candidat n'a ni largeur, ni etat, ni portance mesures : il doit
+             passer {.fn qualifier_desserte} avant d'entrer dans une conception de
+             reseau (specs 026 et 028).",
+      "x" = "Aucun chemin ne doit permettre a un troncon OSM ou detecte d'entrer
+             dans {.arg {arg}} sans qualification (CA-28.4)."
+    ))
+  }
+  invisible(desserte)
+}
+
 # Preparation commune (Lots 16 et 18) : grilles aplaties, reseau existant
 # rasterise, dimensions. Renvoie le contexte partage par les modes/strategies.
 .reseau_preparer <- function(pre, cout, parcelles, desserte_existante, config,
                              pondere_cout = FALSE) {
   checkmate::assert_class(pre, "foretaccess_preprocessing")
   checkmate::assert_class(cout, "foretaccess_cout_construction")
+  .exiger_qualification(desserte_existante)
   tr <- config$desserte$trace
   grille <- pre$mnt
   road_r <- terra::rasterize(terra::vect(desserte_existante), grille, field = 1, background = NA)

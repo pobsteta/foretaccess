@@ -263,8 +263,13 @@
   venait de la classe `hors_desserte`, conservée par défaut depuis le 2026-07-30, qui
   élargit le corridor (spec 028 §1.3). **CA-28.1 coché** dans la foulée (ses trois
   volets ont chacun leur test dans `test-desserte-osm.R` depuis l'implémentation).
-  Reste ouvert sur la spec 028 : le seul **CA-28.4** — l'invariant « aucun tronçon
-  OSM n'entre dans `desserte_existante` sans qualification », qui n'est pas testé.
+- **`v2.5.0` posée : l'invariant CA-28.4 devient une erreur** (2026-08-15).
+  `.reseau_preparer()` — passage commun de `reseau_desserte()` et `optimiser_reseau()` —
+  refuse une `desserte_existante` portant `source` `"osm"` ou `"detectee"` dont les lignes
+  ne sont pas marquées `qualifiee` ; `qualifier_desserte()` pose désormais cette marque
+  **en colonne** en plus de l'attribut de couche (seule la colonne survit au sous-ensemble
+  et à la fusion avec la BD TOPO). Une desserte BD TOPO pure n'a pas de colonne `source` :
+  le contrôle est un no-op. **Spec 028 : tous les CA sont soldés.**
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
@@ -466,6 +471,40 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-08-15 — `v2.5.0` : CA-28.4, la règle écrite devient une erreur
+
+« Aucun tronçon OSM n'entre dans `desserte_existante` sans qualification » était
+écrit dans la doc des specs 026 et 028, répété dans trois `@details`, et tenu par
+la **seule discipline de l'appelant**. Rien dans le code ne l'empêchait. C'est
+tout l'écart entre une règle documentée et un invariant.
+
+`.reseau_preparer()` — le passage commun de `reseau_desserte()` et
+`optimiser_reseau()`, donc le bon goulot — refuse maintenant une
+`desserte_existante` portant `source` `"osm"` ou `"detectee"` dont les lignes ne
+sont pas marquées `qualifiee`.
+
+**Le point de conception, c'est la marque, pas le contrôle.** `qualifier_desserte()`
+posait `attr(x, "qualifiee") <- TRUE` — un attribut de couche, que `sf` perd au
+premier sous-ensemble et à la première fusion. Or le flux réel est précisément une
+fusion : on empile le candidat qualifié sur la BD TOPO. La marque est donc posée
+**en colonne** en plus de l'attribut, et c'est la colonne que le contrôle lit en
+priorité. Les lignes BD TOPO, elles, n'ont pas de `source` : elles ne sont jamais
+mises en cause, même dans un mélange.
+
+**Coût de non-régression : nul.** Une desserte BD TOPO pure n'a pas de colonne
+`source`, le contrôle sort immédiatement. Tous les appels existants sont intacts,
+et un test le vérifie explicitement plutôt que de l'espérer.
+
+**Limite assumée, écrite dans la spec** : on vérifie que le tronçon est *passé
+par* `qualifier_desserte()`, pas que la mesure a abouti — sans LiDAR (NDP 0) cette
+fonction rend la couche telle quelle en la marquant qualifiée, contrat antérieur.
+La porte fermée est celle du candidat **brut**. L'autre porte,
+`preprocess(desserte = )`, reste ouverte : le CA nomme `desserte_existante`, et
+l'étendre demanderait de trancher le cas d'une desserte candidate consommée par
+les quatre moteurs.
+
+**Spec 028 : tous les CA sont soldés.**
 
 ### 2026-08-15 — CA-28.3 clos : la table du §1 tombe au centième, et pourquoi elle a bougé
 

@@ -1,6 +1,7 @@
 # specs/028 — OSM comme source **complémentaire** de desserte
 
-> **Statut** : **IMPLÉMENTÉE ET VALIDÉE** (2026-07-31). Le juge de paix CA-28.5
+> **Statut** : **IMPLÉMENTÉE ET VALIDÉE** ; **tous les CA sont soldés** au
+> 2026-08-15. Le juge de paix CA-28.5
 > donne **93 % du linéaire** en desserte réelle, pour 4 % de faux positifs. Version cible : `1.30.0`
 > (feat). Complète la spec [026](026-desserte-detectee-mnt.md) : celle-ci cherche
 > la desserte dans le **micro-relief**, celle-là dans une source **déjà
@@ -200,8 +201,29 @@ du taux de renseignement.
       couvrait **24 pour 13,41 km**. Les 4 tronçons de plus pèsent 0,11 km — des
       bouts, pas un gisement — mais le taux de 92,9 % porte sur les 24 annotés,
       pas sur les 28.
-- [ ] **CA-28.4** — Aucun tronçon OSM n'entre dans `desserte_existante` sans
-      qualification (invariant testé).
+- [x] **CA-28.4 — ATTEINT** (2026-08-15). La règle n'était tenue que par la
+      discipline de l'appelant : elle est désormais une **erreur**.
+      `.reseau_preparer()` — le point de passage commun de [`reseau_desserte()`]
+      et [`optimiser_reseau()`] — refuse une `desserte_existante` portant
+      `source` `"osm"` ou `"detectee"` dont les lignes ne sont pas marquées
+      `qualifiee`. `qualifier_desserte()` pose désormais cette marque **en
+      colonne** en plus de l'attribut de couche : seule la colonne survit au
+      sous-ensemble et à la fusion avec la BD TOPO.
+
+      Une desserte BD TOPO pure n'a **pas** de colonne `source` : le contrôle est
+      alors un no-op, sans effet sur les appels existants. 7 tests
+      (`test-desserte-reseau.R`, `test-desserte-optim.R`) : OSM refusé, `detectee`
+      refusé de la même façon, qualifié par colonne accepté, par attribut accepté,
+      mélange BD TOPO + OSM brut mis en cause **pour le seul OSM**, BD TOPO pure
+      intacte, et l'optimisation qui ne contourne pas l'invariant.
+
+      **Limite assumée** : on vérifie que le tronçon est *passé par*
+      `qualifier_desserte()`, pas que la mesure a abouti. Sans LiDAR (NDP 0) cette
+      fonction rend la couche telle quelle en la marquant qualifiée — contrat
+      antérieur à ce contrôle. La porte fermée ici est celle du **candidat brut**.
+      L'autre porte, `preprocess(desserte = )`, n'est pas gardée : le CA nomme
+      `desserte_existante`, et l'étendre demanderait de trancher le cas d'une
+      desserte candidate consommée par les quatre moteurs.
 - [x] **CA-28.5 (juge de paix) — ATTEINT** (annotation utilisateur du
       2026-07-31, 24 tronçons `track` hors corridor, 13,41 km, sur ortho IGN
       actuelle et historique) :

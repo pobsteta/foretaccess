@@ -43,6 +43,11 @@
 #'   only the `franchissable` mask is used. See `pondere_cout`.
 #' @param parcelles An `sf` POLYGON of the areas to serve.
 #' @param desserte_existante An `sf` LINESTRING of the network to connect to.
+#'   **Candidate segments must be qualified first** (CA-28.4): a layer carrying
+#'   `source` `"osm"` ([acquire_desserte_osm()]) or `"detectee"`
+#'   ([detecter_desserte()]) is rejected unless those rows are marked
+#'   `qualifiee` by [qualifier_desserte()]. A plain BD TOPO network has no
+#'   `source` column and is unaffected.
 #' @param strategie Optimisation strategy: `"multistart"` (default), `"recuit"`
 #'   (simulated annealing on the insertion order) or `"riprute"` (rip-up & reroute
 #'   local search).

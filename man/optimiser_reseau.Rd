@@ -32,7 +32,12 @@ only the \code{franchissable} mask is used. See \code{pondere_cout}.}
 
 \item{parcelles}{An \code{sf} POLYGON of the areas to serve.}
 
-\item{desserte_existante}{An \code{sf} LINESTRING of the network to connect to.}
+\item{desserte_existante}{An \code{sf} LINESTRING of the network to connect to.
+\strong{Candidate segments must be qualified first} (CA-28.4): a layer carrying
+\code{source} \code{"osm"} (\code{\link[=acquire_desserte_osm]{acquire_desserte_osm()}}) or \code{"detectee"}
+(\code{\link[=detecter_desserte]{detecter_desserte()}}) is rejected unless those rows are marked
+\code{qualifiee} by \code{\link[=qualifier_desserte]{qualifier_desserte()}}. A plain BD TOPO network has no
+\code{source} column and is unaffected.}
 
 \item{strategie}{Optimisation strategy: \code{"multistart"} (default), \code{"recuit"}
 (simulated annealing on the insertion order) or \code{"riprute"} (rip-up & reroute

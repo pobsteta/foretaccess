@@ -165,3 +165,15 @@ test_that("la methode print affiche la strategie", {
   expect_no_error(print(opt))
   expect_invisible(print(opt))
 })
+
+test_that("CA-28.4 : optimiser_reseau refuse aussi un candidat non qualifie", {
+  # Les deux entrees partagent `.reseau_preparer()` : l'invariant ne doit pas
+  # pouvoir etre contourne en passant par l'optimisation.
+  s <- optim_setup()
+  osm <- s$route
+  osm$source <- "osm"
+  expect_error(
+    optimiser_reseau(s$pre, s$cout, s$parcelles, osm, "multistart",
+                     n_start = 2, graine = 1),
+    "CA-28.4")
+})
