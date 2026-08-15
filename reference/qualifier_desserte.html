@@ -21,7 +21,7 @@ are unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -153,7 +153,10 @@ Unmeasured segments are never dropped.</p></dd>
     <p>An <code>sf</code> conforming to <code><a href="acquire_desserte.html">acquire_desserte()</a></code> (fields <code>classe</code>, <code>largeur</code>,
 geometry) with the LiDAR provenance columns of <code><a href="acquire_desserte_lidar.html">acquire_desserte_lidar()</a></code>
 kept as extras, and a <code>largeur</code> filled from the measured drivable width where
-available. Attributes: <code>ndp</code> (<code>0L</code>/<code>1L</code>) and <code>qualifiee</code> (<code>TRUE</code>).</p>
+available. Attributes: <code>ndp</code> (<code>0L</code>/<code>1L</code>) and <code>qualifiee</code> (<code>TRUE</code>), plus a
+per-row <code>qualifiee</code> column carrying the same mark. The <strong>column</strong> is what
+<code><a href="reseau_desserte.html">reseau_desserte()</a></code> checks (CA-28.4), because it survives subsetting and the
+merge with the declared BD TOPO network, whereas the layer attribute does not.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

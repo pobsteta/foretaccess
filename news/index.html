@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,25 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.5.0" id="foretaccess-250-2026-08-15">foretaccess 2.5.0 (2026-08-15)<a class="anchor" aria-label="anchor" href="#foretaccess-250-2026-08-15"></a></h2>
+<p>Version <strong>mineure</strong> : la règle « aucun tronçon candidat n’entre dans le réseau existant sans qualification » devient une <strong>erreur</strong> (CA-28.4, specs 026 et 028).</p>
+<div class="section level3">
+<h3 id="un-invariant-plus-une-consigne-2-5-0">Un invariant, plus une consigne<a class="anchor" aria-label="anchor" href="#un-invariant-plus-une-consigne-2-5-0"></a></h3>
+<p><code><a href="../reference/reseau_desserte.html">reseau_desserte()</a></code> et <code><a href="../reference/optimiser_reseau.html">optimiser_reseau()</a></code> refusent désormais une <code>desserte_existante</code> portant <code>source</code> <code>"osm"</code> ([<code><a href="../reference/acquire_desserte_osm.html">acquire_desserte_osm()</a></code>]) ou <code>"detectee"</code> ([<code><a href="../reference/detecter_desserte.html">detecter_desserte()</a></code>]) dont les lignes ne sont pas marquées <code>qualifiee</code>. La règle était écrite dans la doc des deux specs et tenue par la seule discipline de l’appelant ; rien dans le code ne l’empêchait. Un candidat n’a ni largeur, ni état, ni portance mesurés : le laisser entrer, c’est ajouter du réseau fantôme à un modèle qu’on vient de rendre conforme à ACCESSFOR.</p>
+<p>Le contrôle est posé dans <code>.reseau_preparer()</code>, le passage commun des deux fonctions — l’invariant ne se contourne pas en passant par l’optimisation.</p>
+</div>
+<div class="section level3">
+<h3 id="qualifier_desserte-marque-aussi-en-colonne-2-5-0">
+<code>qualifier_desserte()</code> marque aussi en colonne<a class="anchor" aria-label="anchor" href="#qualifier_desserte-marque-aussi-en-colonne-2-5-0"></a></h3>
+<p>La marque <code>qualifiee</code> était un <strong>attribut de couche</strong>, que <code>sf</code> perd au premier sous-ensemble et à la première fusion. Or le flux réel est une fusion : on empile le candidat qualifié sur la BD TOPO. <code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code> pose donc désormais <code>qualifiee</code> <strong>en colonne</strong> en plus de l’attribut, et c’est la colonne que le contrôle lit en priorité. L’attribut reste accepté.</p>
+</div>
+<div class="section level3">
+<h3 id="ce-qui-ne-change-pas-2-5-0">Ce qui ne change pas<a class="anchor" aria-label="anchor" href="#ce-qui-ne-change-pas-2-5-0"></a></h3>
+<p>Une desserte BD TOPO pure n’a <strong>pas</strong> de colonne <code>source</code> : le contrôle sort immédiatement, sans effet sur les appels existants — un test le vérifie explicitement. <strong>Limite assumée</strong> : on vérifie que le tronçon est <em>passé par</em> <code><a href="../reference/qualifier_desserte.html">qualifier_desserte()</a></code>, pas que la mesure a abouti (sans LiDAR, NDP 0, cette fonction rend la couche telle quelle en la marquant qualifiée). La porte fermée ici est celle du candidat <strong>brut</strong> ; <code>preprocess(desserte = )</code> n’est pas gardée.</p>
+<p><strong>Spec 028 : tous les critères d’acceptation sont soldés.</strong></p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.4.0" id="foretaccess-240-2026-08-14">foretaccess 2.4.0 (2026-08-14)<a class="anchor" aria-label="anchor" href="#foretaccess-240-2026-08-14"></a></h2>
 <p>Version <strong>mineure</strong>, purement additive : <code><a href="../reference/comparer_desserte_osm.html">comparer_desserte_osm()</a></code> rend enfin la <strong>géométrie</strong> hors corridor, qu’elle calculait déjà et jetait.</p>

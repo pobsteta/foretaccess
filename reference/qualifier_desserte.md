@@ -104,7 +104,12 @@ An `sf` conforming to
 of
 [`acquire_desserte_lidar()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_lidar.md)
 kept as extras, and a `largeur` filled from the measured drivable width
-where available. Attributes: `ndp` (`0L`/`1L`) and `qualifiee` (`TRUE`).
+where available. Attributes: `ndp` (`0L`/`1L`) and `qualifiee` (`TRUE`),
+plus a per-row `qualifiee` column carrying the same mark. The **column**
+is what
+[`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+checks (CA-28.4), because it survives subsetting and the merge with the
+declared BD TOPO network, whereas the layer attribute does not.
 
 ## Details
 

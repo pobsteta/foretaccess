@@ -17,7 +17,7 @@ annealing) and "riprute" (rip-up &amp;amp; reroute) are planned (Lot 18b/18c).'>
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,7 +102,12 @@ only the <code>franchissable</code> mask is used. See <code>pondere_cout</code>.
 
 
 <dt id="arg-desserte-existante">desserte_existante<a class="anchor" aria-label="anchor" href="#arg-desserte-existante"></a></dt>
-<dd><p>An <code>sf</code> LINESTRING of the network to connect to.</p></dd>
+<dd><p>An <code>sf</code> LINESTRING of the network to connect to.
+<strong>Candidate segments must be qualified first</strong> (CA-28.4): a layer carrying
+<code>source</code> <code>"osm"</code> (<code><a href="acquire_desserte_osm.html">acquire_desserte_osm()</a></code>) or <code>"detectee"</code>
+(<code><a href="detecter_desserte.html">detecter_desserte()</a></code>) is rejected unless those rows are marked
+<code>qualifiee</code> by <code><a href="qualifier_desserte.html">qualifier_desserte()</a></code>. A plain BD TOPO network has no
+<code>source</code> column and is unaffected.</p></dd>
 
 
 <dt id="arg-strategie">strategie<a class="anchor" aria-label="anchor" href="#arg-strategie"></a></dt>

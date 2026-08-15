@@ -50,7 +50,14 @@ optimiser_reseau(
 
 - desserte_existante:
 
-  An `sf` LINESTRING of the network to connect to.
+  An `sf` LINESTRING of the network to connect to. **Candidate segments
+  must be qualified first** (CA-28.4): a layer carrying `source` `"osm"`
+  ([`acquire_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte_osm.md))
+  or `"detectee"`
+  ([`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md))
+  is rejected unless those rows are marked `qualifiee` by
+  [`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md).
+  A plain BD TOPO network has no `source` column and is unaffected.
 
 - strategie:
 

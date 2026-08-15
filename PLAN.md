@@ -401,7 +401,25 @@
   le cast la couche part en GeoPackage avec deux types), couche vide en
   `sf` à 0 ligne. Débloque le calque « pistes OSM hors BD TOPO » de
   `nemetonshiny`, qui écrivait jusqu’ici la couche OSM **brute**,
-  doublons de la BD TOPO compris.
+  doublons de la BD TOPO compris. **CA-28.3 clos le 2026-08-15** : la
+  table du §1 de la spec 028 est reproduite cellule pour cellule
+  (`data-raw/ca_28_3_table_sec1.R`) ; l’écart apparent venait de la
+  classe `hors_desserte`, conservée par défaut depuis le 2026-07-30, qui
+  élargit le corridor (spec 028 §1.3). **CA-28.1 coché** dans la foulée
+  (ses trois volets ont chacun leur test dans `test-desserte-osm.R`
+  depuis l’implémentation).
+- **`v2.5.0` posée : l’invariant CA-28.4 devient une erreur**
+  (2026-08-15). `.reseau_preparer()` — passage commun de
+  [`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+  et
+  [`optimiser_reseau()`](https://pobsteta.github.io/foretaccess/reference/optimiser_reseau.md)
+  — refuse une `desserte_existante` portant `source` `"osm"` ou
+  `"detectee"` dont les lignes ne sont pas marquées `qualifiee` ;
+  [`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+  pose désormais cette marque **en colonne** en plus de l’attribut de
+  couche (seule la colonne survit au sous-ensemble et à la fusion avec
+  la BD TOPO). Une desserte BD TOPO pure n’a pas de colonne `source` :
+  le contrôle est un no-op. **Spec 028 : tous les CA sont soldés.**
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code.
   [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
   et
@@ -644,6 +662,87 @@ ni `leastcostpath` ne renvoient l’allocation.
 ------------------------------------------------------------------------
 
 ## Journal
+
+### 2026-08-15 — `v2.5.0` : CA-28.4, la règle écrite devient une erreur
+
+« Aucun tronçon OSM n’entre dans `desserte_existante` sans qualification
+» était écrit dans la doc des specs 026 et 028, répété dans trois
+`@details`, et tenu par la **seule discipline de l’appelant**. Rien dans
+le code ne l’empêchait. C’est tout l’écart entre une règle documentée et
+un invariant.
+
+`.reseau_preparer()` — le passage commun de
+[`reseau_desserte()`](https://pobsteta.github.io/foretaccess/reference/reseau_desserte.md)
+et
+[`optimiser_reseau()`](https://pobsteta.github.io/foretaccess/reference/optimiser_reseau.md),
+donc le bon goulot — refuse maintenant une `desserte_existante` portant
+`source` `"osm"` ou `"detectee"` dont les lignes ne sont pas marquées
+`qualifiee`.
+
+**Le point de conception, c’est la marque, pas le contrôle.**
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md)
+posait `attr(x, "qualifiee") <- TRUE` — un attribut de couche, que `sf`
+perd au premier sous-ensemble et à la première fusion. Or le flux réel
+est précisément une fusion : on empile le candidat qualifié sur la BD
+TOPO. La marque est donc posée **en colonne** en plus de l’attribut, et
+c’est la colonne que le contrôle lit en priorité. Les lignes BD TOPO,
+elles, n’ont pas de `source` : elles ne sont jamais mises en cause, même
+dans un mélange.
+
+**Coût de non-régression : nul.** Une desserte BD TOPO pure n’a pas de
+colonne `source`, le contrôle sort immédiatement. Tous les appels
+existants sont intacts, et un test le vérifie explicitement plutôt que
+de l’espérer.
+
+**Limite assumée, écrite dans la spec** : on vérifie que le tronçon est
+*passé par*
+[`qualifier_desserte()`](https://pobsteta.github.io/foretaccess/reference/qualifier_desserte.md),
+pas que la mesure a abouti — sans LiDAR (NDP 0) cette fonction rend la
+couche telle quelle en la marquant qualifiée, contrat antérieur. La
+porte fermée est celle du candidat **brut**. L’autre porte,
+`preprocess(desserte = )`, reste ouverte : le CA nomme
+`desserte_existante`, et l’étendre demanderait de trancher le cas d’une
+desserte candidate consommée par les quatre moteurs.
+
+**Spec 028 : tous les CA sont soldés.**
+
+### 2026-08-15 — CA-28.3 clos : la table du §1 tombe au centième, et pourquoi elle a bougé
+
+[`comparer_desserte_osm()`](https://pobsteta.github.io/foretaccess/reference/comparer_desserte_osm.md)
+reproduit la table du §1 de la spec 028 **cellule pour cellule** sur
+l’AOI Chastel-Nouvel (`data-raw/ca_28_3_table_sec1.R`) : `track` 13,522
+contre 13,52 km hors corridor, `path` 14,090 contre 14,09,
+`unclassified` 1,058 contre 1,06, `tertiary` 3,792 contre 3,79, part
+déjà couverte **55,7 %** contre 55,7 %. Le §1.2 tombe juste sans rien
+retirer : `piste` 5,4006 km, `reseau_public` 0,0099 km.
+
+**Le premier passage ne tombait pas juste, et c’est ça qui était
+intéressant.** La BD TOPO acquise aujourd’hui rend **214 tronçons /
+55,77 km** contre 169 / 44,64 en juillet. L’écart n’est ni une dérive de
+la fonction ni une édition amont : c’est la classe **`hors_desserte`**
+(sentiers, ronds-points, liaisons, `CL_SVAC = 0`), conservée par défaut
+depuis le 2026-07-30 — 45 tronçons, 11,13 km, exactement l’écart. Ces
+tronçons **élargissent le corridor**, donc rabotent le linéaire OSM
+compté dehors : `track` 13,52 → 12,07 km, `path` 14,09 → 9,30. Retirer
+la classe rend les 169 tronçons et 44,64 km au tronçon près, et la table
+entière avec.
+
+Le resserrement va dans le bon sens : un `track` OSM qui suit un sentier
+déjà présent en BD TOPO n’est pas une découverte. La spec porte
+désormais un §1.3 qui donne les deux colonnes — la mesure historique, et
+ce qu’un appelant obtient aujourd’hui sans argument particulier.
+
+**Ce que la 2.4.0 a permis de vérifier en plus des nombres** : la
+longueur de chaque géométrie clippée **égale `hors_m` à 0 m près** (67
+tronçons), et `tracktype` est renseigné sur **13 `track` sur 26** — les
+50 % du CA-28.2, retrouvés deux semaines plus tard sur un tirage
+indépendant. On ne vérifie plus seulement une table : on ouvre la couche
+qu’elle compte.
+
+Nuance conservée : sur les entrées du §1, les `track` hors corridor sont
+aujourd’hui 28 pour 13,52 km, là où l’annotation du CA-28.5 en couvrait
+24 pour 13,41 km. Les 4 de plus pèsent 0,11 km, mais le taux de 92,9 %
+porte sur les 24.
 
 ### 2026-08-14 — `v2.4.0` : la géométrie qu’on calculait puis jetait
 
