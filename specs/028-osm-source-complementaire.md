@@ -55,6 +55,34 @@ cumulé sur 88 tronçons. La complémentarité est donc **asymétrique et entiè
 concentrée sur les pistes** : OSM en apporte ~13,5 km d'inconnues, la BD TOPO en
 apporte 5,4 km qu'OSM n'a pas.
 
+### 1.3. Ce que `hors_desserte` change à ces tables (2026-08-15)
+
+Les deux tables ci-dessus ont été mesurées le 2026-07-30 sur une BD TOPO de
+**169 tronçons / 44,64 km**. Depuis le jour même (`6b9df26` / `451935d`),
+`acquire_desserte()` conserve par défaut la classe **`hors_desserte`** (sentiers,
+ronds-points, liaisons — `CL_SVAC = 0`) : sur la même AOI, elle ajoute
+**45 tronçons / 11,13 km**, soit 214 tronçons / 55,77 km.
+
+Ces tronçons **élargissent le corridor**, donc réduisent mécaniquement le
+linéaire OSM compté « hors corridor » :
+
+| | table du §1 (169 tr.) | défaut actuel (214 tr.) |
+|---|---:|---:|
+| OSM déjà dans le corridor | 55,7 % | **64,2 %** |
+| `track` hors corridor | 13,52 km | **12,07 km** |
+| `path` hors corridor | 14,09 km | **9,30 km** |
+| `unclassified` / `tertiary` / `service` | 1,06 / 3,79 / 0,05 km | identiques |
+
+Le §1.2 (BD TOPO hors corridor OSM) est **inchangé** : `piste` 5,40 km, `route`
+0,00 km, `reseau_public` 0,01 km — `hors_desserte` n'y ajoute qu'une **ligne**
+(4,20 km) sans toucher aux trois autres.
+
+**Ce resserrement va dans le bon sens** : un `track` OSM qui suit un sentier déjà
+présent en BD TOPO n'est pas une découverte, et c'est précisément ce que
+`hors_desserte` absorbe. La table du §1 reste la référence historique de la
+mesure ; c'est la colonne de droite qui décrit ce qu'un appelant obtient
+aujourd'hui **sans argument particulier**.
+
 ## 2. Pourquoi c'est préférable à la détection, et pourquoi ça ne la remplace pas
 
 **Préférable** : déjà vectorisé (pas de squelettisation), déjà attribué
@@ -134,10 +162,39 @@ du taux de renseignement.
       laisserait la moitié du gisement sans information : utilisable comme
       **indice**, pas comme **filtre**. Valeurs présentes : 8 `grade2`,
       3 `grade3`, 1 `grade4`.
-- [ ] **CA-28.3** — `comparer_desserte_osm()` reproduit la table du §1. *Toujours
-      ouvert* : la vérification demande l'AOI oracle Chastel-Nouvel et un appel
-      Overpass. Depuis `2.4.0` la fonction rend les **géométries** hors corridor,
-      donc de quoi vérifier la table **et** inspecter ce qu'elle compte.
+- [x] **CA-28.3 — ATTEINT** (2026-08-15, `data-raw/ca_28_3_table_sec1.R`, AOI
+      Chastel-Nouvel). Sur les **mêmes entrées** que la mesure d'origine — BD TOPO
+      restreinte aux trois classes de desserte (169 tronçons, 44,64 km, valeurs de
+      la table au tronçon et au centième près) et OSM en une requête `highway`
+      toutes valeurs (115 lignes, 73,35 km) — `comparer_desserte_osm()` rend la
+      table du §1.1 **cellule pour cellule** :
+
+      | type | total (réf / obtenu) | hors corridor (réf / obtenu) | écart |
+      |---|---:|---:|---:|
+      | `track` | 40,28 / 40,28 | 13,52 / **13,522** | 0,00 |
+      | `path` | 17,53 / 17,53 | 14,09 / **14,090** | 0,00 |
+      | `unclassified` | 8,47 / 8,47 | 1,06 / **1,058** | 0,00 |
+      | `tertiary` | 6,59 / 6,59 | 3,79 / **3,792** | 0,00 |
+      | `service`+`residential` | 0,48 / 0,48 | 0,05 / **0,052** | 0,00 |
+
+      Part déjà dans le corridor : **55,7 %** contre 55,7 %. Le §1.2 tombe juste
+      aussi, et sans retrait de classe : `piste` **5,4006** km, `reseau_public`
+      **0,0099** km, `route` **0,000** km.
+
+      L'écart apparent avec le défaut d'aujourd'hui (64,2 %, `track` à 12,07 km)
+      ne vient **pas** de la fonction mais de son entrée : voir §1.3.
+
+      Deux corroborations au passage, sur la couche `$osm_hors_corridor` livrée en
+      `2.4.0` : `tracktype` renseigné sur **13 `track` sur 26** — les 50 % du
+      CA-28.2, réaffirmés deux semaines plus tard sur un tirage indépendant — et
+      la longueur de chaque géométrie clippée **égale `hors_m` à 0 m près**, ce qui
+      prouve que la colonne et la géométrie décrivent bien le même objet.
+
+      Une nuance à garder : sur les entrées du §1, les `track` hors corridor sont
+      aujourd'hui **28 tronçons pour 13,52 km**, là où l'annotation du CA-28.5 en
+      couvrait **24 pour 13,41 km**. Les 4 tronçons de plus pèsent 0,11 km — des
+      bouts, pas un gisement — mais le taux de 92,9 % porte sur les 24 annotés,
+      pas sur les 28.
 - [ ] **CA-28.4** — Aucun tronçon OSM n'entre dans `desserte_existante` sans
       qualification (invariant testé).
 - [x] **CA-28.5 (juge de paix) — ATTEINT** (annotation utilisateur du
