@@ -261,9 +261,10 @@
   BD TOPO compris. **CA-28.3 clos le 2026-08-15** : la table du §1 de la spec 028 est
   reproduite cellule pour cellule (`data-raw/ca_28_3_table_sec1.R`) ; l'écart apparent
   venait de la classe `hors_desserte`, conservée par défaut depuis le 2026-07-30, qui
-  élargit le corridor (spec 028 §1.3). Restent ouverts sur la spec 028 : **CA-28.1**
-  (couvert par les tests de `test-desserte-osm.R`, jamais coché) et **CA-28.4**
-  (invariant « aucun tronçon OSM dans `desserte_existante` sans qualification »).
+  élargit le corridor (spec 028 §1.3). **CA-28.1 coché** dans la foulée (ses trois
+  volets ont chacun leur test dans `test-desserte-osm.R` depuis l'implémentation).
+  Reste ouvert sur la spec 028 : le seul **CA-28.4** — l'invariant « aucun tronçon
+  OSM n'entre dans `desserte_existante` sans qualification », qui n'est pas testé.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est

@@ -154,9 +154,14 @@ du taux de renseignement.
 
 ## 6. Critères d'acceptation
 
-- [ ] **CA-28.1** — `acquire_desserte_osm()` rend les `highway` filtrés avec
-      leurs attributs ; sans réseau, dégradation propre. Overpass injoignable →
-      **erreur relayée**, jamais une couche vide (règle posée le 2026-07-30).
+- [x] **CA-28.1 — ATTEINT**, couvert par `tests/testthat/test-desserte-osm.R`
+      depuis l'implémentation, coché le 2026-08-15. Les trois volets ont chacun
+      leur test : *« ne retient que les types de desserte »* (`highway` filtrés,
+      `source = "osm"`, `path` et `tertiary` exclus, `tracktype` conservé),
+      *« Overpass injoignable LEVE, ne rend jamais une couche vide »* (erreur
+      relayée — la règle posée le 2026-07-30), et *« une emprise sans ligne OSM
+      rend une couche vide, pas une erreur »* (dégradation propre). Overpass
+      n'étant pas joignable en CI, `.fetch_osm()` y est mocké.
 - [x] **CA-28.2 — MESURÉ** (2026-07-31) : `tracktype` renseigné sur **12 des 24
       `track`** hors corridor de l'AOI, soit **50 %**. Un pré-tri sur cet attribut
       laisserait la moitié du gisement sans information : utilisable comme
