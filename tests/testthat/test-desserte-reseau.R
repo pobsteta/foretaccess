@@ -224,3 +224,81 @@ test_that("sortie affinee : les lignes portent une longueur planimetrique positi
   expect_true("longueur" %in% names(net$lignes))
   expect_true(all(net$lignes$longueur > 0))
 })
+
+# --- CA-28.4 (spec 028) et regle jumelle de la spec 026 ---------------------
+# Un troncon CANDIDAT -- OSM ou detecte -- n'a ni largeur, ni etat, ni portance
+# mesures. Le laisser entrer dans le reseau existant, c'est ajouter du reseau
+# fantome a un modele qu'on vient de rendre conforme a ACCESSFOR. La regle etait
+# ecrite dans la doc des deux specs et tenue par la seule discipline de
+# l'appelant : ces tests en font un invariant.
+
+# Meme route que `reseau_route()`, mais estampillee d'une source candidate.
+reseau_route_candidate <- function(grille, source = "osm", qualifiee = NULL) {
+  r <- reseau_route(grille)
+  r$source <- source
+  if (!is.null(qualifiee)) r$qualifiee <- qualifiee
+  r
+}
+
+test_that("CA-28.4 : un troncon OSM non qualifie est REFUSE", {
+  s <- reseau_setup()
+  osm <- reseau_route_candidate(s$pre$mnt, "osm")
+  expect_error(
+    reseau_desserte(s$pre, s$cout, s$parcelles, osm, "plus_proche"),
+    "CA-28.4")
+  expect_error(
+    reseau_desserte(s$pre, s$cout, s$parcelles, osm, "plus_proche"),
+    "qualifier_desserte")
+})
+
+test_that("CA-28.4 : un troncon DETECTE non qualifie est refuse de la meme facon", {
+  # Les deux sources suivent le meme parcours (spec 026 sec. 4.3) : pas de
+  # regime de faveur pour la detection morphometrique.
+  s <- reseau_setup()
+  det <- reseau_route_candidate(s$pre$mnt, "detectee")
+  expect_error(
+    reseau_desserte(s$pre, s$cout, s$parcelles, det, "plus_proche"),
+    "CA-28.4")
+})
+
+test_that("CA-28.4 : qualifie par COLONNE, il passe", {
+  # La marque par ligne est celle qui compte : elle survit au sous-ensemble et a
+  # la fusion avec la BD TOPO, ce que l'attribut de couche ne fait pas.
+  s <- reseau_setup()
+  osm <- reseau_route_candidate(s$pre$mnt, "osm", qualifiee = TRUE)
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, osm, "plus_proche")
+  expect_s3_class(net, "foretaccess_reseau")
+})
+
+test_that("CA-28.4 : qualifie par ATTRIBUT de couche, il passe aussi", {
+  # C'est la marque que `qualifier_desserte()` pose depuis toujours.
+  s <- reseau_setup()
+  osm <- reseau_route_candidate(s$pre$mnt, "osm")
+  attr(osm, "qualifiee") <- TRUE
+  net <- reseau_desserte(s$pre, s$cout, s$parcelles, osm, "plus_proche")
+  expect_s3_class(net, "foretaccess_reseau")
+})
+
+test_that("CA-28.4 : un melange BD TOPO + OSM brut est refuse pour le seul OSM", {
+  # Le cas realiste : on empile un candidat sur la reference. La BD TOPO n'a pas
+  # de `source`, donc pas de marque -- elle ne doit pas etre mise en cause.
+  s <- reseau_setup()
+  bdt <- s$route
+  bdt$source <- NA_character_
+  bdt$qualifiee <- NA
+  osm <- reseau_route_candidate(s$pre$mnt, "osm", qualifiee = FALSE)
+  melange <- rbind(bdt, osm)
+  expect_error(
+    reseau_desserte(s$pre, s$cout, s$parcelles, melange, "plus_proche"),
+    "1 troncon candidat")
+})
+
+test_that("CA-28.4 : une desserte BD TOPO pure n'est pas concernee", {
+  # Pas de colonne `source` : le controle est un no-op. Non-regression de tous
+  # les appels existants.
+  s <- reseau_setup()
+  expect_false("source" %in% names(s$route))
+  expect_s3_class(
+    reseau_desserte(s$pre, s$cout, s$parcelles, s$route, "plus_proche"),
+    "foretaccess_reseau")
+})

@@ -63,7 +63,10 @@
 #' @return An `sf` conforming to [acquire_desserte()] (fields `classe`, `largeur`,
 #'   geometry) with the LiDAR provenance columns of [acquire_desserte_lidar()]
 #'   kept as extras, and a `largeur` filled from the measured drivable width where
-#'   available. Attributes: `ndp` (`0L`/`1L`) and `qualifiee` (`TRUE`).
+#'   available. Attributes: `ndp` (`0L`/`1L`) and `qualifiee` (`TRUE`), plus a
+#'   per-row `qualifiee` column carrying the same mark. The **column** is what
+#'   `reseau_desserte()` checks (CA-28.4), because it survives subsetting and the
+#'   merge with the declared BD TOPO network, whereas the layer attribute does not.
 #' @seealso [acquire_desserte_lidar()] (the underlying measurement),
 #'   [acquire_desserte()] (the declared input), [preprocess()] (the consumer).
 #' @export
@@ -92,6 +95,7 @@ qualifier_desserte <- function(desserte, las_source, mnt, mnh = NULL,
              desserte declaree renvoyee telle quelle (ni relocalisation ni largeur)."
     ))
     attr(dl, "qualifiee") <- TRUE
+    dl$qualifiee <- TRUE
     return(dl)
   }
 
@@ -138,6 +142,7 @@ qualifier_desserte <- function(desserte, las_source, mnt, mnh = NULL,
            grumier retire{?s}}."
   ))
   attr(dl, "qualifiee") <- TRUE
+  dl$qualifiee <- TRUE
   dl
   # nocov end
 }
