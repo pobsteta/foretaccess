@@ -258,7 +258,13 @@
   plus `hors_m`, type homogène en `MULTILINESTRING` (seul piège réel : sans le cast la couche part
   en GeoPackage avec deux types), couche vide en `sf` à 0 ligne. Débloque le calque « pistes OSM
   hors BD TOPO » de `nemetonshiny`, qui écrivait jusqu'ici la couche OSM **brute**, doublons de la
-  BD TOPO compris.
+  BD TOPO compris. **CA-28.3 clos le 2026-08-15** : la table du §1 de la spec 028 est
+  reproduite cellule pour cellule (`data-raw/ca_28_3_table_sec1.R`) ; l'écart apparent
+  venait de la classe `hors_desserte`, conservée par défaut depuis le 2026-07-30, qui
+  élargit le corridor (spec 028 §1.3). **CA-28.1 coché** dans la foulée (ses trois
+  volets ont chacun leur test dans `test-desserte-osm.R` depuis l'implémentation).
+  Reste ouvert sur la spec 028 : le seul **CA-28.4** — l'invariant « aucun tronçon
+  OSM n'entre dans `desserte_existante` sans qualification », qui n'est pas testé.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code. `detecter_desserte()` et
   `detecter_desserte_balayage()` sont livrés (`R/desserte-detectee.R`) avec le tarif de réouverture
   (`config$desserte$cout$fraction_reouverture`) ; **l'injection dans `reseau_desserte()` est
@@ -460,6 +466,39 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 ---
 
 ## Journal
+
+### 2026-08-15 — CA-28.3 clos : la table du §1 tombe au centième, et pourquoi elle a bougé
+
+`comparer_desserte_osm()` reproduit la table du §1 de la spec 028 **cellule pour
+cellule** sur l'AOI Chastel-Nouvel (`data-raw/ca_28_3_table_sec1.R`) : `track`
+13,522 contre 13,52 km hors corridor, `path` 14,090 contre 14,09, `unclassified`
+1,058 contre 1,06, `tertiary` 3,792 contre 3,79, part déjà couverte **55,7 %**
+contre 55,7 %. Le §1.2 tombe juste sans rien retirer : `piste` 5,4006 km,
+`reseau_public` 0,0099 km.
+
+**Le premier passage ne tombait pas juste, et c'est ça qui était intéressant.**
+La BD TOPO acquise aujourd'hui rend **214 tronçons / 55,77 km** contre 169 / 44,64
+en juillet. L'écart n'est ni une dérive de la fonction ni une édition amont : c'est
+la classe **`hors_desserte`** (sentiers, ronds-points, liaisons, `CL_SVAC = 0`),
+conservée par défaut depuis le 2026-07-30 — 45 tronçons, 11,13 km, exactement
+l'écart. Ces tronçons **élargissent le corridor**, donc rabotent le linéaire OSM
+compté dehors : `track` 13,52 → 12,07 km, `path` 14,09 → 9,30. Retirer la classe
+rend les 169 tronçons et 44,64 km au tronçon près, et la table entière avec.
+
+Le resserrement va dans le bon sens : un `track` OSM qui suit un sentier déjà
+présent en BD TOPO n'est pas une découverte. La spec porte désormais un §1.3 qui
+donne les deux colonnes — la mesure historique, et ce qu'un appelant obtient
+aujourd'hui sans argument particulier.
+
+**Ce que la 2.4.0 a permis de vérifier en plus des nombres** : la longueur de
+chaque géométrie clippée **égale `hors_m` à 0 m près** (67 tronçons), et
+`tracktype` est renseigné sur **13 `track` sur 26** — les 50 % du CA-28.2,
+retrouvés deux semaines plus tard sur un tirage indépendant. On ne vérifie plus
+seulement une table : on ouvre la couche qu'elle compte.
+
+Nuance conservée : sur les entrées du §1, les `track` hors corridor sont
+aujourd'hui 28 pour 13,52 km, là où l'annotation du CA-28.5 en couvrait 24 pour
+13,41 km. Les 4 de plus pèsent 0,11 km, mais le taux de 92,9 % porte sur les 24.
 
 ### 2026-08-14 — `v2.4.0` : la géométrie qu'on calculait puis jetait
 
