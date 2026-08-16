@@ -1,6 +1,13 @@
 # BRIEF `foretaccess` — `comparer_desserte_osm()` doit rendre la géométrie hors corridor
 
-> **Statut** : ouvert, 2026-08-14.
+> **Statut** : **LIVRÉ en `2.4.0`** (2026-08-14). Une reprise en `2.6.0`
+> (2026-08-16) : le §4 ci-dessous fait retirer `long_m` de la couche comme
+> « colonne de travail » — à tort. C'est le **dénominateur** de `hors_m`, que le
+> brief demandeur (`specs/BRIEF-foretaccess-osm-hors-corridor.md` §4) réclamait
+> explicitement, et sans lequel 170 m hors corridor ne se lit ni sur un tronçon
+> de 200 m ni sur un de 2 km. Seule `hors_m` en double reste à écarter.
+>
+> **Statut d'origine** : ouvert, 2026-08-14.
 > **Package concerné** : `foretaccess` (source canonique). Demandeur :
 > `nemetonshiny`, onglet Desserte — cf.
 > `specs/brief-nemetonshiny-desserte-visualisation.md` §4.

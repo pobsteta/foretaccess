@@ -1,3 +1,31 @@
+# foretaccess 2.6.0 (2026-08-16)
+
+Version **mineure**, additive : les deux couches hors corridor de
+`comparer_desserte_osm()` portent enfin leur **dénominateur**.
+
+## `long_m` sur `$osm_hors_corridor` et `$bdtopo_hors_corridor`
+
+La `2.4.0` livrait les géométries clippées avec `hors_m` seul, `long_m` étant
+écartée comme « colonne de travail ». C'était une erreur d'appréciation : `hors_m`
+ne se lit pas sans la longueur du tronçon d'origine. **170 m hors corridor ne dit
+pas la même chose sur un tronçon de 200 m que sur un tronçon de 2 km** — dans le
+premier cas la voie est massivement absente de la BD TOPO, dans le second c'est
+une amorce. C'est cette part que l'aval affiche en infobulle.
+
+`long_m` mesure donc le tronçon **entier, avant clip** ; `hors_m` reste la part
+hors corridor, et la géométrie rendue reste celle de `hors_m`. Les trois tables
+(`osm`, `bdtopo`, `resume`), `corridor_m`, la classe `foretaccess_osm_compare` et
+le coût de calcul sont **inchangés** — un test de non-régression les fige.
+
+## La réserve suit les géométries
+
+Le `@return` des deux couches redit désormais, mot pour mot, ce que dit déjà le
+`print()` : un linéaire hors corridor est un **gisement à instruire**, pas une
+desserte manquante prouvée. Une carte affirme plus qu'un tableau — un tronçon
+dessiné sur un fond satellite se lit comme un constat, là où « 2,4 km hors
+corridor » se lit comme un indicateur. Un aval qui cartographie ces couches doit
+porter ce texte à l'écran, pas une reformulation.
+
 # foretaccess 2.5.0 (2026-08-15)
 
 Version **mineure** : la règle « aucun tronçon candidat n'entre dans le réseau

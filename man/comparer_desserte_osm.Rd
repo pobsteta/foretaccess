@@ -23,10 +23,15 @@ Une liste de classe \code{foretaccess_osm_compare} :
 \code{osm_couvert_pct}, \code{bdtopo_km}, \code{bdtopo_hors_km}).}
 \item{\code{corridor_m}}{la demi-largeur employée.}
 \item{\code{osm_hors_corridor}}{\code{sf} des tronçons OSM \strong{amputés} de leur part
-dans le corridor BD TOPO : attributs d'origine plus \code{hors_m} (m).
-Géométrie homogène en \code{MULTILINESTRING}, CRS de l'entrée, \code{sf} à 0 ligne
-si rien ne sort du corridor (jamais \code{NULL}).}
-\item{\code{bdtopo_hors_corridor}}{le symétrique, BD TOPO hors corridor OSM.}
+dans le corridor BD TOPO : attributs d'origine, plus \code{long_m} (longueur
+du tronçon entier, avant clip) et \code{hors_m} (la part hors corridor, dont
+la somme vaut \code{resume[["osm_hors_km"]]}). Les tronçons intégralement
+couverts sont \strong{absents} de la couche. Géométrie homogène en
+\code{MULTILINESTRING}, CRS de l'entrée, \code{sf} à 0 ligne si rien ne sort du
+corridor (jamais \code{NULL}). Comme les kilomètres, ces tronçons sont un
+\strong{gisement à instruire}, pas une desserte manquante prouvée.}
+\item{\code{bdtopo_hors_corridor}}{le symétrique, BD TOPO hors corridor OSM,
+mêmes garanties et même réserve.}
 }
 }
 \description{
@@ -45,6 +50,12 @@ tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié hors
 corridor, sans quoi on présenterait comme « absent de la BD TOPO » un linéaire
 qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
 déjà calculée pour mesurer le linéaire.
+
+La réserve ci-dessus \strong{suit les géométries}, et pas seulement les kilomètres.
+Une carte affirme plus qu'un tableau : un tronçon dessiné sur un fond
+satellite se lit comme un constat, là où « 2,4 km hors corridor » se lit comme
+un indicateur. Un aval qui cartographie ces couches doit porter le texte du
+\code{print()} à l'écran, pas une reformulation.
 }
 \section{Performance}{
 

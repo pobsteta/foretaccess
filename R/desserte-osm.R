@@ -124,6 +124,12 @@ acquire_desserte_osm <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #' qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
 #' déjà calculée pour mesurer le linéaire.
 #'
+#' La réserve ci-dessus **suit les géométries**, et pas seulement les kilomètres.
+#' Une carte affirme plus qu'un tableau : un tronçon dessiné sur un fond
+#' satellite se lit comme un constat, là où « 2,4 km hors corridor » se lit comme
+#' un indicateur. Un aval qui cartographie ces couches doit porter le texte du
+#' `print()` à l'écran, pas une reformulation.
+#'
 #' @section Performance:
 #' Recoupement geometrique de deux couches, tempere par l'index spatial de `sf`.
 #' **104 s** pour 3 122 x 544 troncons (mesure nemetonshiny, 2026-08-12).
@@ -140,10 +146,15 @@ acquire_desserte_osm <- function(aoi, crs = 2154, cache_dir = tempdir(),
 #'       `osm_couvert_pct`, `bdtopo_km`, `bdtopo_hors_km`).}
 #'     \item{`corridor_m`}{la demi-largeur employée.}
 #'     \item{`osm_hors_corridor`}{`sf` des tronçons OSM **amputés** de leur part
-#'       dans le corridor BD TOPO : attributs d'origine plus `hors_m` (m).
-#'       Géométrie homogène en `MULTILINESTRING`, CRS de l'entrée, `sf` à 0 ligne
-#'       si rien ne sort du corridor (jamais `NULL`).}
-#'     \item{`bdtopo_hors_corridor`}{le symétrique, BD TOPO hors corridor OSM.}
+#'       dans le corridor BD TOPO : attributs d'origine, plus `long_m` (longueur
+#'       du tronçon entier, avant clip) et `hors_m` (la part hors corridor, dont
+#'       la somme vaut `resume[["osm_hors_km"]]`). Les tronçons intégralement
+#'       couverts sont **absents** de la couche. Géométrie homogène en
+#'       `MULTILINESTRING`, CRS de l'entrée, `sf` à 0 ligne si rien ne sort du
+#'       corridor (jamais `NULL`). Comme les kilomètres, ces tronçons sont un
+#'       **gisement à instruire**, pas une desserte manquante prouvée.}
+#'     \item{`bdtopo_hors_corridor`}{le symétrique, BD TOPO hors corridor OSM,
+#'       mêmes garanties et même réserve.}
 #'   }
 #' @seealso [acquire_desserte_osm()], `specs/028`.
 #' @export
@@ -214,7 +225,10 @@ comparer_desserte_osm <- function(bdtopo, osm, corridor_m = 15) {
   )
 }
 
-# Assemble les morceaux hors corridor en un `sf` : attributs d'origine + hors_m.
+# Assemble les morceaux hors corridor en un `sf` : attributs d'origine, plus
+# long_m (le troncon ENTIER, avant clip) et hors_m (ce qui en sort du corridor).
+# long_m est le denominateur sans lequel hors_m ne se lit pas : 170 m hors
+# corridor ne veut pas dire la meme chose sur un troncon de 200 m ou de 2 km.
 # st_difference rend un LINESTRING quand rien n'est coupe et un MULTILINESTRING
 # quand le corridor coupe le troncon en deux ; sans le cast la couche porterait
 # DEUX types de geometrie et l'ecriture GeoPackage en aval deviendrait hasardeuse.
@@ -222,14 +236,20 @@ comparer_desserte_osm <- function(bdtopo, osm, corridor_m = 15) {
   crs <- sf::st_crs(x)
   att <- sf::st_drop_geometry(x)
   att <- att[, setdiff(names(att), c("long_m", "hors_m")), drop = FALSE]
-  att$hors_m <- h$long
   keep <- which(h$long > 0)
   g <- if (length(keep)) {
     sf::st_cast(do.call(c, h$parts[keep]), "MULTILINESTRING")
   } else {
     sf::st_sfc(sf::st_multilinestring(), crs = crs)[0]
   }
-  sf::st_sf(att[keep, , drop = FALSE], geometry = g, crs = crs)
+  att <- att[keep, , drop = FALSE]
+  att$long_m <- if (length(keep)) {
+    as.numeric(sf::st_length(sf::st_geometry(x)[keep]))
+  } else {
+    numeric(0)
+  }
+  att$hors_m <- h$long[keep]
+  sf::st_sf(att, geometry = g, crs = crs)
 }
 
 #' @export

@@ -94,11 +94,12 @@ test_that("comparer_desserte_osm rend la geometrie hors corridor", {
   expect_equal(sum(as.numeric(sf::st_length(hc))), 100, tolerance = 1e-6)
   expect_equal(unname(cmp$resume[["osm_hors_km"]]),
                sum(hc$hors_m) / 1000, tolerance = 1e-6)
-  # Attributs d'origine conserves, colonnes de travail exclues.
+  # Attributs d'origine conserves.
   expect_equal(hc$highway, "track")
   expect_equal(hc$source, "osm")
   expect_equal(hc$tracktype, "grade3")
-  expect_false("long_m" %in% names(hc))
+  # long_m = le troncon ENTIER : sans ce denominateur, hors_m ne se lit pas.
+  expect_equal(hc$long_m, 100, tolerance = 1e-6)
   expect_equal(sf::st_crs(hc), sf::st_crs(2154))
   # La piste BD TOPO est couverte par l'OSM voisin : couche vide, pas NULL.
   expect_s3_class(cmp$bdtopo_hors_corridor, "sf")
@@ -125,6 +126,10 @@ test_that("un troncon qui traverse le corridor est CLIPPE, type homogene", {
   traverse <- hc[hc$hors_m > 150, ]
   expect_equal(traverse$hors_m, 170, tolerance = 1e-6)
   expect_lt(as.numeric(sf::st_length(traverse)), 200)
+  # long_m mesure le troncon d'origine, pas ce qu'il en reste apres clip.
+  expect_equal(traverse$long_m, 200, tolerance = 1e-6)
+  expect_equal(as.numeric(sf::st_length(traverse)), traverse$hors_m,
+               tolerance = 1e-6)
   # Un seul type de geometrie sur toute la couche.
   expect_equal(unique(as.character(sf::st_geometry_type(hc))), "MULTILINESTRING")
 })
@@ -163,6 +168,6 @@ test_that("comparer_desserte_osm tient sur des couches vides", {
     expect_s3_class(couche, "sf")
     expect_equal(nrow(couche), 0L)
     expect_equal(sf::st_crs(couche), sf::st_crs(2154))
-    expect_true("hors_m" %in% names(couche))
+    expect_true(all(c("long_m", "hors_m") %in% names(couche)))
   }
 })
