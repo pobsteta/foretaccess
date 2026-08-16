@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -138,6 +138,8 @@
 <li>
 <strong><code>v2.5.0</code> posée : l’invariant CA-28.4 devient une erreur</strong> (2026-08-15). <code>.reseau_preparer()</code> — passage commun de <code><a href="reference/reseau_desserte.html">reseau_desserte()</a></code> et <code><a href="reference/optimiser_reseau.html">optimiser_reseau()</a></code> — refuse une <code>desserte_existante</code> portant <code>source</code> <code>"osm"</code> ou <code>"detectee"</code> dont les lignes ne sont pas marquées <code>qualifiee</code> ; <code><a href="reference/qualifier_desserte.html">qualifier_desserte()</a></code> pose désormais cette marque <strong>en colonne</strong> en plus de l’attribut de couche (seule la colonne survit au sous-ensemble et à la fusion avec la BD TOPO). Une desserte BD TOPO pure n’a pas de colonne <code>source</code> : le contrôle est un no-op. <strong>Spec 028 : tous les CA sont soldés.</strong>
 </li>
+<li>
+<strong><code>v2.6.0</code> posée</strong> (2026-08-16) : <code>$osm_hors_corridor</code> et <code>$bdtopo_hors_corridor</code> portent <strong><code>long_m</code></strong>, la longueur du tronçon <strong>entier</strong> avant clip. Solde le dernier point ouvert de la checklist du demandeur (<code>nemetonshiny</code>, <code>specs/BRIEF-foretaccess-osm-hors-corridor.md</code> §9) : la <code>2.4.0</code> avait délibérément retiré cette colonne comme « colonne de travail », mais c’est le <strong>dénominateur</strong> sans lequel <code>hors_m</code> ne se lit pas — 170 m hors corridor ne dit pas la même chose sur un tronçon de 200 m ou de 2 km, et c’est cette part que l’infobulle de l’app affiche. La réserve « gisement à instruire, pas une desserte manquante prouvée » est désormais portée par le <code>@return</code> des deux couches, pas seulement par les kilomètres : une carte affirme plus qu’un tableau.</li>
 <li>
 <strong>Spec 026 bloquée sur le CA-26.5</strong>, pas sur du code. <code><a href="reference/detecter_desserte.html">detecter_desserte()</a></code> et <code><a href="reference/detecter_desserte_balayage.html">detecter_desserte_balayage()</a></code> sont livrés (<code>R/desserte-detectee.R</code>) avec le tarif de réouverture (<code>config$desserte$cout$fraction_reouverture</code>) ; <strong>l’injection dans <code><a href="reference/reseau_desserte.html">reseau_desserte()</a></code> est délibérément non faite</strong> tant que le CA-26.5 n’est pas tranché — sans quoi on ajouterait du réseau fantôme à un modèle qu’on vient de rendre conforme à ACCESSFOR. Le banc est <strong><code>wsfi</code></strong> (MNT 0,50 m), Chastel-Nouvel étant disqualifié pour cause de MNT à 5 m.</li>
 </ul></div>

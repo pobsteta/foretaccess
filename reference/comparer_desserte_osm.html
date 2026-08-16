@@ -11,7 +11,7 @@ résultat : un linéaire hors corridor n'est pas une desserte manquante prouvée
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,12 +91,17 @@ résultat : un linéaire hors corridor n'est pas une desserte manquante prouvée
 
 <dt><code>osm_hors_corridor</code></dt>
 <dd><p><code>sf</code> des tronçons OSM <strong>amputés</strong> de leur part
-dans le corridor BD TOPO : attributs d'origine plus <code>hors_m</code> (m).
-Géométrie homogène en <code>MULTILINESTRING</code>, CRS de l'entrée, <code>sf</code> à 0 ligne
-si rien ne sort du corridor (jamais <code>NULL</code>).</p></dd>
+dans le corridor BD TOPO : attributs d'origine, plus <code>long_m</code> (longueur
+du tronçon entier, avant clip) et <code>hors_m</code> (la part hors corridor, dont
+la somme vaut <code>resume[["osm_hors_km"]]</code>). Les tronçons intégralement
+couverts sont <strong>absents</strong> de la couche. Géométrie homogène en
+<code>MULTILINESTRING</code>, CRS de l'entrée, <code>sf</code> à 0 ligne si rien ne sort du
+corridor (jamais <code>NULL</code>). Comme les kilomètres, ces tronçons sont un
+<strong>gisement à instruire</strong>, pas une desserte manquante prouvée.</p></dd>
 
 <dt><code>bdtopo_hors_corridor</code></dt>
-<dd><p>le symétrique, BD TOPO hors corridor OSM.</p></dd>
+<dd><p>le symétrique, BD TOPO hors corridor OSM,
+mêmes garanties et même réserve.</p></dd>
 
 
 </dl></div>
@@ -111,6 +116,11 @@ tronçon à moitié dans le corridor n'est renvoyé que pour sa moitié hors
 corridor, sans quoi on présenterait comme « absent de la BD TOPO » un linéaire
 qui y figure. Elles ne coûtent rien de plus : la différence géométrique est
 déjà calculée pour mesurer le linéaire.</p>
+<p>La réserve ci-dessus <strong>suit les géométries</strong>, et pas seulement les kilomètres.
+Une carte affirme plus qu'un tableau : un tronçon dessiné sur un fond
+satellite se lit comme un constat, là où « 2,4 km hors corridor » se lit comme
+un indicateur. Un aval qui cartographie ces couches doit porter le texte du
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> à l'écran, pas une reformulation.</p>
     </div>
     <div class="section level2">
     <h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h2>

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.5.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,21 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.6.0" id="foretaccess-260-2026-08-16">foretaccess 2.6.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#foretaccess-260-2026-08-16"></a></h2>
+<p>Version <strong>mineure</strong>, additive : les deux couches hors corridor de <code><a href="../reference/comparer_desserte_osm.html">comparer_desserte_osm()</a></code> portent enfin leur <strong>dénominateur</strong>.</p>
+<div class="section level3">
+<h3 id="long_m-sur-osm_hors_corridor-et-bdtopo_hors_corridor-2-6-0">
+<code>long_m</code> sur <code>$osm_hors_corridor</code> et <code>$bdtopo_hors_corridor</code>
+<a class="anchor" aria-label="anchor" href="#long_m-sur-osm_hors_corridor-et-bdtopo_hors_corridor-2-6-0"></a></h3>
+<p>La <code>2.4.0</code> livrait les géométries clippées avec <code>hors_m</code> seul, <code>long_m</code> étant écartée comme « colonne de travail ». C’était une erreur d’appréciation : <code>hors_m</code> ne se lit pas sans la longueur du tronçon d’origine. <strong>170 m hors corridor ne dit pas la même chose sur un tronçon de 200 m que sur un tronçon de 2 km</strong> — dans le premier cas la voie est massivement absente de la BD TOPO, dans le second c’est une amorce. C’est cette part que l’aval affiche en infobulle.</p>
+<p><code>long_m</code> mesure donc le tronçon <strong>entier, avant clip</strong> ; <code>hors_m</code> reste la part hors corridor, et la géométrie rendue reste celle de <code>hors_m</code>. Les trois tables (<code>osm</code>, <code>bdtopo</code>, <code>resume</code>), <code>corridor_m</code>, la classe <code>foretaccess_osm_compare</code> et le coût de calcul sont <strong>inchangés</strong> — un test de non-régression les fige.</p>
+</div>
+<div class="section level3">
+<h3 id="la-réserve-suit-les-géométries-2-6-0">La réserve suit les géométries<a class="anchor" aria-label="anchor" href="#la-r%C3%A9serve-suit-les-g%C3%A9om%C3%A9tries-2-6-0"></a></h3>
+<p>Le <code>@return</code> des deux couches redit désormais, mot pour mot, ce que dit déjà le <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> : un linéaire hors corridor est un <strong>gisement à instruire</strong>, pas une desserte manquante prouvée. Une carte affirme plus qu’un tableau — un tronçon dessiné sur un fond satellite se lit comme un constat, là où « 2,4 km hors corridor » se lit comme un indicateur. Un aval qui cartographie ces couches doit porter ce texte à l’écran, pas une reformulation.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.5.0" id="foretaccess-250-2026-08-15">foretaccess 2.5.0 (2026-08-15)<a class="anchor" aria-label="anchor" href="#foretaccess-250-2026-08-15"></a></h2>
 <p>Version <strong>mineure</strong> : la règle « aucun tronçon candidat n’entre dans le réseau existant sans qualification » devient une <strong>erreur</strong> (CA-28.4, specs 026 et 028).</p>

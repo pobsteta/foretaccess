@@ -420,6 +420,18 @@
   couche (seule la colonne survit au sous-ensemble et à la fusion avec
   la BD TOPO). Une desserte BD TOPO pure n’a pas de colonne `source` :
   le contrôle est un no-op. **Spec 028 : tous les CA sont soldés.**
+- **`v2.6.0` posée** (2026-08-16) : `$osm_hors_corridor` et
+  `$bdtopo_hors_corridor` portent **`long_m`**, la longueur du tronçon
+  **entier** avant clip. Solde le dernier point ouvert de la checklist
+  du demandeur (`nemetonshiny`,
+  `specs/BRIEF-foretaccess-osm-hors-corridor.md` §9) : la `2.4.0` avait
+  délibérément retiré cette colonne comme « colonne de travail », mais
+  c’est le **dénominateur** sans lequel `hors_m` ne se lit pas — 170 m
+  hors corridor ne dit pas la même chose sur un tronçon de 200 m ou de 2
+  km, et c’est cette part que l’infobulle de l’app affiche. La réserve «
+  gisement à instruire, pas une desserte manquante prouvée » est
+  désormais portée par le `@return` des deux couches, pas seulement par
+  les kilomètres : une carte affirme plus qu’un tableau.
 - **Spec 026 bloquée sur le CA-26.5**, pas sur du code.
   [`detecter_desserte()`](https://pobsteta.github.io/foretaccess/reference/detecter_desserte.md)
   et
