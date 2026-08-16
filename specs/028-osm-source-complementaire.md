@@ -123,7 +123,10 @@ C'est le livrable de diagnostic, **antérieur** à toute intégration.
 
 Depuis `2.4.0`, elle rend aussi la **géométrie** hors corridor —
 `$osm_hors_corridor` et `$bdtopo_hors_corridor`, deux `sf` de tronçons
-**clippés** (attributs d'origine plus `hors_m`). Elle la calculait déjà pour
+**clippés** (attributs d'origine plus `hors_m` ; plus `long_m`, la longueur du
+tronçon entier avant clip, depuis `2.6.0` : c'est le dénominateur qui distingue
+une voie massivement absente de la BD TOPO d'une simple amorce). Elle la
+calculait déjà pour
 mesurer le linéaire ; l'ajout ne coûte rien de plus, et il permet d'**inspecter**
 ce que la table compte, pas seulement de la lire (cf. CA-28.3).
 
