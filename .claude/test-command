@@ -1,0 +1,2 @@
+# niveau rapide ; suite complète en CI (ADR 0001 de nemetonplateforme, amendement du 2026-11-16)
+RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript -e 'devtools::test(stop_on_failure = TRUE, filter = "^(acquire|bascule|cable|cache|certificat|chemin|cog|config|cout|cvat|datasources|depot|dfci|grid|hors|io|leastcost|micro|nonreg|osm|pkgdown|portabilite|rasterize|rust|selection|slope|storage|tuilage|validate|vat|volume)")'
