@@ -1,0 +1,1 @@
+RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript -e 'devtools::test(stop_on_failure = TRUE)'
