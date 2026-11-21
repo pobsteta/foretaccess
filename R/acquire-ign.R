@@ -80,23 +80,60 @@
   })
   en_echec <- vapply(morceaux, inherits, logical(1), what = "error")
   perdues <- sum(en_echec)
+  utiles <- morceaux[!en_echec]
+  utiles <- utiles[vapply(utiles, function(x) nrow(x) > 0, logical(1))]
+  if (!length(utiles)) {
+    # Aucune tuile exploitable (toutes en echec ou vides) : on retente l'emprise
+    # ENTIERE. Si elle passe, la couche n'est pas amputee d'une tuile -- donc PAS
+    # d'alerte, qui serait une fausse alarme (relecture nemetonshiny,
+    # 2026-11-21) ; si elle echoue, l'erreur remonte.
+    return(.get_wfs_retente(x = aoi, layer = typename))
+  }
   if (perdues > 0L) {
     # Une tuile perdue MALGRE les nouvelles tentatives ampute le reseau :
     # composantes orphelines et surfaces inaccessibles a tort (cf. .TUILE_WFS_M).
     # Le dernier message d'erreur est joint, pour que l'aval puisse le relayer.
+    # Classe `foretaccess_tuiles_perdues` : l'aval l'intercepte sans lire le
+    # texte, et les acquisitions ne mettent pas la couche en cache.
     derniere <- conditionMessage(morceaux[[max(which(en_echec))]])
     cli::cli_warn(c(
       "{perdues} tuile{?s} WFS sur {length(tuiles)} en echec pour {.val {typename}}.",
       "!" = "La couche rendue est incomplete sur une partie de l'emprise.",
       "x" = "Derniere erreur : {derniere}"
-    ))
+    ), class = "foretaccess_tuiles_perdues")
   }
-  morceaux <- morceaux[!en_echec]
-  morceaux <- morceaux[vapply(morceaux, function(x) nrow(x) > 0, logical(1))]
-  if (!length(morceaux)) {
-    return(.get_wfs_retente(x = aoi, layer = typename)) # nocov
-  }
+  morceaux <- utiles
   .dedupe_features(.rbind_features(morceaux))
+}
+
+# Evalue `expr` en notant -- SANS les etouffer -- les alertes de tuile perdue
+# (classe `foretaccess_tuiles_perdues`, emise par .fetch_wfs()). Rend
+# list(valeur, complet) : `complet` est FALSE des qu'une tuile a ete perdue.
+.avec_suivi_tuiles <- function(expr) {
+  complet <- TRUE
+  valeur <- withCallingHandlers(expr, foretaccess_tuiles_perdues = function(w) {
+    complet <<- FALSE
+  })
+  list(valeur = valeur, complet = complet)
+}
+
+# Ecrit une couche vectorielle en cache avec sa provenance -- SAUF si elle est
+# incomplete. Une couche amputee d'une tuile, mise en cache, serait resservie au
+# run suivant sans plus aucun avertissement (brief nemetonshiny 2026-11-21) : on
+# ne l'ecrit donc pas, et on retire tout cache anterieur au meme chemin, pour que
+# le prochain appel retente l'IGN (y compris sous `politique_cache = "ignorer"`).
+.ecrire_cache_couche <- function(x, chemin, couche, source, prov, complet = TRUE) {
+  if (!isTRUE(complet)) {
+    unlink(c(chemin, .chemin_provenance(chemin)))
+    cli::cli_inform(c(
+      "!" = "Couche {.val {couche}} incomplete : pas de mise en cache, le prochain
+             appel retentera l'IGN."
+    ))
+    return(invisible(FALSE))
+  }
+  sf::st_write(x, chemin, delete_dsn = TRUE, quiet = TRUE)
+  .provenance_ecrire(chemin, couche, source, prov)
+  invisible(TRUE)
 }
 
 # Decoupe la bbox de `aoi` en tuiles carrees d'au plus `tuile_m` de cote. Rend une
@@ -716,15 +753,18 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
   if (is.null(info)) {
     cli::cli_abort("Couche {.val roads} introuvable pour le pays {.val {country}}.")
   }
-  brut <- .fetch_wfs(aoi, info$typename)
+  suivi <- .avec_suivi_tuiles({
+    brut <- .fetch_wfs(aoi, info$typename)
+    # Routes forestieres nommees : une seule requete sur la couche liee, et
+    # seulement quand la classification s'en sert. Une tuile perdue ICI fausse
+    # aussi la classe : elle rend la couche incomplete au meme titre.
+    cleabs_f <- if (classification == "accessfor") {
+      .cleabs_routes_forestieres(aoi)
+    } else {
+      character(0)
+    }
+  })
   d <- .reprojeter_clip(brut, aoi, crs)
-  # Routes forestieres nommees : une seule requete sur la couche liee, et
-  # seulement quand la classification s'en sert.
-  cleabs_f <- if (classification == "accessfor") {
-    .cleabs_routes_forestieres(aoi)
-  } else {
-    character(0)
-  }
   d$classe <- .mapper_classe_desserte(d, classification, cleabs_f)
   # On conserve la largeur BD TOPO (emprise) : critere du repli geometrique DFCI
   # (`.flag_dfci_repli`). Absente du flux -> NA (colonne quand meme presente).
@@ -748,8 +788,7 @@ acquire_desserte <- function(aoi, crs = 2154, cache_dir = tempdir(),
     ))
     d <- d[!hd, , drop = FALSE]
   }
-  sf::st_write(d, chemin, delete_dsn = TRUE, quiet = TRUE)
-  .provenance_ecrire(chemin, "desserte", info$typename, prov)
+  .ecrire_cache_couche(d, chemin, "desserte", info$typename, prov, suivi$complet)
   d
 }
 
@@ -799,11 +838,10 @@ acquire_foret <- function(aoi, crs = 2154, cache_dir = tempdir(),
   if (is.null(info)) {
     cli::cli_abort("Couche {.val bdforet_v2} introuvable pour le pays {.val {country}}.")
   }
-  brut <- .fetch_wfs(aoi, info$typename)
-  f <- .reprojeter_clip(brut, aoi, crs)
+  suivi <- .avec_suivi_tuiles(.fetch_wfs(aoi, info$typename))
+  f <- .reprojeter_clip(suivi$valeur, aoi, crs)
   f <- .exclure_landes(f, exclure_landes)
-  sf::st_write(f, chemin, delete_dsn = TRUE, quiet = TRUE)
-  .provenance_ecrire(chemin, "foret", info$typename, prov)
+  .ecrire_cache_couche(f, chemin, "foret", info$typename, prov, suivi$complet)
   f
 }
 
@@ -845,9 +883,8 @@ acquire_cadastre <- function(aoi, crs = 2154, cache_dir = tempdir(),
       cache_utilisable(chemin, "cadastre", info$typename, prov, politique_cache)) {
     return(sf::st_read(chemin, quiet = TRUE))
   }
-  brut <- .fetch_wfs(aoi, info$typename)
-  p <- .reprojeter_clip(brut, aoi, crs)
-  sf::st_write(p, chemin, delete_dsn = TRUE, quiet = TRUE)
-  .provenance_ecrire(chemin, "cadastre", info$typename, prov)
+  suivi <- .avec_suivi_tuiles(.fetch_wfs(aoi, info$typename))
+  p <- .reprojeter_clip(suivi$valeur, aoi, crs)
+  .ecrire_cache_couche(p, chemin, "cadastre", info$typename, prov, suivi$complet)
   p
 }
