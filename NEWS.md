@@ -22,6 +22,13 @@ autre mélange → `character`. Une valeur qui ne se convertit pas fait **replie
 colonne entière sur le texte** — on n'invente pas de NA. Vaut pour toutes les
 couches tuilées (`acquire_desserte()`, `acquire_foret()`, obstacles, DFCI…).
 
+## Pente nulle sur un plat, quelle que soit la compilation de terra
+
+Avec terra 1.9-60 compilée sur la CI (Ubuntu), un MNT parfaitement plat ne rendait
+plus une pente exactement nulle : `calculer_terrain()` laissait alors une
+exposition sur des cellules plates. Une pente inférieure à 1e-9 rad (1e-7 %) est
+désormais ramenée à 0 ; aucune pente réelle n'est touchée.
+
 ## Une tuile perdue n'est plus silencieuse
 
 Une tuile en erreur était retirée sans bruit, alors qu'un réseau amputé fabrique
