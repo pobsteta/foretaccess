@@ -1,5 +1,47 @@
 # Changelog
 
+## foretaccess 2.6.3 (2026-11-21)
+
+Version **corrective** : une couche amputée d’une tuile WFS n’est plus
+mise en cache, donc plus resservie en silence.
+
+### Une couche incomplète n’entre pas dans le cache
+
+Depuis la `2.6.2`, une tuile n’est perdue qu’après trois tentatives, et
+on l’annonce. Mais
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+écrivait quand même la couche amputée dans son cache. Au run suivant,
+sur la même emprise, le cache était servi : la couche restait
+incomplète, et l’avertissement ne se déclenchait plus. L’app ne pouvait
+signaler la perte qu’au premier run.
+
+Désormais,
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md),
+[`acquire_foret()`](https://pobsteta.github.io/foretaccess/reference/acquire_foret.md),
+[`acquire_cadastre()`](https://pobsteta.github.io/foretaccess/reference/acquire_cadastre.md)
+et
+[`acquire_obstacles_bdtopo()`](https://pobsteta.github.io/foretaccess/reference/acquire_obstacles_bdtopo.md)
+**n’écrivent pas leur cache** quand une tuile a été perdue, et retirent
+tout cache antérieur au même chemin. Le prochain appel retente donc
+l’IGN, y compris sous `politique_cache = "ignorer"`. Une couche complète
+est mise en cache comme avant. Pour la desserte, une perte sur la couche
+liée des routes nommées compte aussi : elle fausse la classe.
+
+### Plus de fausse alarme quand toutes les tuiles échouent
+
+Quand **toutes** les tuiles échouaient, `.fetch_wfs()` émettait
+l’alerte, puis retentait l’emprise entière. Si cette dernière tentative
+passait, la couche était complète mais l’alerte était déjà partie. Elle
+n’est désormais émise que si la couche rendue est réellement amputée ;
+si l’emprise entière échoue aussi, l’erreur remonte, comme avant.
+
+### Une classe de condition pour l’alerte
+
+L’avertissement « N tuiles WFS en échec » porte la classe
+**`foretaccess_tuiles_perdues`**. Un appelant peut l’intercepter par sa
+classe (`withCallingHandlers(foretaccess_tuiles_perdues = …)`) au lieu
+de lire son texte, qui reste inchangé.
+
 ## foretaccess 2.6.2 (2026-11-21)
 
 Version **corrective** : une erreur **passagère** de la Géoplateforme

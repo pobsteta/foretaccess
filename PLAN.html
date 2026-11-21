@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -365,6 +365,10 @@
 </div>
 <div class="section level2">
 <h2 id="journal">Journal<a class="anchor" aria-label="anchor" href="#journal"></a></h2>
+<div class="section level3">
+<h3 id="id_2026-11-21--v263--pas-de-cache-pour-une-couche-à-tuile-perdue">2026-11-21 — <code>v2.6.3</code> : pas de cache pour une couche à tuile perdue<a class="anchor" aria-label="anchor" href="#id_2026-11-21--v263--pas-de-cache-pour-une-couche-%C3%A0-tuile-perdue"></a></h3>
+<p>Brief <code>nemetonshiny</code> (<code>~/dev/briefs/vers-foretaccess/2026-11-21-cache-couche-incomplete.md</code>) : une couche amputée d’une tuile était mise en cache, puis resservie sans alerte. Voie 1 retenue (celle que le brief préférait) : <code>.ecrire_cache_couche()</code> n’écrit pas une couche incomplète, et retire le cache antérieur. La perte est détectée par <code>.avec_suivi_tuiles()</code>, qui observe sans l’étouffer l’avertissement désormais classé <code>foretaccess_tuiles_perdues</code>. S’applique à la desserte, à la forêt, au cadastre et aux obstacles BD TOPO. Point voisin du brief : l’alerte ne part plus quand toutes les tuiles échouent mais que la reprise sur l’emprise entière passe (fausse alarme). Hors périmètre : une couche d’obstacles ENTIÈREMENT en échec (<code>tryCatch → NULL</code>) est toujours mise en cache.</p>
+</div>
 <div class="section level3">
 <h3 id="id_2026-11-21--v262--retenter-les-requêtes-ign-en-échec-passager">2026-11-21 — <code>v2.6.2</code> : retenter les requêtes IGN en échec passager<a class="anchor" aria-label="anchor" href="#id_2026-11-21--v262--retenter-les-requ%C3%AAtes-ign-en-%C3%A9chec-passager"></a></h3>
 <p>Brief <code>nemeton</code> (<code>~/dev/briefs/vers-foretaccess/2026-11-21-wfs-nouvelles-tentatives.md</code>) : dès la vérification de la 2.6.1, l’alerte « 1 tuile WFS sur 4 en échec » se déclenchait sur une erreur passagère de l’IGN (<code>text/plain</code> au lieu de XML). Un wrapper <code>.retenter()</code> (3 essais, pauses 1 s puis 3 s, option <code>foretaccess.wfs_pause</code>) couvre les trois appels de <code>.fetch_wfs()</code> et <code>.fetch_wms_raster()</code>. L’alerte n’est émise qu’après les essais et joint la dernière erreur.</p>

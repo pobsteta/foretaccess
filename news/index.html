@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,23 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.6.3" id="foretaccess-263-2026-11-21">foretaccess 2.6.3 (2026-11-21)<a class="anchor" aria-label="anchor" href="#foretaccess-263-2026-11-21"></a></h2>
+<p>Version <strong>corrective</strong> : une couche amputée d’une tuile WFS n’est plus mise en cache, donc plus resservie en silence.</p>
+<div class="section level3">
+<h3 id="une-couche-incomplète-nentre-pas-dans-le-cache-2-6-3">Une couche incomplète n’entre pas dans le cache<a class="anchor" aria-label="anchor" href="#une-couche-incompl%C3%A8te-nentre-pas-dans-le-cache-2-6-3"></a></h3>
+<p>Depuis la <code>2.6.2</code>, une tuile n’est perdue qu’après trois tentatives, et on l’annonce. Mais <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> écrivait quand même la couche amputée dans son cache. Au run suivant, sur la même emprise, le cache était servi : la couche restait incomplète, et l’avertissement ne se déclenchait plus. L’app ne pouvait signaler la perte qu’au premier run.</p>
+<p>Désormais, <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code>, <code><a href="../reference/acquire_foret.html">acquire_foret()</a></code>, <code><a href="../reference/acquire_cadastre.html">acquire_cadastre()</a></code> et <code><a href="../reference/acquire_obstacles_bdtopo.html">acquire_obstacles_bdtopo()</a></code> <strong>n’écrivent pas leur cache</strong> quand une tuile a été perdue, et retirent tout cache antérieur au même chemin. Le prochain appel retente donc l’IGN, y compris sous <code>politique_cache = "ignorer"</code>. Une couche complète est mise en cache comme avant. Pour la desserte, une perte sur la couche liée des routes nommées compte aussi : elle fausse la classe.</p>
+</div>
+<div class="section level3">
+<h3 id="plus-de-fausse-alarme-quand-toutes-les-tuiles-échouent-2-6-3">Plus de fausse alarme quand toutes les tuiles échouent<a class="anchor" aria-label="anchor" href="#plus-de-fausse-alarme-quand-toutes-les-tuiles-%C3%A9chouent-2-6-3"></a></h3>
+<p>Quand <strong>toutes</strong> les tuiles échouaient, <code>.fetch_wfs()</code> émettait l’alerte, puis retentait l’emprise entière. Si cette dernière tentative passait, la couche était complète mais l’alerte était déjà partie. Elle n’est désormais émise que si la couche rendue est réellement amputée ; si l’emprise entière échoue aussi, l’erreur remonte, comme avant.</p>
+</div>
+<div class="section level3">
+<h3 id="une-classe-de-condition-pour-lalerte-2-6-3">Une classe de condition pour l’alerte<a class="anchor" aria-label="anchor" href="#une-classe-de-condition-pour-lalerte-2-6-3"></a></h3>
+<p>L’avertissement « N tuiles WFS en échec » porte la classe <strong><code>foretaccess_tuiles_perdues</code></strong>. Un appelant peut l’intercepter par sa classe (<code>withCallingHandlers(foretaccess_tuiles_perdues = …)</code>) au lieu de lire son texte, qui reste inchangé.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.6.2" id="foretaccess-262-2026-11-21">foretaccess 2.6.2 (2026-11-21)<a class="anchor" aria-label="anchor" href="#foretaccess-262-2026-11-21"></a></h2>
 <p>Version <strong>corrective</strong> : une erreur <strong>passagère</strong> de la Géoplateforme IGN ne coûte plus une tuile entière du réseau.</p>

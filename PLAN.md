@@ -675,6 +675,22 @@ ni `leastcostpath` ne renvoient l’allocation.
 
 ## Journal
 
+### 2026-11-21 — `v2.6.3` : pas de cache pour une couche à tuile perdue
+
+Brief `nemetonshiny`
+(`~/dev/briefs/vers-foretaccess/2026-11-21-cache-couche-incomplete.md`)
+: une couche amputée d’une tuile était mise en cache, puis resservie
+sans alerte. Voie 1 retenue (celle que le brief préférait) :
+`.ecrire_cache_couche()` n’écrit pas une couche incomplète, et retire le
+cache antérieur. La perte est détectée par `.avec_suivi_tuiles()`, qui
+observe sans l’étouffer l’avertissement désormais classé
+`foretaccess_tuiles_perdues`. S’applique à la desserte, à la forêt, au
+cadastre et aux obstacles BD TOPO. Point voisin du brief : l’alerte ne
+part plus quand toutes les tuiles échouent mais que la reprise sur
+l’emprise entière passe (fausse alarme). Hors périmètre : une couche
+d’obstacles ENTIÈREMENT en échec (`tryCatch → NULL`) est toujours mise
+en cache.
+
 ### 2026-11-21 — `v2.6.2` : retenter les requêtes IGN en échec passager
 
 Brief `nemeton`
