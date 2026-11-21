@@ -45,6 +45,15 @@
   morceaux <- lapply(tuiles, function(t) {
     tryCatch(happign::get_wfs(x = t, layer = typename), error = function(e) NULL)
   })
+  perdues <- sum(vapply(morceaux, is.null, logical(1)))
+  if (perdues > 0L) {
+    # Une tuile perdue ampute le reseau sans bruit : composantes orphelines et
+    # surfaces inaccessibles a tort (cf. .TUILE_WFS_M). On le dit.
+    cli::cli_warn(c(
+      "{perdues} tuile{?s} WFS sur {length(tuiles)} en echec pour {.val {typename}}.",
+      "!" = "La couche rendue est incomplete sur une partie de l'emprise."
+    ))
+  }
   morceaux <- morceaux[!vapply(morceaux, is.null, logical(1))]
   morceaux <- morceaux[vapply(morceaux, function(x) nrow(x) > 0, logical(1))]
   if (!length(morceaux)) {
@@ -85,13 +94,117 @@
 
 # rbind tolerant : les pages WFS peuvent differer d'une colonne a l'autre selon
 # les valeurs rencontrees. On s'aligne sur les colonnes COMMUNES plutot que
-# d'echouer -- perdre une colonne annexe vaut mieux que perdre la tuile.
+# d'echouer -- perdre une colonne annexe vaut mieux que perdre la tuile. Les
+# TYPES sont ensuite alignes (.aligner_types) : happign ne rend pas le meme type
+# d'une tuile a l'autre (mesure 2026-11-21, `troncon_de_route` pres de Dijon :
+# `date_de_confirmation` en Date sur deux tuiles, en texte "14791" -- jours
+# depuis 1970 -- sur les deux autres), et rbind() echouait alors sur as.Date().
 .rbind_features <- function(morceaux) {
   communs <- Reduce(intersect, lapply(morceaux, names))
   if (!length(communs)) {
     return(morceaux[[1]]) # nocov
   }
-  do.call(rbind, lapply(morceaux, function(x) x[, communs, drop = FALSE]))
+  morceaux <- lapply(morceaux, function(x) x[, communs, drop = FALSE])
+  do.call(rbind, .aligner_types(morceaux))
+}
+
+# Aligne, colonne par colonne (hors geometrie), le type d'une meme colonne entre
+# morceaux. Une colonne dont la classe est deja identique partout n'est pas
+# touchee (bit-pour-bit). Sinon, les morceaux entierement NA sont neutres et la
+# cible se lit sur les autres :
+#  * un POSIXct present -> POSIXct ; sinon un Date present -> Date. Nombres et
+#    texte de chiffres seuls = jours (Date) / secondes (POSIXct) depuis 1970 ;
+#    autre texte = format ISO. Si une valeur ne se convertit pas, repli sur le
+#    texte pour toute la colonne : on ne fabrique pas de NA ;
+#  * nombres / entiers / logiques seuls -> numeric ;
+#  * tout autre melange -> character.
+.aligner_types <- function(morceaux) {
+  geom <- attr(morceaux[[1]], "sf_column")
+  for (col in setdiff(names(morceaux[[1]]), geom)) {
+    vals <- lapply(morceaux, function(x) x[[col]])
+    classes <- vapply(vals, function(v) paste(class(v), collapse = "/"), character(1))
+    if (length(unique(classes)) <= 1L) next
+    neufs <- .convertir_colonne(vals)
+    for (i in seq_along(morceaux)) morceaux[[i]][[col]] <- neufs[[i]]
+  }
+  morceaux
+}
+
+.convertir_colonne <- function(vals) {
+  tout_na <- vapply(vals, function(v) all(is.na(v)), logical(1))
+  info <- vals[!tout_na]
+  est <- function(f) any(vapply(info, f, logical(1)))
+  if (!length(info)) {
+    return(lapply(vals, function(v) rep(NA, length(v))))
+  }
+  cible <- if (est(function(v) inherits(v, "POSIXct"))) {
+    "POSIXct"
+  } else if (est(function(v) inherits(v, "Date"))) {
+    "Date"
+  } else if (all(vapply(info, function(v) is.numeric(v) || is.logical(v), logical(1)))) {
+    "numeric"
+  } else {
+    "character"
+  }
+  if (cible %in% c("POSIXct", "Date")) {
+    tz <- "UTC"
+    if (cible == "POSIXct") {
+      p <- Find(function(v) inherits(v, "POSIXct"), info)
+      tz <- attr(p, "tzone") %||% "UTC"
+      if (!nzchar(tz[1])) tz <- "UTC"
+      tz <- tz[1]
+    }
+    out <- lapply(vals, .vers_temps, cible = cible, tz = tz)
+    perte <- any(mapply(function(v, o) any(!is.na(v) & is.na(o)), vals, out))
+    if (!perte) {
+      return(out)
+    }
+    cible <- "character"
+  }
+  if (cible == "numeric") {
+    return(lapply(vals, as.numeric))
+  }
+  lapply(vals, function(v) {
+    if (inherits(v, "POSIXct")) {
+      format(v, "%Y-%m-%dT%H:%M:%S", tz = "UTC")
+    } else if (inherits(v, "Date")) {
+      format(v, "%Y-%m-%d")
+    } else {
+      as.character(v)
+    }
+  })
+}
+
+# Convertit un vecteur vers Date ou POSIXct ; NA (jamais d'erreur) si une valeur
+# n'est pas lisible.
+.vers_temps <- function(v, cible, tz) {
+  origine <- as.Date("1970-01-01")
+  if (cible == "Date") {
+    if (inherits(v, "Date")) return(v)
+    if (inherits(v, "POSIXct")) return(as.Date(v, tz = tz)) # nocov
+    if (is.numeric(v) || is.logical(v)) return(origine + as.numeric(v))
+    v <- as.character(v)
+    chiffres <- grepl("^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$", v)
+    out <- as.Date(rep(NA_character_, length(v)))
+    out[chiffres] <- origine + as.numeric(v[chiffres])
+    autres <- !chiffres & !is.na(v)
+    out[autres] <- as.Date(v[autres], format = "%Y-%m-%d", optional = TRUE)
+    return(out)
+  }
+  if (inherits(v, "POSIXct")) return(as.POSIXct(as.numeric(v), origin = "1970-01-01", tz = tz))
+  if (inherits(v, "Date")) return(as.POSIXct(as.numeric(v) * 86400, origin = "1970-01-01", tz = tz))
+  if (is.numeric(v) || is.logical(v)) {
+    return(as.POSIXct(as.numeric(v), origin = "1970-01-01", tz = tz))
+  }
+  v <- as.character(v)
+  chiffres <- grepl("^\\s*-?[0-9]+(\\.[0-9]+)?\\s*$", v)
+  out <- as.POSIXct(rep(NA_real_, length(v)), origin = "1970-01-01", tz = tz)
+  out[chiffres] <- as.POSIXct(as.numeric(v[chiffres]), origin = "1970-01-01", tz = tz)
+  autres <- !chiffres & !is.na(v)
+  out[autres] <- as.POSIXct(v[autres], tz = tz, optional = TRUE,
+                            tryFormats = c("%Y-%m-%dT%H:%M:%OS", "%Y-%m-%d %H:%M:%OS",
+                                           "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"))
+  out
 }
 
 # Deduplication des features rendues par plusieurs tuiles. `cleabs` est

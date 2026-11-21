@@ -1,3 +1,6 @@
+# Seuil sous lequel une pente (radians) est du bruit numerique : cf. calculer_terrain().
+.PENTE_PLATE_RAD <- 1e-9
+
 #' Pente et exposition depuis un MNT
 #'
 #' Dérive la **pente en pourcentage** et l'**exposition en degrés** (0–360 depuis
@@ -37,6 +40,11 @@ calculer_terrain <- function(mnt, methode = "Horn") {
   pente_rad <- terra::terrain(mnt, v = "slope", unit = "radians", neighbors = voisins)
   aspect <- terra::terrain(mnt, v = "aspect", unit = "degrees", neighbors = voisins)
 
+  # Un plat parfait doit donner une pente NULLE, pas un bruit flottant : selon la
+  # compilation de terra (constate sur la CI Ubuntu avec terra 1.9-60, pas en
+  # local), un MNT constant ne rend plus exactement 0. Sous .PENTE_PLATE_RAD
+  # (1e-9 rad, soit 1e-7 %), aucune pente n'a de sens physique : on ramene a 0.
+  pente_rad <- terra::ifel(abs(pente_rad) < .PENTE_PLATE_RAD, 0, pente_rad)
   slope_pct <- tan(pente_rad) * 100
   # Sur une cellule plate, terra renvoie 90 par convention : on marque NA.
   aspect_deg <- terra::ifel(pente_rad > 0, aspect, NA)
