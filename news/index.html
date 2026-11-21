@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">foretaccess</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.6.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,19 @@
       <small>Source: <a href="https://github.com/pobsteta/foretaccess/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.6.2" id="foretaccess-262-2026-11-21">foretaccess 2.6.2 (2026-11-21)<a class="anchor" aria-label="anchor" href="#foretaccess-262-2026-11-21"></a></h2>
+<p>Version <strong>corrective</strong> : une erreur <strong>passagère</strong> de la Géoplateforme IGN ne coûte plus une tuile entière du réseau.</p>
+<div class="section level3">
+<h3 id="les-requêtes-ign-sont-retentées-2-6-2">Les requêtes IGN sont retentées<a class="anchor" aria-label="anchor" href="#les-requ%C3%AAtes-ign-sont-retent%C3%A9es-2-6-2"></a></h3>
+<p>Sur « Parc de la colombière », l’alerte « 1 tuile WFS sur 4 en échec » de la <code>2.6.1</code> se déclenchait dès la première vérification. L’IGN répondait en <code>text/plain</code> au lieu de XML, et la même requête passait juste après. Chaque tuile n’étant demandée qu’une fois, le réseau rendu perdait une tuile entière, avec ce que cela fabrique de composantes orphelines et de surfaces inaccessibles à tort. Sur une emprise d’une seule tuile, c’était pire : l’acquisition échouait.</p>
+<p>Toute requête IGN (<code>get_wfs()</code> pour les couches vectorielles, <code>get_wms_raster()</code> pour le MNT et le LiDAR) est désormais tentée <strong>3 fois</strong>, avec une pause de 1 s puis 3 s. Toute erreur est retentée, sans chercher à reconnaître le message ; une erreur durable ne coûte que quelques secondes de plus. Les pauses se règlent par l’option <code>foretaccess.wfs_pause</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="lalerte-de-tuile-perdue-porte-lerreur-2-6-2">L’alerte de tuile perdue porte l’erreur<a class="anchor" aria-label="anchor" href="#lalerte-de-tuile-perdue-porte-lerreur-2-6-2"></a></h3>
+<p>L’avertissement « N tuiles WFS en échec » n’est émis <strong>qu’après</strong> les nouvelles tentatives, et il joint désormais le dernier message d’erreur, pour que l’aval puisse le relayer.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.6.1" id="foretaccess-261-2026-11-21">foretaccess 2.6.1 (2026-11-21)<a class="anchor" aria-label="anchor" href="#foretaccess-261-2026-11-21"></a></h2>
 <p>Version <strong>corrective</strong> : <code><a href="../reference/acquire_desserte.html">acquire_desserte()</a></code> échouait sur <strong>toute</strong> emprise de plus d’une tuile WFS (2 km), avec un message (<code>charToDate(x) : character string is not in a standard unambiguous format</code>) qui orientait l’app vers une panne réseau.</p>
