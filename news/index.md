@@ -1,5 +1,53 @@
 # Changelog
 
+## foretaccess 2.6.1 (2026-11-21)
+
+Version **corrective** :
+[`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md)
+échouait sur **toute** emprise de plus d’une tuile WFS (2 km), avec un
+message
+(`charToDate(x) : character string is not in a standard unambiguous format`)
+qui orientait l’app vers une panne réseau.
+
+### Les tuiles WFS ne rendent pas les mêmes types
+
+[`happign::get_wfs()`](https://paul-carteron.github.io/happign/reference/get_wfs.html)
+type une colonne d’après les valeurs qu’il rencontre. Sur
+`BDTOPO_V3:troncon_de_route` près de Dijon, `date_de_confirmation`
+sortait en `Date` sur deux tuiles et en **texte de jours depuis 1970**
+(`"14791"`) sur les deux autres ; `restriction_de_poids_total` en
+`character` tout NA d’un côté, en `numeric` de l’autre. Le
+[`rbind()`](https://rdrr.io/r/base/cbind.html) des tuiles tentait
+`as.Date("14791")` et plantait.
+
+Les tuiles sont désormais **alignées colonne par colonne** avant
+assemblage : une colonne de même classe partout n’est pas touchée ; un
+morceau entièrement NA ne compte pas ; un `Date`/`POSIXct` présent
+impose son type (nombres et texte de chiffres lus depuis 1970, texte ISO
+parsé) ; nombres seuls → `numeric` ; tout autre mélange → `character`.
+Une valeur qui ne se convertit pas fait **replier la colonne entière sur
+le texte** — on n’invente pas de NA. Vaut pour toutes les couches
+tuilées
+([`acquire_desserte()`](https://pobsteta.github.io/foretaccess/reference/acquire_desserte.md),
+[`acquire_foret()`](https://pobsteta.github.io/foretaccess/reference/acquire_foret.md),
+obstacles, DFCI…).
+
+### Pente nulle sur un plat, quelle que soit la compilation de terra
+
+Avec terra 1.9-60 compilée sur la CI (Ubuntu), un MNT parfaitement plat
+ne rendait plus une pente exactement nulle :
+[`calculer_terrain()`](https://pobsteta.github.io/foretaccess/reference/calculer_terrain.md)
+laissait alors une exposition sur des cellules plates. Une pente
+inférieure à 1e-9 rad (1e-7 %) est désormais ramenée à 0 ; aucune pente
+réelle n’est touchée.
+
+### Une tuile perdue n’est plus silencieuse
+
+Une tuile en erreur était retirée sans bruit, alors qu’un réseau amputé
+fabrique des composantes orphelines et des surfaces inaccessibles à
+tort. `.fetch_wfs()` émet désormais un avertissement qui compte les
+tuiles perdues.
+
 ## foretaccess 2.6.0 (2026-08-16)
 
 Version **mineure**, additive : les deux couches hors corridor de
