@@ -17,12 +17,45 @@
 
 # --- Wrappers reseau (points de mock) ---------------------------------------
 
+# La Geoplateforme IGN echoue parfois PASSAGEREMENT : reponse en text/plain au
+# lieu de XML, timeout, 5xx/429 -- la meme requete passe juste apres (mesure
+# 2026-11-21, Parc de la colombiere : 1 tuile sur 4 en echec au 1er essai, 4/4
+# au 2e). On retente donc TOUTE erreur, sans chercher a reconnaitre le message :
+# une erreur durable (couche inexistante) ne coute que quelques secondes.
+# Pauses entre essais : option `foretaccess.wfs_pause` (secondes ; 0 en test).
+.ESSAIS_IGN <- 3L
+.PAUSE_IGN_S <- c(1, 3)
+
+.retenter <- function(f, essais = .ESSAIS_IGN,
+                      pause_s = getOption("foretaccess.wfs_pause", .PAUSE_IGN_S)) {
+  essais <- max(1L, as.integer(essais))
+  for (k in seq_len(essais)) {
+    res <- tryCatch(f(), error = function(e) e)
+    if (!inherits(res, "error")) {
+      return(res)
+    }
+    if (k < essais) {
+      p <- if (length(pause_s)) pause_s[min(k, length(pause_s))] else 0
+      if (p > 0) Sys.sleep(p)
+    }
+  }
+  stop(res) # erreur d'origine du dernier essai
+}
+
+.get_wfs_retente <- function(x, layer, essais = .ESSAIS_IGN,
+                             pause_s = getOption("foretaccess.wfs_pause", .PAUSE_IGN_S)) {
+  .retenter(function() happign::get_wfs(x = x, layer = layer),
+            essais = essais, pause_s = pause_s)
+}
+
 .fetch_wms_raster <- function(aoi, layer, res, crs, filename) {
   .require_pkg("happign")
-  happign::get_wms_raster(
-    x = aoi, layer = layer, res = res, crs = crs,
-    rgb = FALSE, filename = filename, overwrite = TRUE, verbose = FALSE
-  )
+  .retenter(function() {
+    happign::get_wms_raster(
+      x = aoi, layer = layer, res = res, crs = crs,
+      rgb = FALSE, filename = filename, overwrite = TRUE, verbose = FALSE
+    )
+  })
 }
 
 # Cote (m) des tuiles de requetage WFS. Le WFS IGN rend des jeux INCOMPLETS sur
@@ -40,24 +73,28 @@
   aoi_sf <- sf::st_as_sf(sf::st_geometry(sf::st_as_sf(aoi)))
   tuiles <- .tuiles_bbox(aoi_sf, tuile_m)
   if (length(tuiles) <= 1L) {
-    return(happign::get_wfs(x = aoi, layer = typename))
+    return(.get_wfs_retente(x = aoi, layer = typename))
   }
   morceaux <- lapply(tuiles, function(t) {
-    tryCatch(happign::get_wfs(x = t, layer = typename), error = function(e) NULL)
+    tryCatch(.get_wfs_retente(x = t, layer = typename), error = function(e) e)
   })
-  perdues <- sum(vapply(morceaux, is.null, logical(1)))
+  en_echec <- vapply(morceaux, inherits, logical(1), what = "error")
+  perdues <- sum(en_echec)
   if (perdues > 0L) {
-    # Une tuile perdue ampute le reseau sans bruit : composantes orphelines et
-    # surfaces inaccessibles a tort (cf. .TUILE_WFS_M). On le dit.
+    # Une tuile perdue MALGRE les nouvelles tentatives ampute le reseau :
+    # composantes orphelines et surfaces inaccessibles a tort (cf. .TUILE_WFS_M).
+    # Le dernier message d'erreur est joint, pour que l'aval puisse le relayer.
+    derniere <- conditionMessage(morceaux[[max(which(en_echec))]])
     cli::cli_warn(c(
       "{perdues} tuile{?s} WFS sur {length(tuiles)} en echec pour {.val {typename}}.",
-      "!" = "La couche rendue est incomplete sur une partie de l'emprise."
+      "!" = "La couche rendue est incomplete sur une partie de l'emprise.",
+      "x" = "Derniere erreur : {derniere}"
     ))
   }
-  morceaux <- morceaux[!vapply(morceaux, is.null, logical(1))]
+  morceaux <- morceaux[!en_echec]
   morceaux <- morceaux[vapply(morceaux, function(x) nrow(x) > 0, logical(1))]
   if (!length(morceaux)) {
-    return(happign::get_wfs(x = aoi, layer = typename)) # nocov
+    return(.get_wfs_retente(x = aoi, layer = typename)) # nocov
   }
   .dedupe_features(.rbind_features(morceaux))
 }

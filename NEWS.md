@@ -1,3 +1,29 @@
+# foretaccess 2.6.2 (2026-11-21)
+
+Version **corrective** : une erreur **passagère** de la Géoplateforme IGN ne coûte
+plus une tuile entière du réseau.
+
+## Les requêtes IGN sont retentées
+
+Sur « Parc de la colombière », l'alerte « 1 tuile WFS sur 4 en échec » de la
+`2.6.1` se déclenchait dès la première vérification. L'IGN répondait en
+`text/plain` au lieu de XML, et la même requête passait juste après. Chaque
+tuile n'étant demandée qu'une fois, le réseau rendu perdait une tuile entière,
+avec ce que cela fabrique de composantes orphelines et de surfaces inaccessibles
+à tort. Sur une emprise d'une seule tuile, c'était pire : l'acquisition échouait.
+
+Toute requête IGN (`get_wfs()` pour les couches vectorielles, `get_wms_raster()`
+pour le MNT et le LiDAR) est désormais tentée **3 fois**, avec une pause de 1 s
+puis 3 s. Toute erreur est retentée, sans chercher à reconnaître le message ;
+une erreur durable ne coûte que quelques secondes de plus. Les pauses se règlent
+par l'option `foretaccess.wfs_pause`.
+
+## L'alerte de tuile perdue porte l'erreur
+
+L'avertissement « N tuiles WFS en échec » n'est émis **qu'après** les nouvelles
+tentatives, et il joint désormais le dernier message d'erreur, pour que l'aval
+puisse le relayer.
+
 # foretaccess 2.6.1 (2026-11-21)
 
 Version **corrective** : `acquire_desserte()` échouait sur **toute** emprise de

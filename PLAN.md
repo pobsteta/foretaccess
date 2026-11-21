@@ -481,6 +481,16 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-11-21 — `v2.6.2` : retenter les requêtes IGN en échec passager
+
+Brief `nemeton` (`~/dev/briefs/vers-foretaccess/2026-11-21-wfs-nouvelles-tentatives.md`) :
+dès la vérification de la 2.6.1, l'alerte « 1 tuile WFS sur 4 en échec » se
+déclenchait sur une erreur passagère de l'IGN (`text/plain` au lieu de XML). Un
+wrapper `.retenter()` (3 essais, pauses 1 s puis 3 s, option
+`foretaccess.wfs_pause`) couvre les trois appels de `.fetch_wfs()` et
+`.fetch_wms_raster()`. L'alerte n'est émise qu'après les essais et joint la
+dernière erreur.
+
 ### 2026-11-21 — `v2.6.1` : types hétérogènes entre tuiles WFS
 
 Brief `nemeton` (`~/dev/briefs/vers-foretaccess/2026-11-21-rbind-tuiles-wfs-types.md`) :
