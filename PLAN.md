@@ -481,6 +481,17 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-11-21 — `v2.6.1` : types hétérogènes entre tuiles WFS
+
+Brief `nemeton` (`~/dev/briefs/vers-foretaccess/2026-11-21-rbind-tuiles-wfs-types.md`) :
+`acquire_desserte()` plantait (`charToDate`) sur toute emprise > 1 tuile, happign
+typant `date_de_confirmation` en `Date` ou en texte « jours depuis 1970 » selon la
+tuile. `.rbind_features()` aligne désormais les types (`.aligner_types()`), avec
+repli texte plutôt que NA ; `.fetch_wfs()` avertit des tuiles perdues (point « à
+arbitrer » du brief : avertissement retenu, pas d'échec — un échec dur casserait
+les appelants qui tolèrent déjà une couche partielle). Tests sans réseau +
+rejeu réel de l'emprise du brief.
+
 ### 2026-08-15 — `v2.5.0` : CA-28.4, la règle écrite devient une erreur
 
 « Aucun tronçon OSM n'entre dans `desserte_existante` sans qualification » était

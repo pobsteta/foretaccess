@@ -376,3 +376,72 @@ test_that("hors_desserte est conserve pour la TOPOLOGIE mais exclu du debardage"
   # Des cellules existent (piste + route), mais aucune pour le 3e troncon.
   expect_gt(sum(!is.na(terra::values(out, mat = FALSE))), 0L)
 })
+
+test_that(".rbind_features aligne les types qui changent d'une tuile a l'autre", {
+  # Mesure 2026-11-21 (troncon_de_route, pres de Dijon) : happign rend
+  # `date_de_confirmation` en Date sur deux tuiles et en texte "14791" (jours
+  # depuis 1970) sur les deux autres ; rbind() echouait sur as.Date("14791").
+  pt <- function(x) sf::st_sfc(sf::st_point(c(x, x)), crs = 2154)
+  a <- sf::st_sf(cleabs = "A", date_de_confirmation = as.Date("2015-03-02"),
+    restriction_de_poids_total = NA_character_, nature = "Chemin", geometry = pt(1))
+  b <- sf::st_sf(cleabs = "B", date_de_confirmation = "14791",
+    restriction_de_poids_total = 3.5, nature = "Chemin", geometry = pt(2))
+  c <- sf::st_sf(cleabs = "C", date_de_confirmation = "2020-01-15",
+    restriction_de_poids_total = 7L, nature = "Route", geometry = pt(3))
+
+  out <- foretaccess:::.rbind_features(list(a, b, c))
+  expect_s3_class(out, "sf")
+  expect_equal(nrow(out), 3L)
+  expect_s3_class(out$date_de_confirmation, "Date")
+  expect_equal(out$date_de_confirmation,
+    as.Date(c("2015-03-02", "2010-07-01", "2020-01-15")))
+  expect_type(out$restriction_de_poids_total, "double")
+  expect_equal(out$restriction_de_poids_total, c(NA, 3.5, 7))
+  expect_identical(out$nature, c("Chemin", "Chemin", "Route"))
+
+  # Ordre inverse : le premier morceau ne dicte plus le type.
+  out2 <- foretaccess:::.rbind_features(list(b, a))
+  expect_equal(out2$date_de_confirmation, as.Date(c("2010-07-01", "2015-03-02")))
+})
+
+test_that(".rbind_features se replie sur le texte plutot que d'inventer des NA", {
+  pt <- function(x) sf::st_sfc(sf::st_point(c(x, x)), crs = 2154)
+  a <- sf::st_sf(d = as.Date("2015-03-02"), v = 1, geometry = pt(1))
+  b <- sf::st_sf(d = "inconnue", v = "x", geometry = pt(2))
+  out <- foretaccess:::.rbind_features(list(a, b))
+  expect_identical(out$d, c("2015-03-02", "inconnue"))
+  expect_identical(out$v, c("1", "x"))
+
+  # POSIXct contre secondes en texte.
+  t0 <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
+  p <- sf::st_sf(h = t0, geometry = pt(1))
+  q <- sf::st_sf(h = as.character(as.numeric(t0) + 60), geometry = pt(2))
+  out <- foretaccess:::.rbind_features(list(p, q))
+  expect_s3_class(out$h, "POSIXct")
+  expect_equal(as.numeric(out$h), as.numeric(t0) + c(0, 60))
+
+  # Classes deja identiques : intact.
+  r <- foretaccess:::.rbind_features(list(a, a))
+  expect_s3_class(r$d, "Date")
+  expect_type(r$v, "double")
+})
+
+test_that(".fetch_wfs multi-tuiles survit aux types heterogenes et signale les pertes", {
+  testthat::local_mocked_bindings(.require_pkg = function(...) TRUE)
+  appels <- 0L
+  local_mocked_bindings(get_wfs = function(x, layer, ...) {
+    appels <<- appels + 1L
+    if (appels == 2L) stop("timeout")
+    d <- if (appels %% 2L) as.Date("2010-07-01") else "14791"
+    sf::st_sf(cleabs = paste0("T", appels), date_de_confirmation = d,
+      geometry = sf::st_sfc(sf::st_point(c(appels, appels)), crs = 2154))
+  }, .package = "happign")
+  grand <- sf::st_as_sfc(sf::st_bbox(
+    c(xmin = 0, ymin = 0, xmax = 4000, ymax = 4000), crs = 2154))
+  expect_warning(
+    out <- foretaccess:::.fetch_wfs(grand, "BDTOPO_V3:troncon_de_route"),
+    "1 tuile WFS sur 4"
+  )
+  expect_equal(nrow(out), 3L)
+  expect_true(all(out$date_de_confirmation == as.Date("2010-07-01")))
+})
