@@ -128,46 +128,49 @@ acquire_obstacles_bdtopo <- function(aoi, crs = 2154, cache_dir = tempdir(),
   }
   aoi_cible <- sf::st_transform(sf::st_geometry(sf::st_as_sf(aoi)), crs)
 
-  polys <- list()
-  # --- Obstacles BD TOPO ---------------------------------------------------
-  for (nom in names(.OBSTACLES_BDTOPO)) {
-    x <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO[[nom]]), error = function(e) NULL)
-    x <- .filtre_obstacle(x, nom)
-    g <- .obstacle_polygones(x, crs, aoi_cible, tampon_m)
-    if (!is.null(g)) polys[[nom]] <- g
-  }
-  # Routes principales : filtre ACCESSFOR sur `cpx_classement_administratif`
-  # (annexe p.52), repli sur `importance` si la colonne manque du flux.
-  if (!is.null(classements_routes) || !is.na(routes_importance_max)) {
-    rt <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO_ROUTE()), error = function(e) NULL)
-    rt <- .filtre_routes_principales(rt, classements_routes, routes_importance_max)
-    rt <- .filtre_obstacle(rt, "routes_principales")
-    g <- .obstacle_polygones(rt, crs, aoi_cible, tampon_m)
-    if (!is.null(g)) polys[["routes_principales"]] <- g
-  }
-  # --- Zonages reglementaires (INPN / Patrinat) ----------------------------
-  if (isTRUE(zonages)) {
-    for (typ in .ZONAGES_PATRINAT) {
-      x <- tryCatch(.fetch_wfs(aoi, typ), error = function(e) NULL)
+  suivi <- .avec_suivi_tuiles({
+    polys <- list()
+    # --- Obstacles BD TOPO ---------------------------------------------------
+    for (nom in names(.OBSTACLES_BDTOPO)) {
+      x <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO[[nom]]), error = function(e) NULL)
+      x <- .filtre_obstacle(x, nom)
       g <- .obstacle_polygones(x, crs, aoi_cible, tampon_m)
-      if (!is.null(g)) polys[[typ]] <- g
+      if (!is.null(g)) polys[[nom]] <- g
     }
-    # Parc national : SEULEMENT la reserve integrale (filtre `zone`).
-    pn <- tryCatch(.fetch_wfs(aoi, .ZONAGE_PN), error = function(e) NULL)
-    if (!is.null(pn) && "zone" %in% names(pn)) {
-      pn <- pn[grepl("integrale", .ascii(pn$zone)), ]
-      g <- .obstacle_polygones(pn, crs, aoi_cible, tampon_m)
-      if (!is.null(g)) polys[["pn_reserve_integrale"]] <- g
+    # Routes principales : filtre ACCESSFOR sur `cpx_classement_administratif`
+    # (annexe p.52), repli sur `importance` si la colonne manque du flux.
+    if (!is.null(classements_routes) || !is.na(routes_importance_max)) {
+      rt <- tryCatch(.fetch_wfs(aoi, .OBSTACLES_BDTOPO_ROUTE()), error = function(e) NULL)
+      rt <- .filtre_routes_principales(rt, classements_routes, routes_importance_max)
+      rt <- .filtre_obstacle(rt, "routes_principales")
+      g <- .obstacle_polygones(rt, crs, aoi_cible, tampon_m)
+      if (!is.null(g)) polys[["routes_principales"]] <- g
     }
-  }
+    # --- Zonages reglementaires (INPN / Patrinat) ----------------------------
+    if (isTRUE(zonages)) {
+      for (typ in .ZONAGES_PATRINAT) {
+        x <- tryCatch(.fetch_wfs(aoi, typ), error = function(e) NULL)
+        g <- .obstacle_polygones(x, crs, aoi_cible, tampon_m)
+        if (!is.null(g)) polys[[typ]] <- g
+      }
+      # Parc national : SEULEMENT la reserve integrale (filtre `zone`).
+      pn <- tryCatch(.fetch_wfs(aoi, .ZONAGE_PN), error = function(e) NULL)
+      if (!is.null(pn) && "zone" %in% names(pn)) {
+        pn <- pn[grepl("integrale", .ascii(pn$zone)), ]
+        g <- .obstacle_polygones(pn, crs, aoi_cible, tampon_m)
+        if (!is.null(g)) polys[["pn_reserve_integrale"]] <- g
+      }
+    }
 
+    polys
+  })
+  polys <- suivi$valeur
   out <- if (length(polys)) {
     sf::st_sf(obstacle = names(polys), geometry = do.call(c, unname(polys)))
   } else {
     sf::st_sf(obstacle = character(0), geometry = sf::st_sfc(crs = crs))
   }
-  sf::st_write(out, chemin, delete_dsn = TRUE, quiet = TRUE)
-  .provenance_ecrire(chemin, "obstacles_bdtopo", NULL, prov)
+  .ecrire_cache_couche(out, chemin, "obstacles_bdtopo", NULL, prov, suivi$complet)
   out
 }
 
