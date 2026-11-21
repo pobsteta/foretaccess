@@ -426,22 +426,83 @@ test_that(".rbind_features se replie sur le texte plutot que d'inventer des NA",
   expect_type(r$v, "double")
 })
 
-test_that(".fetch_wfs multi-tuiles survit aux types heterogenes et signale les pertes", {
+# Mock de happign::get_wfs qui identifie la tuile par sa bbox : `pannes` donne,
+# par cle de tuile, le nombre d'echecs avant succes (Inf = toujours en echec).
+mock_wfs_tuiles <- function(env, pannes = list()) {
+  function(x, layer, ...) {
+    bb <- sf::st_bbox(x)
+    cle <- paste(round(bb[["xmin"]]), round(bb[["ymin"]]))
+    env$appels[[cle]] <- (env$appels[[cle]] %||% 0L) + 1L
+    n_pannes <- pannes[[cle]] %||% 0
+    if (env$appels[[cle]] <= n_pannes) {
+      stop("Unexpected content type \"text/plain\". Expecting type \"application/xml\"")
+    }
+    env$n <- (env$n %||% 0L) + 1L
+    d <- if (env$n %% 2L) as.Date("2010-07-01") else "14791"
+    sf::st_sf(cleabs = cle, date_de_confirmation = d,
+      geometry = sf::st_sfc(sf::st_point(c(bb[["xmin"]], bb[["ymin"]])), crs = 2154))
+  }
+}
+`%||%` <- function(a, b) if (is.null(a)) b else a
+grand_4_tuiles <- function() sf::st_as_sfc(sf::st_bbox(
+  c(xmin = 0, ymin = 0, xmax = 4000, ymax = 4000), crs = 2154))
+
+test_that(".fetch_wfs retente une tuile en echec passager : aucune alerte, rien de perdu", {
+  withr::local_options(foretaccess.wfs_pause = 0)
   testthat::local_mocked_bindings(.require_pkg = function(...) TRUE)
-  appels <- 0L
-  local_mocked_bindings(get_wfs = function(x, layer, ...) {
-    appels <<- appels + 1L
-    if (appels == 2L) stop("timeout")
-    d <- if (appels %% 2L) as.Date("2010-07-01") else "14791"
-    sf::st_sf(cleabs = paste0("T", appels), date_de_confirmation = d,
-      geometry = sf::st_sfc(sf::st_point(c(appels, appels)), crs = 2154))
-  }, .package = "happign")
-  grand <- sf::st_as_sfc(sf::st_bbox(
-    c(xmin = 0, ymin = 0, xmax = 4000, ymax = 4000), crs = 2154))
-  expect_warning(
-    out <- foretaccess:::.fetch_wfs(grand, "BDTOPO_V3:troncon_de_route"),
-    "1 tuile WFS sur 4"
-  )
-  expect_equal(nrow(out), 3L)
+  env <- new.env()
+  # Tuile (-100, 1900) : un echec text/plain puis succes (constat 2026-11-21).
+  local_mocked_bindings(get_wfs = mock_wfs_tuiles(env, list("-100 1900" = 1)),
+    .package = "happign")
+  expect_no_warning(out <- foretaccess:::.fetch_wfs(grand_4_tuiles(), "BDTOPO_V3:troncon_de_route"))
+  expect_equal(nrow(out), 4L)
+  expect_identical(env$appels[["-100 1900"]], 2L)
+  # Types heterogenes entre tuiles toujours alignes (2.6.1).
   expect_true(all(out$date_de_confirmation == as.Date("2010-07-01")))
+})
+
+test_that(".fetch_wfs signale une tuile en echec durable, apres les essais, avec l'erreur", {
+  withr::local_options(foretaccess.wfs_pause = 0)
+  testthat::local_mocked_bindings(.require_pkg = function(...) TRUE)
+  env <- new.env()
+  local_mocked_bindings(get_wfs = mock_wfs_tuiles(env, list("-100 1900" = Inf)),
+    .package = "happign")
+  w <- NULL
+  out <- withCallingHandlers(
+    foretaccess:::.fetch_wfs(grand_4_tuiles(), "BDTOPO_V3:troncon_de_route"),
+    warning = function(cnd) { w <<- conditionMessage(cnd); invokeRestart("muffleWarning") }
+  )
+  expect_match(w, "1 tuile WFS sur 4")
+  expect_match(w, "text/plain", fixed = TRUE)
+  expect_identical(env$appels[["-100 1900"]], foretaccess:::.ESSAIS_IGN)
+  expect_equal(nrow(out), 3L)
+})
+
+test_that(".fetch_wfs sur une tuile unique survit a un echec passager", {
+  withr::local_options(foretaccess.wfs_pause = 0)
+  testthat::local_mocked_bindings(.require_pkg = function(...) TRUE)
+  env <- new.env()
+  local_mocked_bindings(get_wfs = mock_wfs_tuiles(env, list("0 0" = 2)),
+    .package = "happign")
+  petit <- sf::st_as_sfc(sf::st_bbox(c(xmin = 0, ymin = 0, xmax = 500, ymax = 500), crs = 2154))
+  expect_no_error(out <- foretaccess:::.fetch_wfs(petit, "BDTOPO_V3:troncon_de_route"))
+  expect_equal(nrow(out), 1L)
+  expect_identical(env$appels[["0 0"]], 3L)
+})
+
+test_that(".retenter relance l'erreur d'origine et respecte les pauses", {
+  n <- 0L
+  expect_error(
+    foretaccess:::.retenter(function() { n <<- n + 1L; stop(paste("panne", n)) },
+                            essais = 3L, pause_s = 0),
+    "panne 3"
+  )
+  expect_identical(n, 3L)
+  # Pause effective (option), et un seul essai suffit si ca passe.
+  withr::local_options(foretaccess.wfs_pause = 0.2)
+  n <- 0L
+  t0 <- Sys.time()
+  res <- foretaccess:::.retenter(function() { n <<- n + 1L; if (n < 2L) stop("x"); "ok" })
+  expect_identical(res, "ok")
+  expect_gte(as.numeric(Sys.time() - t0, units = "secs"), 0.19)
 })
