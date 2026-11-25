@@ -42,6 +42,14 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="development version" id="foretaccess-development-version">foretaccess (development version)<a class="anchor" aria-label="anchor" href="#foretaccess-development-version"></a></h2>
+<div class="section level3">
+<h3 id="cvat-precalcule--le-relief-maximal-nest-plus-un-trou-development-version">CVAT precalcule : le relief maximal n’est plus un trou<a class="anchor" aria-label="anchor" href="#cvat-precalcule--le-relief-maximal-nest-plus-un-trou-development-version"></a></h3>
+<p><code><a href="../reference/build_cvat_precomputed.html">build_cvat_precomputed()</a></code> code desormais le relief valide de <strong>0 a 254</strong> et reserve <strong>255 au nodata</strong>, declare explicitement dans le GeoTIFF (<code>NAflag = 255</code>). Avant, le relief le plus clair (v &gt;= 0,996) valait 255, comme le nodata : il devenait un trou dans le <code>cvat.tif</code> des projets QField. Prix : un pixel de relief maximal perd un niveau de gris sur 255 (254 au lieu de 255), invisible a l’ecran.</p>
+<p><code>vat_combined(as_byte = TRUE)</code> est <strong>inchange</strong> : il reste fidele au <code>byte_scale</code> du plugin QGIS RVT (<code>0..255</code>, <code>NA</code> -&gt; 255). Un fichier deja en cache n’est pas reecrit ; il le sera au prochain <code>overwrite = TRUE</code> ou pour un nouveau projet.</p>
+</div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.6.3" id="foretaccess-263-2026-11-21">foretaccess 2.6.3 (2026-11-21)<a class="anchor" aria-label="anchor" href="#foretaccess-263-2026-11-21"></a></h2>
 <p>Version <strong>corrective</strong> : une couche amputée d’une tuile WFS n’est plus mise en cache, donc plus resservie en silence.</p>
 <div class="section level3">

@@ -135,8 +135,13 @@ DEM to count as covering it. Default 0.9.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Path to the 8-bit CVAT GeoTIFF (<code>0..255</code>, <code>NA</code>-&gt;255), covering the
-AOI + buffer.</p>
+    <p>Path to the 8-bit CVAT GeoTIFF, covering the AOI + buffer. Coding of
+the file: valid relief <code>0..254</code>, <code>255</code> = nodata (declared as the GeoTIFF
+nodata value, read back as <code>NA</code> by terra). This differs from
+<code>vat_combined(as_byte = TRUE)</code>, which stays faithful to the RVT QGIS plugin
+(<code>0..255</code>, <code>NA</code>-&gt;255): there the brightest relief is indistinguishable from
+nodata, so the precomputed file clamps valid values to 254. Files cached
+before this coding are not rewritten until <code>overwrite = TRUE</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

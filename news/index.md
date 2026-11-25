@@ -1,5 +1,22 @@
 # Changelog
 
+## foretaccess (development version)
+
+### CVAT precalcule : le relief maximal n’est plus un trou
+
+[`build_cvat_precomputed()`](https://pobsteta.github.io/foretaccess/reference/build_cvat_precomputed.md)
+code desormais le relief valide de **0 a 254** et reserve **255 au
+nodata**, declare explicitement dans le GeoTIFF (`NAflag = 255`). Avant,
+le relief le plus clair (v \>= 0,996) valait 255, comme le nodata : il
+devenait un trou dans le `cvat.tif` des projets QField. Prix : un pixel
+de relief maximal perd un niveau de gris sur 255 (254 au lieu de 255),
+invisible a l’ecran.
+
+`vat_combined(as_byte = TRUE)` est **inchange** : il reste fidele au
+`byte_scale` du plugin QGIS RVT (`0..255`, `NA` -\> 255). Un fichier
+deja en cache n’est pas reecrit ; il le sera au prochain
+`overwrite = TRUE` ou pour un nouveau projet.
+
 ## foretaccess 2.6.3 (2026-11-21)
 
 Version **corrective** : une couche amputée d’une tuile WFS n’est plus

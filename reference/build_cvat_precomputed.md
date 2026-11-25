@@ -80,8 +80,14 @@ build_cvat_precomputed(
 
 ## Value
 
-Path to the 8-bit CVAT GeoTIFF (`0..255`, `NA`-\>255), covering the
-AOI + buffer.
+Path to the 8-bit CVAT GeoTIFF, covering the AOI + buffer. Coding of the
+file: valid relief `0..254`, `255` = nodata (declared as the GeoTIFF
+nodata value, read back as `NA` by terra). This differs from
+`vat_combined(as_byte = TRUE)`, which stays faithful to the RVT QGIS
+plugin (`0..255`, `NA`-\>255): there the brightest relief is
+indistinguishable from nodata, so the precomputed file clamps valid
+values to 254. Files cached before this coding are not rewritten until
+`overwrite = TRUE`.
 
 ## Details
 
