@@ -481,6 +481,17 @@ diverge donc systématiquement ; ni lui ni `leastcostpath` ne renvoient l'alloca
 
 ## Journal
 
+### 2026-11-25 — Mission 053 : CVAT précalculé, relief 0..254 et nodata 255 distinct
+
+Brief de relecture (nemeton #699) : `build_cvat_precomputed()` écrivait le CVAT avec
+`vat_combined(as_byte = TRUE)`, où le relief maximal (v >= 0,996) vaut 255, comme le
+nodata ; un relief valide devenait un trou dans le `cvat.tif` de Groma. Correctif dans
+`R/cvat_precompute.R` seulement : relief flottant, `.rvt_byte_scale01()`, valide ramené à
+254, NA -> 255, `NAflag = 255` déclaré. `.rvt_byte_scale01()` et `vat_combined(as_byte =
+TRUE)` ne bougent pas (parité plugin RVT). Pas de migration des caches ; cycle dev, pas de
+release. Choix : pas de bump `DESCRIPTION` (reste `2.6.3.9000`), entrée NEWS en tête
+« development version ».
+
 ### 2026-11-21 — `v2.6.3` : pas de cache pour une couche à tuile perdue
 
 Brief `nemetonshiny` (`~/dev/briefs/vers-foretaccess/2026-11-21-cache-couche-incomplete.md`) :

@@ -97,3 +97,95 @@ test_that("build_cvat_precomputed : MNT trop court -> (re)acquisition appelee", 
   expect_true(appele) # la reacquisition a bien ete declenchee
   expect_true(file.exists(out))
 })
+
+# --- Codage du fichier : relief valide 0..254, 255 = nodata declare (mission 053) ---
+
+# MNT synthetique : rampe douce + une cuvette gaussienne en (10, 10) dont le fond
+# donne un relief >= 0.9961 (octet RVT = 255), + une zone NA a l'ecart de la cuvette.
+.mnt_053 <- function(d, na_zone = TRUE) {
+  mnt <- terra::rast(
+    xmin = -10, xmax = 30, ymin = -10, ymax = 30, resolution = 1,
+    crs = "EPSG:2154"
+  )
+  xy <- terra::xyFromCell(mnt, seq_len(terra::ncell(mnt)))
+  terra::values(mnt) <- 100 - 5 * exp(-((xy[, 1] - 10)^2 + (xy[, 2] - 10)^2) / 300)
+  if (na_zone) {
+    mnt[terra::cellFromRowColCombine(mnt, 5:9, 31:36)] <- NA
+  }
+  p <- file.path(d, "mnt053.tif")
+  terra::writeRaster(mnt, p, overwrite = TRUE)
+  # Le MNT relu du disque (float32), celui que voit build_cvat_precomputed().
+  list(path = p, mnt = terra::rast(p))
+}
+
+.construire_053 <- function(d, mnt_path) {
+  testthat::local_mocked_bindings(
+    acquire_mnt = function(...) stop("acquire_mnt ne doit pas etre appele"),
+    .env = parent.frame()
+  )
+  build_cvat_precomputed(.aoi_carre(0, 20, 0, 20),
+    cache_dir = d, buffer_m = 5, mnt_existant = mnt_path
+  )
+}
+
+test_that("cvat precalcule : relief maximal ecrete a 254, jamais confondu avec le nodata", {
+  d <- withr::local_tempdir()
+  m <- .mnt_053(d, na_zone = TRUE)
+  # Precondition : le plugin RVT code bien des pixels valides a 255 (sinon le test
+  # ne prouverait rien).
+  brut <- terra::values(vat_combined(m$mnt, as_byte = TRUE))[, 1]
+  fl <- terra::values(vat_combined(m$mnt, as_byte = FALSE))[, 1]
+  expect_true(any(!is.na(fl) & brut == 255L))
+
+  out <- .construire_053(d, m$path)
+  v <- terra::values(terra::rast(out), na.rm = FALSE)[, 1]
+  # Aucun 255 hors zone NA : les pixels valides les plus clairs valent 254.
+  expect_false(any(v == 255L, na.rm = TRUE)) # 255 est lu comme NA
+  valide_255 <- !is.na(fl) & brut == 255L
+  expect_true(all(v[valide_255] == 254L))
+  expect_false(anyNA(v[!is.na(fl)]))
+})
+
+test_that("cvat precalcule : zone NA du MNT = 255 dans le fichier, nodata declare, lu NA", {
+  d <- withr::local_tempdir()
+  m <- .mnt_053(d, na_zone = TRUE)
+  out <- .construire_053(d, m$path)
+  fl <- terra::values(vat_combined(m$mnt, as_byte = FALSE))[, 1]
+  expect_true(any(is.na(fl)))
+
+  r <- terra::rast(out)
+  # Nodata declare explicitement dans le GeoTIFF.
+  info <- paste(terra::describe(out), collapse = "\n")
+  expect_match(info, "NoData Value=255")
+  # Lu comme NA par terra, et uniquement sur la zone NA.
+  v <- terra::values(r)[, 1]
+  expect_identical(is.na(v), is.na(fl))
+  # Octet brut = 255 sur la zone NA (lecture sans masque nodata).
+  sans_nodata <- file.path(d, "sans_nodata.tif")
+  sf::gdal_utils("translate", out, sans_nodata, options = c("-a_nodata", "none"), quiet = TRUE)
+  brut <- terra::values(terra::rast(sans_nodata))[, 1]
+  expect_true(all(brut[is.na(fl)] == 255))
+})
+
+test_that("vat_combined(as_byte = TRUE) reste fidele au plugin : 0..255, NA -> 255", {
+  d <- withr::local_tempdir()
+  m <- .mnt_053(d, na_zone = TRUE)
+  b <- terra::values(vat_combined(m$mnt, as_byte = TRUE))[, 1]
+  fl <- terra::values(vat_combined(m$mnt, as_byte = FALSE))[, 1]
+  expect_identical(as.integer(b), .rvt_byte_scale01(fl))
+  expect_true(all(b[is.na(fl)] == 255))
+  expect_true(any(b[!is.na(fl)] == 255)) # le relief maximal garde 255 cote RVT
+})
+
+test_that("cvat precalcule : les autres valeurs (0..254) egalent vat_combined(as_byte = TRUE)", {
+  d <- withr::local_tempdir()
+  m <- .mnt_053(d, na_zone = TRUE)
+  out <- .construire_053(d, m$path)
+  v <- terra::values(terra::rast(out))[, 1]
+  b <- terra::values(vat_combined(m$mnt, as_byte = TRUE))[, 1]
+  fl <- terra::values(vat_combined(m$mnt, as_byte = FALSE))[, 1]
+  # Meme grille : le fichier couvre AOI+buffer = tout le MNT (40 x 40) ici ?
+  ok <- !is.na(fl) & b < 255L
+  expect_true(any(ok))
+  expect_identical(as.integer(v[ok]), as.integer(b[ok]))
+})

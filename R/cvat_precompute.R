@@ -73,8 +73,13 @@
 #'   DEM to count as covering it. Default 0.9.
 #' @param country Country code for [acquire_mnt()] layer resolution. Default
 #'   `"FR"`.
-#' @return Path to the 8-bit CVAT GeoTIFF (`0..255`, `NA`->255), covering the
-#'   AOI + buffer.
+#' @return Path to the 8-bit CVAT GeoTIFF, covering the AOI + buffer. Coding of
+#'   the file: valid relief `0..254`, `255` = nodata (declared as the GeoTIFF
+#'   nodata value, read back as `NA` by terra). This differs from
+#'   `vat_combined(as_byte = TRUE)`, which stays faithful to the RVT QGIS plugin
+#'   (`0..255`, `NA`->255): there the brightest relief is indistinguishable from
+#'   nodata, so the precomputed file clamps valid values to 254. Files cached
+#'   before this coding are not rewritten until `overwrite = TRUE`.
 #' @seealso [vat_combined()], [acquire_mnt()].
 #' @export
 #' @examples
@@ -142,9 +147,19 @@ build_cvat_precomputed <- function(aoi, cache_dir, buffer_m = 100,
   if (terra::nlyr(mnt) > 1L) {
     mnt <- mnt[[1]]
   }
-  cvat <- vat_combined(mnt, as_byte = TRUE)
+  # Relief en flottant [0, 1] (NA ou masque conserves), puis codage 8 bits du
+  # fichier precalcule : valide 0..254, 255 = nodata. Le byte_scale du plugin RVT
+  # (`vat_combined(as_byte = TRUE)`) code aussi le relief maximal en 255, donc
+  # indiscernable du nodata : on ecrete le valide a 254 avant d'ecrire.
+  cvat <- vat_combined(mnt, as_byte = FALSE)
+  v <- terra::values(cvat)[, 1]
+  b <- .rvt_byte_scale01(v) # 0..255, NA -> 255
+  b[!is.na(v) & b > 254L] <- 254L
+  b[is.na(v)] <- 255L
+  terra::values(cvat) <- b
   terra::writeRaster(cvat, out,
     overwrite = TRUE, datatype = "INT1U",
+    NAflag = 255,
     gdal = c("COMPRESS=DEFLATE")
   )
   out
