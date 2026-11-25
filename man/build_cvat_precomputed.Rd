@@ -45,8 +45,13 @@ DEM to count as covering it. Default 0.9.}
 \code{"FR"}.}
 }
 \value{
-Path to the 8-bit CVAT GeoTIFF (\verb{0..255}, \code{NA}->255), covering the
-AOI + buffer.
+Path to the 8-bit CVAT GeoTIFF, covering the AOI + buffer. Coding of
+the file: valid relief \verb{0..254}, \code{255} = nodata (declared as the GeoTIFF
+nodata value, read back as \code{NA} by terra). This differs from
+\code{vat_combined(as_byte = TRUE)}, which stays faithful to the RVT QGIS plugin
+(\verb{0..255}, \code{NA}->255): there the brightest relief is indistinguishable from
+nodata, so the precomputed file clamps valid values to 254. Files cached
+before this coding are not rewritten until \code{overwrite = TRUE}.
 }
 \description{
 Materializes the \strong{CVAT} (Combined VAT, \code{\link[=vat_combined]{vat_combined()}}) as an 8-bit GeoTIFF
